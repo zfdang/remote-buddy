@@ -2224,12 +2224,7 @@ extension BluetoothRemoteBridge {
                 return
             }
 
-            audioDecoder.configureFormat(lowNibbleFirst: normalizedModelNumber.contains("ARN9"))
-            if normalizedModelNumber.contains("ARN9") {
-                // ARN9 firmware encodes ADPCM low-nibble-first; flipping the
-                // default high-first order is required for intelligible audio.
-                AppLogger.shared.write("BLE MODEL ARN9 adpcm=low-nibble-first")
-            }
+            audioDecoder.configureFormat(lowNibbleFirst: false)
             modelFormatResolved = true
             if let model = RemoteModel.identified(by: modelNumber) {
                 // 原始型号串必须一起记：广播名与型号**不是**一一对应（本机这台广播名是

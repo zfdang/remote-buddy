@@ -233,8 +233,14 @@ extension BridgeAppModel {
     }
 
     private func suspendActiveAudio(reason: String) {
-        for bridge in connections.bridges.values { _ = bridge.requestMicrophoneClose() }
-        _ = connections.discoveryBridge?.requestMicrophoneClose()
+        for bridge in connections.bridges.values {
+            _ = bridge.requestMicrophoneClose()
+            bridge.suspendVoiceTransferState()
+        }
+        if let discoveryBridge = connections.discoveryBridge {
+            _ = discoveryBridge.requestMicrophoneClose()
+            discoveryBridge.suspendVoiceTransferState()
+        }
         // Hardware sleep cannot be deferred for an active voice source.
         audio.configurationGeneration &+= 1
         cancelVirtualAudioReleaseIfPending(trigger: "system_sleep")

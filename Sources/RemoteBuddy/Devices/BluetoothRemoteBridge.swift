@@ -514,13 +514,15 @@ final class BluetoothRemoteBridge: NSObject {
             guard systemSuspension.suspend(phase: lifecycle) else { return }
             stopBatteryPolling(reason: "system_suspended")
             stopScan()
-            if !lifecycle.isReady,
-               let central,
-               let peripheral,
-               peripheral.state != .disconnected {
-                requestedReconnectDelay = nil
-                lifecycle = .disconnecting(lifecycle.generation ?? generationCounter)
-                central.cancelPeripheralConnection(peripheral)
+            if !lifecycle.isReady {
+                disconnectWatchdog.cancel()
+                if let central,
+                   let peripheral,
+                   peripheral.state != .disconnected {
+                    requestedReconnectDelay = nil
+                    lifecycle = .disconnecting(lifecycle.generation ?? generationCounter)
+                    central.cancelPeripheralConnection(peripheral)
+                }
             }
             reconnectWorkItem?.cancel()
             reconnectWorkItem = nil
@@ -1053,6 +1055,18 @@ final class BluetoothRemoteBridge: NSObject {
         }
         connectionTimeoutWorkItem = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 8, execute: work)
+    }
+
+    func suspendVoiceTransferState() {
+        cancelMicrophoneCloseWatchdog()
+        cancelStreamStopWatchdog()
+        microphoneKeepalive?.cancel()
+        microphoneKeepalive = nil
+        microphoneKeepaliveCount = 0
+        microphoneClosePending = false
+        microphoneCloseSessionID = nil
+        acknowledgedWrites.reset()
+        unacknowledgedWrites.reset()
     }
 
     private func resetSession() {

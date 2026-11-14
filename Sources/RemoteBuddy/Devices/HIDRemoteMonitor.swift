@@ -1224,6 +1224,7 @@ final class HIDRemoteMonitor {
             eventSuppressor.arm(button: button, edge: .up)
         }
         activeUsages.remove(usage)
+        t1ReportUsageState.remove(usage)
         _ = onRuntimeButton?(profileID, button, .release)
         emitActiveButtons()
     }

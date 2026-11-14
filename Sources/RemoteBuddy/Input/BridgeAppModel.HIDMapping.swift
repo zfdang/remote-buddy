@@ -24,7 +24,7 @@ extension BridgeAppModel {
         if !permissionSnapshot.accessibilityGranted {
             _ = releaseVoiceKeyIfNeeded()
         }
-        if started, permissionSnapshot.inputMonitoringGranted {
+        if started, permissionSnapshot.inputMonitoringGranted, permissionSnapshot.accessibilityGranted {
             preferredInputSourceMonitor.start()
         } else {
             preferredInputSourceMonitor.stop(

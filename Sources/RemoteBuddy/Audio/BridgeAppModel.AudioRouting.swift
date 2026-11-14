@@ -530,6 +530,7 @@ extension BridgeAppModel {
                       self.started,
                       self.audio.recoveryGeneration == generation
                 else { return }
+                self.audio.recoveryWorkItem = nil
                 self.audio.preparationQueue.async { [weak self] in
                     let devices = CoreAudioDeviceCatalog.outputDevices()
                     DispatchQueue.main.async { [weak self] in

@@ -87,26 +87,16 @@ private struct CompatibilityScrollEdgeEffectModifier: ViewModifier {
 }
 
 private struct CompatibilityFocusEffectDisabledModifier: ViewModifier {
-    @ViewBuilder
     func body(content: Content) -> some View {
-        if #available(macOS 14.0, *) {
-            content.focusEffectDisabled()
-        } else {
-            content
-        }
+        content.focusEffectDisabled()
     }
 }
 
 private struct CompatibilityRoundedButtonBorderShapeModifier: ViewModifier {
     let radius: CGFloat
 
-    @ViewBuilder
     func body(content: Content) -> some View {
-        if #available(macOS 14.0, *) {
-            content.buttonBorderShape(.roundedRectangle(radius: radius))
-        } else {
-            content
-        }
+        content.buttonBorderShape(.roundedRectangle(radius: radius))
     }
 }
 

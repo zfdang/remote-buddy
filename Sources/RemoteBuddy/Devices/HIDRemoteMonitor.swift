@@ -394,11 +394,6 @@ final class HIDRemoteMonitor {
             activeDeviceIsSeized = false
         }
         guard let manager else { return }
-        IOHIDManagerUnscheduleFromRunLoop(
-            manager,
-            CFRunLoopGetMain(),
-            CFRunLoopMode.commonModes.rawValue
-        )
         IOHIDManagerClose(manager, IOOptionBits(kIOHIDOptionsTypeNone))
         self.manager = nil
     }

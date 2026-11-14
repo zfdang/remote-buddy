@@ -266,6 +266,7 @@ final class BluetoothRemoteBridge: NSObject {
     var isMicrophoneClosePending: Bool { microphoneClosePending }
     var isMicrophoneOpen: Bool { microphoneOpened }
 
+#if DEBUG
     func simulateMicrophoneOpenedForTesting(_ opened: Bool) {
         microphoneOpened = opened
     }
@@ -278,7 +279,6 @@ final class BluetoothRemoteBridge: NSObject {
         stopStreaming()
     }
 
-#if DEBUG
     func simulateReadyStateForTesting(deviceName: String = "Test remote") {
         shouldRun = true
         generationCounter &+= 1

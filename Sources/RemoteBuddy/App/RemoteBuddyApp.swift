@@ -1137,7 +1137,6 @@ private final class RemoteBuddyAppDelegate: NSObject, NSApplicationDelegate, NSM
             }
             switch purpose {
             case .information:
-                updateInformation.beginChecking()
                 updater.checkForUpdateInformation()
             case .userInitiated:
                 updater.checkForUpdates()

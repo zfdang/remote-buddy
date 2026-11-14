@@ -5,19 +5,22 @@ import Testing
 @Suite("Onboarding sessions")
 @MainActor
 struct OnboardingSessionTests {
-    private func settings() throws -> AppSettings {
-        let defaults = try #require(UserDefaults(suiteName: "onboarding-session-" + UUID().uuidString))
-        return AppSettings(defaults: defaults)
+    private func withSettings(_ body: (AppSettings) throws -> Void) throws {
+        let suite = "onboarding-session-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        try body(AppSettings(defaults: defaults))
     }
 
     @Test func unfinishedFirstSetupCannotBeDismissed() throws {
-        let settings = try settings()
-        SettingsPageBehavior.beginDeviceSetup(settings: settings)
-        #expect(!settings.canDismissOnboarding)
-        #expect(settings.onboardingPurpose == .initialSetup)
-        settings.dismissOnboarding()
-        #expect(!settings.isOnboardingComplete)
-        #expect(settings.onboardingStep == .remoteAvailability)
+        try withSettings { settings in
+            SettingsPageBehavior.beginDeviceSetup(settings: settings)
+            #expect(!settings.canDismissOnboarding)
+            #expect(settings.onboardingPurpose == .initialSetup)
+            settings.dismissOnboarding()
+            #expect(!settings.isOnboardingComplete)
+            #expect(settings.onboardingStep == .remoteAvailability)
+        }
     }
 
     @Test func cancellingAdditionalDeviceRestoresCompletedSetupAfterRelaunch() throws {
@@ -63,30 +66,32 @@ struct OnboardingSessionTests {
     }
 
     @Test func restartingIntegrationCanReturnToCompletedSetup() throws {
-        let settings = try settings()
-        let profile = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
-        settings.selectRemoteProfile(profile)
-        settings.setOnboardingVoiceTool(.voiceBuddy)
-        settings.completeOnboarding()
-        SettingsPageBehavior.beginIntegrationSetup(tool: .weixin, settings: settings)
-        #expect(settings.canDismissOnboarding)
-        settings.dismissOnboarding()
-        #expect(settings.isOnboardingComplete)
-        #expect(settings.onboardingVoiceTool == .voiceBuddy)
+        try withSettings { settings in
+            let profile = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
+            settings.selectRemoteProfile(profile)
+            settings.setOnboardingVoiceTool(.voiceBuddy)
+            settings.completeOnboarding()
+            SettingsPageBehavior.beginIntegrationSetup(tool: .weixin, settings: settings)
+            #expect(settings.canDismissOnboarding)
+            settings.dismissOnboarding()
+            #expect(settings.isOnboardingComplete)
+            #expect(settings.onboardingVoiceTool == .voiceBuddy)
+        }
     }
 
     @Test func completingIntegrationKeepsNewConfiguration() throws {
-        let settings = try settings()
-        let profile = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
-        settings.selectRemoteProfile(profile)
-        settings.setOnboardingVoiceTool(.voiceBuddy)
-        settings.completeOnboarding()
-        SettingsPageBehavior.beginIntegrationSetup(tool: .weixin, settings: settings)
-        settings.completeOnboarding()
-        settings.dismissOnboarding()
-        #expect(settings.isOnboardingComplete)
-        #expect(!settings.canDismissOnboarding)
-        #expect(settings.onboardingVoiceTool == .weixin)
+        try withSettings { settings in
+            let profile = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
+            settings.selectRemoteProfile(profile)
+            settings.setOnboardingVoiceTool(.voiceBuddy)
+            settings.completeOnboarding()
+            SettingsPageBehavior.beginIntegrationSetup(tool: .weixin, settings: settings)
+            settings.completeOnboarding()
+            settings.dismissOnboarding()
+            #expect(settings.isOnboardingComplete)
+            #expect(!settings.canDismissOnboarding)
+            #expect(settings.onboardingVoiceTool == .weixin)
+        }
     }
 
     @Test func integrationUsesSelectedRemoteAfterDeletedDeviceAndRelaunch() throws {
@@ -114,33 +119,35 @@ struct OnboardingSessionTests {
     }
 
     @Test func integrationWithoutRecognizedRemoteReturnsToDeviceSetup() throws {
-        let settings = try settings()
-        let google = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
-        settings.selectRemoteProfile(google)
-        settings.setOnboardingControlSource(.chromecastRemote)
-        settings.completeOnboarding()
-        #expect(settings.removeRemoteProfile(google))
-        #expect(settings.onboardingControlSource == .unselected)
-        SettingsPageBehavior.beginIntegrationSetup(tool: .weixin, settings: settings)
-        #expect(settings.onboardingPurpose == .initialSetup)
-        #expect(settings.onboardingStep == .remoteAvailability)
-        #expect(settings.canDismissOnboarding)
+        try withSettings { settings in
+            let google = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+            settings.selectRemoteProfile(google)
+            settings.setOnboardingControlSource(.chromecastRemote)
+            settings.completeOnboarding()
+            #expect(settings.removeRemoteProfile(google))
+            #expect(settings.onboardingControlSource == .unselected)
+            SettingsPageBehavior.beginIntegrationSetup(tool: .weixin, settings: settings)
+            #expect(settings.onboardingPurpose == .initialSetup)
+            #expect(settings.onboardingStep == .remoteAvailability)
+            #expect(settings.canDismissOnboarding)
+        }
     }
 
     @Test func integrationFollowsADeviceSwitchedAfterSetup() throws {
-        let settings = try settings()
-        let xiaomi = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
-        let google = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
-        settings.selectRemoteProfile(xiaomi)
-        settings.setOnboardingControlSource(.xiaomiRemote)
-        settings.completeOnboarding()
-        settings.selectRemoteProfile(google)
-        SettingsPageBehavior.beginIntegrationSetup(tool: .weixin, settings: settings)
-        #expect(settings.onboardingControlSource == .chromecastRemote)
-        #expect(settings.onboardingDevice == .chromecastG9N9N)
-        settings.dismissOnboarding()
-        #expect(settings.selectedRemoteProfileID == google)
-        #expect(settings.onboardingControlSource == .chromecastRemote)
+        try withSettings { settings in
+            let xiaomi = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
+            let google = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+            settings.selectRemoteProfile(xiaomi)
+            settings.setOnboardingControlSource(.xiaomiRemote)
+            settings.completeOnboarding()
+            settings.selectRemoteProfile(google)
+            SettingsPageBehavior.beginIntegrationSetup(tool: .weixin, settings: settings)
+            #expect(settings.onboardingControlSource == .chromecastRemote)
+            #expect(settings.onboardingDevice == .chromecastG9N9N)
+            settings.dismissOnboarding()
+            #expect(settings.selectedRemoteProfileID == google)
+            #expect(settings.onboardingControlSource == .chromecastRemote)
+        }
     }
 
     @Test func shortenedFlowsNavigateOnlyThroughTheirOwnSteps() {
@@ -163,33 +170,35 @@ struct OnboardingSessionTests {
     }
 
     @Test func repairingLostPrerequisiteExpandsFlowWithoutLosingExit() throws {
-        let settings = try settings()
-        settings.completeOnboarding()
-        SettingsPageBehavior.beginDeviceSetup(settings: settings)
-        settings.setOnboardingStep(.permissions)
-        #expect(settings.onboardingPurpose == .initialSetup)
-        #expect(settings.onboardingStep == .permissions)
-        #expect(settings.canDismissOnboarding)
-        settings.dismissOnboarding()
-        #expect(settings.isOnboardingComplete)
+        try withSettings { settings in
+            settings.completeOnboarding()
+            SettingsPageBehavior.beginDeviceSetup(settings: settings)
+            settings.setOnboardingStep(.permissions)
+            #expect(settings.onboardingPurpose == .initialSetup)
+            #expect(settings.onboardingStep == .permissions)
+            #expect(settings.canDismissOnboarding)
+            settings.dismissOnboarding()
+            #expect(settings.isOnboardingComplete)
+        }
     }
 
     @Test func dismissingRestoresSelectedDeviceGainAndMappings() throws {
-        let settings = try settings()
-        let original = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
-        settings.selectRemoteProfile(original)
-        settings.gainDB = 6
-        let originalBindings = settings.buttonBindings
-        settings.completeOnboarding()
-        SettingsPageBehavior.beginDeviceSetup(settings: settings)
-        let added = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
-        settings.selectRemoteProfile(added)
-        settings.gainDB = 15
-        settings.dismissOnboarding()
-        #expect(settings.selectedRemoteProfileID == original)
-        #expect(settings.gainDB == 6)
-        #expect(settings.buttonBindings == originalBindings)
-        #expect(settings.remoteDeviceProfiles.contains { $0.id == added })
-        #expect(settings.gainDB(for: added) == 15)
+        try withSettings { settings in
+            let original = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
+            settings.selectRemoteProfile(original)
+            settings.gainDB = 6
+            let originalBindings = settings.buttonBindings
+            settings.completeOnboarding()
+            SettingsPageBehavior.beginDeviceSetup(settings: settings)
+            let added = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
+            settings.selectRemoteProfile(added)
+            settings.gainDB = 15
+            settings.dismissOnboarding()
+            #expect(settings.selectedRemoteProfileID == original)
+            #expect(settings.gainDB == 6)
+            #expect(settings.buttonBindings == originalBindings)
+            #expect(settings.remoteDeviceProfiles.contains { $0.id == added })
+            #expect(settings.gainDB(for: added) == 15)
+        }
     }
 }

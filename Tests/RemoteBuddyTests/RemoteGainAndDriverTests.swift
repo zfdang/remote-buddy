@@ -80,10 +80,8 @@ struct RemoteGainAndDriverTests {
 
     @Test func driverStepRequiresAConfiguredOutput() {
         var capabilities = OnboardingCapabilities(bluetoothGranted: true, inputMonitoringGranted: true, accessibilityGranted: true, microphoneDriverInstalled: true, audioOutputSelected: true)
-        for method in [OnboardingControlMethod.physicalRemote] {
-            #expect(!OnboardingFlowPolicy.canContinue(from: .audio, voiceTool: .unselected,
-                controlMethod: method, capabilities: capabilities))
-        }
+        #expect(!OnboardingFlowPolicy.canContinue(from: .audio, voiceTool: .unselected,
+            controlMethod: .physicalRemote, capabilities: capabilities))
         capabilities.audioReady = true
         #expect(OnboardingFlowPolicy.canContinue(from: .audio, voiceTool: .unselected,
             controlMethod: .physicalRemote, capabilities: capabilities))

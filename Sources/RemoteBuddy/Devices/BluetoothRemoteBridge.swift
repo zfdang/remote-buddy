@@ -2257,6 +2257,12 @@ extension BluetoothRemoteBridge {
                 AppLogger.shared.write("BLE MODEL observed modelNumber=\(normalizedModelNumber)")
                 return
             }
+            let identifiedCatalogModel = RemoteModel.identified(by: modelNumber)
+            if let identifiedCatalogModel,
+               !identifiedCatalogModel.isT1Remote,
+               !identifiedCatalogModel.isChromecastRemote {
+                t1Candidate = false
+            }
             if t1Candidate {
                 AppLogger.shared.write(
                     "BLE MODEL T1 observed modelNumber=\(DiagnosticRedactor.redactedDeviceName(normalizedModelNumber))"
@@ -2269,7 +2275,7 @@ extension BluetoothRemoteBridge {
 
             audioDecoder.configureFormat(lowNibbleFirst: false)
             modelFormatResolved = true
-            if let model = RemoteModel.identified(by: modelNumber) {
+            if let model = identifiedCatalogModel {
                 // 原始型号串必须一起记：广播名与型号**不是**一一对应（本机这台广播名是
                 // 「小米蓝牙语音遥控器」，DIS 报的却是 RC003），只有原始串能支撑型号目录。
                 AppLogger.shared.write(

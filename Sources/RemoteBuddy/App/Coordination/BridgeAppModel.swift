@@ -15,7 +15,7 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
 
     let connections = BluetoothConnectionRegistry()
     let voiceSession = VoiceSessionRuntime()
-    let audio = AudioRuntime()
+    let audio: AudioRuntime
 
     let settings: AppSettings
     let commonPhraseStore: CommonPhraseStore
@@ -250,6 +250,7 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
         settings: AppSettings? = nil,
         commonPhraseStore: CommonPhraseStore? = nil,
         initialAudioDevices: [AudioDeviceInfo] = [],
+        audioRuntime: AudioRuntime? = nil,
         loginItemService: LoginItemService = LoginItemService(),
         voiceFunctionMapper: RemoteHIDKeyMapper? = nil,
         hidEventSuppressor: KeyboardEventSuppressor? = nil,
@@ -262,6 +263,7 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
         let settings = settings ?? AppSettings()
         self.settings = settings
         self.commonPhraseStore = commonPhraseStore ?? CommonPhraseStore()
+        self.audio = audioRuntime ?? AudioRuntime()
         self.voiceFunctionMapper = voiceFunctionMapper ?? RemoteHIDKeyMapper()
         self.hidEventSuppressor = hidEventSuppressor ?? KeyboardEventSuppressor()
         self.permissionSnapshotProvider = permissionSnapshotProvider

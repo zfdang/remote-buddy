@@ -59,7 +59,7 @@ final class AudibilityCache: @unchecked Sendable {
     }
 
     func value(for deviceID: AudioObjectID, at time: TimeInterval, query: () -> Bool) -> Bool {
-        while true {
+        for _ in 0..<4 {
             let state = lock.withLock { () -> (Bool?, UInt64) in
                 if let cached, cached.deviceID == deviceID, time - cached.checkTime < 2.0 {
                     return (cached.healthy, generation)
@@ -75,6 +75,7 @@ final class AudibilityCache: @unchecked Sendable {
             }
             if accepted { return value }
         }
+        return query()
     }
 }
 
@@ -551,7 +552,8 @@ final class VirtualAudioOutput {
     var pendingPlaybackDuration: TimeInterval {
         playbackLock.lock()
         defer { playbackLock.unlock() }
-        return Double(pendingVoiceSampleCount) / 16_000
+        let sampleRate = sourceFormat.sampleRate > 0 ? sourceFormat.sampleRate : 16_000
+        return Double(pendingVoiceSampleCount) / sampleRate
     }
 
     func endSession() {

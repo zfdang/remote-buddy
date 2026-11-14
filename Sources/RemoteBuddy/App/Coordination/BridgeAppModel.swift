@@ -39,8 +39,6 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
     @Published var isConnected = false
     @Published var isVoiceTriggerEnabled = false
     @Published var activeRemoteButtons = Set<RemoteButton>()
-    /// Chromecast 画布的活动按键（控制 ID）。与苹果遥控器链路完全隔离，互不清除。
-    @Published private(set) var activeChromecastControlIDs = Set<String>()
     @Published var lastRemoteButtonPress: RemoteButton?
     @Published var connectedRemoteProfileIDs = Set<UUID>()
     @Published var remoteBatteryLevels: [UUID: Int] = [:]

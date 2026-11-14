@@ -90,7 +90,7 @@ extension BridgeAppModel {
             applyHIDSettings(allowVoiceKeyModeFallback: false)
         } else if !voiceFunctionMapper.hasMatchingServices,
                   settings.customMappingEnabled || neutralizeVoiceKey {
-            scheduleHIDMappingRecoveryIfNeeded(restartSiriRemote: false)
+            scheduleHIDMappingRecoveryIfNeeded()
         }
         guard Self.canStartBluetoothVoice(
             mode: settings.voiceKeyMode,

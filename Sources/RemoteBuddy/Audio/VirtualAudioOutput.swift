@@ -698,19 +698,6 @@ final class VirtualAudioOutput {
         for context in interruptedContexts {
             AppLogger.shared.write("AUDIO PLAYBACK interrupted \(context)")
         }
-        defer {
-            completeDrainRequests(
-                interruptedDrains,
-                outcome: .forced,
-                phase: "completed",
-                result: "forced",
-                reason: "player_flush",
-                pendingBuffers: 0,
-                pendingSamples: 0,
-                interruptedBuffers: interruptedBuffers,
-                interruptedSamples: interruptedSamples
-            )
-        }
         let restartPlayer = { [weak self] in
             guard let self,
                   let player = self.player,
@@ -728,6 +715,17 @@ final class VirtualAudioOutput {
         } else {
             engineQueue.async(execute: restartPlayer)
         }
+        completeDrainRequests(
+            interruptedDrains,
+            outcome: .forced,
+            phase: "completed",
+            result: "forced",
+            reason: "player_flush",
+            pendingBuffers: 0,
+            pendingSamples: 0,
+            interruptedBuffers: interruptedBuffers,
+            interruptedSamples: interruptedSamples
+        )
     }
 
     func stop() {
@@ -780,19 +778,6 @@ final class VirtualAudioOutput {
         for context in interruptedContexts {
             AppLogger.shared.write("AUDIO PLAYBACK interrupted \(context)")
         }
-        defer {
-            completeDrainRequests(
-                interruptedDrains,
-                outcome: .forced,
-                phase: "completed",
-                result: "forced",
-                reason: "output_stop",
-                pendingBuffers: 0,
-                pendingSamples: 0,
-                interruptedBuffers: interruptedBuffers,
-                interruptedSamples: interruptedSamples
-            )
-        }
         removeEngineConfigurationObserver()
         if let player { _ = RemoteBuddyTryAudioOperation { player.stop() } }
         if let engine { _ = RemoteBuddyTryAudioOperation { engine.stop() } }
@@ -806,6 +791,17 @@ final class VirtualAudioOutput {
             $0.engineRunning = false
             $0.playerPlaying = false
         }
+        completeDrainRequests(
+            interruptedDrains,
+            outcome: .forced,
+            phase: "completed",
+            result: "forced",
+            reason: "output_stop",
+            pendingBuffers: 0,
+            pendingSamples: 0,
+            interruptedBuffers: interruptedBuffers,
+            interruptedSamples: interruptedSamples
+        )
     }
 
     private func scheduledVoiceBufferDidFinish(

@@ -228,7 +228,9 @@ final class BluetoothRemoteBridge: NSObject {
         }
     )
     private lazy var unacknowledgedWrites = FlowControlledBluetoothWriteQueue(
-        canSend: { [weak self] in self?.peripheral?.canSendWriteWithoutResponse == true },
+        canSend: { [weak self] in
+            self?.transmitCharacteristic != nil && self?.peripheral?.canSendWriteWithoutResponse == true
+        },
         send: { [weak self] data in
             guard let self, let peripheral = self.peripheral,
                   let characteristic = self.transmitCharacteristic else { return }
@@ -1842,10 +1844,10 @@ extension BluetoothRemoteBridge: @preconcurrency CBCentralManagerDelegate {
               let generation = centralGeneration,
               lifecycle.acceptsDisconnect(generation: generation)
         else { return }
-        handleDisconnect(error: error)
+        handleDisconnect(error: error, isReconnecting: isReconnecting)
     }
 
-    private func handleDisconnect(error: Error?) {
+    private func handleDisconnect(error: Error?, isReconnecting: Bool? = nil) {
         let shouldBypassCachedTarget: Bool
         switch lifecycle {
         case .connecting, .discovering, .awaitingCapabilities:
@@ -1854,7 +1856,8 @@ extension BluetoothRemoteBridge: @preconcurrency CBCentralManagerDelegate {
             shouldBypassCachedTarget = false
         }
         AppLogger.shared.write(
-            "BLE DISCONNECTED phase=\(lifecycle) " + AppLogger.optionalErrorFields(error)
+            "BLE DISCONNECTED phase=\(lifecycle) is_reconnecting=\(isReconnecting.map(String.init) ?? "unknown") " +
+                AppLogger.optionalErrorFields(error)
         )
         let delay = reconnectDelayAfterFailure(
             bypassCachedTarget: shouldBypassCachedTarget || currentAttemptUsesCachedTarget

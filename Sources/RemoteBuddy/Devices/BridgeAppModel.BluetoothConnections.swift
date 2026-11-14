@@ -90,8 +90,8 @@ extension BridgeAppModel {
             connections.bridges[identifier] = bridge
             attachedBridge = true
         }
-        let appliedTelemetry = applyPendingRemoteTelemetry(identifier: identifier, profileID: profileID)
-        if existingProfileID == nil || attachedBridge || appliedTelemetry {
+        let appliedStatus = applyPendingRemoteStatus(identifier: identifier, profileID: profileID)
+        if existingProfileID == nil || attachedBridge || appliedStatus {
             diagnosticLog(
                 "REMOTE PROFILE phase=completed result=persisted reason=verified_remote_path " +
                     "created=\(existingProfileID == nil)"
@@ -101,7 +101,7 @@ extension BridgeAppModel {
     }
 
     @discardableResult
-    private func applyPendingRemoteTelemetry(identifier: UUID, profileID: UUID) -> Bool {
+    private func applyPendingRemoteStatus(identifier: UUID, profileID: UUID) -> Bool {
         let hadBattery = pendingRemoteBatteryLevels[identifier] != nil
         let hadPower = pendingRemotePowerStates[identifier] != nil
         let hadModel = pendingRemoteModels[identifier] != nil

@@ -8,7 +8,6 @@ import Foundation
 extension BridgeAppModel {
     func applyHIDSettings(
         allowVoiceKeyModeFallback: Bool = true,
-        restartSiriRemote: Bool = true,
         forceRestartMonitors: Bool = false
     ) {
         if audio.suspensionState.suspendsHIDMonitoring {
@@ -25,7 +24,7 @@ extension BridgeAppModel {
         if !permissionSnapshot.accessibilityGranted {
             _ = releaseVoiceKeyIfNeeded()
         }
-        if started, permissionSnapshot.inputMonitoringGranted {
+        if started, permissionSnapshot.inputMonitoringGranted, permissionSnapshot.accessibilityGranted {
             preferredInputSourceMonitor.start()
         } else {
             preferredInputSourceMonitor.stop(
@@ -53,7 +52,6 @@ extension BridgeAppModel {
                 guard cleaned else { return }
                 self?.applyHIDSettings(
                     allowVoiceKeyModeFallback: allowVoiceKeyModeFallback,
-                    restartSiriRemote: restartSiriRemote,
                     forceRestartMonitors: forceRestartMonitors
                 )
             }
@@ -77,7 +75,7 @@ extension BridgeAppModel {
             if settings.selectedRemoteProfile?.model.isT1Remote == true {
                 completeHIDMappingRecoveryIfNeeded()
                 if !voiceFunctionMapper.hasMatchingServices {
-                    scheduleHIDMappingRecoveryIfNeeded(restartSiriRemote: restartSiriRemote)
+                    scheduleHIDMappingRecoveryIfNeeded()
                 }
             }
             refreshVoiceKeyCompatibilityWarning()
@@ -115,9 +113,7 @@ extension BridgeAppModel {
                 AppLogger.shared.write(
                     "VOICE FN TAP mode_pending_mapping reason=no_matching_service"
                 )
-                scheduleHIDMappingRecoveryIfNeeded(
-                    restartSiriRemote: restartSiriRemote
-                )
+                scheduleHIDMappingRecoveryIfNeeded()
             } else {
                 settings.voiceFnTapModeEnabled = false
                 voiceFnTapSession.setEnabled(false)
@@ -184,14 +180,12 @@ extension BridgeAppModel {
         completeHIDMappingRecoveryIfNeeded()
         if !voiceFunctionMapper.hasMatchingServices,
            settings.customMappingEnabled || shouldNeutralizeNativeVoiceKey {
-            scheduleHIDMappingRecoveryIfNeeded(restartSiriRemote: restartSiriRemote)
+            scheduleHIDMappingRecoveryIfNeeded()
         }
         refreshVoiceKeyCompatibilityWarning()
     }
 
-    func scheduleHIDMappingRecoveryIfNeeded(
-        restartSiriRemote: Bool = true
-    ) {
+    func scheduleHIDMappingRecoveryIfNeeded() {
         if settings.selectedRemoteProfile?.model.isChromecastRemote == true {
             cancelHIDMappingRecovery(reason: "google_atvv_voice")
             return
@@ -243,11 +237,9 @@ extension BridgeAppModel {
                 "HID MAPPING RECOVERY applying attempt=\(attempt) " +
                     "ready_bridges=\(self.readyBluetoothBridgeCount)"
             )
-            self.applyHIDSettings(restartSiriRemote: restartSiriRemote)
+            self.applyHIDSettings()
             if !self.voiceFunctionMapper.hasMatchingServices {
-                self.scheduleHIDMappingRecoveryIfNeeded(
-                    restartSiriRemote: restartSiriRemote
-                )
+                self.scheduleHIDMappingRecoveryIfNeeded()
             }
         }
         hidMappingRecoveryWorkItem = workItem
@@ -412,6 +404,8 @@ extension BridgeAppModel {
 
     func stopHIDMonitors() {
         // Detach the blocking event tap before any synchronous IOKit close.
+        hidFilterRetryWorkItem?.cancel()
+        hidFilterRetryWorkItem = nil
         appliedHIDMonitoringConfiguration = nil
         hidEventSuppressor.stop()
         hidMonitors.values.forEach { $0.stop() }
@@ -492,12 +486,12 @@ extension BridgeAppModel {
             if let applyMappings {
                 applyMappings()
             } else {
-                applyHIDSettings(restartSiriRemote: false)
+                applyHIDSettings()
             }
         } else if applyMappings == nil,
                   !voiceFunctionMapper.hasMatchingServices,
                   settings.customMappingEnabled || shouldNeutralizeNativeVoiceKey {
-            scheduleHIDMappingRecoveryIfNeeded(restartSiriRemote: false)
+            scheduleHIDMappingRecoveryIfNeeded()
         }
     }
 

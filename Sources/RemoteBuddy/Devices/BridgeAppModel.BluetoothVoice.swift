@@ -90,7 +90,7 @@ extension BridgeAppModel {
             applyHIDSettings(allowVoiceKeyModeFallback: false)
         } else if !voiceFunctionMapper.hasMatchingServices,
                   settings.customMappingEnabled || neutralizeVoiceKey {
-            scheduleHIDMappingRecoveryIfNeeded(restartSiriRemote: false)
+            scheduleHIDMappingRecoveryIfNeeded()
         }
         guard Self.canStartBluetoothVoice(
             mode: settings.voiceKeyMode,
@@ -372,7 +372,7 @@ extension BridgeAppModel {
         }
         let id = UUID()
         voiceSession.pendingKeyRelease = (id, deviceIdentifier)
-        let maximumDelay = audio.output.pendingPlaybackDuration + 0.75
+        let maximumDelay = max(0.75, audio.output.pendingPlaybackDuration + 0.75)
         AppLogger.shared.write("VOICE HOLD playback_stop id=\(id) phase=requested timeout_ms=\(Int(maximumDelay * 1_000))")
         let drain = drainAudio ?? { [weak self] delay, completion in
             self?.audio.output.endSessionAfterDraining(

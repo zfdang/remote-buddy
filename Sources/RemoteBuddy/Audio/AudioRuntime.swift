@@ -8,7 +8,11 @@ final class AudioRuntime {
     typealias AudioHardwareListenerRemover = (
         inout AudioObjectPropertyAddress, DispatchQueue, @escaping AudioObjectPropertyListenerBlock
     ) -> OSStatus
-    let output = VirtualAudioOutput()
+    let output: VirtualAudioOutput
+
+    init(output: VirtualAudioOutput = VirtualAudioOutput()) {
+        self.output = output
+    }
     let preparationQueue = DispatchQueue(label: "RemoteBuddy.audioPreparation", qos: .userInitiated)
     var configurationGeneration: UInt64 = 0
     var startupGeneration: UInt64 = 0

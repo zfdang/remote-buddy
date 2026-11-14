@@ -138,8 +138,16 @@ final class HIDRemoteMonitor {
     private var manager: IOHIDManager?
     private var callbackContext: HIDMonitorContext?
     private var callbackOpaqueContext: Unmanaged<HIDMonitorContext>?
+    private struct CachedDeviceMetadata {
+        let fingerprint: String?
+        let identity: RemoteHIDIdentity?
+        let locationID: UInt32?
+        let reportDescriptor: Data?
+    }
+
     private var activeDevice: IOHIDDevice?
     private var probedDevices: [IOHIDDevice] = []
+    private var cachedDeviceMetadata: [ObjectIdentifier: CachedDeviceMetadata] = [:]
     private(set) var deviceFingerprint: String?
     private(set) var profileID: UUID?
     private var activeDeviceIsSeized = false
@@ -156,7 +164,9 @@ final class HIDRemoteMonitor {
     private var nonRepeatableReleaseTimers: [RemoteButton: HIDRemoteScheduledTask] = [:]
     private var gestureRecognizer = RemoteButtonGestureRecognizer()
     private var doubleClickTimers: [RemoteButton: HIDRemoteScheduledTask] = [:]
+    private var doubleClickTimerTokens: [RemoteButton: UUID] = [:]
     private var longPressTimers: [RemoteButton: HIDRemoteScheduledTask] = [:]
+    private var longPressTimerTokens: [RemoteButton: UUID] = [:]
     private var permissionPollSubscription: HIDPermissionPoll.Subscription?
     private var appSwitcherTimeout: HIDRemoteScheduledTask?
     private var appSwitcherFrontmostMonitor: HIDRemoteScheduledTask?
@@ -376,6 +386,7 @@ final class HIDRemoteMonitor {
             IOHIDDeviceClose($0, IOOptionBits(kIOHIDOptionsTypeNone))
         }
         probedDevices.removeAll()
+        cachedDeviceMetadata.removeAll()
         if let activeDevice {
             IOHIDDeviceClose(activeDevice, IOOptionBits(kIOHIDOptionsTypeNone))
             self.activeDevice = nil
@@ -383,11 +394,6 @@ final class HIDRemoteMonitor {
             activeDeviceIsSeized = false
         }
         guard let manager else { return }
-        IOHIDManagerUnscheduleFromRunLoop(
-            manager,
-            CFRunLoopGetMain(),
-            CFRunLoopMode.commonModes.rawValue
-        )
         IOHIDManagerClose(manager, IOOptionBits(kIOHIDOptionsTypeNone))
         self.manager = nil
     }
@@ -401,19 +407,20 @@ final class HIDRemoteMonitor {
         // HID may become visible after BLE readiness. Retry association outside the
         // matching callback because learning can restart the manager.
         DispatchQueue.main.async { [weak self] in self?.onCandidateAvailable?() }
-        currentReportIsGoogle = allowsG9N9N && isGoogleDevice(device)
-        currentReportIsT1 = !currentReportIsGoogle && allowsT1Remote && isT1Device(device)
-        guard !isGoogleCandidateIdentity(device) || currentReportIsGoogle else { return }
-        guard !isT1CandidateIdentity(device) || currentReportIsT1 else { return }
+        let deviceMetadata = metadata(for: device)
+        currentReportIsGoogle = allowsG9N9N && isGoogleDevice(device, metadata: deviceMetadata)
+        currentReportIsT1 = !currentReportIsGoogle && allowsT1Remote && isT1Device(device, metadata: deviceMetadata)
+        guard !isGoogleCandidateIdentity(device, metadata: deviceMetadata) || currentReportIsGoogle else { return }
+        guard !isT1CandidateIdentity(device, metadata: deviceMetadata) || currentReportIsT1 else { return }
         guard currentReportIsGoogle || Self.isLocationAllowed(
-            locationID: Self.locationID(for: device),
+            locationID: deviceMetadata.locationID,
             allowedLocationIDs: allowedLocationIDs
         ) else {
             diagnosticLogger("HID DEVICE rejected reason=unsafe_location")
             return
         }
         switch Self.deviceMatchDecision(
-            reportingFingerprint: Self.fingerprint(for: device),
+            reportingFingerprint: deviceMetadata.fingerprint,
             activeFingerprint: deviceFingerprint,
             targetFingerprint: targetFingerprint,
             excludedFingerprints: excludedFingerprints()
@@ -462,6 +469,7 @@ final class HIDRemoteMonitor {
             IOHIDDeviceClose($0, IOOptionBits(kIOHIDOptionsTypeNone))
         }
         probedDevices.removeAll()
+        cachedDeviceMetadata.removeAll()
         activeDevice = selectedDevice
         deviceFingerprint = fingerprint
         activeDeviceIsSeized = false
@@ -564,6 +572,7 @@ final class HIDRemoteMonitor {
     }
 
     fileprivate func deviceDidRemove(device: IOHIDDevice) {
+        cachedDeviceMetadata.removeValue(forKey: ObjectIdentifier(device))
         if let activeDevice, CFEqual(activeDevice, device) {
             IOHIDDeviceClose(activeDevice, IOOptionBits(kIOHIDOptionsTypeNone))
             self.activeDevice = nil
@@ -591,24 +600,25 @@ final class HIDRemoteMonitor {
             diagnosticLogger("HID REPORT rejected reason=mapping_disabled")
             return
         }
-        currentReportIsGoogle = allowsG9N9N && isGoogleDevice(device)
-        currentReportIsT1 = !currentReportIsGoogle && allowsT1Remote && isT1Device(device)
-        currentReportDescriptor = IOHIDDeviceGetProperty(device, kIOHIDReportDescriptorKey as CFString) as? Data
+        let deviceMetadata = metadata(for: device)
+        currentReportIsGoogle = allowsG9N9N && isGoogleDevice(device, metadata: deviceMetadata)
+        currentReportIsT1 = !currentReportIsGoogle && allowsT1Remote && isT1Device(device, metadata: deviceMetadata)
+        currentReportDescriptor = deviceMetadata.reportDescriptor
         if currentReportIsGoogle {
             let payload = data.prefix(16).map { String(format: "%02X", $0) }.joined(separator: " ")
             diagnosticLogger("HID GOOGLE report id=\(reportID) bytes=\(data.count) payload=\(payload)")
         }
-        guard !isGoogleCandidateIdentity(device) || currentReportIsGoogle else { return }
-        guard !isT1CandidateIdentity(device) || currentReportIsT1 else { return }
+        guard !isGoogleCandidateIdentity(device, metadata: deviceMetadata) || currentReportIsGoogle else { return }
+        guard !isT1CandidateIdentity(device, metadata: deviceMetadata) || currentReportIsT1 else { return }
         guard currentReportIsGoogle || Self.isLocationAllowed(
-            locationID: Self.locationID(for: device),
+            locationID: deviceMetadata.locationID,
             allowedLocationIDs: allowedLocationIDs
         ) else {
             diagnosticLogger("HID REPORT rejected reason=unsafe_location")
             return
         }
         let routing = Self.reportRoutingDecision(
-            reportingFingerprint: Self.fingerprint(for: device),
+            reportingFingerprint: deviceMetadata.fingerprint,
             activeFingerprint: deviceFingerprint,
             targetFingerprint: targetFingerprint,
             excludedFingerprints: excludedFingerprints()
@@ -1210,8 +1220,8 @@ final class HIDRemoteMonitor {
         guard activeUsages.contains(usage) || nonRepeatablePressedButtons.contains(button) else { return }
         diagnosticLogger("HID BUTTON recovered reason=\(reason) button=\(button.rawValue)")
         cancelRepeat(for: usage)
-        doubleClickTimers.removeValue(forKey: button)?.cancel()
-        longPressTimers.removeValue(forKey: button)?.cancel()
+        cancelDoubleClickTimeout(for: button)
+        cancelLongPressTimeout(for: button)
         gestureRecognizer.cancel(button)
         finishNonRepeatablePress(button)
         if nativePassthroughUsages.remove(usage) != nil {
@@ -1224,6 +1234,7 @@ final class HIDRemoteMonitor {
             eventSuppressor.arm(button: button, edge: .up)
         }
         activeUsages.remove(usage)
+        t1ReportUsageState.remove(usage)
         _ = onRuntimeButton?(profileID, button, .release)
         emitActiveButtons()
     }
@@ -1501,28 +1512,45 @@ final class HIDRemoteMonitor {
         }
     }
 
-    private func isGoogleCandidateIdentity(_ device: IOHIDDevice) -> Bool {
-        guard let identity = RemoteHIDIdentity.read(from: device) else { return false }
+    private func metadata(for device: IOHIDDevice) -> CachedDeviceMetadata {
+        let key = ObjectIdentifier(device)
+        if let cached = cachedDeviceMetadata[key] {
+            return cached
+        }
+        let resolved = CachedDeviceMetadata(
+            fingerprint: Self.fingerprint(for: device),
+            identity: RemoteHIDIdentity.read(from: device),
+            locationID: Self.locationID(for: device),
+            reportDescriptor: IOHIDDeviceGetProperty(device, kIOHIDReportDescriptorKey as CFString) as? Data
+        )
+        cachedDeviceMetadata[key] = resolved
+        return resolved
+    }
+
+    private func isGoogleCandidateIdentity(_ device: IOHIDDevice, metadata: CachedDeviceMetadata? = nil) -> Bool {
+        guard let identity = (metadata ?? self.metadata(for: device)).identity else { return false }
         return identity == .chromecast || settings.compatibleHIDIdentities(
             includeXiaomi: false, includeGoogle: true).contains(identity)
     }
 
-    private func isGoogleDevice(_ device: IOHIDDevice) -> Bool {
-        guard let fingerprint = Self.fingerprint(for: device),
-              let identity = RemoteHIDIdentity.read(from: device) else { return false }
+    private func isGoogleDevice(_ device: IOHIDDevice, metadata: CachedDeviceMetadata? = nil) -> Bool {
+        let resolved = metadata ?? self.metadata(for: device)
+        guard let fingerprint = resolved.fingerprint,
+              let identity = resolved.identity else { return false }
         return Self.matchesGoogleProtocol(identity: identity, fingerprint: fingerprint,
             profiles: settings.remoteDeviceProfiles)
     }
 
-    private func isT1CandidateIdentity(_ device: IOHIDDevice) -> Bool {
-        guard let identity = RemoteHIDIdentity.read(from: device) else { return false }
+    private func isT1CandidateIdentity(_ device: IOHIDDevice, metadata: CachedDeviceMetadata? = nil) -> Bool {
+        guard let identity = (metadata ?? self.metadata(for: device)).identity else { return false }
         return identity == .t1Remote || settings.compatibleHIDIdentities(
             includeXiaomi: false, includeGoogle: false, includeT1: true).contains(identity)
     }
 
-    private func isT1Device(_ device: IOHIDDevice) -> Bool {
-        guard let fingerprint = Self.fingerprint(for: device),
-              let identity = RemoteHIDIdentity.read(from: device) else { return false }
+    private func isT1Device(_ device: IOHIDDevice, metadata: CachedDeviceMetadata? = nil) -> Bool {
+        let resolved = metadata ?? self.metadata(for: device)
+        guard let fingerprint = resolved.fingerprint,
+              let identity = resolved.identity else { return false }
         return Self.matchesT1Protocol(identity: identity, fingerprint: fingerprint,
             profiles: settings.remoteDeviceProfiles)
     }
@@ -1718,8 +1746,8 @@ final class HIDRemoteMonitor {
             }
             // A hold has won over the deferred click; release must not emit another click.
             self.gestureRecognizer.cancel(button)
-            self.doubleClickTimers.removeValue(forKey: button)?.cancel()
-            self.longPressTimers.removeValue(forKey: button)?.cancel()
+            self.cancelDoubleClickTimeout(for: button)
+            self.cancelLongPressTimeout(for: button)
             if !self.performConfiguredAction(for: button, trigger: .singleClick) {
                 self.cancelRepeat(for: usage)
             }
@@ -1735,11 +1763,11 @@ final class HIDRemoteMonitor {
             case let .scheduleDoubleClickTimeout(button):
                 scheduleDoubleClickTimeout(for: button)
             case let .cancelDoubleClickTimeout(button):
-                doubleClickTimers.removeValue(forKey: button)?.cancel()
+                cancelDoubleClickTimeout(for: button)
             case let .scheduleLongPressTimeout(button):
                 scheduleLongPressTimeout(for: button)
             case let .cancelLongPressTimeout(button):
-                longPressTimers.removeValue(forKey: button)?.cancel()
+                cancelLongPressTimeout(for: button)
             case let .trigger(button, trigger):
                 diagnosticLogger(
                     "HID GESTURE button=\(button.rawValue) trigger=\(trigger.rawValue) path=recognizer"
@@ -1750,13 +1778,26 @@ final class HIDRemoteMonitor {
         return true
     }
 
-    private func scheduleDoubleClickTimeout(for button: RemoteButton) {
+    private func cancelDoubleClickTimeout(for button: RemoteButton) {
+        doubleClickTimerTokens.removeValue(forKey: button)
         doubleClickTimers.removeValue(forKey: button)?.cancel()
+    }
+
+    private func cancelLongPressTimeout(for button: RemoteButton) {
+        longPressTimerTokens.removeValue(forKey: button)
+        longPressTimers.removeValue(forKey: button)?.cancel()
+    }
+
+    private func scheduleDoubleClickTimeout(for button: RemoteButton) {
+        cancelDoubleClickTimeout(for: button)
+        let token = UUID()
+        doubleClickTimerTokens[button] = token
         let timer = scheduler.schedule(
             afterMilliseconds: HIDRemoteTiming.doubleClickMilliseconds,
             repeatingEveryMilliseconds: nil
         ) { [weak self] in
-            guard let self else { return }
+            guard let self, self.doubleClickTimerTokens[button] == token else { return }
+            self.doubleClickTimerTokens.removeValue(forKey: button)
             self.doubleClickTimers.removeValue(forKey: button)
             _ = self.processGestureCommands(self.gestureRecognizer.doubleClickTimedOut(button))
         }
@@ -1764,12 +1805,15 @@ final class HIDRemoteMonitor {
     }
 
     private func scheduleLongPressTimeout(for button: RemoteButton) {
-        longPressTimers.removeValue(forKey: button)?.cancel()
+        cancelLongPressTimeout(for: button)
+        let token = UUID()
+        longPressTimerTokens[button] = token
         let timer = scheduler.schedule(
             afterMilliseconds: HIDRemoteTiming.longPressMilliseconds,
             repeatingEveryMilliseconds: nil
         ) { [weak self] in
-            guard let self else { return }
+            guard let self, self.longPressTimerTokens[button] == token else { return }
+            self.longPressTimerTokens.removeValue(forKey: button)
             self.longPressTimers.removeValue(forKey: button)
             _ = self.processGestureCommands(self.gestureRecognizer.longPressTimedOut(button))
         }
@@ -1948,8 +1992,10 @@ final class HIDRemoteMonitor {
     }
 
     private func resetGestureRecognition() {
+        doubleClickTimerTokens.removeAll()
         doubleClickTimers.values.forEach { $0.cancel() }
         doubleClickTimers.removeAll()
+        longPressTimerTokens.removeAll()
         longPressTimers.values.forEach { $0.cancel() }
         longPressTimers.removeAll()
         gestureRecognizer.reset()

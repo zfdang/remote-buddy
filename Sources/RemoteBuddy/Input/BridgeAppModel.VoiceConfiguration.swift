@@ -87,7 +87,7 @@ extension BridgeAppModel {
         settings.voiceFnTapModeEnabled = false
         voiceFnTapSession.setEnabled(false) { [weak self] cleaned in
             guard cleaned else { return }
-            self?.applyHIDSettings(restartSiriRemote: false)
+            self?.applyHIDSettings()
         }
     }
 
@@ -123,7 +123,7 @@ extension BridgeAppModel {
                 guard cleaned else { return }
                 guard let self else { return }
                 self.settings.voiceKeyMode = mode
-                self.applyHIDSettings(restartSiriRemote: false)
+                self.applyHIDSettings()
                 AppLogger.shared.write(
                     "VOICE KEY mode_change completed from=\(previousMode) to=\(mode.rawValue) result=applied"
                 )
@@ -132,7 +132,7 @@ extension BridgeAppModel {
         }
 
         settings.voiceKeyMode = .function
-        applyHIDSettings(restartSiriRemote: false)
+        applyHIDSettings()
         AppLogger.shared.write(
             "VOICE KEY mode_change completed from=\(previousMode) to=fn result=applied"
         )
@@ -142,7 +142,7 @@ extension BridgeAppModel {
         guard KeyboardInjector.isAccessibilityTrusted else {
             settings.voiceFnTapModeEnabled = false
             requestNextHIDPermissionIfNeeded(voiceFnTapModeRequested: true)
-            applyHIDSettings(restartSiriRemote: false)
+            applyHIDSettings()
             return
         }
 
@@ -165,7 +165,7 @@ extension BridgeAppModel {
                     "VOICE FN TAP mode_pending_mapping reason=no_matching_service"
                 )
                 startHIDMonitors(powerKeySuppressed: powerKeySuppressed)
-                scheduleHIDMappingRecoveryIfNeeded(restartSiriRemote: false)
+                scheduleHIDMappingRecoveryIfNeeded()
                 return
             }
             settings.voiceFnTapModeEnabled = false
@@ -188,7 +188,7 @@ extension BridgeAppModel {
         AppLogger.shared.write("VOICE FN TAP failed reason=\(failure.rawValue) fallback=hardware_fn")
         settings.voiceFnTapModeEnabled = false
         voiceFnTapSession.setEnabled(false)
-        applyHIDSettings(restartSiriRemote: false)
+        applyHIDSettings()
     }
 
     func requestNextHIDPermissionIfNeeded(

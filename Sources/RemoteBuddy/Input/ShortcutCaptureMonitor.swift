@@ -124,11 +124,17 @@ final class ShortcutCaptureMonitor {
             // Capture must never claim that it suppresses keys while its tap is disabled.
             // End the prompt immediately; the user can explicitly begin a new capture.
             stop()
+            lock.lock()
             let generation = captureGeneration
+            lock.unlock()
             let failure: ShortcutCaptureStartFailure = accessibilityTrusted()
                 ? .eventTapUnavailable : .accessibilityPermissionRequired
             dispatchCallback { [weak self] in
-                guard let self, self.captureGeneration == generation else { return }
+                guard let self else { return }
+                self.lock.lock()
+                let isCurrent = self.captureGeneration == generation
+                self.lock.unlock()
+                guard isCurrent else { return }
                 self.onUnavailable(failure)
             }
             return false

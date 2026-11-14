@@ -134,6 +134,15 @@ enum VoiceRemoteAdmission {
         return ForeignVoiceRemoteProduct.isRejected(name: name)
     }
 
+    static func resolvedName(advertisedName: String?, peripheralName: String?) -> String? {
+        for candidate in [advertisedName, peripheralName] {
+            if let trimmed = candidate?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty {
+                return trimmed
+            }
+        }
+        return nil
+    }
+
     static func decide(
         identifier: UUID,
         targetIdentifier: UUID?,
@@ -144,7 +153,7 @@ enum VoiceRemoteAdmission {
         allowsT1Remote: Bool = false,
         adoptUnidentifiedATVVAsT1: Bool = false
     ) -> VoiceRemoteAdmissionDecision {
-        let nameForMatch = advertisedName ?? name
+        let nameForMatch = Self.resolvedName(advertisedName: advertisedName, peripheralName: name)
         if allowsG9N9N, G9N9NProtocol.isCandidateName(nameForMatch) {
             if let targetIdentifier, identifier != targetIdentifier { return .ignore }
             return targetIdentifier == nil ? .adoptRecognizedName(nameForMatch ?? "G9N9N") : .adoptSavedIdentity

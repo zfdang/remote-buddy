@@ -15,7 +15,7 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
 
     let connections = BluetoothConnectionRegistry()
     let voiceSession = VoiceSessionRuntime()
-    let audio = AudioRuntime()
+    let audio: AudioRuntime
 
     let settings: AppSettings
     let commonPhraseStore: CommonPhraseStore
@@ -39,8 +39,6 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
     @Published var isConnected = false
     @Published var isVoiceTriggerEnabled = false
     @Published var activeRemoteButtons = Set<RemoteButton>()
-    /// Chromecast 画布的活动按键（控制 ID）。与苹果遥控器链路完全隔离，互不清除。
-    @Published private(set) var activeChromecastControlIDs = Set<String>()
     @Published var lastRemoteButtonPress: RemoteButton?
     @Published var connectedRemoteProfileIDs = Set<UUID>()
     @Published var remoteBatteryLevels: [UUID: Int] = [:]
@@ -229,6 +227,7 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
     var hidServiceMappingRefreshGeneration: UInt64 = 0
     private var terminationObserver: NSObjectProtocol?
     var completedUpdateHIDRecoveryWorkItem: DispatchWorkItem?
+    var hidFilterRetryWorkItem: DispatchWorkItem?
     var hidMappingRecoveryWorkItem: DispatchWorkItem?
     var hidMappingRecoveryAttempt = 0
     var hidMappingRecoveryGeneration: UInt64 = 0
@@ -251,6 +250,7 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
         settings: AppSettings? = nil,
         commonPhraseStore: CommonPhraseStore? = nil,
         initialAudioDevices: [AudioDeviceInfo] = [],
+        audioRuntime: AudioRuntime? = nil,
         loginItemService: LoginItemService = LoginItemService(),
         voiceFunctionMapper: RemoteHIDKeyMapper? = nil,
         hidEventSuppressor: KeyboardEventSuppressor? = nil,
@@ -263,6 +263,7 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
         let settings = settings ?? AppSettings()
         self.settings = settings
         self.commonPhraseStore = commonPhraseStore ?? CommonPhraseStore()
+        self.audio = audioRuntime ?? AudioRuntime()
         self.voiceFunctionMapper = voiceFunctionMapper ?? RemoteHIDKeyMapper()
         self.hidEventSuppressor = hidEventSuppressor ?? KeyboardEventSuppressor()
         self.permissionSnapshotProvider = permissionSnapshotProvider
@@ -286,6 +287,17 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
                         HIDStatusKeys.interrupted)
             )
             self.refreshRuntimePermissionDiagnosis(trigger: "hid_filter_disabled")
+            let retry = DispatchWorkItem { [weak self] in
+                guard let self else { return }
+                self.hidFilterRetryWorkItem = nil
+                guard self.started,
+                      self.hidMonitoringInterrupted,
+                      self.hidFilterFailureState == .systemDisabled
+                else { return }
+                self.refreshHIDAfterPermissionChange()
+            }
+            self.hidFilterRetryWorkItem = retry
+            DispatchQueue.main.asyncAfter(deadline: .now() + 30, execute: retry)
         }
         voiceToolCancellable = settings.$onboardingVoiceTool
             .removeDuplicates()
@@ -356,6 +368,8 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
         cancelHIDMappingRecovery(reason: "app_stop")
         completedUpdateHIDRecoveryWorkItem?.cancel()
         completedUpdateHIDRecoveryWorkItem = nil
+        hidFilterRetryWorkItem?.cancel()
+        hidFilterRetryWorkItem = nil
         audio.invalidatePendingWork()
         stopObservingAudioHardware()
         cancelTestToneIfNeeded(

@@ -5,11 +5,18 @@ import Testing
 @Suite("Idle audio releases the sleep blocker")
 @MainActor
 struct IdleAudioLifecycleTests {
-    private func withModel(_ body: (BridgeAppModel, BluetoothRemoteBridge) async throws -> Void) async throws {
+    private func withModel(
+        audioOutput: VirtualAudioOutput = VirtualAudioOutput(),
+        _ body: (BridgeAppModel, BluetoothRemoteBridge) async throws -> Void
+    ) async throws {
         let name = UUID().uuidString
         let values = try #require(UserDefaults(suiteName: name))
         defer { values.removePersistentDomain(forName: name) }
-        let model = BridgeAppModel(settings: AppSettings(defaults: values), initialAudioDevices: [])
+        let model = BridgeAppModel(
+            settings: AppSettings(defaults: values),
+            initialAudioDevices: [],
+            audioRuntime: AudioRuntime(output: audioOutput)
+        )
         let identifier = UUID()
         let bridge = BluetoothRemoteBridge(settings: model.settings, delegate: model, targetIdentifier: identifier)
         model.connections.bridges[identifier] = bridge
@@ -73,7 +80,9 @@ struct IdleAudioLifecycleTests {
 
     @Test(arguments: [false, true])
     func remoteStopDrainsTailAndNewVoicePreventsTeardown(restart: Bool) async throws {
-        try await withModel { model, bridge in
+        let clock = ControlledTestScheduler()
+        let output = VirtualAudioOutput(scheduleDrainDeadline: clock.voiceSchedule)
+        try await withModel(audioOutput: output) { model, bridge in
             model.voiceSession.begin(deviceIdentifier: try #require(bridge.deviceIdentifier))
             model.isStreaming = true
             model.audio.output.registerPendingVoiceBuffer()
@@ -86,7 +95,12 @@ struct IdleAudioLifecycleTests {
                 model.voiceSession.isActive = true
                 model.cancelVirtualAudioReleaseIfPending(trigger: "bluetooth_voice_start")
             }
-            try await Task.sleep(for: .milliseconds(850))
+            clock.advance(to: 749)
+            if !restart {
+                #expect(model.audio.pendingVirtualAudioRelease != nil)
+                #expect(model.audio.output.pendingVoiceBufferCountForDiagnostics == 1)
+            }
+            clock.advance(to: 850)
             #expect(model.audio.pendingVirtualAudioRelease == nil)
             // The bounded drain releases an abandoned tail, but a fresh session
             // cancels that timer and retains the queued audio.

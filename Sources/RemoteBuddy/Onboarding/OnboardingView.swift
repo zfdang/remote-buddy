@@ -123,7 +123,7 @@ struct OnboardingView: View {
             refreshSecureInputState()
         }
         .task(id: settings.onboardingStep) { @MainActor in
-            while !Task.isCancelled, settings.onboardingStep != .complete {
+            while !Task.isCancelled {
                 let ready = bluetoothAuthorization == .allowedAlways && inputMonitoringGranted && accessibilityGranted
                 do { try await Task.sleep(for: .seconds(ready ? 5 : 1)) }
                 catch { return }

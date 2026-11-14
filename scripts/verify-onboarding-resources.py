@@ -26,10 +26,43 @@ referenced_keys.update(re.findall(r'detailKey:\s*"([\w\.-]+)"', source))
 referenced_keys.update(re.findall(r'localization\.text\("([\w\.-]+)"\)', source))
 referenced_keys.update(re.findall(r'snapshot\.text\(\s*"([\w\.-]+)"', source))
 referenced_keys.update(re.findall(r'LocalizedMessage\(\s*"([\w\.-]+)"', source))
+PLACEHOLDER_RE = re.compile(
+    r'%(?:\d+\$)?[+#0\- ]*(?:\d+)?(?:\.\d+)?(?:ll|l|hh|h|z|t|j)?[@dDuUxXoOfeEgGcCsSp]'
+)
+localized_entries_by_lang = {}
 for strings in sorted(resources.glob('*.lproj/Localizable.strings')):
-    keys = set(re.findall(r'^\s*"([^"\n]+)"\s*=', strings.read_text(), re.MULTILINE))
+    entries = {
+        match.group(1): match.group(2)
+        for match in re.finditer(
+            r'^\s*"((?:[^"\\]|\\.)*)"\s*=\s*"((?:[^"\\]|\\.)*)"\s*;',
+            strings.read_text(),
+            re.MULTILINE,
+        )
+    }
+    keys = set(entries)
     missing = [k for k in sorted(referenced_keys) if k not in keys]
     assert not missing, f'Missing referenced localization keys in {strings}: {missing}'
+    localized_entries_by_lang[strings.parent.name] = entries
+
+langs = sorted(localized_entries_by_lang)
+assert len(langs) >= 2, f'Expected multiple Localizable.strings languages, got: {langs}'
+base_lang, base_entries = langs[0], localized_entries_by_lang[langs[0]]
+for lang, entries in localized_entries_by_lang.items():
+    if lang == base_lang:
+        continue
+    only_base = sorted(set(base_entries) - set(entries))
+    only_lang = sorted(set(entries) - set(base_entries))
+    assert not only_base and not only_lang, (
+        f'Localization key mismatch between {base_lang} and {lang}: '
+        f'only_{base_lang}={only_base}, only_{lang}={only_lang}'
+    )
+    for key in sorted(base_entries):
+        base_placeholders = sorted(PLACEHOLDER_RE.findall(base_entries[key].replace('%%', '')))
+        lang_placeholders = sorted(PLACEHOLDER_RE.findall(entries[key].replace('%%', '')))
+        assert base_placeholders == lang_placeholders, (
+            f'Localization placeholder mismatch for {key} between {base_lang} '
+            f'({base_placeholders}) and {lang} ({lang_placeholders})'
+        )
 
 names = set(re.findall(r'\.screenshot\("([\w-]+)"\)', source))
 names.update(re.findall(r'onboardingGuideScreenshot\(\s*resourceName: "([\w-]+)"', source))

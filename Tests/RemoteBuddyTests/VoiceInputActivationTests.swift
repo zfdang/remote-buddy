@@ -6,13 +6,13 @@ import Testing
 @Suite("Ordered voice input activation")
 @MainActor
 struct VoiceInputActivationTests {
-    private func model() throws -> BridgeAppModel {
+    private func makeModel() throws -> (model: BridgeAppModel, defaults: UserDefaults, suite: String) {
         let suite = "voice-activation-" + UUID().uuidString
         let defaults = try #require(UserDefaults(suiteName: suite))
         let settings = AppSettings(defaults: defaults)
         settings.setOnboardingVoiceTool(.weixin)
         settings.voiceKeyMode = .function
-        return BridgeAppModel(settings: settings, initialAudioDevices: [])
+        return (BridgeAppModel(settings: settings, initialAudioDevices: []), defaults, suite)
     }
 
     private func beginInlineSession(_ monitor: PreferredInputSourceMonitor) -> Bool {
@@ -22,7 +22,8 @@ struct VoiceInputActivationTests {
     }
 
     @Test func firstFnWaitsForActivationAndLeavesSourceSelectedAfterStop() throws {
-        let model = try model()
+        let (model, defaults, suite) = try makeModel()
+        defer { defaults.removePersistentDomain(forName: suite) }
         let target = try #require(OnboardingVoiceTool.weixin.preferredInputSourceID)
         var source = "previous"
         var events: [String] = []
@@ -56,7 +57,8 @@ struct VoiceInputActivationTests {
     }
 
     @Test func cancelledActivationCannotSendFnDownOrBlockTheNextSession() throws {
-        let model = try model()
+        let (model, defaults, suite) = try makeModel()
+        defer { defaults.removePersistentDomain(forName: suite) }
         var source = "previous"
         var cancel = true
         var posted: [Bool] = []
@@ -92,7 +94,8 @@ struct VoiceInputActivationTests {
     }
 
     @Test func activationTimeoutRollsBackBeforePostingAnyKey() throws {
-        let model = try model()
+        let (model, defaults, suite) = try makeModel()
+        defer { defaults.removePersistentDomain(forName: suite) }
         var source = "previous"
         var posts = 0
         model.preferredInputSourceMonitor = PreferredInputSourceMonitor(
@@ -109,7 +112,8 @@ struct VoiceInputActivationTests {
     }
 
     @Test func failedFnUpAndConfirmedCleanupBothRetainSourceForComposition() throws {
-        let model = try model()
+        let (model, defaults, suite) = try makeModel()
+        defer { defaults.removePersistentDomain(forName: suite) }
         var source = "previous"
         model.preferredInputSourceMonitor = PreferredInputSourceMonitor(
             voiceTool: { .weixin }, prepareInputSource: { tool in source = tool.preferredInputSourceID!; return .selected },
@@ -161,7 +165,8 @@ struct VoiceInputActivationTests {
     }
 
     @Test func delayedResultRemainsAttachedAfterKeyUpAndMonitorStop() throws {
-        let model = try model()
+        let (model, defaults, suite) = try makeModel()
+        defer { defaults.removePersistentDomain(forName: suite) }
         let target = try #require(OnboardingVoiceTool.weixin.preferredInputSourceID)
         var source = "previous"
         var restores = 0
@@ -319,7 +324,8 @@ struct VoiceInputActivationTests {
 
     @Test func failedSourceSelectionOrFnDownNeverLeavesTheSourceOwned() throws {
         for selection in [OnboardingInputSourceSwitchResult.failed, .selected] {
-            let model = try model()
+            let (model, defaults, suite) = try makeModel()
+            defer { defaults.removePersistentDomain(forName: suite) }
             var source = "previous"
             var posts = 0
             model.preferredInputSourceMonitor = PreferredInputSourceMonitor(
@@ -358,7 +364,8 @@ struct VoiceInputActivationTests {
     }
 
     @Test func multipleVoiceOwnersReleaseKeysWithoutRestoringTheSource() throws {
-        let model = try model()
+        let (model, defaults, suite) = try makeModel()
+        defer { defaults.removePersistentDomain(forName: suite) }
         var source = "previous"
         var posts: [Bool] = []
         model.preferredInputSourceMonitor = PreferredInputSourceMonitor(
@@ -379,7 +386,8 @@ struct VoiceInputActivationTests {
         #expect(posts == [true, false])
     }
     @Test func toolChangesRemainPendingUntilBothRecordingAndKeyCleanupEnd() throws {
-        let model = try model()
+        let (model, defaults, suite) = try makeModel()
+        defer { defaults.removePersistentDomain(forName: suite) }
         model.started = true
         model.isStreaming = true
         model.pendingVoiceToolMappingRefresh = true
@@ -440,7 +448,8 @@ struct VoiceInputActivationTests {
     }
 
     @Test func cancelledDeferredActivationCannotPostOrMutateNewSession() throws {
-        let model = try model()
+        let (model, defaults, suite) = try makeModel()
+        defer { defaults.removePersistentDomain(forName: suite) }
         var source = "previous"
         var confirmations: [(Bool) -> Void] = []
         var posted: [Bool] = []

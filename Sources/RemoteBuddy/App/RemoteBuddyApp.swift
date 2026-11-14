@@ -467,6 +467,20 @@ private final class RemoteBuddyAppDelegate: NSObject, NSApplicationDelegate, NSM
                 }
             }
         }
+        workspaceAudioLifecycleObservers.append(
+            notificationCenter.addObserver(
+                forName: NSWorkspace.didDeactivateApplicationNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] notification in
+                let bundleID = (notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?
+                    .bundleIdentifier
+                guard bundleID == "com.apple.systempreferences" else { return }
+                MainActor.assumeIsolated {
+                    self?.model.refreshHIDAfterPermissionChange()
+                }
+            }
+        )
         AppLogger.shared.write(
             "SYSTEM AUDIO observers_started events=\(events.map { $0.1.rawValue }.joined(separator: ","))"
         )

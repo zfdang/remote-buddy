@@ -404,6 +404,8 @@ extension BridgeAppModel {
 
     func stopHIDMonitors() {
         // Detach the blocking event tap before any synchronous IOKit close.
+        hidFilterRetryWorkItem?.cancel()
+        hidFilterRetryWorkItem = nil
         appliedHIDMonitoringConfiguration = nil
         hidEventSuppressor.stop()
         hidMonitors.values.forEach { $0.stop() }

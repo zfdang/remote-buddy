@@ -227,6 +227,7 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
     var hidServiceMappingRefreshGeneration: UInt64 = 0
     private var terminationObserver: NSObjectProtocol?
     var completedUpdateHIDRecoveryWorkItem: DispatchWorkItem?
+    var hidFilterRetryWorkItem: DispatchWorkItem?
     var hidMappingRecoveryWorkItem: DispatchWorkItem?
     var hidMappingRecoveryAttempt = 0
     var hidMappingRecoveryGeneration: UInt64 = 0
@@ -284,6 +285,17 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
                         HIDStatusKeys.interrupted)
             )
             self.refreshRuntimePermissionDiagnosis(trigger: "hid_filter_disabled")
+            let retry = DispatchWorkItem { [weak self] in
+                guard let self else { return }
+                self.hidFilterRetryWorkItem = nil
+                guard self.started,
+                      self.hidMonitoringInterrupted,
+                      self.hidFilterFailureState == .systemDisabled
+                else { return }
+                self.refreshHIDAfterPermissionChange()
+            }
+            self.hidFilterRetryWorkItem = retry
+            DispatchQueue.main.asyncAfter(deadline: .now() + 30, execute: retry)
         }
         voiceToolCancellable = settings.$onboardingVoiceTool
             .removeDuplicates()
@@ -354,6 +366,8 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
         cancelHIDMappingRecovery(reason: "app_stop")
         completedUpdateHIDRecoveryWorkItem?.cancel()
         completedUpdateHIDRecoveryWorkItem = nil
+        hidFilterRetryWorkItem?.cancel()
+        hidFilterRetryWorkItem = nil
         audio.invalidatePendingWork()
         stopObservingAudioHardware()
         cancelTestToneIfNeeded(

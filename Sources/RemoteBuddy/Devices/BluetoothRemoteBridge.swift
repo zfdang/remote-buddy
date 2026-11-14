@@ -887,15 +887,19 @@ final class BluetoothRemoteBridge: NSObject {
             let cachedProfile = settings.remoteDeviceProfiles.first {
                 $0.bluetoothIdentifier == candidate.identifier
             }
+            let resolvedName = VoiceRemoteAdmission.resolvedName(
+                advertisedName: advertisedName,
+                peripheralName: candidate.name
+            )
             googleCandidate = allowsG9N9N && (
-                G9N9NProtocol.isCandidateName(advertisedName ?? candidate.name) ||
+                G9N9NProtocol.isCandidateName(resolvedName) ||
                 cachedProfile?.model.isChromecastRemote == true
             )
             t1Candidate = !googleCandidate && allowsT1Remote && (
-                T1RemoteProtocol.isCandidateName(advertisedName ?? candidate.name) ||
+                T1RemoteProtocol.isCandidateName(resolvedName) ||
                 cachedProfile?.model.isT1Remote == true ||
                 (adoptUnidentifiedATVVAsT1() &&
-                    XiaomiVoiceRemoteNameMatcher.recognizedName(advertisedName ?? candidate.name) == nil)
+                    XiaomiVoiceRemoteNameMatcher.recognizedName(resolvedName) == nil)
             )
             connect(
                 candidate,

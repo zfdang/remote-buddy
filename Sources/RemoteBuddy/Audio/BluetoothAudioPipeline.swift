@@ -18,7 +18,7 @@ final class BluetoothAudioPipeline: @unchecked Sendable {
     private var fragmentBytes = 0
 
     init(queue: DispatchQueue = DispatchQueue(label: "RemoteBuddy.bluetoothAudio", qos: .userInitiated),
-         maximumPendingBytes: Int = 4_000,
+         maximumPendingBytes: Int = 16_000,
          deliver: @escaping Delivery = { action in DispatchQueue.main.async { action() } }) {
         self.queue = queue
         self.maximumPendingBytes = maximumPendingBytes
@@ -124,6 +124,15 @@ final class BluetoothAudioPipeline: @unchecked Sendable {
         queue.async { [self] in
             guard isCurrent(token) else { return }
             let batches = decoder.append(data, frameSize: frameSize, gainDB: gainDB)
+            if batches.isEmpty {
+                lock.withLock {
+                    if generation == token {
+                        pendingBytes -= data.count
+                        fragmentBytes = decoder.pendingByteCount
+                    }
+                }
+                return
+            }
             lock.withLock { if generation == token { fragmentBytes = decoder.pendingByteCount } }
             deliver { [self] in
                 guard isCurrent(token) else { return }

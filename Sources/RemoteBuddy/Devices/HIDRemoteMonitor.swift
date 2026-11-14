@@ -156,7 +156,9 @@ final class HIDRemoteMonitor {
     private var nonRepeatableReleaseTimers: [RemoteButton: HIDRemoteScheduledTask] = [:]
     private var gestureRecognizer = RemoteButtonGestureRecognizer()
     private var doubleClickTimers: [RemoteButton: HIDRemoteScheduledTask] = [:]
+    private var doubleClickTimerTokens: [RemoteButton: UUID] = [:]
     private var longPressTimers: [RemoteButton: HIDRemoteScheduledTask] = [:]
+    private var longPressTimerTokens: [RemoteButton: UUID] = [:]
     private var permissionPollSubscription: HIDPermissionPoll.Subscription?
     private var appSwitcherTimeout: HIDRemoteScheduledTask?
     private var appSwitcherFrontmostMonitor: HIDRemoteScheduledTask?
@@ -1210,8 +1212,8 @@ final class HIDRemoteMonitor {
         guard activeUsages.contains(usage) || nonRepeatablePressedButtons.contains(button) else { return }
         diagnosticLogger("HID BUTTON recovered reason=\(reason) button=\(button.rawValue)")
         cancelRepeat(for: usage)
-        doubleClickTimers.removeValue(forKey: button)?.cancel()
-        longPressTimers.removeValue(forKey: button)?.cancel()
+        cancelDoubleClickTimeout(for: button)
+        cancelLongPressTimeout(for: button)
         gestureRecognizer.cancel(button)
         finishNonRepeatablePress(button)
         if nativePassthroughUsages.remove(usage) != nil {
@@ -1719,8 +1721,8 @@ final class HIDRemoteMonitor {
             }
             // A hold has won over the deferred click; release must not emit another click.
             self.gestureRecognizer.cancel(button)
-            self.doubleClickTimers.removeValue(forKey: button)?.cancel()
-            self.longPressTimers.removeValue(forKey: button)?.cancel()
+            self.cancelDoubleClickTimeout(for: button)
+            self.cancelLongPressTimeout(for: button)
             if !self.performConfiguredAction(for: button, trigger: .singleClick) {
                 self.cancelRepeat(for: usage)
             }
@@ -1736,11 +1738,11 @@ final class HIDRemoteMonitor {
             case let .scheduleDoubleClickTimeout(button):
                 scheduleDoubleClickTimeout(for: button)
             case let .cancelDoubleClickTimeout(button):
-                doubleClickTimers.removeValue(forKey: button)?.cancel()
+                cancelDoubleClickTimeout(for: button)
             case let .scheduleLongPressTimeout(button):
                 scheduleLongPressTimeout(for: button)
             case let .cancelLongPressTimeout(button):
-                longPressTimers.removeValue(forKey: button)?.cancel()
+                cancelLongPressTimeout(for: button)
             case let .trigger(button, trigger):
                 diagnosticLogger(
                     "HID GESTURE button=\(button.rawValue) trigger=\(trigger.rawValue) path=recognizer"
@@ -1751,13 +1753,26 @@ final class HIDRemoteMonitor {
         return true
     }
 
-    private func scheduleDoubleClickTimeout(for button: RemoteButton) {
+    private func cancelDoubleClickTimeout(for button: RemoteButton) {
+        doubleClickTimerTokens.removeValue(forKey: button)
         doubleClickTimers.removeValue(forKey: button)?.cancel()
+    }
+
+    private func cancelLongPressTimeout(for button: RemoteButton) {
+        longPressTimerTokens.removeValue(forKey: button)
+        longPressTimers.removeValue(forKey: button)?.cancel()
+    }
+
+    private func scheduleDoubleClickTimeout(for button: RemoteButton) {
+        cancelDoubleClickTimeout(for: button)
+        let token = UUID()
+        doubleClickTimerTokens[button] = token
         let timer = scheduler.schedule(
             afterMilliseconds: HIDRemoteTiming.doubleClickMilliseconds,
             repeatingEveryMilliseconds: nil
         ) { [weak self] in
-            guard let self else { return }
+            guard let self, self.doubleClickTimerTokens[button] == token else { return }
+            self.doubleClickTimerTokens.removeValue(forKey: button)
             self.doubleClickTimers.removeValue(forKey: button)
             _ = self.processGestureCommands(self.gestureRecognizer.doubleClickTimedOut(button))
         }
@@ -1765,12 +1780,15 @@ final class HIDRemoteMonitor {
     }
 
     private func scheduleLongPressTimeout(for button: RemoteButton) {
-        longPressTimers.removeValue(forKey: button)?.cancel()
+        cancelLongPressTimeout(for: button)
+        let token = UUID()
+        longPressTimerTokens[button] = token
         let timer = scheduler.schedule(
             afterMilliseconds: HIDRemoteTiming.longPressMilliseconds,
             repeatingEveryMilliseconds: nil
         ) { [weak self] in
-            guard let self else { return }
+            guard let self, self.longPressTimerTokens[button] == token else { return }
+            self.longPressTimerTokens.removeValue(forKey: button)
             self.longPressTimers.removeValue(forKey: button)
             _ = self.processGestureCommands(self.gestureRecognizer.longPressTimedOut(button))
         }
@@ -1949,8 +1967,10 @@ final class HIDRemoteMonitor {
     }
 
     private func resetGestureRecognition() {
+        doubleClickTimerTokens.removeAll()
         doubleClickTimers.values.forEach { $0.cancel() }
         doubleClickTimers.removeAll()
+        longPressTimerTokens.removeAll()
         longPressTimers.values.forEach { $0.cancel() }
         longPressTimers.removeAll()
         gestureRecognizer.reset()

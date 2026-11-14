@@ -1149,6 +1149,9 @@ final class BluetoothRemoteBridge: NSObject {
         }
 
         guard !systemSuspension.isSuspended else {
+            central?.delegate = nil
+            central = nil
+            centralGeneration = nil
             systemSuspension.markConnectionCycleNeeded()
             lifecycle = .stopped
             publishReconnectingState()

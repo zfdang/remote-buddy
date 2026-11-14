@@ -1244,8 +1244,16 @@ final class BluetoothRemoteBridge: NSObject {
               let peripheral
         else { return }
         guard !capabilitiesRequested else { return }
+        if !write(ATVVProtocol.getCapabilitiesV10) {
+            AppLogger.shared.write("ATVV CAPABILITIES write_failed")
+            if googleCandidate {
+                failInitialization(LocalizedMessage("google.remote.unconfirmed_identity"))
+            } else {
+                scheduleReconnect(bypassCachedTarget: currentAttemptUsesCachedTarget)
+            }
+            return
+        }
         capabilitiesRequested = true
-        write(ATVVProtocol.getCapabilitiesV10)
         lifecycle = .awaitingCapabilities(generation)
         state = .discovering
         AppLogger.shared.write("ATVV CAPABILITIES requested name=\(DiagnosticRedactor.redactedDeviceName(peripheral.name ?? "MI RC"))")
@@ -1901,7 +1909,9 @@ extension BluetoothRemoteBridge {
             $0.uuid == deviceInformationServiceUUID
         }) {
             peripheral.discoverCharacteristics([modelNumberUUID, pnpIDUUID, firmwareRevisionUUID], for: deviceInformationService)
-        } else if !googleCandidate {
+        } else if googleCandidate {
+            failInitialization(LocalizedMessage("google.remote.unconfirmed_identity"))
+        } else {
             modelFormatResolved = true
             finishInitializationIfReady(generation: generation)
         }
@@ -1982,14 +1992,21 @@ extension BluetoothRemoteBridge {
                     "BLE MODEL characteristic_discovery_failed " +
                         AppLogger.errorFields(error)
                 )
-                if !googleCandidate {
-                    modelFormatResolved = true
-                    finishInitializationIfReady(generation: generation)
+                if googleCandidate {
+                    failInitialization(LocalizedMessage("google.remote.unconfirmed_identity"))
+                    return
                 }
+                modelFormatResolved = true
+                finishInitializationIfReady(generation: generation)
                 return
             }
             let characteristics = service.characteristics ?? []
             let hasModelNumber = characteristics.contains(where: { $0.uuid == modelNumberUUID })
+            let hasPnPID = characteristics.contains(where: { $0.uuid == pnpIDUUID })
+            if googleCandidate && !hasPnPID {
+                failInitialization(LocalizedMessage("google.remote.unconfirmed_identity"))
+                return
+            }
             if !hasModelNumber && !googleCandidate {
                 modelFormatResolved = true
                 finishInitializationIfReady(generation: generation)
@@ -2134,6 +2151,15 @@ extension BluetoothRemoteBridge {
                 hasObservedPowerState = false
                 lastObservedPowerState = nil
                 delegate?.bluetoothBridge(self, didUpdatePowerState: nil)
+            } else if characteristic.uuid == pnpIDUUID, googleCandidate {
+                if G9N9NProtocol.requiresPairing(error) {
+                    failInitialization(LocalizedMessage("google.remote.pairing_required"))
+                    return
+                }
+                AppLogger.shared.write(
+                    "BLE PNP G9N9N read_failed " + AppLogger.errorFields(error)
+                )
+                failInitialization(LocalizedMessage("google.remote.unconfirmed_identity"))
             } else if characteristic.uuid == pnpIDUUID, t1Candidate {
                 AppLogger.shared.write(
                     "BLE PNP T1 read_failed " + AppLogger.errorFields(error)

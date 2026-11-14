@@ -73,6 +73,10 @@ struct ProductBoundaryTests {
             "onboarding.side.web",
             "macro.integration.",
         ]
+        let placeholderRegex = try NSRegularExpression(
+            pattern: #"%(?:\d+\$)?[+#0\- ]*(?:\d+)?(?:\.\d+)?(?:ll|l|hh|h|z|t|j)?[@dDuUxXoOfeEgGcCsSp]"#
+        )
+        var tablesByLanguage: [String: [String: String]] = [:]
         for lang in ["zh-Hans.lproj", "en.lproj"] {
             let stringsURL = resources.appendingPathComponent(lang).appendingPathComponent("Localizable.strings")
             let content = try String(contentsOf: stringsURL, encoding: .utf8)
@@ -89,6 +93,27 @@ struct ProductBoundaryTests {
                 retiredPrefixes.contains { key.hasPrefix($0) }
             }
             #expect(retiredFound.isEmpty, "Found retired keys in \(lang): \(retiredFound)")
+            let table = try #require(NSDictionary(contentsOf: stringsURL) as? [String: String])
+            #expect(Set(table.keys) == definedKeys, "Parsed keys differ from regex keys in \(lang)")
+            tablesByLanguage[lang] = table
+        }
+        let zhTable = try #require(tablesByLanguage["zh-Hans.lproj"])
+        let enTable = try #require(tablesByLanguage["en.lproj"])
+        #expect(Set(zhTable.keys) == Set(enTable.keys))
+        for key in zhTable.keys.sorted() {
+            guard let zhValue = zhTable[key], let enValue = enTable[key] else { continue }
+            let extractPlaceholders: (String) -> [String] = { text in
+                let cleaned = text.replacingOccurrences(of: "%%", with: "")
+                let nsCleaned = cleaned as NSString
+                return placeholderRegex.matches(
+                    in: cleaned,
+                    range: NSRange(location: 0, length: nsCleaned.length)
+                ).map { nsCleaned.substring(with: $0.range) }.sorted()
+            }
+            #expect(
+                extractPlaceholders(zhValue) == extractPlaceholders(enValue),
+                "Format placeholders mismatch for localization key \(key)"
+            )
         }
     }
 

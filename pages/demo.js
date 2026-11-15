@@ -72,7 +72,7 @@ button.addEventListener('blur', stop);
         windowTitle: '按键映射 · Remote Buddy',
         src: 'assets/screenshots/mapping-zh.png',
         alt: 'Remote Buddy 按键映射设置界面：可视化遥控器按键映射，支持单击、双击、长按与自定义快捷键',
-        desc: '点击遥控器按键，设置单击、双击或长按动作。小米默认映射：主页键切换应用、TV 键播放／暂停、菜单键打开上下文菜单。'
+        desc: '点击遥控器按键，设置单击、双击或长按动作。小米默认映射：主页键切换应用、TV 键播放/暂停、菜单键打开上下文菜单。'
       },
       {
         title: '常用语编辑',

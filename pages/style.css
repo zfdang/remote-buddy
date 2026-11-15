@@ -17,3 +17,6 @@
 
 /* Three currently usable remote options, with a full-width size comparison. */
 .remote-size-figure{margin:24px 0;background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;overflow:hidden}.remote-size-figure a{display:block}.remote-size-figure img{display:block;width:100%;height:auto;border-radius:8px}.remote-size-figure figcaption{font-size:13px;line-height:1.7;color:var(--muted)}.remote-size-figure figcaption{margin-top:14px}@media(max-width:760px){.remote-size-figure{padding:8px}.remote-size-figure figcaption{padding:0 6px 6px}}
+
+/* Device section links stay visible and wrap on smaller screens. */
+.device-nav{gap:24px}.device-nav nav{justify-content:flex-end;align-items:center;flex-wrap:wrap}.device-nav nav>a{white-space:nowrap}@media(max-width:1000px){.device-nav{flex-wrap:wrap}.device-nav nav{margin-left:auto}}@media(max-width:560px){.device-nav nav{width:100%;margin-left:0;justify-content:flex-start}}

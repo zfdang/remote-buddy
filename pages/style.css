@@ -16,6 +16,4 @@
 
 
 /* Three currently usable remote options, with a full-width size comparison. */
-.remote-size-figure{margin:24px 0;background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;overflow:hidden}.remote-size-figure a{display:block}.remote-size-figure img{display:block;width:100%;height:auto;border-radius:8px}.remote-size-figure figcaption,.remote-comparison-note{font-size:13px;line-height:1.7;color:var(--muted)}.remote-size-figure figcaption{margin-top:14px}.remote-comparison-note{margin:0 0 16px}.remote-basics-table{min-width:880px}.remote-basics-table tbody th{font-size:14px;letter-spacing:normal;color:var(--ink);background:#fff}.remote-basics-table small{font-size:12px}@media(max-width:760px){.remote-size-figure{padding:8px}.remote-size-figure figcaption{padding:0 6px 6px}}
-
-.remote-basics-table caption{text-align:left;padding:14px 18px;font-size:13px;color:var(--muted);background:#f7fafb}
+.remote-size-figure{margin:24px 0;background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;overflow:hidden}.remote-size-figure a{display:block}.remote-size-figure img{display:block;width:100%;height:auto;border-radius:8px}.remote-size-figure figcaption{font-size:13px;line-height:1.7;color:var(--muted)}.remote-size-figure figcaption{margin-top:14px}@media(max-width:760px){.remote-size-figure{padding:8px}.remote-size-figure figcaption{padding:0 6px 6px}}

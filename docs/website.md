@@ -23,7 +23,7 @@ python3 -m http.server 8765 --directory pages
 
 视频台词和分镜统一维护在 `scripts/demo-video/storyboard.json`；动画与合成入口为
 `scripts/demo-video/visuals.py` 和 `scripts/demo-video/render.py`。视频使用当前 `pages/assets/screenshots/` 中的应用截图，并标注界面示例不代表硬件验收。更新时先对照当前程序界面。网页硬件区域列出五项设备，
-与输入工具列表并列展示。网页说明小米与 T1 已适配、G9N9N 支持语音但不支持普通单键映射、GY3LE 与 Siri Remote 计划支持，并链接到独立设备页面（`device.html` / `device_en.html`）查看各型号支持情况与实拍对比。实际连接准入与验收状态以 README 和应用向导为准。操作说明须匹配当前界面：音频固定输出 Remote Buddy Mic，用户只需在输入工具中选择同名麦克风。安装包未公证的提醒仅保留在网页文字说明中；视频不展示此提醒。
+与输入工具列表并列展示。网页说明小米与 T1 已适配、G9N9N 支持语音但不支持普通单键映射、GY3LE 与 Siri Remote 计划支持，并链接到独立设备页面（`device.html` / `device_en.html`）查看各型号支持情况与实拍对比。设备页在兼容表之后展示当前三款可用遥控器的参考尺寸示意图与基本信息，可点击查看大图，中英文页面同步。小米图示按用户指定约 138 × 35 mm 调整；T1 暂按原图 164 × 50 mm，均注明非样机实测。G9N9N 使用 Google 官方规格。示意图不作为精确测量或兼容性证明；原有小米／T1 并排实拍保留，未经统一测量的 T1 尺寸与毫米级厚度差不再断言。实际连接准入与验收状态以 README 和应用向导为准。操作说明须匹配当前界面：音频固定输出 Remote Buddy Mic，用户只需在输入工具中选择同名麦克风。安装包未公证的提醒仅保留在网页文字说明中；视频不展示此提醒。
 
 在 macOS 上重做视频（需要 `ffmpeg`、`ffprobe` 和系统中文字体）：
 

@@ -64,7 +64,11 @@ struct SessionRecoveryTests {
 
     @Test func cancelledDrainAnswersExactlyOnceEvenAfterDeadline() {
         let clock = ControlledTestScheduler()
-        let output = VirtualAudioOutput(logger: { _ in }, scheduleDrainDeadline: clock.voiceSchedule)
+        let output = VirtualAudioOutput(
+            logger: { _ in },
+            uptime: { Double(clock.now) / 1_000 },
+            scheduleDrainDeadline: clock.voiceSchedule
+        )
         output.registerPendingVoiceBuffer()
         var outcomes: [VirtualAudioDrainOutcome] = []
         output.endSessionAfterDraining(maximumDelay: 0.02) { (outcome: VirtualAudioDrainOutcome) in outcomes.append(outcome) }

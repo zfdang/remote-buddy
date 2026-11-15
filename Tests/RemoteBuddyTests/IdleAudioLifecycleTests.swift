@@ -81,7 +81,11 @@ struct IdleAudioLifecycleTests {
     @Test(arguments: [false, true])
     func remoteStopDrainsTailAndNewVoicePreventsTeardown(restart: Bool) async throws {
         let clock = ControlledTestScheduler()
-        let output = VirtualAudioOutput(scheduleDrainDeadline: clock.voiceSchedule)
+        let output = VirtualAudioOutput(
+            logger: { _ in },
+            uptime: { Double(clock.now) / 1_000 },
+            scheduleDrainDeadline: clock.voiceSchedule
+        )
         try await withModel(audioOutput: output) { model, bridge in
             model.voiceSession.begin(deviceIdentifier: try #require(bridge.deviceIdentifier))
             model.isStreaming = true

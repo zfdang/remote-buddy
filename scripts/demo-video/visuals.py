@@ -1,39 +1,52 @@
-from PIL import Image, ImageDraw, ImageFont
-import math, re
-W,H,FPS=1920,1080,12
-FONT='/System/Library/Fonts/STHeiti Medium.ttc'
-fonts={}
+"""Cartoon demo frames, current app screenshots, and shared subtitle layout."""
+from pathlib import Path
+import json
+import math
+import re
+from PIL import Image, ImageDraw, ImageFont, ImageOps
+
+ROOT = Path(__file__).resolve().parents[2]
+SCENES = json.loads(Path(__file__).with_name("storyboard.json").read_text())
+W, H, FPS = 1920, 1080, 12
+FONT = "/System/Library/Fonts/STHeiti Medium.ttc"
+BLUE, INK, GREEN = "#3268DA", "#253449", "#258968"
+ORANGE, BG, LINE = "#C67A2D", "#FFF9EF", "#DCE3EE"
+fonts = {}
+action_times = {}
+scene_lengths = []
+
+
 def get_font(size):
- if size not in fonts:
-  fonts[size]=ImageFont.truetype(FONT,size)
- return fonts[size]
+    if size not in fonts:
+        fonts[size] = ImageFont.truetype(FONT, size)
+    return fonts[size]
 
-BLUE='#3268DA'; INK='#253449'; GREEN='#35AB84'; ORANGE='#EF9C4C'; BG='#FFF9EF'; LINE='#DCE3EE'
-scenes=[
- ('遥控搭子', '打破人与 AI 之间的沟通带宽瓶颈', ['大模型时代，编码范式变迁', '键盘打字 100 WPM vs 思维语音 300+ WPM', '动口不行动手，与 AI 同频思考'], ''),
- ('破局：身边的廉价硬件', '拒绝昂贵 AI 硬件，唤醒闲置电视遥控器', ['市面专用 AI 硬件动辄数百上千元', '电视遥控器：工业级微动、实体盲操按键', '两节干电池供电，超长数月续航'], ''),
- ('Remote Buddy · 遥控搭子', '让电视遥控器秒变 Mac 语音输入神器', ['专为 macOS 打造的系统级桥接工具', '拿起遥控器，按住说话，松手即上屏', '完全开源 · 零音频留存 · 零隐私泄漏'], ''),
- ('它是怎样工作的？', '不跑大模型，专心做最稳定的驱动级桥梁', ['遥控器：蓝牙压缩音频与物理按键', '遥控搭子：实时 ADPCM 解码与快捷键注入', '输入工具：转写文字并写入当前光标'], ''),
- ('01  一站式免配置安装', '一个安装包，搞定 App 与虚拟麦克风驱动', ['前往 remote.zfdang.com 下载安装包', '底层打上 USB 伪装，全系统即插即用', '支持 Apple Silicon 与 Intel Mac'], ''),
- ('02  权限与安全底线', '跟随向导透明授权，坚守纯本地隐私', ['蓝牙、输入监控与辅助功能权限透明指引', '零音频保留：纯内存流转，绝不落盘', '零网络遥测：不上传数据，密码框自动防护'], ''),
- ('03  多硬件兼容', '支持小米系列与 Google Chromecast 遥控器', ['小米电视遥控器 2 / 2 Pro (RC001 / RC003)', 'Google Chromecast 语音遥控器 (G9N9N)', '独立设备增益调节，音量自动自愈'], ''),
- ('04  输入工具生态', '支持各类主流输入法与独立语音工具', ['微信输入法、豆包输入法、Voice Buddy（语音搭子）', '网易叭哥说、Typeless 独立语音工具', '支持系统原生听写与多输入法自由切换'], ''),
- ('05  按键映射与常用语', '不仅是语音键，更是桌面效率宏手柄', ['全量按键自定义：单击、双击、长按分别设置', '常用语功能：Prompt 模板与代码片段一键直出', '方向键、确认键、返回键自由映射系统动作'], ''),
- ('试一试：按住，说话，松开', '光标所至，行云流水', ['点击任意文本框：Cursor / VSCode / 终端', '按住语音键说话：“把这段逻辑重构为异步并发”', '松开按键，代码指令整齐落定，心流无缝'], ''),
- ('极客之选，即刻体验', 'remote.zfdang.com', ['完全开源：基于 GPL-3.0 协议发布', '前往官网 remote.zfdang.com 下载体验', '翻出抽屉里的遥控器，开启全新输入体验！'], ''),
-]
 
-def text(d,xy,t,size=36,fill=INK): d.text(xy,t,font=get_font(size),fill=fill)
-def rr(d,box,fill,r=28,outline=None,width=2): d.rounded_rectangle(box,radius=r,fill=fill,outline=outline,width=width)
-def center(d,x,y,t,size=36,color=INK):
- b=d.textbbox((0,0),t,font=get_font(size)); text(d,(x-(b[2]-b[0])/2,y),t,size,color)
-def wrap(d,t,size,maxw):
- lines=[]; s=''
- for c in t:
-  if d.textlength(s+c,font=get_font(size))>maxw: lines.append(s);s=c
-  else:s+=c
- if s:lines.append(s)
- return lines
+def text(d, xy, value, size=36, fill=INK):
+    d.text(xy, value, font=get_font(size), fill=fill)
+
+
+def rr(d, box, fill, r=28, outline=None, width=2):
+    d.rounded_rectangle(box, radius=r, fill=fill, outline=outline, width=width)
+
+
+def center(d, x, y, value, size=36, color=INK):
+    width = d.textlength(value, font=get_font(size))
+    text(d, (x-width/2, y), value, size, color)
+
+
+def wrap(d, value, size, max_width):
+    lines, line = [], ""
+    for char in value:
+        if line and d.textlength(line+char, font=get_font(size)) > max_width:
+            lines.append(line)
+            line = char
+        else:
+            line += char
+    if line:
+        lines.append(line)
+    return lines
+
 
 def character(d,x,y,t):
  # Friendly cartoon operator, drawn directly for this animation.
@@ -68,201 +81,174 @@ def remote(d,x,y,t,active=False,scale=1):
   for px in [.32,.68]:d.ellipse((x+rw*px-10,y+161+row*39,x+rw*px+10,y+181+row*39),fill='#728296')
  center(d,x+rw/2,y+rh-26,'RB',24,'#AAB8CA')
 
-def window(d,selected,t):
- rr(d,(960,236,1780,836),'white',30,LINE,3)
- rr(d,(960,236,1780,287),'#E9EFF8',26)
- for i,c in enumerate(['#F57E73','#F3C264','#81CFA5']):d.ellipse((984+i*28,252,999+i*28,267),fill=c)
- center(d,1370,249,'遥控搭子',24)
- rr(d,(960,288,1120,836),'#F2F6FD',12)
- nav=['遥控器连接','按键映射','常用语','输入法集成','权限与环境','设置']
- for j,n in enumerate(nav):
-  yy=310+j*82
-  if j==selected:rr(d,(973,yy-10,1106,yy+50),'#DCE9FF',12)
-  center(d,1040,yy,n,24,BLUE if j==selected else '#7A869A')
- return 1160,316
 
-total_duration = 199.0
-voice_lengths=[]
 
-def frame(i,u,total):
- im=Image.new('RGB',(W,H),BG);d=ImageDraw.Draw(im)
- for j in range(5):
-  xx=1500+j*90; yy=90+math.sin(u*.4+j)*18
-  d.ellipse((xx,yy,xx+28,yy+28),fill='#E1EBFA')
- text(d,(92,43),'REMOTE BUDDY  /  遥控搭子',28,BLUE)
- text(d,(92,112),scenes[i][0],64)
- text(d,(94,198),scenes[i][1],32,'#758398')
- rr(d,(92,282,860,835),'#EDF3FC',36)
- character(d,270,450,u)
- for j,line in enumerate(scenes[i][2]):
-  yy=329+j*113
-  if u>j*.65:
-   d.ellipse((440,yy+2,478,yy+40),fill=GREEN)
-   center(d,459,yy+3,str(j+1),28,'white')
-   ls=wrap(d,line,32,335)
-   for k,l in enumerate(ls):text(d,(497,yy+k*41),l,32)
+screenshots = {}
 
- if i==0:
-  rr(d,(1000,320,1740,760),'white',32,LINE)
-  center(d,1370,365,'打字速度 vs 语音速度',38,BLUE)
-  rr(d,(1060,430,1680,540),'#FFF2F0',18)
-  text(d,(1085,450),'传统键盘打字：~60-100 WPM',28,'#D9363E')
-  text(d,(1085,490),'机械输入慢、频繁打断思路、手指疲惫',22,'#758398')
-  rr(d,(1060,570,1680,680),'#F0F9EB',18)
-  text(d,(1085,590),'自然语音沟通：~300+ WPM',28,'#389E0D')
-  text(d,(1085,630),'与脑海思维同频、零摩擦、大模型吞吐倍增',22,'#758398')
- elif i==1:
-  rr(d,(1000,310,1740,780),'white',32,LINE)
-  center(d,1370,350,'硬件破局：电视蓝牙遥控器',38,BLUE)
-  rr(d,(1060,420,1680,530),'#F4F7FD',18)
-  text(d,(1085,440),'市面专用 AI 硬件：¥500~¥1500+',26,INK)
-  text(d,(1085,480),'锂电池频繁充电 · 强制绑定按月订阅',22,'#758398')
-  rr(d,(1060,550,1680,720),'#EDF8F2',18)
-  text(d,(1085,570),'电视蓝牙遥控器：¥60~¥70 / $10~$15',28,GREEN)
-  text(d,(1085,615),'• 实体微动语音按键，盲按极准',24,INK)
-  text(d,(1085,655),'• 两节 7 号电池，超长数月续航',24,INK)
- elif i==2:
-  remote(d,1050,340,u,2<u<8,1.4)
-  rr(d,(1270,360,1760,700),'white',30,LINE)
-  center(d,1515,415,'Remote Buddy',44,BLUE)
-  center(d,1515,480,'遥控搭子',36)
-  center(d,1515,560,'按住说话 · 松手结束',32,GREEN)
-  center(d,1515,620,'文字瞬间落在当前光标处',24,'#758398')
- elif i==3:
-  labels=['遥控器','遥控搭子','输入工具']
-  for j,l in enumerate(labels):
-   xx=930+j*293
-   rr(d,(xx,421,xx+255,646),'white',26,LINE)
-   center(d,xx+127,456,['声音','连接桥梁','文字'][j],48,BLUE)
-   center(d,xx+127,553,l,32)
-   if j<2:
-    d.line((xx+260,527,xx+288,527),fill=GREEN,width=6)
-  pos=930+(u%3)/3*840;d.ellipse((pos,704,pos+24,728),fill=GREEN)
- elif i==4:
-  rr(d,(1030,317,1740,763),'white',36,LINE)
-  center(d,1385,365,'Remote_Buddy.pkg',40,BLUE)
-  for j,l in enumerate(['Remote Buddy.app','虚拟麦克风驱动 (免驱伪装)']):
-   rr(d,(1100,450+j*105,1670,527+j*105),'#EDF3FC',18)
-   center(d,1385,467+j*105,l,32)
-  center(d,1385,683,'一个安装包，完成两项安装',28)
- elif i==5:
-  x,y=window(d,4,u)
-  text(d,(x,y),'系统权限与本地隐私',40)
-  for j,l in enumerate(['蓝牙权限','输入监控','辅助功能']):
-   yy=y+70+j*93;rr(d,(x,yy,1734,yy+77),'#F2F6FD',16)
-   text(d,(x+15,yy+24),l,28)
-   ready=u>2+j*2
-   d.ellipse((x+175,yy+32,x+187,yy+44),fill=GREEN if ready else ORANGE)
-   text(d,(x+195,yy+25),'已开启' if ready else '未开启',24)
-   rr(d,(x+330,yy+20,1714,yy+58),'#E0E5ED',10)
-   center(d,x+441,yy+25,'打开蓝牙设置' if j==0 else '打开系统设置',24)
-  rr(d,(x,y+364,1734,y+469),'#EDF8F2',16)
-  text(d,(x+15,y+377),'100% 本地运行 · 零音频留存 · 零隐私上报',26,GREEN)
-  text(d,(x+15,y+425),'遇到密码框自动静默降级防护',22,'#758398')
- elif i==6:
-  x,y=window(d,0,u)
-  rr(d,(1140,314,1390,795),'#F2F6FD',18)
-  center(d,1265,339,'小米 / Chromecast',24)
-  center(d,1265,384,'正在连接…' if u<4 else '已连接',28,GREEN)
-  remote(d,1210,435,u,False,.9)
-  rr(d,(1410,314,1754,616),'#F2F6FD',18)
-  text(d,(1430,340),'硬件适配支持',32)
-  text(d,(1430,405),'• 小米遥控器 2 / 2 Pro',24)
-  text(d,(1430,445),'• Chromecast G9N9N',24)
-  text(d,(1430,490),'设备独立增益调节',26)
-  d.line((1435,536,1715,536),fill=LINE,width=7)
-  d.ellipse((1530,522,1558,550),fill=BLUE)
-  text(d,(1430,575),'按向导快速完成测试',24,BLUE)
-  center(d,1578,706,'连接后测试按键',28,GREEN)
- elif i==7:
-  x,y=window(d,3,u)
-  text(d,(x,y),'输入法与语音工具集成',32)
-  rr(d,(x,y+56,1735,y+167),'#EDF3FC',18)
-  text(d,(x+16,y+70),'输入工具生态自由搭配',28,BLUE)
-  text(d,(x+16,y+119),'语音麦克风：Remote Buddy Mic',24)
-  for j,label in enumerate(['微信输入法','豆包输入法','Voice Buddy','网易叭哥说','Typeless','macOS 原生听写']):
-   xx=x+(j%2)*294;yy=y+184+(j//2)*82
-   rr(d,(xx,yy,xx+280,yy+73),'#DCE9FF' if j==0 else '#F2F6FD',12)
-   text(d,(xx+12,yy+5),label,24,BLUE if j==0 else INK)
-   text(d,(xx+12,yy+39),'通过向导配置并测试',24)
-   if j==0:d.ellipse((xx+249,yy+12,xx+263,yy+26),fill=BLUE)
-  text(d,(x,y+439),'语音触发方式：按住说话 / 点按开关',24,BLUE)
- elif i==8:
-  x,y=window(d,1,u)
-  text(d,(1140,311),'按键映射与常用语',32)
-  text(d,(1450,319),'自定义宏',24)
-  rr(d,(1556,318,1612,345),GREEN,14)
-  d.ellipse((1585,321,1608,342),fill='white')
-  rr(d,(1140,367,1750,409),'#F2F6FD',10)
-  text(d,(1155,374),'支持映射系统快捷键与 Prompt 常用语模板',22,BLUE)
-  remote(d,1386,430,u,False,.84)
-  for j,(label,action,xx,yy) in enumerate([
-   ('电源键','Escape',1140,430),('上键','↑',1140,530),
-   ('返回键','删除/撤销',1140,630),('语音键','语音触发',1505,430),
-   ('确定键','Tab/采纳',1505,530),('下键','↓',1505,630)]):
-   rr(d,(xx,yy,xx+230,yy+88),'#DCE9FF' if label=='确定键' else '#F2F6FD',12)
-   text(d,(xx+10,yy+7),label,24)
-   if label=='语音键':
-    text(d,(xx+10,yy+45),'按住说话 / 松手结束',20,BLUE)
-   else:
-    for k,gesture in enumerate(['单击','双击','长按']):
-     center(d,xx+40+k*75,yy+36,gesture,20,'#758398')
-     center(d,xx+40+k*75,yy+61,action if k==0 else '常用语',18)
-  rr(d,(1140,735,1750,815),'#EDF3FC',14)
-  text(d,(1160,748),'常用语功能：预设 Prompt / 代码片段，按键一键直达上屏',22,BLUE)
-  text(d,(1160,780),'支持单击、双击、长按独立触发，无需键盘反复敲击',19,'#758398')
- elif i==9:
-  rr(d,(955,306,1790,817),'white',30,LINE)
-  text(d,(1000,345),'文本输入框 · 示意 (Cursor / VSCode / 终端)',30)
-  rr(d,(996,410,1748,605),'#F4F7FD',18)
-  phrase='把这段逻辑重构为异步并发，并增加测试。'
-  if u>=7:
-   n=min(len(phrase),int((u-7)*10)+1);text(d,(1025,478),phrase[:n],38)
-  else:
-   text(d,(1025,478),'请按住遥控器语音键说话…',38,'#AAB3C0')
-  remote(d,1013,656,u,2<u<7,.40)
-  for j in range(32):
-   amp=(18+16*math.sin(j*.8+u*8)) if 2<u<7 else 3
-   xx=1160+j*15;d.line((xx,715-amp,xx,715+amp),fill=GREEN,width=6)
-  text(d,(1160,760),'按住语音键说话' if u<7 else '松开，文字瞬间整齐上屏！',28,BLUE)
- else:
-  rr(d,(978,310,1780,807),'white',35,LINE)
-  center(d,1380,350,'Vibe Coding 时代的语音输入神器',38,BLUE)
-  center(d,1380,425,'Remote Buddy · 遥控搭子',46)
-  center(d,1380,515,'100% 本地运行 · 零音频留存 · GPL-3.0 开源',26,GREEN)
-  center(d,1380,590,'remote.zfdang.com',46,BLUE)
-  center(d,1380,685,'前往官网下载，即刻体验！',30)
 
- rr(d,(76,886,1844,1036),'#253449',24)
- lines=wrap(d,scenes[i][3],32,1700)
- chunks=subtitle_chunks(scenes[i][3])
- spoken=voice_lengths[i] if voice_lengths else 14.0
- position=min(1,u/spoken)*sum(len(c) for c in chunks)
- offset=0; chunk=chunks[-1]
- for c in chunks:
-  offset+=len(c)
-  if position < offset: chunk=c; break
- for k,l in enumerate(wrap(d,chunk,36,1670)):center(d,W/2,920+k*44,l,36,'white')
- text(d,(96,849),'产品宣传与操作演示  ·  macOS',24,'#8793A5')
- text(d,(1630,849),f'{i+1:02d} / {len(scenes):02d}',24,'#8793A5')
- rr(d,(76,1069,1844,1077),'#DFE7F2',4)
- rr(d,(76,1069,76+1768*total/total_duration,1077),BLUE,4)
- fade=min(1,u/.3,(12-u)/.3)
- if fade<1:im=Image.blend(Image.new('RGB',(W,H),BG),im,fade)
- return im
+def screenshot(im, d, filename, label):
+    if filename not in screenshots:
+        shot = Image.open(ROOT / "pages/assets/screenshots" / filename).convert("RGB")
+        # Focus on the current content area; omit the narrow navigation column.
+        # The full-size examples remain available in the webpage gallery.
+        shot = shot.crop((216, 0, shot.width, min(shot.height, 1120)))
+        screenshots[filename] = ImageOps.contain(shot, (950, 530), Image.Resampling.LANCZOS)
+    shot = screenshots[filename]
+    rr(d, (830, 290, 1840, 860), "white", 24, LINE)
+    im.paste(shot, (int(1335-shot.width/2), int(565-shot.height/2)))
+    text(d, (858, 821), label + " · 当前界面示例", 22, "#68758A")
+
+
+def card(d, y, heading, detail, color=BLUE):
+    rr(d, (860, y, 1810, y+125), "white", 22, LINE)
+    text(d, (890, y+19), heading, 32, color)
+    for k, line in enumerate(wrap(d, detail, 25, 860)):
+        text(d, (890, y+68+k*31), line, 25, "#68758A")
+
+
+def frame(index, progress, total, duration, subtitle=""):
+    scene = SCENES[index]
+    kind = scene["id"]
+    t = progress * 12
+    local = progress * (scene_lengths[index] if scene_lengths else 20)
+    actions = action_times.get(kind, {})
+    im = Image.new("RGB", (W, H), BG)
+    d = ImageDraw.Draw(im)
+    text(d, (76, 42), "REMOTE BUDDY  /  遥控搭子", 27, BLUE)
+    text(d, (76, 105), scene["title"], 60)
+    text(d, (78, 191), scene["subtitle"], 32, "#68758A")
+    rr(d, (76, 278, 795, 862), "#EDF3FC", 30)
+    operator = Image.new("RGBA", (360, 450), (0, 0, 0, 0))
+    character(ImageDraw.Draw(operator), 180, 105, t)
+    operator = operator.resize((252, 315), Image.Resampling.LANCZOS)
+    im.paste(operator, (100, 520), operator)
+    for j, bullet in enumerate(scene["bullets"]):
+        y = 320+j*150
+        d.ellipse((365, y+4, 400, y+39), fill=GREEN)
+        center(d, 382, y+4, str(j+1), 24, "white")
+        for k, line in enumerate(wrap(d, bullet, 30, 335)):
+            text(d, (421, y+k*43), line, 30)
+
+    if kind == "intro":
+        remote(d, 907, 355, t, 0.25 < progress < 0.75, 1.25)
+        rr(d, (1100, 350, 1820, 730), "white", 28, LINE)
+        center(d, 1460, 393, "Remote Buddy", 48, BLUE)
+        center(d, 1460, 478, "遥控器 → Mac → 输入工具", 32)
+        center(d, 1460, 570, "让语音输入的入口就在手边", 30, GREEN)
+        center(d, 1460, 645, "支持范围以设备指南为准", 25, "#68758A")
+    elif kind == "flow":
+        for j, (name, detail) in enumerate([
+            ("遥控器", "声音 + 按键"), ("遥控搭子", "音频 + 语音热键"), ("输入工具", "识别 + 写入文字")
+        ]):
+            x = 840+j*337
+            rr(d, (x, 385, x+300, 640), "white", 24, LINE)
+            center(d, x+150, 436, name, 36, BLUE)
+            center(d, x+150, 538, detail, 26)
+            if j < 2:
+                text(d, (x+305, 490), "→", 27, GREEN)
+        center(d, 1340, 725, "Remote Buddy Mic 是连接两者的虚拟麦克风", 27, GREEN)
+    elif kind == "install":
+        card(d, 325, "官网下载适合 Mac 芯片的安装包", "Apple Silicon / Intel · macOS 14+")
+        card(d, 485, "Remote Buddy.app + 虚拟麦克风驱动", "安装后打开应用，按向导检查环境")
+        card(d, 645, "在输入工具中选择麦克风", "麦克风：Remote Buddy Mic", GREEN)
+    elif kind == "devices":
+        rows = [
+            ("小米 2 Pro · RC003", "语音与按键已验证；2 代 RC001 完整音频待验收", GREEN),
+            ("T1 飞鼠键盘遥控器", "已测蓝牙样机支持；兼容批次需单独验证", GREEN),
+            ("Chromecast · G9N9N", "支持语音；不支持普通单键映射", ORANGE),
+        ]
+        for j, row in enumerate(rows):
+            card(d, 305+j*153, *row)
+        center(d, 1335, 800, "GY3LE / Siri Remote：计划支持，尚未完成适配", 25, "#68758A")
+    elif kind in ("xiaomi", "t1"):
+        is_t1 = kind == "t1"
+        start, stop = actions.get("start", 4), actions.get("stop", 8)
+        recording = start <= local < stop
+        held = recording if not is_t1 else (start <= local < start+.35 or stop <= local < stop+.35)
+        title = "T1 · 已测样机操作示意" if is_t1 else "小米 2 Pro · 操作示意"
+        center(d, 1465, 325, title, 32, BLUE)
+        phase = 0 if local < start else 1 if local < stop else 2
+        steps = ["准备输入", "已松手，持续收音" if is_t1 else "保持按住，正在收音", "再次点按，停止收音" if is_t1 else "松开按键，停止收音"]
+        rr(d, (1120, 395, 1810, 565), "white", 22, LINE)
+        center(d, 1465, 425, steps[phase], 32, GREEN if recording else BLUE)
+        center(d, 1465, 500, "声音送入 Remote Buddy Mic", 26, "#68758A")
+        remote(d, 884, 414, t, held, 1.05)
+        for j in range(32):
+            amplitude = 8+24*abs(math.sin(j*0.7+t*3)) if recording else 3
+            x = 1160+j*18
+            d.line((x, 652-amplitude, x, 652+amplitude), fill=GREEN, width=7)
+        center(d, 1460, 727, "T1：点按开始 / 再按结束" if is_t1 else "小米：按住开始 / 松手结束", 29)
+        center(d, 1460, 788, "结束后等待尾音和输入工具处理", 25, "#68758A")
+    elif kind in ("permissions", "tools", "mapping"):
+        filename = scene["screenshot"]
+        if kind == "mapping" and progress > 0.55:
+            filename = "phrases-zh.png"
+        screenshot(im, d, filename, {"permissions": "权限与麦克风", "tools": "输入法集成", "mapping": "按键映射 / 常用语"}[kind])
+    elif kind == "privacy":
+        card(d, 325, "遥控搭子", "不保存录音或转写历史，不采集使用统计", GREEN)
+        card(d, 485, "本地运行日志", "不上传日志，可由用户在本机查看", GREEN)
+        card(d, 645, "你选择的识别工具", "联网和音频处理方式，请查看该工具的设置与隐私政策", BLUE)
+    elif kind == "example":
+        rr(d, (850, 315, 1830, 800), "white", 28, LINE)
+        text(d, (890, 350), "编辑器 / 聊天窗口 / 终端 · 输入流程示意", 28, BLUE)
+        rr(d, (886, 420, 1795, 660), "#F2F6FD", 18)
+        phrase = "把这段逻辑重构为异步并发，并增加测试。"
+        stop = actions.get("stop", 11)
+        count = max(0, min(len(phrase), int((local-stop-1)*len(phrase)/3)))
+        value = phrase[:count] if count else "先点击准备输入的位置…"
+        for k, line in enumerate(wrap(d, value, 38, 830)):
+            text(d, (917, 470+k*57), line, 38, INK if count else "#8793A5")
+        center(d, 1340, 711, "准备输入" if local < actions.get("start", 5) else "说话 → 结束收音 → 等待识别" if local < stop+1 else "检查输入工具返回的文字", 29, GREEN)
+        center(d, 1340, 758, "处理速度与结果取决于所选输入工具", 23, "#68758A")
+    else:
+        rr(d, (850, 315, 1830, 810), "white", 30, LINE)
+        center(d, 1340, 360, "Remote Buddy · 遥控搭子", 44, BLUE)
+        center(d, 1340, 465, "remote.zfdang.com", 54)
+        center(d, 1340, 570, "下载应用 · 查看设备指南 · 完成语音测试", 29, GREEN)
+        center(d, 1340, 682, "GPL-3.0-only 开源", 30)
+        center(d, 1340, 745, "从一次语音测试开始", 26, "#68758A")
+
+    text(d, (80, 875), "产品介绍与操作示意 · 界面示例不代表硬件验收", 21, "#68758A")
+    text(d, (1690, 875), f"{index+1:02d} / {len(SCENES):02d}", 23, "#68758A")
+    rr(d, (76, 920, 1844, 1045), INK, 22)
+    lines = wrap(d, subtitle, 35, 1650)
+    if len(lines) > 2:
+        raise ValueError(f"Subtitle exceeds two lines: {subtitle}")
+    for k, line in enumerate(lines):
+        center(d, W/2, 950+k*45 if len(lines) > 1 else 963, line, 35, "white")
+    rr(d, (76, 1064, 1844, 1072), LINE, 4)
+    rr(d, (76, 1064, 76+1768*min(1, total/duration), 1072), BLUE, 4)
+    return im
+
 
 def subtitle_chunks(narration):
- pieces=re.findall(r'[^。！？]+[。！？]?',narration)
- chunks=[]
- for p in pieces:
-  if len(p)<=42:chunks.append(p)
-  else:
-   parts=re.findall(r'[^，]+，?',p); current=''
-   for part in parts:
-    if len(current+part)>42 and current:chunks.append(current);current=''
-    current+=part
-   if current:chunks.append(current)
- return chunks
+    pieces = re.findall(r"[^，。！？；]+[，。！？；]?", narration)
+    chunks, current = [], ""
+    for piece in pieces:
+        if len(current+piece) > 36 and current:
+            chunks.append(current)
+            current = ""
+        while len(piece) > 36:
+            if current:
+                chunks.append(current)
+                current = ""
+            chunks.append(piece[:36])
+            piece = piece[36:]
+        current += piece
+        if piece.endswith(("。", "！", "？")):
+            chunks.append(current)
+            current = ""
+    if current:
+        chunks.append(current)
+    combined = []
+    for chunk in chunks:
+        if combined and not any(char.isalnum() for char in chunk):
+            combined[-1] += chunk
+        else:
+            combined.append(chunk)
+    return combined
+
 
 def stamp(seconds):
- ms=int(seconds*1000);return f'{ms//3600000:02}:{ms//60000%60:02}:{ms//1000%60:02},{ms%1000:03}'
+    ms = round(seconds*1000)
+    return f"{ms//3600000:02}:{ms//60000%60:02}:{ms//1000%60:02}.{ms%1000:03}"

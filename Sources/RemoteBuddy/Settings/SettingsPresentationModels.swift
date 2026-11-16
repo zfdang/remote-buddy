@@ -247,8 +247,7 @@ enum RemoteBatteryPresentationPolicy {
         level: Int?,
         powerState: RemotePowerState?
     ) -> Bool {
-        // Chromecast 不宣告电池能力，界面不得显示永远是「未知」的电量位。
-        guard !model.isChromecastRemote else { return false }
+        if model.isChromecastRemote { return level != nil }
         guard model.isAppleSiriRemote else { return true }
         guard level == nil else { return true }
         return powerState == .charging || powerState == .externalPower

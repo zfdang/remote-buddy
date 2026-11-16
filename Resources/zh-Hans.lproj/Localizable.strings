@@ -1250,7 +1250,9 @@
 "button_mapping.google.partial.enter_rule" = "2. 组合键「方向键 + OK」（如「上 + OK」）：同时按下发送一次 Enter（回车）键（需保持上方映射开关开启）";
 "button_mapping.google.partial.unsupported_rule" = "3. 其余 14 颗普通单键、双击/长按、单键常用语及任何键位修改在该模式下均禁止使用";
 "button_mapping.google.partial.setup_only_hint" = "支持模式已在首次/添加设备向导中锁定，此处仅作只读展示；若更换了遥控器硬件，请在「连接」页移除该设备后通过「添加新设备」重新识别。";
+"remote.device.full_support_badge" = "完全支持";
 "remote.device.partial_support_badge" = "部分支持";
+"connection.g9n9n.full_support_notice" = "完全支持模式：语音键与全部 14 颗普通按键均可正常使用与自定义。";
 "connection.g9n9n.partial_support_notice" = "部分支持（双键兼容）模式：语音键正常可用，仅「方向键 + OK」可发送 Enter 键，不可修改按键映射。若更换硬件，请移除后通过「添加新设备」重新检测。";
 "button_mapping.voice.settings_button" = "前往输入法整合设置";
 "common_phrases.g9n9n_partial_notice" = "当前选中的 G9N9N 处于部分支持（双键兼容）模式，仅支持语音键和「方向键 + OK」发 Enter，无法通过单键触发常用语。";

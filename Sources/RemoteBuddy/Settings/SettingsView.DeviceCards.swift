@@ -103,8 +103,8 @@ extension SettingsView {
                     }
                     .font(.system(size: 12))
                     .lineLimit(1)
-                    if profile.effectiveG9N9NInputMode == .twoKeyCompatibility {
-                        partialSupportBadge
+                    if profile.model.isChromecastRemote {
+                        g9n9nSupportBadge(for: profile.effectiveG9N9NInputMode)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .center)
@@ -136,16 +136,23 @@ extension SettingsView {
     }
 
     var partialSupportBadge: some View {
-        HStack(spacing: 4) {
-            Image(systemName: "exclamationmark.circle.fill")
-                .foregroundStyle(.orange)
-            Text(localization.text("remote.device.partial_support_badge"))
-                .foregroundStyle(.secondary)
+        g9n9nSupportBadge(for: .twoKeyCompatibility)
+    }
+
+    func g9n9nSupportBadge(for mode: G9N9NInputMode) -> some View {
+        let isFull = mode == .full
+        return HStack(spacing: 4) {
+            Image(systemName: isFull ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+                .foregroundStyle(isFull ? Color.green : Color.orange)
+            Text(localization.text(
+                isFull ? "remote.device.full_support_badge" : "remote.device.partial_support_badge"
+            ))
+            .foregroundStyle(.secondary)
         }
         .font(.system(size: 11, weight: .medium))
         .padding(.horizontal, 7)
         .padding(.vertical, 2)
-        .background(Color.orange.opacity(0.12), in: Capsule())
+        .background((isFull ? Color.green : Color.orange).opacity(0.12), in: Capsule())
     }
 
     private func remoteConnectionLabel(connected: Bool) -> some View {

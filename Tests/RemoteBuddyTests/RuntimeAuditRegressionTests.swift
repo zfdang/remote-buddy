@@ -193,7 +193,7 @@ struct RuntimeAuditRegressionTests {
         var keys: [Bool] = []
         var completed = false
         let session = VoiceFnTapSessionController(startDelay: 0,
-            schedule: scheduler.voiceSchedule, setFunctionKeyPressed: { keys.append($0); return true },
+            schedule: scheduler.voiceSchedule, setTriggerPressed: { keys.append($0); return true },
             enqueueAudio: { _ in Issue.record("Cancelled start delivered audio") },
             drainAudio: { _, done in done() }, onFailure: { _ in Issue.record("Cleanup failed") })
         session.setEnabled(true)
@@ -228,7 +228,7 @@ struct RuntimeAuditRegressionTests {
         let scheduler = ControlledTestScheduler()
         var keys: [Bool] = []
         let session = VoiceFnTapSessionController(startDelay: 0, schedule: scheduler.voiceSchedule,
-            setFunctionKeyPressed: { keys.append($0); return true }, enqueueAudio: { _ in },
+            setTriggerPressed: { keys.append($0); return true }, enqueueAudio: { _ in },
             drainAudio: { _, done in done() }, onFailure: { _ in Issue.record("Shutdown failed") })
         session.setEnabled(true)
         #expect(session.startVoice())

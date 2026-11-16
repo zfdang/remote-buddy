@@ -9,8 +9,8 @@ struct OnboardingView: View {
     @EnvironmentObject var localization: LocalizationStore
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.colorSchemeContrast) var colorSchemeContrast
-    let completeRuntimeReadyOverride: Bool?
     let allowsInputSourceSwitching: Bool
+    let allowsHardwareMonitoring: Bool
     let systemFunctionKeyAvailableOverride: Bool?
     let voiceToolAvailabilityOverride: [OnboardingVoiceTool: OnboardingVoiceToolAvailability]?
     let remoteInputDiagnosticOverride: FirstUseRemoteInputDiagnostic?
@@ -41,7 +41,7 @@ struct OnboardingView: View {
     @State var voiceToolRuntimeState: [OnboardingVoiceTool: OnboardingVoiceToolRuntimeState] = [:]
     @State var systemFunctionKeyUsage = OnboardingSystemFunctionKeyUsage.current
     @State var selectedInputMethodGuideStep: Int?
-    @State var completedInputMethodGuideSteps = Set<Int>()
+    @State var viewedInputMethodGuideSteps = Set<Int>()
     @State var transcriptFocusRequest = 0
     @State var transcriptEditorMounted = false
     @State var transcriptWindowKey = false
@@ -53,18 +53,19 @@ struct OnboardingView: View {
     @State var voiceTranscriptDeadlineToken = UUID()
     @State var voiceTestTasks: [ScheduledOperation] = []
     @State var suppressConnectedPhysicalRemoteAutoRouteOnce = false
-    @State var isCapturingVoiceShortcut = false
-    @State var shortcutCaptureErrorKey: String?
     @State var secureInputActive: Bool?
     @State var secureInputWaitStartedAtUptime: TimeInterval?
     @State var lastLoggedSecureInputState: Bool?
-    @State var aiPromptCopyResult: Bool?
+    @State var diagnosticCopySucceeded: Bool?
+    @State var buttonHelpExpanded = false
+    @State var wechatHelpExpanded = false
+    @State var microphonePreparationInProgress = false
     @State var isPermissionRelaunchConfirmationPresented = false
 
     init(
         model: BridgeAppModel,
-        completeRuntimeReadyOverride: Bool? = nil,
         allowsInputSourceSwitching: Bool = true,
+        allowsHardwareMonitoring: Bool = true,
         systemFunctionKeyAvailableOverride: Bool? = nil,
         voiceToolAvailabilityOverride: [OnboardingVoiceTool: OnboardingVoiceToolAvailability]? = nil,
         initialInputMethodGuideStep: Int? = nil,
@@ -76,8 +77,8 @@ struct OnboardingView: View {
         self.model = model
 
         settings = model.settings
-        self.completeRuntimeReadyOverride = completeRuntimeReadyOverride
         self.allowsInputSourceSwitching = allowsInputSourceSwitching
+        self.allowsHardwareMonitoring = allowsHardwareMonitoring
         self.systemFunctionKeyAvailableOverride = systemFunctionKeyAvailableOverride
         self.voiceToolAvailabilityOverride = voiceToolAvailabilityOverride
         self.remoteInputDiagnosticOverride = remoteInputDiagnosticOverride
@@ -123,7 +124,7 @@ struct OnboardingView: View {
             refreshSecureInputState()
         }
         .task(id: settings.onboardingStep) { @MainActor in
-            while !Task.isCancelled, settings.onboardingStep != .complete {
+            while !Task.isCancelled {
                 let ready = bluetoothAuthorization == .allowedAlways && inputMonitoringGranted && accessibilityGranted
                 do { try await Task.sleep(for: .seconds(ready ? 5 : 1)) }
                 catch { return }
@@ -151,8 +152,8 @@ struct OnboardingView: View {
                 routeConnectedPhysicalRemoteIfNeeded()
             case .remote:
                 prepareSelectedControlConnection()
-            case .audio:
-                model.refreshAudioDevices()
+            case .voiceTrigger:
+                break
             case .complete:
                 prepareSelectedControlConnection()
                 model.refreshAudioDevices()
@@ -244,6 +245,10 @@ struct OnboardingView: View {
         .onChange(of: settings.onboardingStep) { _, step in
             cancelVoiceTestTasks()
             prepareForStep(step)
+        }
+        .onChange(of: settings.onboardingVoiceTrigger) { _, _ in
+            selectedInputMethodGuideStep = nil
+            viewedInputMethodGuideSteps.removeAll()
         }
         .onChange(of: settings.onboardingVoiceTool) { _, _ in
             refreshSelectedVoiceToolRuntimeState()

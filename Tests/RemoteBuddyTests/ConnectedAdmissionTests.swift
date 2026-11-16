@@ -22,4 +22,12 @@ struct ConnectedAdmissionTests {
     @Test func xiaomiOnlyModeStillRejectsChromecast() {
         #expect(VoiceRemoteAdmission.rejectsConnectedProduct(name: "Chromecast", allowsG9N9N: false))
     }
+
+    @Test func resolvedNameFallsBackFromBlankAdvertisedNameToPeripheralName() {
+        #expect(VoiceRemoteAdmission.resolvedName(advertisedName: "  Chromecast  ", peripheralName: "MI RC") == "Chromecast")
+        #expect(VoiceRemoteAdmission.resolvedName(advertisedName: nil, peripheralName: "  T1-Remote ") == "T1-Remote")
+        #expect(VoiceRemoteAdmission.resolvedName(advertisedName: "", peripheralName: "Chromecast") == "Chromecast")
+        #expect(VoiceRemoteAdmission.resolvedName(advertisedName: " \n\t ", peripheralName: "MI RC") == "MI RC")
+        #expect(VoiceRemoteAdmission.resolvedName(advertisedName: "  ", peripheralName: nil) == nil)
+    }
 }

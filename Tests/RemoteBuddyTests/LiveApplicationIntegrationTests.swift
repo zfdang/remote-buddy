@@ -27,6 +27,7 @@ struct LiveApplicationIntegrationTests {
                         windowFrame: KeyboardInjector.axFrame(window)) != nil
                 }.count
                 print("LIVE SCAN app=\(integration.rawValue) iteration=\(iteration) ms=\(Int((ProcessInfo.processInfo.systemUptime - started) * 1000)) nodes=\(nodes) candidates=\(candidates.count) matches=\(matches) truncated=\(truncated)")
+                #expect(!truncated)
             }
         }
     }

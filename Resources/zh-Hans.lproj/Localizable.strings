@@ -130,11 +130,6 @@
 "chromecast.status.disconnected" = "遥控器已断开";
 "chromecast.enabled.title" = "启用 Chromecast 遥控器";
 "chromecast.enabled.detail" = "打开后会搜索并连接该遥控器，用它的语音键直接说话；与 Siri Remote 互不影响。";
-"chromecast.mode.title" = "语音键模式";
-"chromecast.mode.toggle" = "按一次说话";
-"chromecast.mode.hold" = "按住说话";
-"chromecast.mode.toggle.detail" = "按一下开始收音，再按一下结束。只有这款遥控器支持这种方式，其他遥控器都只能按住说话。语音工具请对应选「按一次」触发（豆包：免按模式）。";
-"chromecast.mode.hold.detail" = "按住语音键时收音，松开结束。与 Siri Remote 的手感一致。语音工具请对应选「按住」触发（豆包：长按模式）。";
 "chromecast.action.reconnect" = "重新连接";
 "chromecast.help.plain" = "声音来自遥控器麦克风，传入所选虚拟麦克风；不使用电脑内置麦克风。";
 "chromecast.mapping.voice.title" = "语音键";
@@ -287,18 +282,16 @@
 "connection.status.voice_active" = "语音中";
 "common.status.ready" = "已就绪";
 "connection.status.voice_trigger" = "语音触发";
-"connection.voice_fn_tap.enabled" = "语音键模拟 Fn 点按";
-"connection.voice_fn_tap.hint" = "目前支持的遥控器需要按住语音键才能持续收音，松开就停止。网易叭哥说、Typeless 等工具需要单击切换识别状态。点按转换会配合收音过程：按下遥控器语音键时自动单击一次 Fn 开始识别；松开后待尾部音频传输完毕，再自动单击一次 Fn 结束识别。长按式工具（如微信输入法、豆包长按模式）请保持关闭。需要辅助功能权限。";
-"connection.voice_fn_tap.hint_short" = "适配网易叭哥说、Typeless 等单击切换工具：按下语音键自动单击一次 Fn 开始，松开并传完尾部音频后再自动单击一次 Fn 结束。";
-"connection.voice_key_mode.title" = "语音触发键";
+"connection.voice_fn_tap.enabled" = "点按模式";
+"connection.voice_fn_tap.hint_short" = "开启：自动点按热键开始和结束；关闭：收音期间持续按住热键。";
+"connection.voice_key_mode.title" = "语音热键";
 "connection.voice_key.mode.fn" = "Fn/地球键";
-"connection.voice_key.mode.left_command" = "左 Command";
-"connection.voice_key.mode.right_command" = "右 Command";
-"connection.voice_key.mode.left_option" = "左 Option（⌥）";
-"connection.voice_key.mode.right_option" = "右 Option（⌥）";
-"connection.voice_key_mode.help" = "默认使用 Fn/地球键。Command 与 Option 模式需要辅助功能权限，并要求目标语音应用支持对应的单独按键长按；许多应用会把左右同侧按键合并为通用修饰键。长按期间按其他键可能触发修饰键快捷键。";
-"connection.voice_key_mode.unverified" = "修饰键模式尚未验证";
-"connection.voice_key_mode.unverified_detail" = "请在目标语音工具中同步配置相同的触发键（左/右 Command 或左/右 Option）并实际说一句确认文字上屏。遥控搭子无法读取第三方工具的内部设置；如果没有文字，请改回 Fn/地球键。";
+"connection.voice_key.mode.left_command" = "左 Command (⌘)";
+"connection.voice_key.mode.right_command" = "右 Command (⌘)";
+"connection.voice_key.mode.left_option" = "左 Option (⌥)";
+"connection.voice_key.mode.right_option" = "右 Option (⌥)";
+"connection.voice_key_mode.help" = "下一步请在输入工具中设置相同语音热键和录音方式。";
+"onboarding.voice_trigger.save_hint" = "通过后续语音测试后，新设置才会生效。";
 "connection.voice_key_mode.command_permission" = "修饰键模式需要辅助功能权限";
 "connection.action.reconnect" = "立即重新连接";
 "audio.section.title" = "音频设置";
@@ -320,12 +313,9 @@
 "audio.compatibility.help_plain" = "如果常用的语音工具收不到声音，可选择随安装包提供的兼容麦克风；已有音频设备不会被替换。";
 "button_mapping.page.title" = "按键映射";
 "button_mapping.page.subtitle" = "点击按键进行设置";
-"button_mapping.google.subtitle" = "G9N9N 仅支持 OK＋方向键发送 Enter，单键映射不可用";
+"button_mapping.google.subtitle" = "G9N9N 支持自定义单击、双击和长按动作";
 "button_mapping.t1.subtitle" = "点击返回、主页、菜单、静音、音量或电源键自定义；语音键按一下松开开始说话，再按一下结束（确认、方向键、飞鼠与背面全键盘保持系统默认输入）";
 "t1.remote.keyboard_airmouse_note" = "返回、主页、菜单、静音、音量与电源键支持单击、双击与长按映射；确认、方向键、空中飞鼠与背面 QWERTY 全键盘保持系统默认输入（直接打字和移动鼠标）。";
-"button_mapping.google.enter.title" = "OK＋方向键 → Enter（固定）";
-"button_mapping.google.enter.detail" = "开启上方“自定义按键”且应用已接管按键输入时，短按 OK＋任意方向键可发送 Enter。该组合为固定动作，不受下方单键设置影响。";
-"button_mapping.google.enter.limit" = "由于 G9N9N 发送的蓝牙 HID 按键报文不符合 macOS 标准规范，单键与松开事件会被系统底层忽略，因此下方的单键配置对该设备无效。仅 OK＋方向键可发送 Enter；长按双键可能重复输入。";
 "button_mapping.toggle.enabled" = "自定义按键";
 "button_mapping.permission_prompt.title" = "需要开启按键权限";
 "button_mapping.permission_prompt.message" = "自定义按键需要“输入监控”和“辅助功能”权限，请前往权限页面完成设置。";
@@ -342,8 +332,6 @@
 "button_mapping.selection_lock_hint_short" = "按遥控器时保持当前编辑项。";
 "button_mapping.voice_button.title" = "语音键";
 "button_mapping.voice_button.fixed" = "语音触发键";
-"button_mapping.voice_button.detail" = "按住说话；可选择 Fn/地球键、左/右 Command 或左/右 Option 长按，不参与普通按键动作映射。";
-"button_mapping.voice_button.t1_detail" = "按一下松开开始说话，说完再按一下结束；可选择 Fn/地球键、左/右 Command 或左/右 Option，不参与普通按键映射。";
 "button_mapping.action.not_set" = "未设置";
 "button_mapping.single_click.help" = "按一下立即执行；设置双击后会稍等片刻再确认。";
 "button_mapping.double_click.effect" = "单击会稍等片刻以区分双击；长按仍可选择独立动作或持续连发。";
@@ -355,7 +343,6 @@
 "trigger.other_actions" = "%1$@其他触发";
 "trigger.hold_repeat_disabled" = "按住重复已停用";
 "trigger.timing.help" = "双击会等待约 0.3 秒确认单击；长按约 0.55 秒触发。未配置时保持原有即时响应。";
-"shortcut.action.click_to_record" = "点击录入";
 "permissions.page.title" = "权限与隐私";
 "permissions.page.subtitle" = "按顺序完成权限设置，确保遥控器正常连接和发送按键";
 "permissions.required.title" = "所需权限";
@@ -379,28 +366,11 @@
 "common.status.connected" = "已连接";
 "common.status.connecting" = "连接中";
 "common.status.preparing" = "准备中";
-"shortcut.editor.title" = "录入%1$@%2$@快捷键";
-"shortcut.editor.instructions" = "直接按下单个按键或组合键；左/右 Command、Option、Control、Shift 和 Fn 也可以单独录入。";
-"shortcut.editor.waiting" = "等待按键…";
-"shortcut.editor.click_first_help" = "可直接选择常用组合，或在标准键盘中选择主按键，组合键可以留空；也可以继续使用键盘录入。";
 "shortcut.editor.not_recorded" = "尚未录入";
 "shortcut.editor.recording_prompt" = "现在请按下单个按键、组合键或单独修饰键；本次按键不会触发原本绑定的动作。";
 "shortcut.editor.success" = "快捷键录入成功";
 "shortcut.editor.permission_required" = "录入系统快捷键需要辅助功能权限。请完成系统授权后再次点击录入。";
 "shortcut.editor.capture_unavailable" = "无法启动快捷键录入，请检查辅助功能和输入监控权限，或重新打开遥控搭子后再试。";
-"shortcut.picker.selection_method" = "快捷键选择方式";
-"shortcut.picker.mode.presets" = "常用组合";
-"shortcut.picker.mode.keyboard" = "标准键盘";
-"shortcut.picker.presets.help" = "点击一个常用组合即可保存，不会在选择时执行该快捷键。";
-"shortcut.picker.modifiers.title" = "组合键";
-"shortcut.picker.modifiers.help" = "可多选 Command、Option、Control、Shift 或 Fn，再从下方选择一个主按键。";
-"shortcut.picker.keyboard.main" = "主键区";
-"shortcut.picker.keyboard.navigation" = "方向与导航键";
-"shortcut.picker.keyboard.extended_functions" = "扩展功能键";
-"shortcut.picker.keyboard.number_pad" = "数字键盘";
-"shortcut.picker.keyboard.key_accessibility" = "选择快捷键 %1$@";
-"shortcut.picker.standalone_modifiers.title" = "单独修饰键";
-"shortcut.picker.standalone_modifiers.help" = "用于只短按并释放一个左侧或右侧修饰键，不需要在实体键盘上录入。";
 "shortcut.modifier.control" = "Control";
 "shortcut.modifier.option" = "Option";
 "shortcut.modifier.shift" = "Shift";
@@ -415,30 +385,15 @@
 "shortcut.standalone_modifier.left_shift" = "左 Shift";
 "shortcut.standalone_modifier.right_shift" = "右 Shift";
 "shortcut.standalone_modifier.function" = "Fn";
-"shortcut.preset.copy" = "复制";
-"shortcut.preset.paste" = "粘贴";
-"shortcut.preset.cut" = "剪切";
-"shortcut.preset.undo" = "撤销";
-"shortcut.preset.redo" = "重做";
-"shortcut.preset.select_all" = "全选";
-"shortcut.preset.save" = "保存";
-"shortcut.preset.find" = "查找";
-"shortcut.preset.app_switcher" = "切换 APP";
-"shortcut.preset.spotlight" = "聚焦搜索";
-"shortcut.preset.close_window" = "关闭窗口";
-"shortcut.preset.quit_application" = "退出 APP";
-"shortcut.preset.lock_screen" = "锁定屏幕";
-"shortcut.preset.capture_area" = "截取区域";
-"shortcut.preset.force_quit" = "强制退出";
 "common.action.clear" = "清除";
 "common.action.cancel" = "取消";
 "common.action.save" = "保存";
 "common.action.choose" = "选择";
 "common.action.continue" = "继续";
 "remote.photo.missing" = "实物图资源缺失";
-"remote.mapping.instructions" = "点击或按下实物按键定位映射；麦克风键固定用于语音输入与 Fn 功能。";
-"remote.voice_button.help" = "按住麦克风键进行语音输入；在需要时也可作为 Mac Fn 键使用。";
-"remote.voice_button.accessibility_label" = "语音输入与 Fn 键，固定核心功能";
+"remote.mapping.instructions" = "点击或按下实物按键定位映射；麦克风键固定用于语音输入，热键可在输入法集成中设置。";
+"remote.voice_button.help" = "使用麦克风键进行语音输入；触发热键在输入法集成中设置。";
+"remote.voice_button.accessibility_label" = "语音输入键，热键可配置";
 "menu.open_settings" = "打开设置…";
 "menu.show_logs" = "显示日志";
 "menu.about" = "关于遥控搭子";
@@ -471,10 +426,8 @@
 
 "settings.overview.title" = "当前状态检查";
 "settings.overview.remote" = "遥控器连接";
-"settings.overview.mapping" = "按键映射";
 "settings.overview.integration" = "输入法集成";
 "settings.overview.disconnected" = "未连接";
-"settings.overview.optional" = "可选 · 未启用";
 "settings.overview.not_configured" = "未设置";
 "settings.general.display_group" = "应用显示";
 "settings.general.language_group" = "语言";
@@ -482,7 +435,6 @@
 "settings.overview.missing_requirements" = "待设置：%@";
 "settings.overview.open_section" = "打开%@设置";
 
-"settings.section.settings" = "设置";
 "settings.update_badge.accessibility_value" = "有新版本可用";
 "settings.page.title" = "设置";
 "settings.permissions.title" = "系统权限";
@@ -490,8 +442,6 @@
 "settings.diagnostics.title" = "诊断与日志";
 "settings.application_updates.title" = "应用与更新";
 "settings.application.tagline" = "让语音触手可及";
-"settings.section.login" = "我的";
-"settings.section.transcripts" = "回眸";
 "about.page.subtitle" = "查看版本、更新、语言和应用显示选项";
 "about.app.description" = "让遥控器成为你的语音输入助手，轻松说话打字，一键操作常用功能。";
 "about.app_support.title" = "应用与支持";
@@ -502,7 +452,6 @@
 "about.preferences.app_icon" = "应用图标";
 "about.preferences.app_icon_help" = "选择在 Dock、应用切换器和设置窗口中显示的图标。";
 "about.preferences.app_icon_standard" = "Remote Buddy";
-"about.preferences.app_icon_faceted_duck" = "几何鸭";
 "about.preferences.language" = "应用语言";
 "about.preferences.rc003_voice_extension_test" = "测试长时间语音功能";
 "about.page.hero_subtitle" = "集中查看无线语音工作台的版本、偏好与支持信息";
@@ -515,8 +464,10 @@
 "about.info.architecture" = "芯片架构";
 "about.info.updates" = "软件更新";
 "about.info.project" = "项目介绍与链接";
-"about.info.releases" = "最新发布与下载";
-"about.info.open_releases" = "查看发布";
+"about.info.website_downloads" = "官网直接下载";
+"about.info.open_website_downloads" = "前往官网下载";
+"about.info.releases" = "GitHub 发布下载";
+"about.info.open_releases" = "查看 GitHub Releases";
 "about.version.latest" = "最新版本";
 "about.version.available" = "可更新";
 "about.version.update_to" = "更新到 %1$@";
@@ -532,7 +483,6 @@
 "about.version.release_notes_unavailable" = "此版本暂未提供可展示的更新内容。";
 "about.version.check_prerelease" = "接收测试版（Preview）更新";
 "about.version.check_prerelease_help" = "默认关闭。开启后，自动检查和手动检查都会包含尚未正式发布的测试版（Preview）。";
-"about.version.check_prerelease_help_short" = "包含尚未正式发布的测试版（Preview）更新。";
 "about.version.history" = "版本历史";
 "help.glossary.open" = "术语表";
 "about.support.github" = "GitHub";
@@ -582,16 +532,8 @@
 "onboarding.action.start" = "开始设置";
 "onboarding.action.continue" = "继续";
 "onboarding.action.open_app" = "打开遥控搭子";
-"onboarding.welcome.title" = "让手边的设备成为随手可用的\n遥控搭子";
-"onboarding.welcome.detail" = "我们会一起选择控制方式，完成权限、语音输出设备和真实语音检查，让你第一次使用时就知道每一部分都在正常工作。";
-"onboarding.welcome.feature.voice" = "按住语音键，直接在常用工具里说话输入";
-"onboarding.welcome.feature.controls" = "用遥控器按键控制方向、音量和常用操作";
-"onboarding.welcome.feature.verify" = "每项设置都现场检查，出问题时直接告诉你原因";
-"onboarding.welcome.ai_prompt.action" = "让 AI 工具帮我配置";
-"onboarding.welcome.ai_prompt.copied" = "配置提示已复制，请粘贴到常用的 AI 工具。";
-"onboarding.welcome.ai_prompt.failed" = "复制失败，请重试。";
 "onboarding.voice_tool.title" = "你准备在哪个工具里说话？";
-"onboarding.voice_tool.detail" = "选择常用工具，遥控搭子会适配语音键；之后仍可在设置中修改。";
+"onboarding.voice_tool.detail" = "选择输入工具，并按右侧说明完成设置。";
 "onboarding.voice_tool.none_detected" = "未检测到已安装的微信输入法、豆包输入法、网易叭哥说或 Typeless。你仍可选择“其他语音工具”，但请先安装并打开一个支持语音输入的工具。";
 "onboarding.voice_tool.unselected.title" = "尚未选择";
 "onboarding.voice_tool.unselected.detail" = "尚未选择常用语音工具。";
@@ -612,33 +554,31 @@
 "onboarding.voice_tool.doubao.install" = "安装豆包输入法";
 "onboarding.voice_tool.typeless.fn_required" = "Typeless 使用按一下语音键的方式。";
 "onboarding.voice_tool.voice_key_help" = "当前语音触发键：%1$@。目标语音工具也需要使用同一个按键；遥控搭子不会拦截输入法切换快捷键。";
-"onboarding.voice_tool.fn_only" = "首次设置统一使用 Fn/地球键";
 "onboarding.voice_tool.guide.title" = "按图完成语音工具设置";
 "onboarding.voice_tool.guide.detail" = "只显示当前工具需要的设置；遥控搭子不会自动修改第三方工具。";
 "onboarding.voice_tool.guide.continue_hint" = "请先查看右侧的每一个设置步骤，再继续。";
 "onboarding.voice_tool.guide.microphone_hint" = "请在第 3 个步骤中确认输入工具的麦克风选择，再继续。";
 "onboarding.voice_tool.guide.microphone_detail" = "请在%@的语音输入设置中，将麦克风选择为“%@”。这项设置需要在输入工具中手动完成。";
-"onboarding.voice_tool.guide.match_shortcut" = "请将语音热键设为“%@”，与本次方案保持一致。截图展示的是本机输入法当前的设置。";
+"onboarding.voice_tool.guide.match_shortcut" = "热键：%@ · 模式：%@";
 "onboarding.voice_tool.guide.select_step" = "请点击右侧步骤，查看对应设置说明。";
 "onboarding.voice_tool.guide.select_doubao" = "选择豆包输入法";
-"onboarding.voice_tool.guide.configure_doubao" = "设置豆包的 Fn 语音";
+"onboarding.voice_tool.guide.configure_doubao" = "设置豆包语音热键";
 "onboarding.voice_tool.guide.select_weixin" = "选择微信输入法";
-"onboarding.voice_tool.guide.configure_weixin" = "设置微信输入法的 Fn 语音";
+"onboarding.voice_tool.guide.configure_weixin" = "设置微信输入法语音热键";
 "onboarding.voice_tool.guide.open_bageshuo" = "打开网易叭哥说设置";
 "onboarding.voice_tool.guide.open_bageshuo.detail" = "在菜单栏点击网易叭哥说图标，选择“设置”。";
-"onboarding.voice_tool.guide.configure_bageshuo" = "设置语音快捷键为 Fn";
-"onboarding.voice_tool.guide.configure_bageshuo.detail" = "在设置 → 快捷键中，将“语音润色快捷键”设为 Fn。工作模式为按一下开始、再按一下结束。因遥控器需按住才能收音，遥控搭子已自动开启点按转换：按住语音键时自动单击一次 Fn 开始识别，松开后待尾部音频传输完毕再自动单击一次 Fn 结束识别。使用时请按住说话、松手结束。";
+"onboarding.voice_tool.guide.configure_bageshuo" = "设置语音热键";
+"onboarding.voice_tool.guide.configure_bageshuo.detail" = "在设置 → 快捷键中，将“语音润色快捷键”设为“%@”，使用按一下开始、再按一下结束模式。遥控器的点按转换状态以当前方案为准。";
 "onboarding.voice_tool.guide.open_typeless" = "打开 Typeless";
 "onboarding.voice_tool.guide.open_typeless.detail" = "启动 Typeless，并保持它在后台运行。";
 "onboarding.voice_tool.guide.configure_typeless" = "使用按一次说话";
-"onboarding.voice_tool.guide.configure_typeless.detail" = "在 Typeless 设置中配置快捷键为 Fn。Typeless 采用按一下开始、再按一下结束。因遥控器需按住才能收音，遥控搭子已自动开启点按转换：按住语音键时自动单击一次 Fn 开始识别，松开后待尾部音频传输完毕再自动单击一次 Fn 结束识别。使用时请按住说话、松手结束。";
+"onboarding.voice_tool.guide.configure_typeless.detail" = "在 Typeless 中将语音快捷键设为“%@”，采用按一下开始、再按一下结束模式。遥控器的点按转换状态以当前方案为准。";
 "onboarding.voice_tool.guide.open_other" = "打开语音工具";
 "onboarding.voice_tool.guide.open_other.detail" = "启动你准备使用的语音工具，并确认它支持语音输入。";
-"onboarding.voice_tool.guide.configure_other" = "把语音键设为 Fn";
-"onboarding.voice_tool.guide.configure_other.detail" = "在工具自己的设置中，把语音输入快捷键设为 Fn。";
+"onboarding.voice_tool.guide.configure_other" = "设置匹配的语音热键";
+"onboarding.voice_tool.guide.configure_other.detail" = "在工具自己的设置中，将语音输入快捷键设为“%@”，并使录音触发模式与本页选择一致。";
 "onboarding.voice_tool.guide.select_microphone.detail" = "在语音工具中选择与遥控搭子音频页相同的麦克风。";
-"onboarding.voice_tool.guide.release_system_fn" = "去除系统 Fn 占用";
-"onboarding.voice_tool.guide.release_wechat_fn" = "清空微信 App 的 Fn 快捷键";
+"onboarding.voice_tool.guide.release_system_fn" = "检查系统 Fn 设置";
 "onboarding.voice_tool.guide.image_missing" = "当前安装包缺少设置图片，请安装最新的完整安装包。";
 "onboarding.voice_tool.switch.selected" = "当前已经选择 %1$@。";
 "onboarding.voice_tool.switch.not_selected" = "%1$@ 已安装，但当前不是 macOS 输入法。这里不会因为你选择了它就自动切换。";
@@ -655,17 +595,10 @@
 "onboarding.voice_tool.bageshuo.detail" = "网易AI语音输入，端到端极速上屏与智能润色。";
 "onboarding.voice_tool.bageshuo.install" = "前往网易叭哥说官网";
 "onboarding.voice_tool.bageshuo.install_detail" = "未检测到已安装的网易叭哥说：";
-"onboarding.voice_tool.fn_tap_banner" = "目前遥控器需按住收音（松手即停）。所选工具使用单击触发，软件已自动开启点按转换：按住时自动单击一次 Fn 开始识别，松开后待尾部音频传输完毕再自动单击一次 Fn 结束识别。使用时依然按住说话、松手结束。";
+"onboarding.voice_tool.fn_tap_banner" = "已启用点按转换：收音开始时点按一次“%@”，收音结束且尾部音频送完后再点按一次。请按遥控器的正常方式开始和结束收音。";
 "onboarding.voice_tool.status.unknown" = "请打开工具后继续";
-"onboarding.voice_tool.binding.title" = "快捷键配置来源";
-"onboarding.voice_tool.binding.recommended" = "使用推荐配置";
-"onboarding.voice_tool.binding.recommended_detail" = "遥控搭子会根据控制设备和已记录的工具默认值生成配置，真实文字测试通过后才保存。";
-"onboarding.voice_tool.binding.no_documented_default" = "没有可安全自动采用的默认快捷键。";
-"onboarding.voice_tool.binding.evidence_verified" = "推荐";
-"onboarding.voice_tool.binding.evidence_pending" = "测试通过后保存";
-"onboarding.control_source.title" = "选择控制设备";
+"onboarding.control_source.title" = "选择遥控器型号";
 "onboarding.control_source.detail" = "请选择要使用的遥控器，然后点击“继续”。";
-"onboarding.control_source.hardware" = "实体遥控器";
 "onboarding.control_source.alternatives" = "备用方式";
 "onboarding.control_source.more" = "更多控制方式";
 "onboarding.control_source.recommended" = "推荐";
@@ -681,38 +614,11 @@
 "onboarding.control_source.apple_remote.generation_7.title" = "苹果遥控器第 7 代";
 "onboarding.control_source.chromecast_remote.title" = "Chromecast 语音遥控器";
 "onboarding.control_source.chromecast_remote.detail" = "支持按住说话或按一次说话。";
-"onboarding.gesture.title" = "说话方式";
 "onboarding.gesture.hold" = "按住说话";
 "onboarding.gesture.toggle" = "按一次说话";
-"onboarding.pairing_plan.title" = "遥控搭子将按这个方案试用";
-"onboarding.pairing_plan.summary" = "%1$@ · %2$@ · %3$@";
-"onboarding.pairing_plan.fn_tap_on" = "已启用 Fn 点按转换";
-"onboarding.pairing_plan.fn_tap_off" = "无需 Fn 点按转换";
-"onboarding.pairing_plan.pending_evidence" = "语音文字测试通过后保存这套设置。";
-"onboarding.shortcut_learning.title" = "学习你当前的语音快捷键";
-"onboarding.shortcut_learning.detail" = "先选择按住或按一次，再点击开始并完整按下当前工具的快捷键。遥控搭子不会读取第三方工具的私有设置。";
-"onboarding.shortcut_learning.start" = "开始学习快捷键";
-"onboarding.shortcut_learning.waiting" = "请按下当前语音快捷键…";
-"onboarding.shortcut_learning.captured" = "已识别：%1$@";
-"onboarding.shortcut_learning.unsupported" = "这个组合目前无法作为遥控搭子语音键，请使用 Fn、左/右 Command 或左/右 Option。";
-"onboarding.shortcut_learning.incompatible" = "这个快捷键和所选控制设备的说话方式无法可靠转换，请更换模式或快捷键。";
-"onboarding.shortcut_learning.permission_required" = "需要先授予辅助功能权限。";
-"onboarding.shortcut_learning.unavailable" = "暂时无法监听快捷键，请重新授权后重试。";
-"onboarding.voice_test.configuration.binding_expected" = "%1$@ · %2$@";
-"onboarding.remote_availability.title" = "你现在有实体遥控器吗？";
-"onboarding.remote_availability.detail" = "实体遥控器可以获得完整、稳定的遥控搭子体验。如果当前没有，也可以继续使用手机。";
-"onboarding.remote_availability.has_remote.title" = "有遥控器";
-"onboarding.remote_availability.has_remote.detail" = "连接支持的蓝牙遥控器，使用实体按键和遥控器麦克风。";
-"onboarding.remote_availability.no_remote.title" = "当前没有遥控器";
-"onboarding.remote_availability.no_remote.detail" = "下一步选择 iPhone App 或微信小程序完成体验。";
-"onboarding.remote_availability.recommended" = "优先推荐";
 "onboarding.remote_availability.illustration" = "优先使用实体遥控器";
-"onboarding.control_method.title" = "没有遥控器时，选择手机控制方式";
-"onboarding.control_method.physical_remote.title" = "使用实体遥控器";
-"onboarding.control_method.physical_remote.detail" = "连接支持的蓝牙遥控器，使用实体按键和遥控器麦克风。";
-"onboarding.control_method.illustration" = "选择现在就能使用的控制方式";
-"onboarding.permissions.title" = "允许遥控搭子连接和控制 Mac";
-"onboarding.permissions.detail" = "先开启三项权限，再选择和连接设备。麦克风驱动将在第 4 步检查。";
+"onboarding.permissions.title" = "权限与麦克风";
+"onboarding.permissions.detail" = "先开启蓝牙、输入监控和辅助功能权限，并确认虚拟麦克风驱动及音频输出就绪，再连接设备。";
 "onboarding.permissions.bluetooth.detail" = "发现并连接已配对的蓝牙遥控器";
 "onboarding.permissions.input.detail" = "读取实体按键并支持语音输入";
 "onboarding.permissions.accessibility.detail" = "执行语音快捷键和自定义按键";
@@ -725,7 +631,7 @@
 "onboarding.remote.siri_pairing.first" = "打开“系统设置 → 蓝牙”，让苹果遥控器靠近 Mac。";
 "onboarding.remote.siri_pairing.second" = "同时按住返回键和音量加键约 5 秒，看到遥控器后完成连接。";
 "onboarding.remote.siri_pairing.third" = "蓝牙名称可能不会显示为“苹果遥控器”。重置后请关注蓝牙列表中新出现的设备，不要只按名称判断。";
-"onboarding.remote.chromecast_pairing.title" = "Google 遥控器配对（G9N9N / GY3LE）";
+"onboarding.remote.chromecast_pairing.title" = "Google 遥控器配对（G9N9N）";
 "onboarding.remote.chromecast_pairing.first" = "打开“系统设置 → 蓝牙”，将遥控器靠近 Mac。";
 "onboarding.remote.chromecast_pairing.second" = "同时按住返回（Back）和主页（Home）约 3 秒，直到指示灯开始闪烁。";
 "onboarding.remote.t1_pairing.title" = "配对 T1 飞鼠键盘遥控器（及同款兼容版）";
@@ -740,9 +646,6 @@
 "onboarding.remote.searching_detail" = "保持遥控器靠近 Mac；首次连接按上方步骤操作，已配对时按任意键唤醒。";
 "onboarding.remote.button_waiting" = "等待控制按键";
 "onboarding.remote.button_waiting_detail" = "请短按圆盘中间的确定键或任意方向键，不要按麦克风/语音键。";
-"onboarding.remote.g9n9n.button_waiting_detail" = "受限于 G9N9N 单键蓝牙 HID 报文与 macOS 的兼容性，请同时按下 OK＋上方向键进行检测，收到输入后松开（请勿按语音键）。";
-"onboarding.remote.g9n9n.button_detail" = "已检测到按键输入，可继续进行语音设置。";
-"onboarding.remote.g9n9n_pairing.third" = "在 Mac 蓝牙中连接遥控器，然后同时按下 OK＋上方向键完成按键检测。";
 "onboarding.remote.button_received" = "已收到控制按键";
 "onboarding.remote.button_detail" = "语音键以外的任意普通按键都可以。";
 "onboarding.remote.voice_button_mistake.title" = "刚才按的是语音键";
@@ -750,9 +653,8 @@
 "onboarding.remote.reconnect" = "重新查找";
 "onboarding.remote.retry_input" = "重新检测按键";
 "onboarding.remote.open_bluetooth" = "打开蓝牙设置";
-"onboarding.audio.title" = "检查虚拟麦克风驱动";
-"onboarding.audio.detail" = "自动检查驱动并配置 Remote Buddy Mic。检测成功后，点击“继续”进入下一步，无需选择音频设备。";
-"onboarding.audio.device_detail" = "请安装 Remote Buddy Mic 驱动，安装后仍未检测到设备时，请重启 Mac。";
+"onboarding.audio.title" = "检查虚拟麦克风";
+"onboarding.audio.detail" = "Remote Buddy Mic 就是遥控搭子的虚拟麦克风。应用会自动检查并准备，无需另外选择音频设备。";
 "onboarding.audio.no_devices" = "未检测到支持的虚拟音频设备";
 "onboarding.audio.selected" = "已选择 %1$@";
 "onboarding.audio.select_required" = "未检测到 Remote Buddy Mic";
@@ -760,28 +662,20 @@
 "onboarding.audio.refresh" = "重新检查";
 "onboarding.audio.on_demand_detail" = "手机开始语音时会自动连接所选设备；下一步将通过真实声音和文字进行验证。";
 "onboarding.voice_test.title" = "亲自说一句，确认真的能用";
-"onboarding.voice_test.detail" = "点一下下面的输入框，按照上方提示使用语音键说一句话。";
+"onboarding.voice_test.detail" = "点击下面的输入框，按提示说一句话。";
 "onboarding.voice_test.gain.title" = "调整声音增益";
 "onboarding.voice_test.gain.detail" = "增益会放大遥控搭子送到语音工具的声音。小声或气声不容易识别时，可先试 6–12 dB；过高也会放大环境噪声，调节后再说一句测试。";
 "onboarding.voice_test.gain.help" = "调整会立即用于后续语音。";
 "onboarding.voice_test.other_detail" = "请在“%@”所用的其他语音工具中开启语音输入，并在工具设置里把“%@”选为麦克风。";
-"onboarding.voice_test.configuration.title" = "测试前核对：遥控搭子与%@必须一致";
-"onboarding.voice_test.configuration.detail" = "请在%@中确认语音输入方式和麦克风与页面提示一致，确认后再开始测试。";
-"onboarding.voice_test.configuration.buddy_audio_output" = "遥控搭子音频输出";
-"onboarding.voice_test.configuration.audio_output_not_ready" = "%@（尚未连接）";
-"onboarding.voice_test.configuration.voice_gesture_checkbox" = "我已确认语音工具使用上方显示的操作方式";
-"onboarding.voice_test.configuration.global_voice_checkbox" = "我已确认豆包已开启“全局唤起语音”";
-"onboarding.voice_test.configuration.no_commit" = "没有收到文字。请重新核对上面的语音输入方式、全局唤起和麦克风设置。";
 "onboarding.voice_test.microphone_confirmation.title" = "输入工具还必须选择同一个麦克风";
 "onboarding.voice_tool.guide.select_microphone" = "选择输入工具的麦克风";
 "onboarding.voice_test.microphone_confirmation.detail" = "遥控搭子选择“%@”只负责输出遥控器声音，不会修改%@自己的麦克风设置。请先在该工具设置中把麦克风也改为“%@”。";
 "onboarding.voice_test.microphone_confirmation.checkbox" = "我已确认%@的麦克风是“%@”";
 "onboarding.voice_test.placeholder" = "试着说：遥控搭子已经连接成功";
-"onboarding.voice_test.waiting_voice" = "等待你按照上方提示使用语音键…";
-"onboarding.voice_test.fn_tap_explanation" = "遥控器收音与点按转换说明：目前支持的遥控器需按住语音键才能持续收音，松开就停止。点按转换会配合收音过程：按住时自动模拟单击一次 Fn 键，让工具开始识别；松开后待尾部音频传输完毕，再自动单击一次 Fn 键结束识别。你只需正常按住说话、说完松开。";
-"onboarding.voice_test.t1_fn_tap_explanation" = "T1 遥控器点按转换说明：T1 按一下语音键松开后就会持续收音，说完后再按一下停止。点按转换会在开麦时自动模拟单击一次 Fn 键，在第二次按下停止收音且尾部音频传输完毕后，再自动单击一次 Fn 键结束识别。";
+"onboarding.voice_test.waiting_voice" = "等待开始收音…";
+"onboarding.voice_test.t1_fn_tap_explanation" = "按一下 T1 语音键开始说话，再按一下结束。应用会在开始和送完尾部音频后，分别点按一次“%@”。";
 "onboarding.voice_test.receiving" = "正在接收声音…";
-"onboarding.voice_test.waiting_text" = "已收到声音，正在等待文字出现…";
+"onboarding.voice_test.waiting_text" = "收音结束，正在等待文字…";
 "onboarding.voice_test.tool_not_running" = "请先打开所选语音工具，再开始测试…";
 "onboarding.voice_test.manual_input" = "检测到键盘输入，请重新用语音键说一句";
 "onboarding.voice_test.success" = "语音与文字输入都已确认";
@@ -791,29 +685,18 @@
 "onboarding.controls.siri.detail" = "在苹果遥控器上连续按下三个不同的普通按键，例如方向、中心、返回、TV、播放或音量。";
 "onboarding.controls.chromecast.detail" = "在 Chromecast 遥控器上连续按下三个不同的普通按键，例如方向、确定、返回、主页、静音或音量。";
 "onboarding.controls.t1.detail" = "在 T1 遥控器正面连续按下三个不同的可映射按键，例如返回、主页、菜单、静音、音量或电源键。";
-"onboarding.controls.g9n9n.detail" = "G9N9N 请使用双键测试：先同时按 OK＋上，松开；再同时按返回＋上，松开。累计检测到 3 个按键即可继续。";
-"onboarding.controls.g9n9n.ready" = "已完成按键检测，可继续设置";
-"onboarding.side.g9n9n_test_enabled" = "按键测试已开启";
-"onboarding.complete.g9n9n.voice_only" = "G9N9N 支持语音输入与 OK＋方向键发送 Enter（普通单键映射不受支持）";
 "onboarding.controls.mobile_slot" = "第 %@ 个不同控制";
-"onboarding.controls.waiting" = "继续按下不同的按键";
-"onboarding.controls.ready" = "常用按键已经可以使用";
+"onboarding.controls.ready" = "按键检测通过";
 "onboarding.secure_input.title" = "系统安全输入可能影响遥控器按键";
 "onboarding.secure_input.detail" = "请退出正在输入密码或使用安全键盘输入的应用，然后重新检测。";
 "onboarding.secure_input.recheck" = "重新检测";
 "onboarding.secure_input.help" = "如果仍未恢复，请锁定 Mac 后使用密码重新解锁，再重新检测。";
 "onboarding.complete.title" = "遥控搭子已经准备好了";
-"onboarding.complete.detail" = "现在可以用所选控制方式说话输入，也可以在主面板中调整连接、语音和按键设置。";
-"onboarding.complete.runtime_changed" = "当前环境状态发生了变化";
-"onboarding.complete.runtime_changed_detail" = "请返回检查权限、遥控器连接或语音输出设备；恢复后即可继续。";
-"onboarding.complete.voice" = "语音传输与文字输入测试已通过";
-"onboarding.complete.controls" = "控制设备连接和普通按键已经确认";
-"onboarding.complete.settings" = "所有选项仍可在主面板中随时调整";
 "onboarding.illustration.tagline" = "无线说话，也能随手控制";
 "onboarding.complete.illustration" = "开始使用遥控搭子";
 
 "common.action.delete" = "删除";
-"onboarding.side.permissions" = "权限检查";
+"onboarding.side.permissions" = "权限与麦克风状态";
 "onboarding.side.remote" = "连接检查";
 "onboarding.side.audio" = "音频检查";
 "onboarding.side.voice_test" = "实时检查";
@@ -821,14 +704,12 @@
 "onboarding.side.remote_connected" = "遥控器已连接";
 "onboarding.side.control_selected" = "控制方式已选择";
 "onboarding.side.button_received" = "控制按键已收到";
-"onboarding.side.device_found" = "支持的虚拟音频设备已检测";
-"onboarding.side.device_selected" = "已自动指定 Remote Buddy Mic";
 "onboarding.side.audio_ready" = "音频输出正常";
 "onboarding.side.audio_on_demand" = "语音开始时连接音频";
-"onboarding.side.voice_key" = "语音键已按下并松开";
+"onboarding.side.voice_key" = "收音已开始并结束";
 "onboarding.side.samples" = "语音声音已收到";
 "onboarding.side.transcript" = "文字已经出现";
-"onboarding.side.three_buttons" = "常用按键已体验";
+"onboarding.side.three_buttons" = "已检测到三个不同按键";
 "onboarding.side.mapping_enabled" = "自定义按键已启用";
 "onboarding.diagnostics.copy" = "复制设置诊断";
 "onboarding.recovery.permission.bluetooth_denied.title" = "还需要蓝牙权限";
@@ -910,9 +791,6 @@
 "onboarding.recovery.controls.not_confirmed.title" = "请试三个不同的普通按键";
 "onboarding.recovery.controls.not_confirmed.detail" = "如有需要先重新连接，然后按三个不同的普通按键。";
 "onboarding.recovery.controls.not_confirmed.action" = "重新检测按键";
-"onboarding.recovery.complete.runtime_regressed.title" = "有一项设置发生了变化";
-"onboarding.recovery.complete.runtime_regressed.detail" = "直接返回受影响的设置页，恢复后再打开遥控搭子。";
-"onboarding.recovery.complete.runtime_regressed.action" = "修复受影响项目";
 "about.preferences.restart_onboarding" = "重新运行设置向导";
 "about.preferences.restart_onboarding_help" = "重新检查权限、遥控器、语音输出设备和语音输入；不会清除现有连接、按键映射或其他设置。";
 "about.preferences.restart_onboarding_action" = "重新运行";
@@ -1002,12 +880,12 @@
 "custom_application.accessibility.test" = "测试输入框";
 
 "onboarding.voice_tool.guide.screenshot.doubao_menu" = "在输入法菜单中选择豆包输入法，再打开设置。";
-"onboarding.voice_tool.guide.screenshot.doubao_settings" = "在语音输入中，将匹配模式的快捷键设为 Fn。图中为长按模式。开启全局唤起语音，并在麦克风选择中选择 Remote Buddy。";
+"onboarding.voice_tool.guide.screenshot.doubao_settings" = "在语音输入中，将对应模式的快捷键设为“%@”。开启全局唤起语音，并选择遥控搭子的虚拟麦克风。";
 "onboarding.voice_tool.guide.screenshot.weixin_input_menu" = "在输入法菜单中选择微信输入法，再打开设置。";
-"onboarding.voice_tool.guide.screenshot.weixin_input_settings" = "在语音输入中开启按住说话，并将快捷键设为 Fn。";
-"onboarding.voice_tool.guide.screenshot.weixin_app_shortcuts" = "在微信设置的快捷键中，清除语音输入文字下按住和按下开始模式占用的 Fn 快捷键。";
+"onboarding.voice_tool.guide.screenshot.weixin_input_settings" = "在语音输入中将快捷键设为“%@”，并让录音触发模式与当前方案一致。";
+"onboarding.voice_tool.guide.screenshot.weixin_app_shortcuts" = "微信 App 的全局语音快捷键可能与其他语音工具冲突。请检查是否占用了“%@”；如有冲突，仅清除对应快捷键。";
 "onboarding.voice_tool.guide.screenshot.bageshuo_menu" = "在菜单栏点击网易叭哥说图标，选择设置。";
-"onboarding.voice_tool.guide.screenshot.bageshuo_settings" = "在设置 → 快捷键中，将“语音润色快捷键”设为 Fn。工作模式为按一下开始说话，再按一下结束。";
+"onboarding.voice_tool.guide.screenshot.bageshuo_settings" = "在设置 → 快捷键中，将“语音润色快捷键”设为“%@”，使用按一下开始、再按一下结束模式。";
 "onboarding.voice_tool.guide.screenshot.system_fn" = "在系统设置的键盘中，将按下🌐键时设为不执行任何操作。";
 "siri_remote.activation.enable" = "启用";
 "siri_remote.activation.disable" = "停用";
@@ -1026,22 +904,20 @@
 "settings.driver.missing" = "未检测到兼容麦克风";
 "settings.driver.reload_help" = "如果安装驱动后仍未检测到 Remote Buddy Mic，请重启 Mac，或查看安装说明。";
 "settings.integration.title" = "输入法与语音工具集成";
-"settings.integration.introduction" = "在这里配置接收遥控器音频与语音快捷键的工具。通过向导验证完整输入流程，避免设备已连接却仍无法输入。";
-"settings.integration.current" = "当前集成";
-"settings.integration.microphone_help" = "在输入工具中选择相同的虚拟麦克风，并让语音快捷键、按下与松开行为和下方设置保持一致。";
+"settings.integration.introduction" = "选择输入工具，按向导完成设置和语音测试。";
+"settings.integration.current" = "当前集成工具";
 "settings.integration.other_title" = "其他工具";
 "settings.integration.configure" = "通过向导配置并测试";
 "settings.integration.select_tool" = "选择输入工具";
 "settings.integration.shortcut_title" = "语音触发方式";
-"settings.integration.shortcut_help" = "这些选项只调整语音触发方式。普通遥控器按键在“按键映射”中配置；识别与文本整理由所选输入工具完成。";
 
 "remote.device.illustration" = "遥控器示意图";
 
 "remote.device.select_placeholder" = "请选择遥控器";
 
 "onboarding.voice_tool.voice_buddy.title" = "Voice Buddy（语音搭子）";
-"onboarding.voice_tool.voice_buddy.detail" = "100% 本地 AI 语音输入与润色工具，零数据上云（myvoicebuddy.com）。";
-"onboarding.voice_tool.voice_buddy.intro" = "Voice Buddy 是一款 100% 本地离线运行的 Apple Silicon 语音输入搭子：端侧完成语音识别与大模型润色，音频与文字绝不上云，默认配合 Fn 长按说话。";
+"onboarding.voice_tool.voice_buddy.detail" = "本地离线运行的 AI 语音输入与润色工具。";
+"onboarding.voice_tool.voice_buddy.intro" = "Voice Buddy（语音搭子）是我们开发的 Apple Silicon 语音输入工具，支持本地离线语音识别与 AI 润色。";
 "onboarding.voice_tool.voice_buddy.install_detail" = "当前未检测到已安装的 Voice Buddy，可前往官网下载安装：";
 "onboarding.voice_tool.voice_buddy.website" = "访问官网 myvoicebuddy.com ↗";
 "onboarding.voice_tool.macos_dictation.title" = "macOS 听写";
@@ -1055,10 +931,9 @@
 "onboarding.voice_tool.guide.screenshot.macos_dictation_microphone" = "在“系统设置 → 键盘 → 听写 → 麦克风来源”中明确选择 Remote Buddy Mic，不要选择“自动”。红框标出的是听写的麦克风设置，无需更改系统默认麦克风。";
 
 "onboarding.step.welcome" = "欢迎";
-"onboarding.step.remoteAvailability" = "准备设备";
-"onboarding.step.permissions" = "系统权限";
+"onboarding.step.remoteAvailability" = "选择遥控器型号";
+"onboarding.step.permissions" = "权限与麦克风";
 "onboarding.step.remote" = "连接遥控器";
-"onboarding.step.audio" = "驱动检查";
 "onboarding.step.voiceTool" = "输入工具";
 "onboarding.step.voiceTest" = "语音测试";
 "onboarding.step.controls" = "按键测试";
@@ -1066,9 +941,8 @@
 
 "onboarding.voice_tool.guide.open_voice_buddy" = "打开 Voice Buddy";
 "onboarding.voice_tool.guide.open_voice_buddy.detail" = "打开 Voice Buddy（语音搭子）主窗口并切换到“通用”，配置触发按键、与当前遥控器一致的录音触发模式及麦克风输入源。";
-"onboarding.voice_tool.guide.configure_voice_buddy" = "将触发按键设为 Fn / 🌐 并匹配按住说话";
-"onboarding.voice_tool.guide.screenshot.voicebuddy_setting_fn" = "在 Voice Buddy → 通用 → 快捷键与录音方式中，将“触发按键”设为 Fn / 🌐，并将“录音触发模式”设为“按住说话”（如图），确保与遥控器的按住行为保持同步。";
-"onboarding.voice_tool.guide.voice_buddy.match_toggle_mode" = "当前向导选择了按一次切换模式，请将 Voice Buddy 的“录音触发模式”改为“按键切换录音”。";
+"onboarding.voice_tool.guide.configure_voice_buddy" = "设置触发热键和录音模式";
+"onboarding.voice_tool.guide.screenshot.voicebuddy_setting_fn" = "在 Voice Buddy → 通用 → 快捷键与录音方式中，将触发按键设为“%@”，并让录音触发模式与本页方案一致。";
 "onboarding.voice_tool.guide.screenshot.voicebuddy_setting_mic" = "在 Voice Buddy → 通用 → 音频输入与提示中，将“麦克风输入源”选为 Remote Buddy Mic。";
 
 "diagnostics.logs.open_failed" = "无法打开日志文件";
@@ -1104,11 +978,11 @@
 
 "button_mapping.unsupported_device" = "此遥控器目前尚未支持。请选择小米、T1-Remote 或 G9N9N 遥控器进行按键设置。";
 
-"onboarding.voice_tool.guide.screenshot.doubao_input_microphone" = "豆包输入法：选择遥控搭子的麦克风";
-"onboarding.voice_tool.guide.screenshot.weixin_input_microphone" = "微信输入法：选择遥控搭子的麦克风";
+"onboarding.voice_tool.guide.screenshot.doubao_input_microphone" = "在豆包输入法 → 语音输入 → 麦克风中，选择 Remote Buddy Mic。";
+"onboarding.voice_tool.guide.screenshot.weixin_input_microphone" = "在微信输入法 → 语音输入 → 麦克风中，选择 Remote Buddy Mic。";
 "onboarding.voice_tool.guide.screenshot.bageshuo_input_microphone" = "网易叭哥说：在设置 → 常规 → 麦克风中选择 Remote Buddy Mic。";
 
-"voice_button.status.cleanup_failed" = "Fn 键释放失败，请恢复辅助功能权限后重试。";
+"voice_button.status.cleanup_failed" = "语音热键释放失败，请恢复辅助功能权限后重试。";
 
 "button_mapping.error.filter_unavailable" = "按键映射已暂停，暂时无法接管遥控器原始按键。请重新检查遥控器输入权限或重连后再试。";
 
@@ -1154,7 +1028,6 @@
 "t1.remote.microphone_refused" = "T1 遥控器拒绝开启麦克风。请在系统蓝牙设置中重新配对后重试。";
 "google.remote.microphone_refused" = "遥控器拒绝开启麦克风。请重新配对后重试。";
 "google.remote.pairing_required" = "蓝牙配对认证尚未完成。请在 macOS 蓝牙设置中移除并重新配对遥控器，再重新连接。";
-"google.remote.ir_controls" = "电源和信源键在发送蓝牙信号时可以自定义映射；如果遥控器将它们设为红外模式（直接控制电视），电脑将无法收到这些按键。";
 
 "connection.action.add_device" = "添加新设备";
 "remote.hid_binding.title" = "关联遥控器按键设备";
@@ -1170,20 +1043,16 @@
 
 "settings.driver.fixed_output_help" = "所有设备共用此虚拟麦克风，程序会自动配置语音输出。";
 
-"onboarding.audio.automatic_ready" = "驱动与语音输出已就绪，点击“继续”进入下一步。";
 "onboarding.voice_prompt.t1.fn_tap" = "按一下 T1 语音键并松开开始说话，说完后再按一下结束（已自动开启点按转换）。";
 "onboarding.voice_prompt.t1.hold" = "按一下 T1 语音键并松开开始说话，说完后再按一下结束（期间遥控搭子会全程替你按住语音键）。";
 "onboarding.voice_prompt.generic.fn_tap" = "按住语音键说话，说完松开（已自动开启点按转换）。";
 "onboarding.voice_prompt.generic.hold" = "按住语音键说话，说完松开。";
 "onboarding.voice_prompt.generic.toggle" = "按一下语音键开始说话，再按一下结束。";
 
-"onboarding.audio.checking" = "正在检查驱动与语音输出。";
 
 "onboarding.action.dismiss" = "退出向导";
 "onboarding.add_device.complete.title" = "设备添加完成";
-"onboarding.add_device.complete.detail" = "设备已连接，按键已测试，麦克风已就绪。已有的输入法集成配置保持不变。";
 "onboarding.integration.complete.title" = "输入法集成完成";
-"onboarding.integration.complete.detail" = "输入法已完成配置，并已通过现有设备的语音输入验证。";
 
 "common_phrases.inserted" = "常用语已插入。";
 
@@ -1263,4 +1132,82 @@
 "application_integration.status.preserved" = "继续使用你选中的输入框，正在准备语音输入…";
 "application_integration.status.triggered_preserved" = "已沿用当前输入框，并请求开始语音输入。";
 
-"application_integration.voice_key_note" = "开启任一应用后，在所有应用里按住 Fn 说话，都会由遥控搭子处理。";
+"application_integration.voice_key_note" = "开启任一应用后，遥控搭子会统一处理遥控器语音键；热键和点按模式沿用输入法集成设置。";
+"connection.voice_key.mode.custom" = "自定义组合键";
+"connection.voice_key.customize" = "自定义热键…";
+"connection.voice_key.custom_unsupported" = "请选择带 Control、Shift、Option 或 Command 的普通按键组合；单独修饰键请使用 Fn、左右 Command 或左右 Option。组合键暂不支持 Fn。";
+"onboarding.voice_tool.selected_trigger_help" = "选择要发送给输入工具的热键。";
+"onboarding.voice_tool.trigger_incompatible" = "macOS 听写需要 Fn/地球键，请改用 Fn 或选择其他工具。";
+"onboarding.voice_tool.guide.release_wechat_shortcut" = "检查微信 App 热键冲突";
+"voice_button.status.custom_enabled" = "已启用自定义语音组合键";
+"voice_button.status.custom_pressed" = "语音组合键已按下；收音结束后释放";
+"voice_button.status.custom_released" = "语音组合键已释放";
+"onboarding.step.voiceTrigger" = "语音热键";
+"onboarding.voice_trigger.title" = "选择语音热键";
+"settings.integration.tap_enabled" = "点按模式：已开启";
+"settings.integration.tap_disabled" = "点按模式：已关闭";
+"settings.integration.trigger_readonly" = "热键和点按模式只能在输入法集成向导中修改，通过语音测试后才生效。";
+"onboarding.audio.not_detected" = "未检测到 Remote Buddy Mic，请安装或检查虚拟麦克风。";
+"onboarding.side.microphone" = "Remote Buddy Mic";
+"onboarding.button_help.title" = "按键没反应？";
+"onboarding.button_help.steps" = "1. 确认遥控器有电，并已通过蓝牙连接到这台 Mac。\n2. 点击“重新检测按键”，再按上方提示的普通按键；按键测试页请尝试三个不同按键。\n3. 仍无反应时，检查“系统设置 → 隐私与安全性 → 输入监控”中是否允许遥控搭子。";
+"onboarding.button_help.copy" = "复制诊断信息以反馈问题";
+"onboarding.audio.state.missing" = "未检测到 Remote Buddy Mic";
+"onboarding.audio.state.preparing" = "正在准备 Remote Buddy Mic…";
+"onboarding.audio.state.failed" = "Remote Buddy Mic 未能就绪";
+"onboarding.audio.state.ready" = "Remote Buddy Mic 已就绪";
+"onboarding.audio.retry" = "重新检测";
+"onboarding.audio.failure_help" = "请重新检测；若仍未就绪，请查看驱动安装说明。";
+"onboarding.permission.not_enabled" = "未开启";
+"onboarding.button_help.expanded" = "已展开";
+"onboarding.button_help.collapsed" = "已收起";
+"onboarding.controls.progress" = "已检测到 %@/3 个不同按键";
+"onboarding.voice_tool.choose_required" = "请选择输入工具。";
+"onboarding.voice_tool.install_required" = "请先安装并在系统中启用所选输入工具，再回到此页。";
+"onboarding.voice_tool.tap_required" = "此工具需要点按模式：将当前按住模式改为自动点按语音热键开始和结束，通过语音测试后才生效。";
+"onboarding.voice_tool.enable_tap" = "开启点按模式";
+"onboarding.voice_tool.choose_another" = "改选其他工具";
+"onboarding.guide.viewed" = "已查看";
+"onboarding.summary.detail" = "请核对本次配置，点击“打开遥控搭子”完成设置。";
+"onboarding.summary.remote" = "遥控器";
+"onboarding.summary.remote_missing" = "未选择遥控器";
+"onboarding.summary.buttons" = "按键检测";
+"onboarding.summary.passed" = "已通过";
+"onboarding.summary.not_tested" = "尚未验证";
+"onboarding.summary.not_ready" = "未就绪";
+"onboarding.diagnostics.copied" = "诊断信息已复制，可粘贴到问题反馈中。";
+"onboarding.diagnostics.copy_failed" = "未能复制诊断信息，请重试。";
+"button_mapping.voice_button.configure" = "请在输入法集成向导中设置语音热键和点按模式。";
+"voice.keyboard.help" = "点击修饰键和主键来组合热键，也可以直接录入。左右按键分别设置。";
+"voice.keyboard.choose_keys" = "请选择热键";
+"voice.keyboard.stop_recording" = "停止录入";
+"voice.keyboard.use_shortcut" = "使用此热键";
+"voice.keyboard.space" = "空格";
+"voice.keyboard.title" = "自定义语音热键";
+
+"shortcut.keyboard.title" = "自定义快捷键";
+"shortcut.keyboard.choose" = "选择快捷键…";
+
+"voice.keyboard.fn_replaced" = "Fn 仅支持单独使用，已替换之前选择的按键。";
+
+"onboarding.voice_tool.use_fn" = "改用 Fn/地球键";
+
+"shortcut.keyboard.main_key_required" = "请再选择一个普通按键，或只保留一个修饰键。";
+
+"connection.voice_key.chord_help" = "输入工具须支持此组合键和所选录音方式。请设置一致，并避开其他应用已用的快捷键。";
+
+"shortcut.keyboard.help" = "点击修饰键和普通按键来组合快捷键，也可以直接录入。左右按键分别设置。";
+"shortcut.keyboard.use_shortcut" = "使用此快捷键";
+"voice.keyboard.caps_unsupported" = "语音热键不支持 Caps Lock，请选择其他按键。";
+"shortcut.standalone_modifier.left_control_short" = "左 Ctrl";
+"shortcut.standalone_modifier.right_control_short" = "右 Ctrl";
+
+"onboarding.voice_test.trial_missing" = "本次语音测试配置已失效，请返回输入工具重新配置后再测试。";
+"onboarding.voice_test.reconfigure" = "返回配置输入工具";
+
+"button_mapping.google.version_notice" = "G9N9N 兼容款众多，不同硬件版本的功能支持可能不同，购买时请注意挑选硬件版本，详见";
+"button_mapping.google.device_guide" = "设备指南 ↗";
+
+"connection.empty.title" = "尚未添加遥控器";
+"connection.empty.detail" = "点击右上角“添加新设备”，连接你的遥控器。";
+"connection.action.device_comparison" = "设备对比与选购指南 ↗";

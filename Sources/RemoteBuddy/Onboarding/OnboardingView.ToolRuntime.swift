@@ -23,13 +23,13 @@ extension OnboardingView {
 
     func fnTapExplanationText(fallbackKey: String) -> String {
         if settings.onboardingControlSource == .t1Remote {
-            return localization.text(
+            return voiceToolGuideText(
                 settings.onboardingVoiceTool == .macosDictation
                     ? "onboarding.voice_tool.t1_dictation_fn_tap_explanation"
                     : "onboarding.voice_test.t1_fn_tap_explanation"
             )
         }
-        return localization.text(
+        return voiceToolGuideText(
             settings.onboardingVoiceTool == .macosDictation
                 ? "onboarding.voice_tool.dictation_fn_tap_explanation"
                 : fallbackKey
@@ -105,25 +105,21 @@ extension OnboardingView {
     }
 
     var voiceTestStatusText: String {
-        if !selectedVoiceToolRuntimeReady {
-            return localization.text("onboarding.voice_test.tool_not_running")
-        }
-        if manualTranscriptInputObserved {
-            return localization.text("onboarding.voice_test.manual_input")
-        }
-        if voiceAttempt.result == .audioDeliveryFailed {
-            return localization.text("onboarding.recovery.voice.audio_delivery_failed.title")
-        }
-        if voiceAttempt.result == .passed {
-            return localization.text("onboarding.voice_test.success")
-        }
-        if voiceSamplesReceived {
-            return localization.text("onboarding.voice_test.waiting_text")
-        }
-        if voiceSessionStarted {
-            return localization.text("onboarding.voice_test.receiving")
-        }
-        return localization.text("onboarding.voice_test.waiting_voice")
+        localization.text(Self.voiceTestStatusKey(toolReady: selectedVoiceToolRuntimeReady,
+            manualInput: manualTranscriptInputObserved, result: voiceAttempt.result,
+            sessionStarted: voiceSessionStarted, samplesReceived: voiceSamplesReceived,
+            sessionEnded: voiceSessionEnded))
+    }
+
+    static func voiceTestStatusKey(toolReady: Bool, manualInput: Bool, result: FirstUseVoiceAttemptResult,
+                                   sessionStarted: Bool, samplesReceived: Bool, sessionEnded: Bool) -> String {
+        if !toolReady { return "onboarding.voice_test.tool_not_running" }
+        if manualInput { return "onboarding.voice_test.manual_input" }
+        if result == .passed { return "onboarding.voice_test.success" }
+        if let failure = result.failureReason { return "onboarding.recovery.\(failure.rawValue).title" }
+        if !sessionEnded && (sessionStarted || samplesReceived) { return "onboarding.voice_test.receiving" }
+        if sessionEnded && samplesReceived { return "onboarding.voice_test.waiting_text" }
+        return "onboarding.voice_test.waiting_voice"
     }
 
     func bundledRemoteImage(resourceName: String) -> NSImage? {
@@ -155,21 +151,6 @@ extension OnboardingView {
         case .t1Remote: return "keyboard"
         case .siriRemote: return "appletvremote.gen4.fill"
         case .chromecastRemote: return "tv.and.hifispeaker.fill"
-        case .unselected: return "circle"
-        }
-    }
-
-    private func controlMethodIcon(_ method: OnboardingControlMethod) -> String {
-        switch method {
-        case .physicalRemote: return "appletvremote.gen4.fill"
-        case .unselected: return "circle"
-        }
-    }
-
-    private func remoteAvailabilityIcon(_ availability: OnboardingRemoteAvailability) -> String {
-        switch availability {
-        case .hasRemote: return "appletvremote.gen4.fill"
-        case .noRemote: return "iphone.and.arrow.forward"
         case .unselected: return "circle"
         }
     }

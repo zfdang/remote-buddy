@@ -9,7 +9,7 @@ struct MacOSDictationToolTests {
         samples: @escaping ([Int16]) -> Void = { _ in }
     ) -> VoiceFnTapSessionController {
         let session = VoiceFnTapSessionController(startTapCount: { 2 }, schedule: clock.voiceSchedule,
-            setFunctionKeyPressed: { edges($0); return true }, enqueueAudio: samples,
+            setTriggerPressed: { edges($0); return true }, enqueueAudio: samples,
             drainAudio: { _, done in done() }, onFailure: { _ in Issue.record("Unexpected failure") })
         session.setEnabled(true)
         return session
@@ -54,7 +54,7 @@ struct MacOSDictationToolTests {
         #expect(OnboardingVoiceTool.macosDictation.functionKeyStartTapCount == 2)
         #expect(OnboardingVoiceTool.other.functionKeyStartTapCount == 1)
         #expect(!OnboardingVoiceTool.macosDictation.supportsHoldVoiceRecording)
-        #expect(!OnboardingVoiceTool.macosDictation.requiresFunctionKeySetup)
+        #expect(!OnboardingVoiceTool.macosDictation.requiresInputSourceSelection)
         let plan = try #require(OnboardingVoicePairingPlan.resolve(
             tool: .macosDictation, controlSource: .chromecastRemote
         ))

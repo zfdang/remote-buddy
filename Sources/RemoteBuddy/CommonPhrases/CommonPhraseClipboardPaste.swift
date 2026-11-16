@@ -274,7 +274,6 @@ final class CommonPhraseClipboardPaste: ObservableObject {
     private static func snapshot(_ board: NSPasteboard) -> Snapshot? {
         if #available(macOS 15.4, *), board.accessBehavior == .alwaysDeny { return nil }
         guard let items = board.pasteboardItems else { return nil }
-        if #available(macOS 15.4, *), board.accessBehavior == .alwaysDeny { return nil }
         var result: Snapshot = []
         var size = 0
         for item in items {

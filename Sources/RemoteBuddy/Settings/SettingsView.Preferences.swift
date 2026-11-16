@@ -16,8 +16,7 @@ extension SettingsView {
                 HStack(spacing: 10) {
                     overviewCard(number: 1, titleKey: "settings.section.permissions", status: overview.permissionsSummary(using: localization), ready: overview.permissionsReady, section: .permissions)
                     overviewCard(number: 2, titleKey: "settings.overview.remote", status: remoteSummary, ready: overview.remoteReady, section: .connection)
-                    overviewCard(number: 3, titleKey: "settings.overview.mapping", status: localization.text(overview.mappingEnabled ? "common.status.enabled" : "settings.overview.optional"), ready: overview.mappingEnabled, optional: true, section: .mapping)
-                    overviewCard(number: 4, titleKey: "settings.overview.integration", status: localization.text(overview.integrationReady ? overview.integrationTool.titleKey : "settings.overview.not_configured"), ready: overview.integrationReady, optional: true, section: .integration)
+                    overviewCard(number: 3, titleKey: "settings.overview.integration", status: localization.text(overview.integrationReady ? overview.integrationTool.titleKey : "settings.overview.not_configured"), ready: overview.integrationReady, optional: true, section: .integration)
                 }
             }
             .padding(.bottom, 16)
@@ -155,7 +154,7 @@ extension SettingsView {
             accessibilityGranted: accessibilityGranted,
             audioDevices: model.audioDevices, profiles: settings.remoteDeviceProfiles,
             connectedIDs: model.connectedRemoteProfileIDs,
-            mappingEnabled: settings.customMappingEnabled, integrationTool: settings.onboardingVoiceTool,
+            integrationTool: settings.onboardingVoiceTool,
             remoteName: remoteModelName
         )
     }
@@ -301,20 +300,16 @@ extension SettingsView {
                     .foregroundStyle(Color.accentColor)
                     .frame(width: 34)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(localization.text("about.version.check_prerelease_help_short"))
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
-                }
+                Text(localization.text("about.version.check_prerelease"))
+                    .font(.subheadline.weight(.semibold))
 
                 Spacer(minLength: 16)
 
-                Toggle(
-                    localization.text("about.version.check_prerelease"),
-                    isOn: $settings.checksForPreReleaseUpdates
-                )
-                .toggleStyle(.switch)
-                .font(.system(size: 12))
+                Toggle("", isOn: $settings.checksForPreReleaseUpdates)
+                    .labelsHidden()
+                    .accessibilityLabel(localization.text("about.version.check_prerelease"))
+                    .toggleStyle(.switch)
+                    .font(.system(size: 12))
 
                 Button(action: checkForUpdates) {
                     Label(
@@ -348,6 +343,8 @@ extension SettingsView {
     private var settingsSupportSection: some View {
         VStack(alignment: .leading, spacing: 0) {
             aboutLinkRow(titleKey: "about.support.website", symbol: "globe", label: "remote.zfdang.com", destination: localization.localizedWebsiteURL)
+            Divider()
+            aboutLinkRow(titleKey: "about.info.website_downloads", symbol: "arrow.down.circle", label: localization.text("about.info.open_website_downloads"), destination: localization.localizedDownloadsURL)
             Divider()
             aboutLinkRow(titleKey: "about.info.releases", symbol: "shippingbox", label: localization.text("about.info.open_releases"), destination: AppLinks.githubReleases)
             Divider()

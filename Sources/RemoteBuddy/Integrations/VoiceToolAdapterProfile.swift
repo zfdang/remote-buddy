@@ -44,7 +44,7 @@ enum OnboardingVoiceTool: String, CaseIterable, Codable, Identifiable {
         }
     }
 
-    var requiresFunctionKeySetup: Bool {
+    var requiresInputSourceSelection: Bool {
         preferredInputSourceID != nil
     }
 

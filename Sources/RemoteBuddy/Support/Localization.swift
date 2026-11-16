@@ -173,6 +173,7 @@ final class LocalizationStore: ObservableObject {
         snapshot.localizedURL(forResource: name, withExtension: `extension`)
     }
     var localizedWebsiteURL: URL { snapshot.localizedWebsiteURL }
+    var localizedDownloadsURL: URL { snapshot.localizedDownloadsURL }
 }
 
 /// An immutable lookup for non-UI consumers; it never observes or mutates preferences.
@@ -235,6 +236,10 @@ struct LocalizationSnapshot {
 
     var localizedWebsiteURL: URL {
         AppLinks.website(for: locale)
+    }
+
+    var localizedDownloadsURL: URL {
+        AppLinks.downloads(for: locale)
     }
 
     private func bundle(for localizationIdentifier: String) -> Bundle? {

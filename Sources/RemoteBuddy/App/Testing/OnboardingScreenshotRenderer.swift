@@ -123,6 +123,8 @@ enum OnboardingScreenshotRenderer {
         let requestedAppleRemoteGeneration = ProcessInfo.processInfo.environment[
             "REMOTE_BUDDY_ONBOARDING_SCREENSHOT_APPLE_REMOTE_GENERATION"
         ].flatMap(OnboardingAppleRemoteGeneration.init(rawValue:))
+        let verifiedPreview = ProcessInfo.processInfo.environment["REMOTE_BUDDY_ONBOARDING_SCREENSHOT_VERIFIED"] == "1"
+        let requestedTapMode = ProcessInfo.processInfo.environment["REMOTE_BUDDY_ONBOARDING_SCREENSHOT_TAP_MODE"] == "1"
         let systemFunctionKeyAvailable = ProcessInfo.processInfo.environment[
             "REMOTE_BUDDY_ONBOARDING_SCREENSHOT_SYSTEM_FN_AVAILABLE"
         ].map { $0 != "0" } ?? true
@@ -156,6 +158,7 @@ enum OnboardingScreenshotRenderer {
         if let requestedVoiceKeyMode {
             settings.voiceKeyMode = requestedVoiceKeyMode
         }
+        settings.voiceFnTapModeEnabled = requestedTapMode
         settings.setOnboardingVoiceTool(requestedVoiceTool ?? .doubao)
         settings.setOnboardingControlSource(controlSource)
         if controlSource == .siriRemote {
@@ -172,11 +175,20 @@ enum OnboardingScreenshotRenderer {
             "REMOTE_BUDDY_ONBOARDING_SCREENSHOT_PURPOSE"
         ].flatMap(OnboardingPurpose.init(rawValue:)) ?? .initialSetup
         if requestedPurpose != .initialSetup {
+            let previewModel: RemoteModel = switch controlSource {
+            case .t1Remote: .t1Remote
+            case .chromecastRemote: .chromecastVoiceRemote
+            case .siriRemote: .appleSiriRemoteA2854
+            case .xiaomiRemote, .unselected: .rc003
+            }
+            let profile = settings.registerBluetoothRemote(identifier: UUID(), model: previewModel)
+            settings.selectRemoteProfile(profile)
             settings.completeOnboarding()
             if requestedPurpose == .integration {
                 SettingsPageBehavior.beginIntegrationSetup(tool: settings.onboardingVoiceTool, settings: settings)
             } else {
                 SettingsPageBehavior.beginDeviceSetup(settings: settings)
+                if let device = RemoteSetupDevice.device(for: controlSource) { settings.selectOnboardingDevice(device) }
             }
         }
         let screenshotAudioDevices = [
@@ -187,6 +199,15 @@ enum OnboardingScreenshotRenderer {
             settings: settings,
             initialAudioDevices: screenshotAudioDevices
         )
+        if settings.onboardingControlSource == .chromecastRemote {
+            let profileID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+            settings.selectRemoteProfile(profileID)
+            model.configureRemoteCardsForSettingsScreenshot(
+                profileIDs: [profileID], systemNames: [profileID: "Chromecast Remote"],
+                batteryLevels: [profileID: 64], powerStates: [profileID: .onBattery]
+            )
+        }
+        if verifiedPreview { model.isAudioOutputVerified = true }
         let localization = LocalizationStore(
             settings: settings,
             resourceBundle: RemoteBuddyResourceBundle.mainOrDevelopment
@@ -209,28 +230,46 @@ enum OnboardingScreenshotRenderer {
         let renderedPages = pages(for: controlMethod)
 #endif
         for (step, filename) in renderedPages {
+            if step == .complete && verifiedPreview {
+                settings.recordFirstUseEvent(.passed, step: .controls)
+                if requestedPurpose != .addDevice,
+                   let plan = OnboardingVoicePairingPlan.resolve(tool: settings.onboardingVoiceTool,
+                    controlSource: settings.onboardingControlSource,
+                    preferredGesture: requestedTapMode ? .toggle : .hold,
+                    selectedShortcut: settings.voiceKeyMode) {
+                    settings.beginOnboardingVoiceTrial(plan)
+                    settings.verifyOnboardingVoiceBinding()
+                }
+            }
             settings.setOnboardingStep(step)
             let actionProbe = OnboardingInteractionProbe(openURL: { _ in })
-            let rootView = OnboardingView(
-                model: model,
-                completeRuntimeReadyOverride: true,
-                allowsInputSourceSwitching: false,
-                systemFunctionKeyAvailableOverride: systemFunctionKeyAvailable,
-                voiceToolAvailabilityOverride: [
-                    .weixin: allVoiceToolsUnavailable ? .notInstalled : .available,
-                    .doubao: allVoiceToolsUnavailable ? .notInstalled : .available,
-                    .voiceBuddy: allVoiceToolsUnavailable ? .notInstalled : .available,
-                    .bageshuo: allVoiceToolsUnavailable ? .notInstalled : .available,
-                    .typeless: allVoiceToolsUnavailable ? .notInstalled : .available,
-                    .other: .unknown,
-                ],
-                initialInputMethodGuideStep: requestedGuideStep,
-                remoteInputDiagnosticOverride: remoteInputDiagnostic,
-                interactionProbe: actionProbe,
-                permissionOverrides: onboardingPermissionsOverride
-            )
-                .environmentObject(localization)
-                .frame(width: size.width, height: size.height)
+            let rootView = Group {
+                if ProcessInfo.processInfo.environment["REMOTE_BUDDY_ONBOARDING_SCREENSHOT_SHORTCUT_EDITOR"] == "1" {
+                    KeyboardShortcutEditor(shortcut: CustomKeyboardShortcut(keyCode: 9,
+                        modifierFlags: [.control, .option], keyLabel: "V"), onSelect: { _ in }, onCancel: {})
+                } else {
+                    OnboardingView(
+                        model: model,
+                        allowsInputSourceSwitching: false,
+                        allowsHardwareMonitoring: false,
+                        systemFunctionKeyAvailableOverride: systemFunctionKeyAvailable,
+                        voiceToolAvailabilityOverride: [
+                            .weixin: allVoiceToolsUnavailable ? .notInstalled : .available,
+                            .doubao: allVoiceToolsUnavailable ? .notInstalled : .available,
+                            .voiceBuddy: allVoiceToolsUnavailable ? .notInstalled : .available,
+                            .bageshuo: allVoiceToolsUnavailable ? .notInstalled : .available,
+                            .typeless: allVoiceToolsUnavailable ? .notInstalled : .available,
+                            .other: .unknown,
+                        ],
+                        initialInputMethodGuideStep: requestedGuideStep,
+                        remoteInputDiagnosticOverride: remoteInputDiagnostic,
+                        interactionProbe: actionProbe,
+                        permissionOverrides: onboardingPermissionsOverride
+                    )
+                }
+            }
+            .environmentObject(localization)
+            .frame(width: size.width, height: size.height)
             let hostingController = NSHostingController(rootView: rootView)
             let window = makeWindow(hostingController: hostingController, size: size)
 
@@ -300,7 +339,7 @@ enum OnboardingScreenshotRenderer {
         case .remoteAvailability: return "control-source"
         case .permissions: return "permissions"
         case .remote: return "remote"
-        case .audio: return "audio"
+        case .voiceTrigger: return "voice-trigger"
         case .voiceTest: return "voice-test"
         case .controls: return "controls"
         case .complete: return "complete"

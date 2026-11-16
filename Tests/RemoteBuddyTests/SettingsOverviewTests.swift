@@ -6,12 +6,12 @@ import Testing
 struct SettingsOverviewTests {
     private func state(bluetooth: Bool = true, input: Bool = true, accessibility: Bool = true,
                        driver: Bool = true, profiles: [RemoteDeviceProfile] = [], ids: Set<UUID> = [],
-                       mapping: Bool = false, tool: OnboardingVoiceTool = .unselected) -> SettingsOverviewState {
+                       tool: OnboardingVoiceTool = .unselected) -> SettingsOverviewState {
         SettingsOverviewState(bluetoothGranted: bluetooth, inputMonitoringGranted: input,
             accessibilityGranted: accessibility,
             audioDevices: driver ? [AudioDeviceInfo(id: 111, uid: BuddyMicrophoneDevicePolicy.deviceUID,
                 name: BuddyMicrophoneDevicePolicy.deviceName)] : [],
-            profiles: profiles, connectedIDs: ids, mappingEnabled: mapping,
+            profiles: profiles, connectedIDs: ids,
             integrationTool: tool, remoteName: { $0.customName })
     }
 
@@ -36,9 +36,8 @@ struct SettingsOverviewTests {
     @Test func optionalConfigurationDoesNotBlockPrerequisites() {
         let snapshot = state()
         #expect(snapshot.permissionsReady)
-        #expect(!snapshot.mappingEnabled)
         #expect(!snapshot.integrationReady)
-        #expect(state(mapping: true, tool: .voiceBuddy).integrationReady)
+        #expect(state(tool: .voiceBuddy).integrationReady)
     }
 
     @Test func changedPrerequisitesAreReflectedWithoutRestartingOnboarding() {

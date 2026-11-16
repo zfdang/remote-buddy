@@ -74,4 +74,16 @@ struct LaunchTrackingTests {
         let otherResolved = settings.configuredBaseAction(for: .volumeUp, trigger: .singleClick, profileID: otherDevice)
         #expect(otherResolved.action == .playPause)
     }
+
+    @Test func ignoresNonNumericBuildWithoutOverwritingLastLaunchedBuild() throws {
+        let name = "launch-nonnumeric-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let settings = AppSettings(defaults: defaults)
+
+        #expect(!settings.recordLaunchAndDetectCompletedUpdate(currentBuild: "80", sparkleHadLaunchedBefore: false))
+        #expect(!settings.recordLaunchAndDetectCompletedUpdate(currentBuild: "81-beta", sparkleHadLaunchedBefore: true))
+        #expect(!settings.recordLaunchAndDetectCompletedUpdate(currentBuild: "", sparkleHadLaunchedBefore: false))
+        #expect(settings.recordLaunchAndDetectCompletedUpdate(currentBuild: "81", sparkleHadLaunchedBefore: false))
+    }
 }

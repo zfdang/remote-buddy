@@ -10,7 +10,7 @@ struct VoiceFnStopPulseTests {
         var audio: [[Int16]] = []
         let session = VoiceFnTapSessionController(startTapCount: { startTaps },
             maximumPreRollSampleCount: 4, schedule: clock.voiceSchedule,
-            setFunctionKeyPressed: { edges.append($0); return true },
+            setTriggerPressed: { edges.append($0); return true },
             enqueueAudio: { audio.append($0) }, drainAudio: { _, done in done() },
             onFailure: { _ in Issue.record("Unexpected key failure") })
         session.setEnabled(true)
@@ -43,7 +43,7 @@ struct VoiceFnStopPulseTests {
         var downs = 0
         var audio: [[Int16]] = []
         let session = VoiceFnTapSessionController(schedule: clock.voiceSchedule,
-            setFunctionKeyPressed: { down in
+            setTriggerPressed: { down in
                 if down { downs += 1 }
                 return down || allowRelease
             }, enqueueAudio: { audio.append($0) }, drainAudio: { _, done in done() }, onFailure: { _ in })

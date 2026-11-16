@@ -22,6 +22,7 @@ extension SettingsView {
     func setMappingShortcut(_ shortcut: CustomKeyboardShortcut?, for button: RemoteButton, trigger: ButtonTrigger) {
         var configured = mappingConfiguration(for: button, trigger: trigger)
         configured.shortcut = shortcut
+        if shortcut != nil { configured.action = .customShortcut }
         saveMappingBinding(configured, button: button, trigger: trigger)
     }
 
@@ -55,10 +56,13 @@ extension SettingsView {
     var mappingPage: some View {
         hardwareMappingPage {
             if settings.selectedRemoteProfile?.model.isChromecastRemote == true {
-                googleChordInformation
-                Text(localization.text("google.remote.ir_controls"))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text(localization.text("button_mapping.google.version_notice"))
+                        .foregroundStyle(.secondary)
+                    Link(localization.text("button_mapping.google.device_guide"),
+                         destination: AppLinks.devices(for: localization.locale))
+                }
+                .font(.caption)
             } else if settings.selectedRemoteProfile?.model.isT1Remote == true {
                 Text(localization.text("t1.remote.keyboard_airmouse_note"))
                     .font(.caption)
@@ -93,23 +97,6 @@ extension SettingsView {
         }
     }
 
-    private var googleChordInformation: some View {
-        GlassPanel {
-            VStack(alignment: .leading, spacing: 8) {
-                Label(localization.text("button_mapping.google.enter.title"), systemImage: "return")
-                    .font(.system(size: 15, weight: .semibold))
-                Text(localization.text("button_mapping.google.enter.detail"))
-                    .font(.system(size: 13))
-                    .fixedSize(horizontal: false, vertical: true)
-                Text(localization.text("button_mapping.google.enter.limit"))
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .accessibilityIdentifier("button-mapping.google-enter-info")
-    }
 
     private func hardwareMappingPage<HardwareCanvas: View>(
         @ViewBuilder hardwareCanvas: @escaping () -> HardwareCanvas
@@ -334,52 +321,16 @@ extension SettingsView {
         .help(localization.text("button_mapping.selection_lock_help"))
     }
 
-    var mappingVoiceKeyModeControl: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(localization.text("connection.voice_key_mode.title"))
-                .font(.system(size: 12, weight: .medium))
-            Picker(localization.text("connection.voice_key_mode.title"), selection: Binding(
-                get: { settings.voiceKeyMode },
-                set: { model.setVoiceKeyMode($0) }
-            )) {
-                ForEach(VoiceKeyMode.allCases) { mode in
-                    Text(localization.text(mode.localizationKey)).tag(mode)
-                }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .controlSize(.small)
-            .tint(Color.accentColor)
-            Text(localization.text("connection.voice_key_mode.help"))
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
-                .lineLimit(3)
-            if settings.voiceKeyMode != .function {
-                Text(localization.text("connection.voice_key_mode.unverified_detail"))
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .help(localization.text("connection.voice_key_mode.help"))
-    }
-
-    var mappingVoiceFnTapControl: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Toggle(localization.text("connection.voice_fn_tap.enabled"), isOn: Binding(
-                get: { settings.voiceFnTapModeEnabled },
-                set: { model.setVoiceFnTapModeEnabled($0) }
-            ))
-            .font(.system(size: 12, weight: .medium))
-            .toggleStyle(.switch)
-            Text(localization.text("connection.voice_fn_tap.hint_short"))
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
+    var voiceTriggerStatus: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label(settings.voiceKeyMode.displayName(using: localization), systemImage: "keyboard")
+            Label(localization.text(settings.voiceFnTapModeEnabled
+                ? "settings.integration.tap_enabled" : "settings.integration.tap_disabled"),
+                systemImage: "hand.tap")
+            Text(localization.text("settings.integration.trigger_readonly"))
+                .font(.caption).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .help(localization.text("connection.voice_fn_tap.hint"))
-        .opacity(settings.voiceKeyMode == .function ? 1 : 0.55)
-        .disabled(settings.voiceKeyMode != .function)
     }
 
     private var mappingResetAllDefaultsSection: some View {

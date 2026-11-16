@@ -69,12 +69,11 @@ struct BluetoothAudioPipelineTests {
         #expect(audio == reference + reference)
     }
 
-    @Test func connectionResetRejectsAlreadyComputedOldResultsAndResetsFormat() {
+    @Test func connectionResetRejectsAlreadyComputedOldResults() {
         let queue = DispatchQueue(label: "test.audio.cancel")
         let deliveries = AudioDeliveries()
         let pipeline = BluetoothAudioPipeline(queue: queue, deliver: { deliveries.enqueue($0) })
         let bytes = Data([0x12, 0x34, 0x56])
-        pipeline.configureFormat(lowNibbleFirst: true)
         #expect(pipeline.beginStream { Issue.record("Old start delivered") })
         #expect(pipeline.append(bytes, frameSize: 3, gainDB: 0) { _ in Issue.record("Old audio delivered") })
         queue.sync {}

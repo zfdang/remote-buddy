@@ -10,6 +10,8 @@ final class FlowControlledBluetoothWriteQueue {
     private var timeout: HIDRemoteScheduledTask?
     private var generation: UInt64 = 0
 
+    var hasPendingWork: Bool { !pending.isEmpty }
+
     init(scheduler: HIDRemoteScheduling = DispatchHIDRemoteScheduler(),
          canSend: @escaping () -> Bool, send: @escaping (Data) -> Void,
          onFailure: @escaping () -> Void) {

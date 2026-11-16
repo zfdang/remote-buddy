@@ -44,8 +44,22 @@ struct RuntimeReviewBoundaryTests {
             #expect(edges.isEmpty)
             #expect(KeyboardInjector.setVoiceKeyPressed(mode, isPressed: false,
                 accessibilityTrusted: { true }, keyStatePoster: post, secureInputEnabled: { true }))
-            #expect(edges == [false])
+            if case .shortcut = mode { #expect(edges.isEmpty) }
+            else { #expect(edges == [false]) }
         }
+    }
+
+    @Test(arguments: [VoiceKeyMode.function, .leftCommand, .rightCommand, .leftOption, .rightOption])
+    func voiceModifierReleaseDoesNotReinheritItsOwnHIDFlags(mode: VoiceKeyMode) throws {
+        let own = ShortcutEventSequence.modifierFlags(for: mode.keyCode)
+        let down = try #require(KeyboardInjector.makeMarkedKeyEvent(code: mode.keyCode, isDown: true,
+            flags: mode.eventFlags, marker: KeyboardInjector.orderedVoiceEventMarker,
+            hardwareFlags: { .maskShift }))
+        let up = try #require(KeyboardInjector.makeMarkedKeyEvent(code: mode.keyCode, isDown: false,
+            flags: [], marker: KeyboardInjector.orderedVoiceEventMarker,
+            hardwareFlags: { own.union(.maskShift) }))
+        #expect(down.flags.contains(mode.eventFlags))
+        #expect(up.flags == .maskShift)
     }
 
     @Test func physicalModifiersSurviveSyntheticModifierRelease() throws {

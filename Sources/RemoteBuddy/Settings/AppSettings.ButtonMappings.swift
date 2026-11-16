@@ -223,16 +223,19 @@ extension AppSettings {
     }
 
     func defaultAction(for button: RemoteButton, trigger: ButtonTrigger) -> ConfiguredButtonAction {
+        let modelDefaults = selectedRemoteProfile.map { Self.defaultMappings(for: $0.model) }
+        let bindings = modelDefaults?.parsedButtonBindings ?? Self.defaultBindings
+        let secondary = modelDefaults?.parsedSecondaryButtonBindings ?? Self.defaultSecondaryBindings
         switch trigger {
         case .singleClick:
             return ConfiguredButtonAction(
-                action: Self.defaultBindings[button] ?? .disabled,
+                action: bindings[button] ?? .disabled,
                 shortcut: nil
             )
         case .doubleClick:
-            return Self.defaultSecondaryBindings[button]?[.doubleClick] ?? .disabled
+            return secondary[button]?[.doubleClick] ?? .disabled
         case .longPress:
-            return Self.defaultSecondaryBindings[button]?[.longPress] ??
+            return secondary[button]?[.longPress] ??
                 defaultSecondaryAction(for: button, trigger: .longPress)
         }
     }
@@ -277,14 +280,12 @@ extension AppSettings {
         if let binding = unifiedBaseBindings.first(where: {
             $0.remoteProfileID == profileID && $0.button == button && $0.trigger == trigger
         }) { return binding.configured }
-        if let binding = unifiedBaseBindings.first(where: {
-            $0.remoteProfileID == nil && $0.button == button && $0.trigger == trigger
-        }) { return binding.configured }
-
         if let profileID,
            profileID != selectedRemoteProfileID,
            let profile = remoteDeviceProfiles.first(where: { $0.id == profileID }) {
-            let bindings = profile.mappings.parsedButtonBindings
+            let bindings = Self.defaultMappings(for: profile.model).parsedButtonBindings.merging(
+                profile.mappings.parsedButtonBindings
+            ) { _, saved in saved }
             let shortcuts = profile.mappings.parsedButtonShortcuts
             if trigger == .singleClick {
                 return ConfiguredButtonAction(
@@ -333,7 +334,7 @@ extension AppSettings {
         withLoadingRemoteProfile {
             selectedRemoteProfileID = profileID
             gainDB = Self.normalizedGain(nextGain)
-            buttonBindings = Self.defaultBindings.merging(profile.mappings.parsedButtonBindings) {
+            buttonBindings = Self.defaultMappings(for: profile.model).parsedButtonBindings.merging(profile.mappings.parsedButtonBindings) {
                 _, saved in saved
             }
             buttonShortcuts = profile.mappings.parsedButtonShortcuts
@@ -438,10 +439,9 @@ extension AppSettings {
         let profile = RemoteDeviceProfile(
             model: model,
             bluetoothIdentifier: identifier,
-            mappings: mappingsForNewRemote()
+            mappings: Self.defaultMappings(for: model)
         )
         remoteDeviceProfiles.append(profile)
-        inheritUnifiedBindings(from: selectedRemoteProfileID, to: profile.id)
         return profile.id
     }
 
@@ -460,9 +460,8 @@ extension AppSettings {
             }
             // Multiple independent BLE identities cannot be joined by a product label alone.
             let profile = RemoteDeviceProfile(model: model, hidFingerprint: fingerprint,
-                                              mappings: mappingsForNewRemote())
+                                              mappings: Self.defaultMappings(for: model))
             remoteDeviceProfiles.append(profile)
-            inheritUnifiedBindings(from: selectedRemoteProfileID, to: profile.id)
             return profile.id
         }
         let candidates = remoteDeviceProfiles.indices.filter {
@@ -476,36 +475,16 @@ extension AppSettings {
             return nil
         }
         if let index = candidates.first {
-            let defaultMappings = RemoteDeviceMappings(
-                buttonBindings: Self.defaultBindings,
-                buttonShortcuts: [:],
-                secondaryButtonBindings: [:]
-            )
-            if remoteDeviceProfiles[index].mappings == defaultMappings,
-               let configured = remoteDeviceProfiles.first(where: {
-                   $0.id != remoteDeviceProfiles[index].id && $0.mappings != defaultMappings
-               }) {
-                remoteDeviceProfiles[index].mappings = configured.mappings
-            }
             remoteDeviceProfiles[index].hidFingerprint = fingerprint
             return remoteDeviceProfiles[index].id
         }
         let profile = RemoteDeviceProfile(
             model: model,
             hidFingerprint: fingerprint,
-            mappings: mappingsForNewRemote()
+            mappings: Self.defaultMappings(for: model)
         )
         remoteDeviceProfiles.append(profile)
-        inheritUnifiedBindings(from: selectedRemoteProfileID, to: profile.id)
         return profile.id
-    }
-
-    private func inheritUnifiedBindings(from sourceID: UUID?, to targetID: UUID) {
-        guard let sourceID else { return }
-        let toCopy = unifiedBaseBindings.filter { $0.remoteProfileID == sourceID }
-        for binding in toCopy {
-            setBaseBinding(binding.configured, for: binding.button, trigger: binding.trigger, profileID: targetID)
-        }
     }
 
     func profileID(forBluetoothIdentifier identifier: UUID) -> UUID? {
@@ -524,15 +503,6 @@ extension AppSettings {
         remoteDeviceProfiles[index].hidFingerprint = fingerprint
     }
 
-    private func mappingsForNewRemote() -> RemoteDeviceMappings {
-        selectedRemoteProfile?.mappings ?? RemoteDeviceMappings(
-            buttonBindings: buttonBindings,
-            buttonShortcuts: buttonShortcuts,
-            buttonApplicationProfileIDs: buttonApplicationProfileIDs,
-            secondaryButtonBindings: secondaryButtonBindings
-        )
-    }
-
     func updateRemoteProfile(
         _ profileID: UUID,
         model: RemoteModel,
@@ -547,12 +517,11 @@ extension AppSettings {
     @discardableResult
     func updateRemoteProfileSystemName(
         _ profileID: UUID,
-        name: String?,
-        serialNumber: String? = nil
+        name: String?
     ) -> Bool {
         guard let index = remoteDeviceProfiles.firstIndex(where: { $0.id == profileID }),
               let customName = RemoteDeviceNamePolicy.customName(
-                from: name, model: remoteDeviceProfiles[index].model, serialNumber: serialNumber
+                from: name, model: remoteDeviceProfiles[index].model
               ),
               remoteDeviceProfiles[index].customName != customName
         else { return false }
@@ -565,7 +534,25 @@ extension AppSettings {
               let index = remoteDeviceProfiles.firstIndex(where: { $0.id == profileID }),
               remoteDeviceProfiles[index].model != model
         else { return }
-        remoteDeviceProfiles[index].model = model
+        var profile = remoteDeviceProfiles[index]
+        let resolvesUnknownModel = profile.model == .unknown
+        if resolvesUnknownModel {
+            let defaults = Self.defaultMappings(for: model)
+            profile.mappings.buttonBindings = defaults.buttonBindings.merging(profile.mappings.buttonBindings) {
+                _, saved in saved
+            }
+            profile.mappings.secondaryButtonBindings = defaults.secondaryButtonBindings.merging(
+                profile.mappings.secondaryButtonBindings
+            ) { presets, saved in presets.merging(saved) { _, customized in customized } }
+        }
+        profile.model = model
+        remoteDeviceProfiles[index] = profile
+        if resolvesUnknownModel, selectedRemoteProfileID == profileID {
+            withLoadingRemoteProfile {
+                buttonBindings = profile.mappings.parsedButtonBindings
+                secondaryButtonBindings = profile.mappings.parsedSecondaryButtonBindings
+            }
+        }
     }
 
     func setAction(_ action: ButtonAction, for button: RemoteButton, trigger: ButtonTrigger) {
@@ -621,29 +608,46 @@ extension AppSettings {
 
     func resetBindings() {
         withResettingBindings {
-            buttonBindings = Self.defaultBindings
+            let mappings = Self.defaultMappings(for: selectedRemoteProfile?.model ?? .unknown)
+            buttonBindings = mappings.parsedButtonBindings
             buttonShortcuts = [:]
             unifiedBaseBindings.removeAll { $0.remoteProfileID == selectedRemoteProfileID }
-            // Override inherited bindings only for the selected device.
-            if let device = selectedRemoteProfileID {
-                for inherited in unifiedBaseBindings.filter({ $0.remoteProfileID == nil }) {
-                    setBaseBinding(
-                        defaultAction(for: inherited.button, trigger: inherited.trigger),
-                        for: inherited.button,
-                        trigger: inherited.trigger,
-                        profileID: device
-                    )
-                }
-            }
             buttonApplicationProfileIDs = [:]
-            secondaryButtonBindings = Self.defaultSecondaryBindings
+            secondaryButtonBindings = mappings.parsedSecondaryButtonBindings
         }
         saveSelectedRemoteProfileMappings()
         encodeAndSave(unifiedBaseBindings, forKey: "unifiedBaseBindings")
+        AppLogger.shared.write("SETTINGS MAPPING reset profile_scoped=\(selectedRemoteProfileID != nil)")
     }
 }
 
 extension AppSettings {
+    static func defaultMappings(for model: RemoteModel) -> RemoteDeviceMappings {
+        let buttons: [RemoteButton]
+        switch model {
+        case .chromecastVoiceRemote:
+            buttons = [.power, .up, .left, .ok, .right, .down, .back, .home,
+                .volumeUp, .volumeDown, .mute, .youtube, .netflix, .input]
+        case .t1Remote:
+            buttons = [.power, .back, .home, .menu, .volumeUp, .volumeDown, .mute]
+        case .rc001, .rc003, .unknown:
+            buttons = RemoteButton.xiaomiCases
+        case .appleSiriRemoteA2540, .appleSiriRemoteA2854:
+            buttons = []
+        }
+        var bindings = Dictionary(uniqueKeysWithValues: buttons.map { ($0, defaultBindings[$0] ?? .disabled) })
+        if model == .chromecastVoiceRemote {
+            bindings[.youtube] = .previousCommandLeft
+            bindings[.netflix] = .nextCommandRight
+            bindings[.input] = .playPause
+        }
+        return RemoteDeviceMappings(
+            buttonBindings: bindings,
+            buttonShortcuts: [:],
+            secondaryButtonBindings: defaultSecondaryBindings.filter { buttons.contains($0.key) }
+        )
+    }
+
     static let defaultSecondaryBindings: [RemoteButton: [ButtonTrigger: ConfiguredButtonAction]] = [
         .ok: [.longPress: ConfiguredButtonAction(action: .commandReturn, shortcut: nil)],
     ]

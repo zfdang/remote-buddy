@@ -24,12 +24,10 @@ final class AppSettings: ObservableObject {
         static let checksForPreReleaseUpdates = "checksForPreReleaseUpdates"
         static let voiceFnTapModeEnabled = "voiceFnTapModeEnabled"
         static let voiceKeyMode = "voiceKeyMode"
-        static let chromecastVoiceMode = "chromecast.voiceMode"
         static let lastLaunchedBuild = "launch.lastLaunchedBuild"
         static let onboardingPurpose = "onboarding.purpose"
         static let onboardingCompletedVersion = "onboarding.completedVersion"
         static let onboardingStep = "onboarding.step"
-        static let onboardingRemoteAvailability = "onboarding.remoteAvailability"
         static let onboardingControlSource = "onboarding.controlSource"
         static let onboardingDevice = "onboarding.device"
         static let onboardingAppleRemoteGeneration = "onboarding.appleRemoteGeneration"
@@ -37,7 +35,7 @@ final class AppSettings: ObservableObject {
         static let onboardingPreferredGesture = "onboarding.preferredGesture"
         static let onboardingVerifiedVoiceBinding = "onboarding.verifiedVoiceBinding"
         static let onboardingStagedVoiceBinding = "onboarding.stagedVoiceBinding"
-        static let onboardingTrialSnapshot = "onboarding.trialSnapshot"
+        static let onboardingVoiceTrigger = "onboarding.voiceTrigger"
         static let firstUseEvents = "onboarding.diagnostics.events"
         static let firstUseStepStartedAt = "onboarding.diagnostics.stepStartedAt"
         static let firstUseLastSignature = "onboarding.diagnostics.lastSignature"
@@ -86,6 +84,10 @@ final class AppSettings: ObservableObject {
         bindings.append(UnifiedButtonBinding(remoteProfileID: profileID, button: button,
                                             trigger: trigger, configured: configured))
         unifiedBaseBindings = bindings
+        AppLogger.shared.write(
+            "SETTINGS MAPPING updated button=\(button.rawValue) trigger=\(trigger.rawValue) " +
+                "action=\(configured.action.rawValue) profile_scoped=\(profileID != nil)"
+        )
 
         if let profileID {
             if let index = remoteDeviceProfiles.firstIndex(where: { $0.id == profileID }) {
@@ -224,13 +226,6 @@ final class AppSettings: ObservableObject {
         }
     }
 
-    /// Chromecast 语音手势模式。默认 `toggle`（按一下开始、再按一下结束）。
-    @Published var chromecastVoiceMode: ChromecastVoiceMode {
-        didSet {
-            defaults.set(chromecastVoiceMode.rawValue, forKey: Keys.chromecastVoiceMode)
-        }
-    }
-
     private(set) var isLoadingRemoteProfile = false
     private(set) var isResettingBindings = false
 
@@ -246,6 +241,9 @@ final class AppSettings: ObservableObject {
         return try block()
     }
 
+    // Session-only routing: a fresh launch still opens the General page.
+    var completedOnboardingDestination: SettingsSection = .general
+
     @Published var onboardingPurpose: OnboardingPurpose {
         didSet { defaults.set(onboardingPurpose.rawValue, forKey: Keys.onboardingPurpose) }
     }
@@ -260,14 +258,7 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(onboardingStep.rawValue, forKey: Keys.onboardingStep) }
     }
 
-    @Published var onboardingRemoteAvailability: OnboardingRemoteAvailability {
-        didSet {
-            defaults.set(
-                onboardingRemoteAvailability.rawValue,
-                forKey: Keys.onboardingRemoteAvailability
-            )
-        }
-    }
+    @Published var onboardingRemoteAvailability: OnboardingRemoteAvailability
 
     var onboardingControlMethod: OnboardingControlMethod {
         onboardingControlSource.controlMethod
@@ -311,6 +302,34 @@ final class AppSettings: ObservableObject {
                 defaults.removeObject(forKey: Keys.onboardingVerifiedVoiceBinding)
             }
         }
+    }
+
+    @Published var onboardingVoiceTrigger: VoiceTriggerConfiguration? {
+        didSet {
+            if let onboardingVoiceTrigger, let data = try? JSONEncoder().encode(onboardingVoiceTrigger) {
+                defaults.set(data, forKey: Keys.onboardingVoiceTrigger)
+            } else { defaults.removeObject(forKey: Keys.onboardingVoiceTrigger) }
+        }
+    }
+
+    var selectedVoiceTrigger: VoiceTriggerConfiguration {
+        onboardingVoiceTrigger ?? VoiceTriggerConfiguration(
+            voiceKeyMode: voiceKeyMode, voiceFnTapModeEnabled: voiceFnTapModeEnabled)
+    }
+
+    var isTestingVoiceTrigger: Bool {
+        guard !isOnboardingComplete, onboardingStep == .voiceTest,
+              let binding = stagedVoiceToolBinding else { return false }
+        return binding.tool == onboardingVoiceTool && binding.validationState == .staged
+    }
+
+    var effectiveVoiceKeyMode: VoiceKeyMode {
+        isTestingVoiceTrigger ? (stagedVoiceToolBinding?.shortcut ?? voiceKeyMode) : voiceKeyMode
+    }
+
+    var effectiveVoiceFnTapModeEnabled: Bool {
+        guard isTestingVoiceTrigger, let binding = stagedVoiceToolBinding else { return voiceFnTapModeEnabled }
+        return binding.gestureMode == .toggle
     }
 
     @Published var stagedVoiceToolBinding: VoiceToolUserBinding?
@@ -383,7 +402,7 @@ final class AppSettings: ObservableObject {
             .intersection(ApplicationIntegration.allCases.map(\.rawValue))
         var corruptedKeys: [String] = []
         self.defaults = defaults
-        Self.restoreInterruptedOnboardingTrial(in: defaults)
+        Self.discardInterruptedOnboardingTrial(in: defaults)
         remoteDeviceProfiles = []
         selectedRemoteProfileID = nil
         storedGainDB = defaults.object(forKey: Keys.gainDB) == nil
@@ -483,9 +502,6 @@ final class AppSettings: ObservableObject {
         voiceKeyMode = VoiceKeyMode(
             rawValue: defaults.string(forKey: Keys.voiceKeyMode) ?? ""
         ) ?? .function
-        chromecastVoiceMode = ChromecastVoiceMode(
-            rawValue: defaults.string(forKey: Keys.chromecastVoiceMode) ?? ""
-        ) ?? .productDefault
         onboardingPurpose = defaults.string(forKey: Keys.onboardingPurpose)
             .flatMap(OnboardingPurpose.init(rawValue:)) ?? .initialSetup
         onboardingCompletedVersion = defaults.integer(forKey: Keys.onboardingCompletedVersion)
@@ -513,6 +529,9 @@ final class AppSettings: ObservableObject {
             from: defaults,
             corrupted: &corruptedKeys
         )
+        onboardingVoiceTrigger = Self.decodeSetting(
+            VoiceTriggerConfiguration.self, forKey: Keys.onboardingVoiceTrigger,
+            from: defaults, corrupted: &corruptedKeys)
         stagedVoiceToolBinding = Self.decodeSetting(
             VoiceToolUserBinding.self,
             forKey: Keys.onboardingStagedVoiceBinding,
@@ -540,7 +559,7 @@ final class AppSettings: ObservableObject {
             if let selectedRemoteProfileID,
                let selected = decoded.first(where: { $0.id == selectedRemoteProfileID }) {
                 if let storedGain = selected.gainDB, storedGain.isFinite, (0...24).contains(storedGain) { gainDB = storedGain }
-                buttonBindings = Self.defaultBindings.merging(selected.mappings.parsedButtonBindings) {
+                buttonBindings = Self.defaultMappings(for: selected.model).parsedButtonBindings.merging(selected.mappings.parsedButtonBindings) {
                     _, saved in saved
                 }
                 buttonShortcuts = selected.mappings.parsedButtonShortcuts

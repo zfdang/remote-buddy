@@ -4,10 +4,6 @@ import CoreBluetooth
 import SwiftUI
 
 extension OnboardingView {
-    var usesG9N9NButtonTestWorkaround: Bool {
-        settings.onboardingControlSource == .chromecastRemote &&
-            (settings.onboardingDevice ?? .chromecastG9N9N) == .chromecastG9N9N
-    }
 
     var controlsContent: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -76,13 +72,9 @@ extension OnboardingView {
                         .font(.system(size: 18))
                         .foregroundStyle(testedControlButtons.count > index ? Color.green : Color.secondary)
                 }
-                Text(verbatim: localization.text(
-                    testedControlButtons.count >= 3
-                        ? usesG9N9NButtonTestWorkaround
-                            ? "onboarding.controls.g9n9n.ready"
-                            : "onboarding.controls.ready"
-                        : "onboarding.controls.waiting"
-                ))
+                Text(testedControlButtons.count >= 3
+                    ? localization.text("onboarding.controls.ready")
+                    : LocalizedMessage("onboarding.controls.progress", arguments: [String(min(3, testedControlButtons.count))]).text(using: localization))
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(.secondary)
             }
@@ -96,9 +88,7 @@ extension OnboardingView {
         secondStep: String,
         thirdStep: String?
     ) {
-        let keys = Self.physicalRemotePairingKeys(for: settings.onboardingControlSource)
-        return (keys.title, keys.firstStep, keys.secondStep,
-            usesG9N9NButtonTestWorkaround ? "onboarding.remote.g9n9n_pairing.third" : keys.thirdStep)
+        Self.physicalRemotePairingKeys(for: settings.onboardingControlSource)
     }
 
     static func physicalRemotePairingKeys(
@@ -137,9 +127,7 @@ extension OnboardingView {
     }
 
     var controlsDetailKey: String {
-        usesG9N9NButtonTestWorkaround
-            ? "onboarding.controls.g9n9n.detail"
-            : Self.controlsDetailKey(for: settings.onboardingControlSource)
+        Self.controlsDetailKey(for: settings.onboardingControlSource)
     }
 
     static func controlsDetailKey(for source: OnboardingControlSource) -> String {
@@ -195,47 +183,120 @@ extension OnboardingView {
         }
     }
 
-    private var completionDetailKey: String {
-        switch settings.onboardingPurpose {
-        case .initialSetup: return "onboarding.complete.detail"
-        case .addDevice: return "onboarding.add_device.complete.detail"
-        case .integration: return "onboarding.integration.complete.detail"
+    var completionSummary: OnboardingCompletionSummary {
+        let profile = settings.selectedRemoteProfile
+        let name = profile.flatMap { model.systemDeviceName(for: $0) }
+            ?? profile.map { localization.text($0.model.localizationKey) }
+            ?? settings.onboardingDevice.map { localization.text($0.titleKey) }
+            ?? localization.text("onboarding.summary.remote_missing")
+        let lastButtonEvent = settings.firstUseEvents.last { event in
+            event.step == .controls && [.entered, .passed, .blocked, .retry].contains(event.kind)
         }
+        return OnboardingCompletionSummary(purpose: settings.onboardingPurpose,
+            remoteName: name, buttonsVerified: testedControlButtons.count >= 3 || lastButtonEvent?.kind == .passed,
+            microphoneReady: onboardingAudioReady, voiceKeyMode: settings.voiceKeyMode,
+            tapModeEnabled: settings.voiceFnTapModeEnabled, voiceTool: settings.onboardingVoiceTool,
+            binding: settings.verifiedVoiceToolBinding)
     }
 
     var completeContent: some View {
-        VStack(alignment: .leading, spacing: 18) {
+        let summary = completionSummary
+        return VStack(alignment: .leading, spacing: 18) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 46))
                 .foregroundStyle(Color.green)
             onboardingTitle(completionTitleKey)
-            Text(verbatim: localization.text(completionDetailKey))
-                .font(.system(size: 15))
-                .foregroundStyle(.secondary)
+            Text(localization.text("onboarding.summary.detail"))
+                .font(.system(size: 14))
+                .foregroundStyle(Color.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-
             VStack(alignment: .leading, spacing: 12) {
-                if settings.onboardingPurpose != .addDevice {
-                    featureLine("mic.fill", "onboarding.complete.voice")
+                if let name = summary.remoteName {
+                    completionSummaryLine("appletvremote.gen4", "onboarding.summary.remote", value: name)
                 }
-                if usesG9N9NButtonTestWorkaround {
-                    featureLine("mic.fill", "onboarding.complete.g9n9n.voice_only")
-                } else if settings.onboardingPurpose != .integration {
-                    featureLine("button.programmable", "onboarding.complete.controls")
+                if let verified = summary.buttonsVerified {
+                    completionSummaryLine("button.programmable", "onboarding.summary.buttons",
+                        value: localization.text(verified ? "onboarding.summary.passed" : "onboarding.summary.not_tested"))
                 }
-                featureLine("gearshape", "onboarding.complete.settings")
-            }
-            .padding(.top, 8)
-
-            if !canContinue {
-                statusCard(
-                    icon: "exclamationmark.triangle.fill",
-                    title: localization.text("onboarding.complete.runtime_changed"),
-                    detail: localization.text("onboarding.complete.runtime_changed_detail"),
-                    isComplete: false
-                )
+                if let ready = summary.microphoneReady {
+                    completionSummaryLine("mic.fill", "onboarding.side.microphone",
+                        value: localization.text(ready ? "common.status.ready" : "onboarding.summary.not_ready"))
+                }
+                if let mode = summary.voiceKeyMode {
+                    completionSummaryLine("keyboard", "connection.voice_key_mode.title", value: mode.displayName(using: localization))
+                }
+                if let tap = summary.tapModeEnabled {
+                    completionSummaryLine("hand.tap", "connection.voice_fn_tap.enabled",
+                        value: localization.text(tap ? "common.status.enabled" : "common.status.disabled"))
+                }
+                if let tool = summary.voiceTool {
+                    completionSummaryLine("waveform", "onboarding.step.voiceTool", value: localization.text(tool.titleKey))
+                }
+                if let verified = summary.voiceVerified {
+                    completionSummaryLine("checkmark.bubble", "onboarding.step.voiceTest",
+                        value: localization.text(verified ? "onboarding.summary.passed" : "onboarding.summary.not_tested"))
+                }
             }
         }
+    }
+
+    private func completionSummaryLine(_ icon: String, _ titleKey: String, value: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: icon).foregroundStyle(Color.accentColor).frame(width: 22)
+            Text(localization.text(titleKey)).foregroundStyle(.secondary)
+            Spacer(minLength: 12)
+            Text(value).multilineTextAlignment(.trailing).fixedSize(horizontal: false, vertical: true)
+        }
+        .font(.system(size: 13))
+    }
+
+    func buttonTroubleshooting(for failure: FirstUseFailureReason) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            onboardingActionButton(id: "button-help.toggle") {
+                buttonHelpExpanded.toggle()
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: buttonHelpExpanded ? "chevron.down" : "chevron.right")
+                    Text(localization.text("onboarding.button_help.title"))
+                    Spacer(minLength: 0)
+                }
+                .frame(maxWidth: .infinity, minHeight: 36, alignment: .leading)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityValue(localization.text(buttonHelpExpanded
+                ? "onboarding.button_help.expanded" : "onboarding.button_help.collapsed"))
+            if buttonHelpExpanded {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(localization.text("onboarding.button_help.steps"))
+                        .font(.callout).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    HStack(spacing: 10) {
+                        onboardingActionButton(id: "recovery.\(failure.rawValue)") {
+                            performRecovery(for: failure)
+                        } label: {
+                            Text(localization.text(recoveryActionKey(for: failure)))
+                        }
+                        .buttonStyle(.bordered)
+                        onboardingActionButton(id: "diagnostics.copy") {
+                            copyDiagnosticSummary()
+                        } label: {
+                            Text(localization.text("onboarding.button_help.copy"))
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                    diagnosticCopyFeedback
+                    if settings.onboardingStep == .remote,
+                       let profile = settings.selectedRemoteProfile, selectedControlConnected,
+                       BridgeAppModel.canLearnHIDIdentity(model: profile.model, source: settings.onboardingControlSource) {
+                        Button(localization.text("remote.hid_binding.open")) { hidBindingProfile = profile }
+                            .buttonStyle(.bordered)
+                    }
+                }
+                .padding(.top, 8)
+            }
+        }
+        .id(settings.onboardingStep)
     }
 
     func recoveryCard(for failure: FirstUseFailureReason) -> some View {
@@ -282,6 +343,7 @@ extension OnboardingView {
                 }
                 .buttonStyle(.bordered)
             }
+            diagnosticCopyFeedback
         }
         .padding(14)
         .background(Color.orange.opacity(0.07), in: RoundedRectangle(cornerRadius: 12))
@@ -291,7 +353,18 @@ extension OnboardingView {
         }
     }
 
+    @ViewBuilder
+    private var diagnosticCopyFeedback: some View {
+        if let copied = diagnosticCopySucceeded {
+            Text(localization.text(copied ? "onboarding.diagnostics.copied" : "onboarding.diagnostics.copy_failed"))
+                .font(.caption).foregroundStyle(copied ? Color.secondary : Color.orange)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
     func shouldShowStandaloneRecoveryCard(_ failure: FirstUseFailureReason) -> Bool {
+        // The first page owns inline permission and microphone recovery actions.
+        if settings.onboardingStep == .permissions && failure != .permissionDesynced { return false }
         if settings.onboardingStep == .remote,
            settings.onboardingControlMethod == .physicalRemote,
            failure == .remoteNotFound {
@@ -319,13 +392,6 @@ extension OnboardingView {
     }
 
     private func recoveryDetailKey(for failure: FirstUseFailureReason) -> String {
-        if usesG9N9NButtonTestWorkaround {
-            switch failure {
-            case .remoteButtonNotReady: return "onboarding.remote.g9n9n.button_waiting_detail"
-            case .controlsNotConfirmed: return "onboarding.controls.g9n9n.detail"
-            default: break
-            }
-        }
         if failure == .permissionDesynced {
             return canOfferPermissionRelaunch
                 ? "onboarding.recovery.permission.desynced.detail.with_restart"

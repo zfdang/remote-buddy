@@ -29,6 +29,14 @@ extension OnboardingView {
                                 .padding(.horizontal, 28)
                         } else if settings.onboardingStep == .voiceTool {
                             welcomeIllustration
+                        } else if settings.onboardingStep == .permissions {
+                            VStack(spacing: 24) {
+                                remotePhotoPlaceholder
+                                Image(systemName: "mic.fill")
+                                    .font(.system(size: 44)).foregroundStyle(Color.accentColor)
+                                sideStatusPanel
+                            }
+                            .padding(.horizontal, 28)
                         } else if settings.onboardingStep == .remoteAvailability {
                             selectedDeviceIllustration
                         } else if settings.onboardingStep == .complete {
@@ -131,20 +139,6 @@ extension OnboardingView {
         Image(systemName: "appletvremote.gen4.fill")
             .font(.system(size: 180))
             .foregroundStyle(.secondary)
-    }
-
-    private var controlMethodIllustration: some View {
-        VStack(spacing: 26) {
-            HStack(spacing: 38) {
-                Image(systemName: "iphone")
-                Image(systemName: "safari.fill")
-            }
-            .font(.system(size: 58, weight: .medium))
-            .foregroundStyle(Color.accentColor)
-                Text(verbatim: localization.text("onboarding.control_method.illustration"))
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(.secondary)
-        }
     }
 
     private var remoteAvailabilityIllustration: some View {

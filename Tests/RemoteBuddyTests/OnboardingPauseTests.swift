@@ -22,8 +22,10 @@ struct OnboardingPauseTests {
         for _ in 0..<2 {
             let resumed = AppSettings(defaults: defaults)
             #expect(resumed.onboardingStep == .voiceTest)
-            #expect(resumed.voiceKeyMode == .function)
-            #expect(resumed.voiceFnTapModeEnabled)
+            #expect(resumed.voiceKeyMode == mode)
+            #expect(resumed.effectiveVoiceKeyMode == .function)
+            #expect(!resumed.voiceFnTapModeEnabled)
+            #expect(resumed.effectiveVoiceFnTapModeEnabled)
             #expect(resumed.stagedVoiceToolBinding == plan.binding)
             #expect(resumed.verifiedVoiceToolBinding == nil)
         }
@@ -54,7 +56,7 @@ struct OnboardingPauseTests {
         #expect(resumed.stagedVoiceToolBinding == nil)
     }
 
-    @Test(arguments: [OnboardingStep.audio, .permissions, .voiceTest])
+    @Test(arguments: [OnboardingStep.voiceTrigger, .permissions, .voiceTest])
     func pausePreservesStepAcrossRelaunchWithoutCompletingValidation(step: OnboardingStep) throws {
         let name = "pause-" + UUID().uuidString
         let defaults = try #require(UserDefaults(suiteName: name))

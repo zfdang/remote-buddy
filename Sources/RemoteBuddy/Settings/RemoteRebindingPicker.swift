@@ -7,6 +7,7 @@ struct RemoteRebindingPicker: View {
     @Environment(\.dismiss) private var dismiss
     @State private var selected: UUID?
     @State private var failed = false
+    @State private var discoveryRequestID = UUID()
 
     private var replacements: [RemoteDeviceProfile] {
         model.settings.remoteDeviceProfiles.filter {
@@ -37,5 +38,7 @@ struct RemoteRebindingPicker: View {
                     .keyboardShortcut(.defaultAction)
             }
         }.padding(24).frame(width: 520)
+        .onAppear { model.beginRemoteDiscovery(requestID: discoveryRequestID) }
+        .onDisappear { model.endRemoteDiscovery(requestID: discoveryRequestID) }
     }
 }

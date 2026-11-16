@@ -10,13 +10,13 @@ enum RemoteSetupDevice: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var titleKey: String { "remote.catalog.\(rawValue).title" }
 
-    /// Selection can precede adapter readiness; connection validation remains mandatory.
+    /// Only devices with an available adapter can enter connection setup.
     var onboardingSource: OnboardingControlSource? {
         switch self {
         case .xiaomi: return .xiaomiRemote
         case .t1Remote: return .t1Remote
-        case .chromecastG9N9N, .googleStreamerGY3LE: return .chromecastRemote
-        case .siriRemote: return nil
+        case .chromecastG9N9N: return .chromecastRemote
+        case .googleStreamerGY3LE, .siriRemote: return nil
         }
     }
 
@@ -26,12 +26,12 @@ enum RemoteSetupDevice: String, CaseIterable, Identifiable {
         allCases.first { $0.onboardingSource == source }
     }
 
-    /// Original schematic artwork; not a photograph or evidence of device support.
+    /// Bundled device artwork: G9N9N uses the supplied real photograph.
     var illustrationResource: String {
         switch self {
         case .xiaomi: return "BuddyRemoteIllustration"
         case .t1Remote: return "T1RemoteSetupIllustration"
-        case .chromecastG9N9N: return "ChromecastG9N9NIllustration"
+        case .chromecastG9N9N: return "ChromecastG9N9NPhoto"
         case .googleStreamerGY3LE: return "GoogleStreamerGY3LEIllustration"
         case .siriRemote: return "SiriRemoteA2854Illustration"
         }

@@ -15,18 +15,16 @@ extension SettingsView {
                     .fixedSize(horizontal: false, vertical: true)
                 GlassPanel {
                     VStack(alignment: .leading, spacing: 12) {
+                        Text(localization.text("settings.integration.shortcut_title")).font(.headline)
+                        voiceTriggerStatus
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                GlassPanel {
+                    VStack(alignment: .leading, spacing: 12) {
                         Text(localization.text("settings.integration.current")).font(.headline)
                         Text(localization.text(settings.onboardingVoiceTool.titleKey))
                             .font(.title3.weight(.medium))
-                        Label(model.voiceShortcutStatus.text(using: localization), systemImage: "keyboard")
-                        Label(model.integrationAudioDeviceStatus.text(using: localization), systemImage: "mic")
-                        if model.audioStatus.key != "audio.output.none_selected",
-                           model.audioStatus.key != "audio.output.current_format" {
-                            Text(model.audioStatus.text(using: localization))
-                                .font(.caption).foregroundStyle(.secondary)
-                        }
-                        Text(localization.text("settings.integration.microphone_help"))
-                            .font(.caption).foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -67,17 +65,7 @@ extension SettingsView {
                         }
                     }
                 }
-                GlassPanel {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text(localization.text("settings.integration.shortcut_title")).font(.headline)
-                        mappingVoiceKeyModeControl
-                        if VoiceFunctionKeyTapApplicability.isApplicable(capabilities: model.selectedRemoteVoiceCapabilities) {
-                            mappingVoiceFnTapControl
-                        }
-                        Text(localization.text("settings.integration.shortcut_help"))
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                }
+
                 if let warning = model.voiceKeyCompatibilityWarning {
                     voiceKeyCompatibilityWarningPanel(warning)
                 }

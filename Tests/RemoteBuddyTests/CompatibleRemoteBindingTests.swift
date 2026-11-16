@@ -6,9 +6,11 @@ import Testing
 @MainActor
 struct CompatibleRemoteBindingTests {
     private let alternate = RemoteHIDIdentity(vendorID: 0x1234, productID: 0x5678)
-    private func settings() throws -> AppSettings {
-        let defaults = try #require(UserDefaults(suiteName: "compatible-remote-" + UUID().uuidString))
-        return AppSettings(defaults: defaults)
+    private func withSettings(_ body: @MainActor (AppSettings) throws -> Void) throws {
+        let suite = "compatible-remote-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        try body(AppSettings(defaults: defaults))
     }
 
     @Test func pnpIdentityUsesLittleEndianAndRejectsMissingOrInvalidMetadata() {
@@ -29,7 +31,9 @@ struct CompatibleRemoteBindingTests {
     }
 
     @Test func alternateIdentityPersistsWithoutChangingOtherDeviceMappings() throws {
-        let defaults = try #require(UserDefaults(suiteName: "compatible-persist-" + UUID().uuidString))
+        let suite = "compatible-persist-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: defaults)
         let first = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         let google = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
@@ -48,11 +52,12 @@ struct CompatibleRemoteBindingTests {
 
     @Test func standardIdentitiesDoNotCreateExtraWhitelistEntries() throws {
         for identity in [RemoteHIDIdentity.xiaomi, .chromecast] {
-            let settings = try settings()
-            let profile = settings.registerBluetoothRemote(identifier: UUID(), model: identity == .xiaomi ? .rc003 : .chromecastVoiceRemote)
-            #expect(settings.bindCompatibleHID(.init(identity: identity, fingerprint: "standard"), to: profile))
-            #expect(settings.compatibleHIDBindings.isEmpty)
-            #expect(settings.profileID(forHIDFingerprint: "standard") == profile)
+            try withSettings { settings in
+                let profile = settings.registerBluetoothRemote(identifier: UUID(), model: identity == .xiaomi ? .rc003 : .chromecastVoiceRemote)
+                #expect(settings.bindCompatibleHID(.init(identity: identity, fingerprint: "standard"), to: profile))
+                #expect(settings.compatibleHIDBindings.isEmpty)
+                #expect(settings.profileID(forHIDFingerprint: "standard") == profile)
+            }
         }
     }
 
@@ -61,14 +66,15 @@ struct CompatibleRemoteBindingTests {
         #expect(!BridgeAppModel.canLearnHIDIdentity(model: .chromecastVoiceRemote, source: .xiaomiRemote))
         #expect(!BridgeAppModel.canLearnHIDIdentity(model: .unknown, source: .xiaomiRemote))
         #expect(!BridgeAppModel.canLearnHIDIdentity(model: .appleSiriRemoteA2854, source: .siriRemote))
-        let settings = try settings()
-        let first = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
-        let second = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
-        let binding = RemoteHIDBinding(identity: alternate, fingerprint: "same-device")
-        #expect(settings.bindCompatibleHID(binding, to: first))
-        #expect(!settings.bindCompatibleHID(binding, to: second))
-        #expect(settings.compatibleHIDBindings.count == 1)
-        #expect(!settings.bindCompatibleHID(.init(identity: .init(vendorID: 0, productID: 1), fingerprint: "bad"), to: first))
+        try withSettings { settings in
+            let first = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+            let second = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+            let binding = RemoteHIDBinding(identity: alternate, fingerprint: "same-device")
+            #expect(settings.bindCompatibleHID(binding, to: first))
+            #expect(!settings.bindCompatibleHID(binding, to: second))
+            #expect(settings.compatibleHIDBindings.count == 1)
+            #expect(!settings.bindCompatibleHID(.init(identity: .init(vendorID: 0, productID: 1), fingerprint: "bad"), to: first))
+        }
     }
 
     @Test func dynamicMatchingAddsExactDeduplicatedPairsOnly() throws {
@@ -81,48 +87,50 @@ struct CompatibleRemoteBindingTests {
     }
 
     @Test func googleSupportDoesNotBypassXiaomiPowerSuppression() throws {
-        let settings = try settings()
-        let xiaomi = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
-        let google = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
-        let other = RemoteHIDIdentity(vendorID: 0x2345, productID: 0x6789)
-        #expect(settings.bindCompatibleHID(.init(identity: alternate, fingerprint: "xiaomi"), to: xiaomi))
-        #expect(settings.bindCompatibleHID(.init(identity: other, fingerprint: "google"), to: google))
-        let blocked = HIDRemoteMonitor.monitorFamilies(targetModel: .rc003, powerKeySuppressed: false, allowsGoogle: true)
-        #expect(!blocked.xiaomi && !blocked.google)
-        let discovery = HIDRemoteMonitor.monitorFamilies(targetModel: nil, powerKeySuppressed: false, allowsGoogle: true)
-        #expect(!discovery.xiaomi && discovery.google)
-        let identities = settings.compatibleHIDIdentities(includeXiaomi: discovery.xiaomi, includeGoogle: discovery.google)
-        #expect(identities == [other])
-        let matches = HIDRemoteMonitor.deviceMatchingCriteria(includeXiaomi: discovery.xiaomi,
-            includeGoogle: discovery.google, additionalIdentities: identities)
-        #expect(matches.count == 2)
-        #expect(!matches.contains { ($0["VendorID"] as? Int) == Int(alternate.vendorID) })
-        let protected = HIDRemoteMonitor.monitorFamilies(targetModel: .rc003, powerKeySuppressed: true, allowsGoogle: true)
-        #expect(protected.xiaomi && !protected.google)
-        let pendingXiaomi = HIDRemoteMonitor.monitorFamilies(targetModel: .unknown, powerKeySuppressed: true, allowsGoogle: true)
-        #expect(pendingXiaomi.xiaomi && !pendingXiaomi.google)
-        let unsafePending = HIDRemoteMonitor.monitorFamilies(targetModel: .unknown, powerKeySuppressed: false, allowsGoogle: true)
-        #expect(!unsafePending.xiaomi && !unsafePending.google)
+        try withSettings { settings in
+            let xiaomi = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
+            let google = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+            let other = RemoteHIDIdentity(vendorID: 0x2345, productID: 0x6789)
+            #expect(settings.bindCompatibleHID(.init(identity: alternate, fingerprint: "xiaomi"), to: xiaomi))
+            #expect(settings.bindCompatibleHID(.init(identity: other, fingerprint: "google"), to: google))
+            let blocked = HIDRemoteMonitor.monitorFamilies(targetModel: .rc003, powerKeySuppressed: false, allowsGoogle: true)
+            #expect(!blocked.xiaomi && !blocked.google)
+            let discovery = HIDRemoteMonitor.monitorFamilies(targetModel: nil, powerKeySuppressed: false, allowsGoogle: true)
+            #expect(!discovery.xiaomi && discovery.google)
+            let identities = settings.compatibleHIDIdentities(includeXiaomi: discovery.xiaomi, includeGoogle: discovery.google)
+            #expect(identities == [other])
+            let matches = HIDRemoteMonitor.deviceMatchingCriteria(includeXiaomi: discovery.xiaomi,
+                includeGoogle: discovery.google, additionalIdentities: identities)
+            #expect(matches.count == 2)
+            #expect(!matches.contains { ($0["VendorID"] as? Int) == Int(alternate.vendorID) })
+            let protected = HIDRemoteMonitor.monitorFamilies(targetModel: .rc003, powerKeySuppressed: true, allowsGoogle: true)
+            #expect(protected.xiaomi && !protected.google)
+            let pendingXiaomi = HIDRemoteMonitor.monitorFamilies(targetModel: .unknown, powerKeySuppressed: true, allowsGoogle: true)
+            #expect(pendingXiaomi.xiaomi && !pendingXiaomi.google)
+            let unsafePending = HIDRemoteMonitor.monitorFamilies(targetModel: .unknown, powerKeySuppressed: false, allowsGoogle: true)
+            #expect(!unsafePending.xiaomi && !unsafePending.google)
+        }
     }
 
     @Test func googleProtocolRecognitionUsesStoredBindingsWithoutLiveBLEConfirmation() throws {
-        let settings = try settings()
-        let google = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
-        #expect(settings.bindCompatibleHID(.init(identity: .chromecast, fingerprint: "google"), to: google))
-        func recognized(_ identity: RemoteHIDIdentity, _ fingerprint: String) -> Bool {
-            HIDRemoteMonitor.matchesGoogleProtocol(identity: identity, fingerprint: fingerprint,
-                profiles: settings.remoteDeviceProfiles)
+        try withSettings { settings in
+            let google = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+            #expect(settings.bindCompatibleHID(.init(identity: .chromecast, fingerprint: "google"), to: google))
+            @MainActor func recognized(_ identity: RemoteHIDIdentity, _ fingerprint: String) -> Bool {
+                HIDRemoteMonitor.matchesGoogleProtocol(identity: identity, fingerprint: fingerprint,
+                    profiles: settings.remoteDeviceProfiles)
+            }
+            #expect(recognized(.chromecast, "google"))
+            #expect(recognized(.chromecast, "other-device"))
+            #expect(!recognized(alternate, "google"))
+            #expect(settings.bindCompatibleHID(.init(identity: alternate, fingerprint: "clone"), to: google))
+            #expect(recognized(alternate, "clone"))
+            #expect(!recognized(.chromecast, "clone"))
+            let index = try #require(settings.remoteDeviceProfiles.firstIndex { $0.id == google })
+            settings.remoteDeviceProfiles[index].compatibleHIDBinding = .init(identity: alternate, fingerprint: "another-fingerprint")
+            #expect(!recognized(alternate, "clone"))
+            #expect(!settings.bindCompatibleHID(.init(identity: .xiaomi, fingerprint: "wrong-family"), to: google))
         }
-        #expect(recognized(.chromecast, "google"))
-        #expect(recognized(.chromecast, "other-device"))
-        #expect(!recognized(alternate, "google"))
-        #expect(settings.bindCompatibleHID(.init(identity: alternate, fingerprint: "clone"), to: google))
-        #expect(recognized(alternate, "clone"))
-        #expect(!recognized(.chromecast, "clone"))
-        let index = try #require(settings.remoteDeviceProfiles.firstIndex { $0.id == google })
-        settings.remoteDeviceProfiles[index].compatibleHIDBinding = .init(identity: alternate, fingerprint: "another-fingerprint")
-        #expect(!recognized(alternate, "clone"))
-        #expect(!settings.bindCompatibleHID(.init(identity: .xiaomi, fingerprint: "wrong-family"), to: google))
     }
 
     @Test func automaticBindingRequiresMatchingNameEvenWithUniqueVIDPID() {
@@ -147,7 +155,9 @@ struct CompatibleRemoteBindingTests {
     }
 
     @Test func replacingWhitelistRestoresMappingsWhileOldServicesAreStillReachable() throws {
-        let defaults = try #require(UserDefaults(suiteName: "compatible-mapper-" + UUID().uuidString))
+        let suite = "compatible-mapper-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
         let original = HIDUsageMapping(source: RemoteHIDKeyMappingPolicy.remoteVoiceKey.source, destination: 99)
         var mappings = [original]
         var mapper: RemoteHIDKeyMapper!
@@ -168,22 +178,23 @@ struct CompatibleRemoteBindingTests {
     }
 
     @Test func addDeviceOpensDeviceSelectionWithoutResettingConfiguredTools() throws {
-        let settings = try settings()
-        settings.setOnboardingVoiceTool(.voiceBuddy)
-        settings.voiceKeyMode = .leftCommand
-        settings.voiceFnTapModeEnabled = false
-        let profile = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
-        settings.selectRemoteProfile(profile)
-        settings.completeOnboarding()
-        let original = settings.remoteDeviceProfiles
-        SettingsPageBehavior.beginDeviceSetup(settings: settings)
-        #expect(settings.onboardingStep == .remoteAvailability)
-        #expect(settings.onboardingPurpose == .addDevice)
-        #expect(settings.canDismissOnboarding)
-        #expect(!settings.isOnboardingComplete)
-        #expect(settings.onboardingDevice == nil)
-        #expect(settings.onboardingVoiceTool == .voiceBuddy)
-        #expect(settings.voiceKeyMode == .leftCommand)
-        #expect(settings.remoteDeviceProfiles == original)
+        try withSettings { settings in
+            settings.setOnboardingVoiceTool(.voiceBuddy)
+            settings.voiceKeyMode = .leftCommand
+            settings.voiceFnTapModeEnabled = false
+            let profile = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
+            settings.selectRemoteProfile(profile)
+            settings.completeOnboarding()
+            let original = settings.remoteDeviceProfiles
+            SettingsPageBehavior.beginDeviceSetup(settings: settings)
+            #expect(settings.onboardingStep == .remoteAvailability)
+            #expect(settings.onboardingPurpose == .addDevice)
+            #expect(settings.canDismissOnboarding)
+            #expect(!settings.isOnboardingComplete)
+            #expect(settings.onboardingDevice == nil)
+            #expect(settings.onboardingVoiceTool == .voiceBuddy)
+            #expect(settings.voiceKeyMode == .leftCommand)
+            #expect(settings.remoteDeviceProfiles == original)
+        }
     }
 }

@@ -150,7 +150,7 @@ extension BridgeAppModel {
             isVoiceTriggerEnabled = applied
             voiceShortcutStatus = LocalizedMessage(
                 applied
-                    ? "voice_button.status.\(settings.voiceKeyMode.rawValue)_enabled"
+                    ? "voice_button.status.\(settings.effectiveVoiceKeyMode.statusIdentifier)_enabled"
                     : "voice_button.status.waiting"
             )
         }
@@ -174,9 +174,14 @@ extension BridgeAppModel {
             voiceSession.pendingKeyRelease = nil
             applicationIntegrationController.cancelPending()
         }
+        // Tap conversion owns the full shortcut transaction; do not also hold its keys.
+        if streaming && settings.effectiveVoiceFnTapModeEnabled {
+            completion(true)
+            return true
+        }
         let mode = streaming
-            ? settings.voiceKeyMode
-            : (heldVoiceKeyMode ?? pendingVoiceKeyMode ?? settings.voiceKeyMode)
+            ? settings.effectiveVoiceKeyMode
+            : (heldVoiceKeyMode ?? pendingVoiceKeyMode ?? settings.effectiveVoiceKeyMode)
         guard forceSoftware || !mode.usesHardwareMapping || requiresOrderedVoiceFn else {
             if streaming { clearApplicationIntegrationStatus() }
             completion(true)
@@ -322,8 +327,8 @@ extension BridgeAppModel {
         isVoiceTriggerEnabled = !shouldHold
         voiceShortcutStatus = LocalizedMessage(
             shouldHold
-                ? "voice_button.status.\(mode.rawValue)_pressed"
-                : "voice_button.status.\(mode.rawValue)_released"
+                ? "voice_button.status.\(mode.statusIdentifier)_pressed"
+                : "voice_button.status.\(mode.statusIdentifier)_released"
         )
         AppLogger.shared.write(
             "VOICE KEY mode=\(mode.rawValue) edge=\(shouldHold ? "down" : "up") " +
@@ -392,7 +397,7 @@ extension BridgeAppModel {
         preferredInputSourceMonitor.endVoiceSession()
         isVoiceTriggerEnabled = true
         voiceShortcutStatus = LocalizedMessage(
-            "voice_button.status.\(heldVoiceKeyMode.rawValue)_released"
+            "voice_button.status.\(heldVoiceKeyMode.statusIdentifier)_released"
         )
         AppLogger.shared.write(
             "VOICE KEY mode=\(heldVoiceKeyMode.rawValue) edge=up " +

@@ -173,10 +173,10 @@ enum T1RemoteProtocol {
         expectedLength: Int,
         data: Data
     ) -> [UInt8]? {
-        if data.count >= expectedLength + 1, data.first == expectedID {
+        if data.count == expectedLength + 1, data.first == expectedID {
             return Array(data.dropFirst())
         }
-        if data.count >= expectedLength {
+        if data.count == expectedLength {
             return Array(data)
         }
         return nil

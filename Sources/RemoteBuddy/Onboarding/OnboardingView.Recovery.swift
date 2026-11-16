@@ -5,7 +5,12 @@ import SwiftUI
 
 extension OnboardingView {
     func prepareForStep(_ step: OnboardingStep) {
+        buttonHelpExpanded = false
+        diagnosticCopySucceeded = nil
         refreshPermissionStates()
+        if allowsHardwareMonitoring {
+            model.applyHIDSettings(allowVoiceKeyModeFallback: false)
+        }
         switch step {
         case .voiceTool:
             refreshVoiceToolAvailability()
@@ -27,7 +32,9 @@ extension OnboardingView {
             requestedRemoteConnectionRecovery = false
             secureInputWaitStartedAtUptime = nil
             prepareSelectedControlConnection()
-        case .permissions, .audio:
+        case .voiceTrigger:
+            break
+        case .permissions:
             model.refreshAudioDevices()
         case .voiceTest:
             refreshSelectedVoiceToolRuntimeState()
@@ -40,8 +47,6 @@ extension OnboardingView {
             if secureInputActive != nil { secureInputActive = nil }
             if secureInputWaitStartedAtUptime != nil { secureInputWaitStartedAtUptime = nil }
             if lastLoggedSecureInputState != nil { lastLoggedSecureInputState = nil }
-            prepareSelectedControlConnection()
-            model.refreshAudioDevices()
         }
         settings.recordFirstUseEvent(.entered, step: step)
         lastRecordedFailure = nil
@@ -114,16 +119,6 @@ extension OnboardingView {
         case .voiceNoSamples, .voiceAudioDeliveryFailed:
             model.applyAudioSettings(reason: "onboarding_voice_retry")
             resetVoiceTestForRetry()
-        case .completeRuntimeRegressed:
-            guard let recoveryStep = OnboardingFlowPolicy.recoveryStep(
-                from: .complete,
-                voiceTool: settings.onboardingVoiceTool,
-                remoteAvailability: settings.onboardingRemoteAvailability,
-                controlMethod: settings.onboardingControlMethod,
-                capabilities: capabilities,
-                hasSelectedAudioUID: !settings.selectedAudioDeviceUID.isEmpty
-            ) else { return }
-            settings.setOnboardingStep(recoveryStep)
         }
     }
 

@@ -15,6 +15,8 @@ extension OnboardingView {
     }
 
     private func learnSelectedHIDIdentity() {
+        guard selectedControlConnected, let profile = settings.selectedRemoteProfile,
+              BridgeAppModel.canLearnHIDIdentity(model: profile.model, source: settings.onboardingControlSource) else { return }
         if let bridge = model.selectedBluetoothBridge { model.learnSelectedRemoteHIDIdentity(bridge) }
     }
 
@@ -108,15 +110,6 @@ extension OnboardingView {
                 compact: true
             )
 
-            if let profile = settings.selectedRemoteProfile,
-               selectedControlConnected,
-               BridgeAppModel.canLearnHIDIdentity(model: profile.model, source: settings.onboardingControlSource) {
-                Button(localization.text("remote.hid_binding.open")) { hidBindingProfile = profile }
-                    .buttonStyle(.bordered)
-                    .onAppear { learnSelectedHIDIdentity() }
-                    .onChange(of: settings.selectedRemoteProfileID) { _, _ in learnSelectedHIDIdentity() }
-            }
-
             if shouldShowSecureInputWarning {
                 secureInputWarningCard
             }
@@ -125,7 +118,14 @@ extension OnboardingView {
                 openBluetoothSettingsButton
             }
         }
-        .onAppear { model.selectOnboardingRemoteIfNeeded() }
+        .onAppear {
+            model.selectOnboardingRemoteIfNeeded()
+            learnSelectedHIDIdentity()
+        }
+        .onChange(of: settings.selectedRemoteProfileID) { _, _ in learnSelectedHIDIdentity() }
+        .onChange(of: selectedControlConnected) { _, connected in
+            if connected { learnSelectedHIDIdentity() }
+        }
         .onChange(of: model.onboardingRemoteProfiles.map(\.id)) { _, _ in
             model.selectOnboardingRemoteIfNeeded()
         }
@@ -198,11 +198,6 @@ extension OnboardingView {
     }
 
     private var physicalRemoteButtonStatusDetail: String {
-        if usesG9N9NButtonTestWorkaround {
-            return localization.text(observedRemoteButtons.isEmpty
-                ? "onboarding.remote.g9n9n.button_waiting_detail"
-                : "onboarding.remote.g9n9n.button_detail")
-        }
         let instructionKey = remoteInputDiagnostic.shouldShowVoiceButtonCorrection
             ? "onboarding.remote.voice_button_mistake.detail"
             : observedRemoteButtons.isEmpty
@@ -265,25 +260,6 @@ extension OnboardingView {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.orange.opacity(0.25), lineWidth: 1)
         }
-    }
-
-    private func controllerButtonStatusCard(waitingDetailKey: String) -> some View {
-        statusCard(
-            icon: observedRemoteButtons.isEmpty
-                ? "button.programmable"
-                : "checkmark.circle.fill",
-            title: localization.text(
-                observedRemoteButtons.isEmpty
-                    ? "onboarding.remote.button_waiting"
-                    : "onboarding.remote.button_received"
-            ),
-            detail: localization.text(
-                observedRemoteButtons.isEmpty
-                    ? waitingDetailKey
-                    : "onboarding.remote.button_detail"
-            ),
-            isComplete: !observedRemoteButtons.isEmpty
-        )
     }
 
     private var openBluetoothSettingsButton: some View {

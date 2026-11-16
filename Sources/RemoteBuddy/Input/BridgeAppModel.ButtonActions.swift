@@ -34,7 +34,7 @@ extension BridgeAppModel {
             }
             return handled
         }
-        if settings.voiceFnTapModeEnabled,
+        if settings.effectiveVoiceFnTapModeEnabled,
            let intent = VoiceInputDestinationIntent.resolve(configured: configured, applicationProfile: applicationProfile) {
             voiceInputDestinationCoordinator.beginTargetSwitch(intent: intent) { requestID in
                 _ = sendAction(requestID)
@@ -45,7 +45,7 @@ extension BridgeAppModel {
     }
 
     func handleVoiceInputDestinationState(_ state: VoiceInputDestinationState) {
-        guard settings.voiceFnTapModeEnabled else { return }
+        guard settings.effectiveVoiceFnTapModeEnabled else { return }
         switch state {
         case .waiting:
             voiceShortcutStatus = LocalizedMessage("voice_button.status.waiting_for_input")

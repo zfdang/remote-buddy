@@ -1106,4 +1106,37 @@ struct T1RemoteProtocolTests {
         #expect(!routing.claims(.up, source: source))
         monitor.disconnectSimulatedDevice()
     }
+
+    @Test func rejectsOversizedAndUndersizedReportPayloads() {
+        #expect(T1RemoteProtocol.decodeHIDReport(
+            reportID: T1RemoteProtocol.keyboardReportID,
+            data: Data([0x01, 0x00, 0x00, 0x65, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF])
+        ) == .invalid)
+        #expect(T1RemoteProtocol.decodeHIDReport(
+            reportID: T1RemoteProtocol.keyboardReportID,
+            data: Data([0x00, 0x00, 0x65, 0x00, 0x00, 0x00, 0x00, 0x00])
+        ) == .usages([RemoteButton.menu.hidUsage], voiceHoldPressed: false))
+
+        #expect(T1RemoteProtocol.decodeHIDReport(
+            reportID: T1RemoteProtocol.consumerReportID,
+            data: Data([0x02, 0x24, 0x02, 0x00])
+        ) == .invalid)
+        #expect(T1RemoteProtocol.decodeHIDReport(
+            reportID: T1RemoteProtocol.consumerReportID,
+            data: Data([0x24])
+        ) == .invalid)
+
+        #expect(T1RemoteProtocol.decodeHIDReport(
+            reportID: T1RemoteProtocol.systemControlReportID,
+            data: Data([0x03, 0x01, 0x00])
+        ) == .invalid)
+        #expect(T1RemoteProtocol.decodeHIDReport(
+            reportID: T1RemoteProtocol.systemControlReportID,
+            data: Data()
+        ) == .invalid)
+        #expect(T1RemoteProtocol.usages(
+            reportID: T1RemoteProtocol.systemControlReportID,
+            data: Data([0x01])
+        ) == [RemoteButton.power.hidUsage])
+    }
 }

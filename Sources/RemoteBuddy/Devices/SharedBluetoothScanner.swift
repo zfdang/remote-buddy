@@ -39,7 +39,10 @@ final class SharedBluetoothScanner: NSObject, @preconcurrency CBCentralManagerDe
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral,
                         advertisementData: [String: Any], rssi RSSI: NSNumber) {
         subscriptions.publish(Advertisement(identifier: peripheral.identifier,
-            name: advertisementData[CBAdvertisementDataLocalNameKey] as? String ?? peripheral.name,
+            name: VoiceRemoteAdmission.resolvedName(
+                advertisedName: advertisementData[CBAdvertisementDataLocalNameKey] as? String,
+                peripheralName: peripheral.name
+            ),
             data: advertisementData))
     }
 }

@@ -8,7 +8,7 @@ struct VoiceFnQuickReleaseTests {
         var edges: [Bool] = []
         var samples: [[Int16]] = []
         let session = VoiceFnTapSessionController(schedule: clock.voiceSchedule,
-            setFunctionKeyPressed: { edges.append($0); return true }, enqueueAudio: { samples.append($0) },
+            setTriggerPressed: { edges.append($0); return true }, enqueueAudio: { samples.append($0) },
             drainAudio: { _, done in done() }, onFailure: { _ in Issue.record("Unexpected failure") })
         session.setEnabled(true)
         #expect(session.startVoice())

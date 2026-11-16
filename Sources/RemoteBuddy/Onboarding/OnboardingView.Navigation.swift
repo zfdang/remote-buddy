@@ -65,7 +65,11 @@ extension OnboardingView {
                 VStack(alignment: .leading, spacing: 18) {
                     stepContent
                     if let failureReason, shouldShowStandaloneRecoveryCard(failureReason) {
-                        recoveryCard(for: failureReason)
+                        if failureReason == .remoteButtonNotReady || failureReason == .controlsNotConfirmed {
+                            buttonTroubleshooting(for: failureReason)
+                        } else {
+                            recoveryCard(for: failureReason)
+                        }
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -73,8 +77,10 @@ extension OnboardingView {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .scrollIndicators(.visible)
 
-            if settings.onboardingStep == .voiceTool && !canContinue {
-                Text(verbatim: localization.text("onboarding.voice_tool.guide.continue_hint"))
+            if settings.onboardingStep == .voiceTool, let hint = voiceToolBlockingHintKey,
+               hint != "onboarding.voice_tool.tap_required",
+               hint != "onboarding.voice_tool.trigger_incompatible" {
+                Text(verbatim: localization.text(hint))
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -100,7 +106,7 @@ extension OnboardingView {
                     .accessibilityIdentifier("onboarding.language")
                 }
                 Spacer(minLength: 0)
-                if settings.canDismissOnboarding {
+                if settings.onboardingStep != .complete && settings.canDismissOnboarding {
                     onboardingActionButton(id: "dismiss") {
                         model.dismissOnboardingSetup()
                     } label: {
@@ -113,7 +119,7 @@ extension OnboardingView {
                     .disabled(model.isVoiceConfigurationBusy)
                     .accessibilityIdentifier("onboarding.dismiss")
                 }
-                if !settings.canDismissOnboarding {
+                if settings.onboardingStep != .complete && !settings.canDismissOnboarding {
                     onboardingActionButton(id: "pause", action: pauseIncompleteSetup) {
                         Text(localization.text("onboarding.action.pause"))
                     }
@@ -152,8 +158,8 @@ extension OnboardingView {
             permissionsContent
         case .remote:
             remoteContent
-        case .audio:
-            audioContent
+        case .voiceTrigger:
+            voiceTriggerContent
         case .voiceTest:
             voiceTestContent
         case .controls:

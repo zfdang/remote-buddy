@@ -54,7 +54,8 @@ struct VirtualAudioDeviceAudibilityRepairResult: Equatable {
 
     var isReady: Bool {
         !applicable || (
-            !after.requiresAudibilityRepair &&
+            !writeFailed &&
+                !after.requiresAudibilityRepair &&
                 (!before.requiresAudibilityRepair || after.hasObservation)
         )
     }

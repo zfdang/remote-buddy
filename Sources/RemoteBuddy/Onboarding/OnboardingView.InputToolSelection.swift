@@ -12,6 +12,44 @@ extension OnboardingView {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
+            Text(voiceToolGuideText("onboarding.voice_tool.guide.match_shortcut"))
+                .font(.callout).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if voiceToolBlockingHintKey == "onboarding.voice_tool.tap_required" {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(localization.text("onboarding.voice_tool.tap_required"))
+                        .foregroundStyle(.orange)
+                    HStack {
+                        onboardingActionButton(id: "voice-tool.enable-tap") {
+                            settings.selectOnboardingFnTapMode(true)
+                            stageCurrentDocumentedPairingPlanIfPossible()
+                        } label: { Text(localization.text("onboarding.voice_tool.enable_tap")) }
+                        .buttonStyle(.borderedProminent)
+                        onboardingActionButton(id: "voice-tool.choose-another") {
+                            selectVoiceTool(.unselected)
+                        } label: { Text(localization.text("onboarding.voice_tool.choose_another")) }
+                        .buttonStyle(.bordered)
+                    }
+                }
+            }
+
+            if voiceToolBlockingHintKey == "onboarding.voice_tool.trigger_incompatible" {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(localization.text("onboarding.voice_tool.trigger_incompatible"))
+                        .foregroundStyle(.orange)
+                    HStack {
+                        onboardingActionButton(id: "voice-tool.use-fn") {
+                            selectFunctionTriggerForVoiceTool()
+                        } label: { Text(localization.text("onboarding.voice_tool.use_fn")) }
+                        .buttonStyle(.borderedProminent)
+                        onboardingActionButton(id: "voice-tool.choose-another") {
+                            selectVoiceTool(.unselected)
+                        } label: { Text(localization.text("onboarding.voice_tool.choose_another")) }
+                        .buttonStyle(.bordered)
+                    }
+                }
+            }
+
             if allRecognizedVoiceToolsUnavailable {
                 HStack(alignment: .top, spacing: 10) {
                     Image(systemName: "exclamationmark.triangle.fill")
@@ -141,43 +179,14 @@ extension OnboardingView {
                 }
             }
 
-            if settings.onboardingControlSource.supportedGestureModes.count > 1 {
-                gestureModeChoice
-            }
-
         }
     }
-
-    private var onboardingVoiceKeyControl: some View {
-        let profile = VoiceToolAdapterProfile.profile(for: settings.onboardingVoiceTool)
-        return VStack(alignment: .leading, spacing: 7) {
-            HStack(spacing: 8) {
-                Text(verbatim: localization.text("onboarding.voice_tool.binding.title"))
-                    .font(.system(size: 13, weight: .semibold))
-                Spacer(minLength: 4)
-                onboardingActionButton(id: "voice-binding.recommended") {
-                    stageCurrentDocumentedPairingPlanIfPossible()
-                } label: {
-                    Label {
-                        Text(verbatim: localization.text("onboarding.voice_tool.binding.recommended"))
-                    } icon: {
-                        Image(systemName: "checkmark.circle.fill")
-                    }
-                }
-                .buttonStyle(.bordered)
-            }
-
-            Text(verbatim: localization.text("onboarding.voice_tool.binding.recommended_detail"))
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Text(defaultBindingSummary(profile: profile))
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(profile.evidenceState == .verified ? Color.green : Color.orange)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(10)
-        .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 10))
+    func selectFunctionTriggerForVoiceTool() {
+        settings.selectOnboardingVoiceTrigger(.function)
+        selectedInputMethodGuideStep = nil
+        viewedInputMethodGuideSteps.removeAll()
+        refreshSystemFunctionKeyUsage()
+        stageCurrentDocumentedPairingPlanIfPossible()
     }
+
 }

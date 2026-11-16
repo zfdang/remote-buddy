@@ -5,7 +5,7 @@ import SwiftUI
 
 extension OnboardingView {
     func copyDiagnosticSummary() {
-        guard interactionProbe == nil else { return }
+        guard interactionProbe == nil else { diagnosticCopySucceeded = true; return }
         var diagnosticVoiceAttempt = voiceAttempt
         diagnosticVoiceAttempt.audioDelivery = model.voiceAudioDeliveryDiagnosticSnapshot()
         let snapshot = FirstUseDiagnosticSnapshot(
@@ -14,8 +14,8 @@ extension OnboardingView {
             systemMajorVersion: ProcessInfo.processInfo.operatingSystemVersion.majorVersion,
             architecture: FirstUseDiagnosticSnapshot.architecture,
             voiceTool: settings.onboardingVoiceTool,
-            voiceKeyMode: settings.voiceKeyMode,
-            voiceFnTapModeEnabled: settings.voiceFnTapModeEnabled,
+            voiceKeyMode: settings.effectiveVoiceKeyMode,
+            voiceFnTapModeEnabled: settings.effectiveVoiceFnTapModeEnabled,
             context: diagnosticContext,
             voiceAttempt: diagnosticVoiceAttempt,
             bluetoothStatus: model.connectionStatus.key,
@@ -27,7 +27,7 @@ extension OnboardingView {
             voiceBinding: settings.stagedVoiceToolBinding ?? settings.verifiedVoiceToolBinding
         )
         NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(snapshot.redactedText, forType: .string)
+        diagnosticCopySucceeded = NSPasteboard.general.setString(snapshot.redactedText, forType: .string)
         AppLogger.shared.write(
             "ONBOARDING DIAGNOSTICS copied step=\(settings.onboardingStep.rawValue) " +
                 "failure=\(failureReason?.rawValue ?? "none")"
@@ -77,6 +77,7 @@ extension OnboardingView {
     }
 
     func prepareSelectedControlConnection() {
+        guard allowsHardwareMonitoring else { return }
         switch settings.onboardingControlSource {
         case .xiaomiRemote, .t1Remote, .chromecastRemote:
             model.refreshRemoteDiscovery()

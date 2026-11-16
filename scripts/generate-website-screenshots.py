@@ -7,7 +7,7 @@ import tempfile
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
-APP_PATH = ROOT / "dist/Remote Buddy.app/Contents/MacOS/RemoteBuddy"
+APP_PATH = ROOT / "dist/website-screenshots/Remote Buddy.app/Contents/MacOS/RemoteBuddy"
 OUTPUT_DIR = ROOT / "pages/assets/screenshots"
 
 SETTINGS_SECTIONS = [
@@ -26,7 +26,7 @@ ONBOARDING_STEPS = [
     ("02-control-source.png", "wizard-source"),
     ("03-remote.png", "wizard-remote"),
     ("04-controls.png", "wizard-controls"),
-    ("05-audio.png", "wizard-driver"),
+    ("05-voice-trigger.png", "wizard-driver"),
     ("06-voice-tool.png", "wizard-tool"),
     ("07-voice-test.png", "wizard-test"),
 ]
@@ -35,6 +35,7 @@ def ensure_binary() -> Path:
     print("Building current sources with CONFIGURATION=debug...")
     env = os.environ.copy()
     env["CONFIGURATION"] = "debug"
+    env["APP_BUNDLE_DESTINATION"] = str(APP_PATH.parents[2])
     if "DEVELOPER_DIR" not in env and Path("/Applications/Xcode.app/Contents/Developer").exists():
         env["DEVELOPER_DIR"] = "/Applications/Xcode.app/Contents/Developer"
     subprocess.run(["scripts/build-app.sh"], cwd=ROOT, env=env, check=True)
@@ -44,6 +45,7 @@ def render_settings(bin_path: Path, language: str, output_tmp: Path, extra_env=N
     env = os.environ.copy()
     env["REMOTE_BUDDY_SETTINGS_SCREENSHOT_DIR"] = str(output_tmp)
     env["REMOTE_BUDDY_SETTINGS_SCREENSHOT_REMOTE_CARDS"] = "1"
+    env["REMOTE_BUDDY_SETTINGS_SCREENSHOT_CHROMECAST"] = "1"
     env["REMOTE_BUDDY_SETTINGS_SCREENSHOT_UP_TO_DATE"] = "1"
     env["REMOTE_BUDDY_SETTINGS_SCREENSHOT_LANGUAGE"] = language
     env["REMOTE_BUDDY_SETTINGS_SCREENSHOT_APPEARANCE"] = "light"
@@ -55,6 +57,8 @@ def render_onboarding(bin_path: Path, language: str, output_tmp: Path):
     env["REMOTE_BUDDY_ONBOARDING_SCREENSHOT_DIR"] = str(output_tmp)
     env["REMOTE_BUDDY_ONBOARDING_SCREENSHOT_LANGUAGE"] = language
     env["REMOTE_BUDDY_ONBOARDING_SCREENSHOT_APPEARANCE"] = "light"
+    env["REMOTE_BUDDY_ONBOARDING_SCREENSHOT_CONTROL_SOURCE"] = "chromecast_remote"
+    env["REMOTE_BUDDY_ONBOARDING_SCREENSHOT_DEVICE"] = "chromecastG9N9N"
     subprocess.run([str(bin_path)], cwd=ROOT, env=env, check=True)
 
 def optimize_png(src: Path, dst: Path):
@@ -83,6 +87,16 @@ def main():
                 target_file = OUTPUT_DIR / f"{target_id}-{lang_suffix}.png"
                 print(f"Optimizing {target_file.name}...")
                 optimize_png(source_file, target_file)
+
+            # Include all G9N9N media buttons and both connection cards in full.
+            for section, height, cards in [("mapping", 980, "0"), ("connection", 860, "1")]:
+                render_settings(bin_path, lang_code, Path(tmp_settings_dir), {
+                    "REMOTE_BUDDY_SETTINGS_SCREENSHOT_SECTION": section,
+                    "REMOTE_BUDDY_SETTINGS_SCREENSHOT_REMOTE_CARDS": cards,
+                    "REMOTE_BUDDY_SETTINGS_SCREENSHOT_SIZE": f"1020x{height}",
+                })
+                optimize_png(Path(tmp_settings_dir) / f"{section}-1020x{height}.png",
+                             OUTPUT_DIR / f"{section}-{lang_suffix}.png")
 
             for variant, overrides in integration_variants():
                 render_settings(bin_path, lang_code, Path(tmp_settings_dir), overrides)

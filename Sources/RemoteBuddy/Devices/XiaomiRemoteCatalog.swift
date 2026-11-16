@@ -31,12 +31,6 @@ enum XiaomiRemoteCatalog {
             model: .rc003,
             photoResource: "BuddyRemoteIllustration",
             // 真机证实（2026-09-19）：小米蓝牙遥控器 2 Pro 的 DIS 报 RC003。
-            //
-            // ARN9 **不**列入型号目录：两台真机（2 与 2 Pro）的 DIS 都不是 ARN9，
-            // 全部历史日志里也从未出现过，没有任何证据表明它属于哪一款——型号不猜。
-            // 但 ARN9 的两处功能保留：①广播名白名单里的 "arn9"（连接层，老固件设备
-            // 可能广播这个名字）；②桥里 contains("ARN9") 的 ADPCM low-nibble-first
-            // 翻转（解码层，见 ATVVProtocol.lowNibbleFirst）——两者都不依赖型号归属。
             disModelNumbers: ["RC003"]
         ),
     ]
@@ -44,10 +38,6 @@ enum XiaomiRemoteCatalog {
     /// 本桥会考虑的广播名（设备自报，小写）。**只作连接前的辅助筛选**：
     /// 广播名与型号不是一一对应（真机实测：广播名「小米蓝牙语音遥控器」、DIS 报 RC003），
     /// 型号判定一律以 DIS 为准。
-    ///
-    /// 「小米蓝牙遥控器2」「小米蓝牙遥控器2 pro」「arn9」对应的就是**小米蓝牙遥控器 2 / 2 Pro**
-    /// （硬件型号 ARN9）——这是老版本用户的主力设备，**绝不能从这份名单里移除**，
-    /// 否则老用户升级后遥控器永远无法首次采纳。
     static let adoptedAdvertisedNames: Set<String> = [
         "mi rc",
         "xiaomi bluetooth remote 2",
@@ -55,11 +45,10 @@ enum XiaomiRemoteCatalog {
         "小米蓝牙语音遥控器",
         "小米蓝牙遥控器2",
         "小米蓝牙遥控器2 pro",
-        "arn9",
     ]
 
     /// 按 DIS 型号串识别型号。`raw` 是设备上报的原始串，子串命中即认——
-    /// 只有目录里登记的型号串才会命中，登记之外的（如 ARN9）返回 nil，型号不猜。
+    /// 只有目录里登记的型号串才会命中，未登记的型号返回 nil，型号不猜。
     static func entry(matchingDISModelNumber raw: String) -> XiaomiRemoteCatalogEntry? {
         let normalized = raw.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         guard !normalized.isEmpty else { return nil }

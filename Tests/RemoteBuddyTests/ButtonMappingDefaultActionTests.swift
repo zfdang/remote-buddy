@@ -4,6 +4,24 @@ import Testing
 
 @Suite("Button mapping default action resolution") @MainActor
 struct ButtonMappingDefaultActionTests {
+    @Test(arguments: [RemoteButton.youtube, .netflix, .input])
+    func googleSingleTriggerResetMatchesModelAndWholeDeviceDefaults(button: RemoteButton) throws {
+        try withSettings { settings in
+            let profile = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+            settings.selectRemoteProfile(profile)
+            let expected = try #require(AppSettings.defaultMappings(for: .chromecastVoiceRemote).parsedButtonBindings[button])
+            settings.setAction(.showDesktop, for: button)
+            settings.setAction(.escape, for: button, trigger: .doubleClick)
+            let preset = settings.defaultAction(for: button, trigger: .singleClick)
+            #expect(preset.action == expected)
+            settings.setBaseBinding(preset, for: button, trigger: .singleClick, profileID: profile)
+            #expect(settings.action(for: button) == expected)
+            #expect(settings.configuredAction(for: button, trigger: .doubleClick).action == .escape)
+            settings.resetBindings()
+            #expect(settings.action(for: button) == preset.action)
+        }
+    }
+
     private func withSettings(_ body: (AppSettings) throws -> Void) throws {
         let name = "default-actions-" + UUID().uuidString
         let defaults = try #require(UserDefaults(suiteName: name))

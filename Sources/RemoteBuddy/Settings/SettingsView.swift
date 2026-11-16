@@ -18,7 +18,6 @@ struct SettingsView: View {
     let setStatusBarIconVisible: (Bool) -> Void
     let appIconCatalog: AppIconCatalog
     private let minimumContentSize: CGSize
-    let initialShortcutPickerShowsKeyboard: Bool
     let permissionOverrides: SystemPermissionOverrides?
 
     @State var remoteRebindingProfile: RemoteDeviceProfile?
@@ -56,7 +55,6 @@ struct SettingsView: View {
         initialSection: SettingsSection? = nil,
         initialMappingEditingButton: RemoteButton? = nil,
         initialMappingEditingTrigger: ButtonTrigger = .singleClick,
-        initialShortcutPickerShowsKeyboard: Bool = false,
         minimumContentSize: CGSize = SettingsWindowLayout.minimumCanvasSize,
         permissionOverrides: SystemPermissionOverrides? = nil
     ) {
@@ -71,7 +69,6 @@ struct SettingsView: View {
         self.setStatusBarIconVisible = setStatusBarIconVisible
         self.appIconCatalog = appIconCatalog ?? .live()
         self.minimumContentSize = minimumContentSize
-        self.initialShortcutPickerShowsKeyboard = initialShortcutPickerShowsKeyboard
         self.permissionOverrides = permissionOverrides
         _selectedSection = State(initialValue: SettingsPageBehavior.initialSection(
             requestedSection: initialSection

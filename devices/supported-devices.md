@@ -1,6 +1,6 @@
 # 遥控器设备指南
 
-更新日期：2026-11-14。本文记录 Remote Buddy **macOS 版**的设备型号、外观、按键、语音操作、限制和选购信息。Windows 支持另行验证。
+更新日期：2026-11-16。本文记录 Remote Buddy **macOS 版**的设备型号、外观、按键、语音操作、限制和选购信息。Windows 支持另行验证。
 
 ## 先看语音键怎么按
 
@@ -10,8 +10,8 @@
 | --- | --- | --- | --- |
 | 小米蓝牙遥控器 2 Pro · `RC003` | **需要**；按住说话，松手停止收音 | 按键已本地验证，音频由用户确认正常；单次按住约 60 秒上限 | 中国大陆，小米有品页面参考 **¥99** |
 | 小米蓝牙遥控器 2 · `RC001` | 按住说话；完整音频流程仍待单独验收 | 已有协议与按键适配，不能直接沿用 2 Pro 的全部验收结论 | 未核实 |
-| T1 飞鼠键盘语音遥控器 · `T1-Remote` | **不需要持续按住**；按一下并松开开始，再按一下结束 | 作者蓝牙样机已验证；兼容批次需单独确认 | 中国大陆，项目样本记录约 **¥50**，非本次实时报价 |
-| Chromecast Voice Remote · `G9N9N` | **需要**；全程按住 Google Assistant 语音键 | 语音可用；已测样机普通单键映射不可用，支持实验性双键 Enter | 原装未核实；兼容款有用户反馈 **¥15**，见下文 |
+| T1 飞鼠键盘语音遥控器 · `T1-Remote` | **不需要持续按住**；按一下并松开开始，再按一下结束 | 已支持；兼容批次需单独确认 | 中国大陆，项目样本记录约 **¥50**，非本次实时报价 |
+| Chromecast Voice Remote · `G9N9N` | **需要**；全程按住 Google Assistant 语音键 | 已验证版本支持语音、14 颗普通按键自定义与电量显示 | 实购约 ¥15，以购买页面为准 |
 | Google TV Streamer Voice Remote · `GY3LE` | Remote Buddy **尚未支持**；原生电视用法为按住语音键 | 计划支持，未完成适配与真机验证 | 未核实 |
 | Apple Siri Remote · 分代识别 | Remote Buddy **尚未支持** | 计划支持，未完成适配与真机验证 | 未按代际核实 |
 
@@ -52,25 +52,15 @@
 
 ## Google Chromecast Voice Remote（G9N9N）
 
-<p><img src="../Resources/ChromecastG9N9NIllustration.png" width="150" alt="项目原创示意图：G9N9N 正面圆形方向盘与侧面音量键" /></p>
+<p><img src="../pages/assets/devices/g9n9j-in-hand.jpg" width="180" alt="Google G9N9N 遥控器真实照片" /></p>
 
-- **型号与外观**：`G9N9N`，圆润短机身，顶部方向盘，侧面音量键；示意图用于识别布局，不能证明商品原装或兼容。
-- **主要按键**：方向与 OK、返回、Google Assistant、主页、静音、YouTube、Netflix、电源、输入源、侧面音量。[Google 官方按键说明](https://support.google.com/chromecast/answer/10116742?hl=en)。
-- **语音操作**：**全程按住 Google Assistant 语音键**，松手停止提供语音流。在 Remote Buddy 中使用“按住说话”；[issue #175](https://github.com/zfdang/remote-buddy/issues/175)报告“点按开始/结束”不可用。当前不提供松手后持续收音或后台常开监听功能，不能把 T1 的保活能力套用过来。
-- **按键限制**：项目已测样机的单键及松开报文存在长度问题，macOS 不转交普通单键；自定义按键不能按“小米或 T1 全键可用”理解。开启自定义按键并独占设备时，支持短按 OK＋任意方向键发送一次 Enter。详见[兼容性说明及测试条件](../docs/g9n9n-compatibility.md)。
-- **供电**：两节 AAA 电池。没有本项目可承诺的统一续航数据；社区存在耗电较快的反馈，不能仅凭低功耗蓝牙名称推断续航。
-- **原装价格与购买**：未录入核实报价；不要把下面兼容款的 15 元当作 Google 原装价格。
-
-### 用户分享的兼容款：约 15 元
-
-[issue #170 的用户反馈](https://github.com/zfdang/remote-buddy/issues/170#issuecomment-6846598354)记录：2026-11-13 在拼多多购买了约 **人民币 15 元**的兼容款，用户表示按键可识别，同时反馈电池消耗较快。
-
-- **用户分享的购买链接**：[拼多多商品页](https://mobile.yangkeduo.com/goods.html?ps=wI005ehWCi)，来源为[用户原评论](https://github.com/zfdang/remote-buddy/issues/170#issuecomment-6847000702)。
-- **核验状态**：本次无法直接访问商品页，未核验当前价格、店铺、库存或实际发货批次；这是用户样本报告，不是作者验收或店铺推荐。
-- **语音方式**：评论中的“单击”没有验证“松手后持续收音”，不能据此认定该款支持免长按语音。
-- **外观与型号**：尚无核实过的独立型号、固件和实拍。类似外壳或“兼容 G9N9N”的标题，不保证内部协议、按键和耗电表现一致。
-
-项目已测样机的单键限制，与这个兼容款用户的按键成功反馈，属于不同样本，分别保留记录。
+- **已验证版本**：Google Inc.、VID/PID `18D1:9450`、DIS 型号 `A0`、HID VersionNumber `0x0110`。G9N9N 兼容款众多，不同硬件版本的功能支持可能不同，购买时请注意挑选硬件版本，购买前查看[设备页面](https://remote.zfdang.com/device.html)。
+- **按键**：方向、OK、返回、主页、静音、音量加减、YouTube、Netflix、输入源、电源共 14 颗普通按键均收到按下和松开报告；可配置单击、双击和长按。
+- **语音**：全程按住 Google Assistant 键说话，松开停止。
+- **供电**：两节 AAA 电池；有电量读数时应用显示百分比。
+- **设置**：向导单按 OK，然后逐个测试三个不同普通按键。语音键保持固定语音用途。
+- **实购验证链接**：[拼多多本次测试设备](https://mobile.yangkeduo.com/goods.html?ps=wI005ehWCi)，实购约 ¥15。
+- **资料**：[使用指南](../docs/g9n9n-compatibility.md)、[实机验证](../docs/g9n9n-hardware-debugging.md)、[Google 按键说明](https://support.google.com/chromecast/answer/10116742?hl=en)。
 
 ## Google TV Streamer Voice Remote（GY3LE，计划支持）
 

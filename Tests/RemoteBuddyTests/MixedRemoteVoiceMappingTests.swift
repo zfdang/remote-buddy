@@ -15,7 +15,7 @@ struct MixedRemoteVoiceMappingTests {
         let google = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         settings.setOnboardingVoiceTool(.other)
         settings.voiceKeyMode = mode
-        settings.voiceFnTapModeEnabled = tapMode && mode == .function
+        settings.voiceFnTapModeEnabled = tapMode
         let model = BridgeAppModel(settings: settings)
         var mappings: [HIDUsageMapping] = []
         let mapper = RemoteHIDKeyMapper(serviceProvider: {

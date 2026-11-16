@@ -18,7 +18,7 @@ struct SessionRecoveryTests {
             schedule: { delay, action in
                 let task = scheduler.schedule(afterMilliseconds: UInt64(delay * 1000), repeatingEveryMilliseconds: nil, action)
                 return ScheduledOperation(cancellation: { task.cancel() })
-            }, setFunctionKeyPressed: { _ in true }, enqueueAudio: { _ in },
+            }, setTriggerPressed: { _ in true }, enqueueAudio: { _ in },
             drainAudio: { _, completion in completion() }, onFailure: { _ in })
         session.setEnabled(true)
         #expect(session.startVoice())
@@ -64,7 +64,11 @@ struct SessionRecoveryTests {
 
     @Test func cancelledDrainAnswersExactlyOnceEvenAfterDeadline() {
         let clock = ControlledTestScheduler()
-        let output = VirtualAudioOutput(logger: { _ in }, scheduleDrainDeadline: clock.voiceSchedule)
+        let output = VirtualAudioOutput(
+            logger: { _ in },
+            uptime: { Double(clock.now) / 1_000 },
+            scheduleDrainDeadline: clock.voiceSchedule
+        )
         output.registerPendingVoiceBuffer()
         var outcomes: [VirtualAudioDrainOutcome] = []
         output.endSessionAfterDraining(maximumDelay: 0.02) { (outcome: VirtualAudioDrainOutcome) in outcomes.append(outcome) }

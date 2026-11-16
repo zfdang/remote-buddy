@@ -92,10 +92,7 @@ final class IMAADPCMDecoder {
     private(set) var predictor = 0
     private(set) var stepIndex = 0
 
-    // RC001/RC003 (firmware 2671) encode high-nibble-first; ARN9 firmware
-    // encodes low-nibble-first. Default stays high-first; the bridge flips
-    // this once the 2A24 model number identifies an ARN9 remote.
-    var lowNibbleFirst = false
+    // Supported remotes (RC001/RC003/G9N9N/T1-Remote) encode high-nibble-first ADPCM.
 
     func reset(predictor: Int = 0, stepIndex: Int = 0) {
         self.predictor = min(32_767, max(-32_768, predictor))
@@ -106,13 +103,8 @@ final class IMAADPCMDecoder {
         var samples: [Int16] = []
         samples.reserveCapacity(data.count * 2)
         for byte in data {
-            if lowNibbleFirst {
-                samples.append(decodeNibble(Int(byte & 0x0F)))
-                samples.append(decodeNibble(Int(byte >> 4)))
-            } else {
-                samples.append(decodeNibble(Int(byte >> 4)))
-                samples.append(decodeNibble(Int(byte & 0x0F)))
-            }
+            samples.append(decodeNibble(Int(byte >> 4)))
+            samples.append(decodeNibble(Int(byte & 0x0F)))
         }
         return samples
     }
@@ -160,13 +152,8 @@ final class PCMPostprocessor {
 
 /// A control sync arriving during a partial frame takes effect at the next boundary.
 final class ATVVAudioDecoder {
-    func configureFormat(lowNibbleFirst: Bool) {
-        decoder.lowNibbleFirst = lowNibbleFirst
-    }
-
     func resetPeripheral() {
         reset()
-        configureFormat(lowNibbleFirst: false)
     }
 
     private(set) var isStreaming = false

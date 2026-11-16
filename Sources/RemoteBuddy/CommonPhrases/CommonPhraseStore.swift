@@ -53,19 +53,20 @@ struct CommonPhraseArchive: Codable, Equatable {
     }
 }
 
+@MainActor
 final class CommonPhraseStore: ObservableObject {
     enum StoreError: Error { case invalidData, unavailable }
-    static let maximumImportBytes = 4_000_000
-    static let baseButtons: [RemoteButton] = [.ok, .left, .up, .right, .down]
+    nonisolated static let maximumImportBytes = 4_000_000
+    nonisolated static let baseButtons: [RemoteButton] = [.ok, .left, .up, .right, .down]
     /// Row order of the panel grid: Home | Mute, YouTube | Netflix, Power | Input,
     /// matching the physical Chromecast remote.
-    static let chromecastButtons: [RemoteButton] = [.home, .mute, .youtube, .netflix, .power, .input]
-    static let buttons = baseButtons + chromecastButtons
-    static func buttons(chromecast: Bool) -> [RemoteButton] {
+    nonisolated static let chromecastButtons: [RemoteButton] = [.home, .mute, .youtube, .netflix, .power, .input]
+    nonisolated static let buttons = baseButtons + chromecastButtons
+    nonisolated static func buttons(chromecast: Bool) -> [RemoteButton] {
         chromecast ? buttons : baseButtons
     }
-    static let exportWebsite = AppLinks.chineseWebsite.absoluteString
-    static let exportGitHub = AppLinks.githubRepository.absoluteString
+    nonisolated static let exportWebsite = AppLinks.chineseWebsite.absoluteString
+    nonisolated static let exportGitHub = AppLinks.githubRepository.absoluteString
     private static let defaultsKey = "commonPhrases.archive.v2"
     @Published private(set) var archive = CommonPhraseArchive(entries: [], bindings: [:])
     @Published private(set) var isAvailable = false
@@ -164,14 +165,14 @@ final class CommonPhraseStore: ObservableObject {
         try persist(action: "reorder") { candidate }
     }
 
-    static func decodedImport(_ data: Data) throws -> CommonPhraseArchive {
+    nonisolated static func decodedImport(_ data: Data) throws -> CommonPhraseArchive {
         guard data.count <= maximumImportBytes else { throw StoreError.invalidData }
         let candidate = try JSONDecoder().decode(CommonPhraseArchive.self, from: data)
         try candidate.validate()
         return candidate
     }
 
-    static func readImport(from url: URL) throws -> CommonPhraseArchive {
+    nonisolated static func readImport(from url: URL) throws -> CommonPhraseArchive {
         try decodedImport(CommonPhraseFileReader.read(from: url, maximumBytes: maximumImportBytes))
     }
 

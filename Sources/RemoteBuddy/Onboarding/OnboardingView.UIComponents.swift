@@ -22,6 +22,7 @@ extension OnboardingView {
                     )
                 }
                 sideCheck("permission.accessibility.title", isComplete: accessibilityGranted)
+                sideCheck("onboarding.side.microphone", isComplete: onboardingAudioReady)
             }
         case .remote:
             sidePanel(titleKey: "onboarding.side.remote") {
@@ -30,12 +31,6 @@ extension OnboardingView {
                     isComplete: selectedControlConnected
                 )
                 sideCheck("onboarding.side.button_received", isComplete: !observedRemoteButtons.isEmpty)
-            }
-        case .audio:
-            sidePanel(titleKey: "onboarding.side.audio") {
-                sideCheck("onboarding.side.device_found", isComplete: !supportedAudioDevices.isEmpty)
-                sideCheck("onboarding.side.device_selected", isComplete: audioOutputSelected)
-                sideCheck("onboarding.side.audio_ready", isComplete: onboardingAudioReady)
             }
         case .voiceTest:
             sidePanel(titleKey: "onboarding.side.voice_test") {
@@ -50,8 +45,7 @@ extension OnboardingView {
         case .controls:
             sidePanel(titleKey: "onboarding.side.controls") {
                 sideCheck("onboarding.side.three_buttons", isComplete: testedControlButtons.count >= 3)
-                sideCheck(usesG9N9NButtonTestWorkaround
-                    ? "onboarding.side.g9n9n_test_enabled" : "onboarding.side.mapping_enabled",
+                sideCheck("onboarding.side.mapping_enabled",
                     isComplete: settings.customMappingEnabled)
             }
         default:
@@ -143,17 +137,6 @@ extension OnboardingView {
             .fixedSize(horizontal: false, vertical: true)
     }
 
-    func featureLine(_ icon: String, _ titleKey: String) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 17, weight: .medium))
-                .foregroundStyle(Color.accentColor)
-                .frame(width: 26)
-            Text(localization.text(titleKey))
-                .font(.system(size: 14, weight: .medium))
-        }
-    }
-
     func permissionRow(
         id: String,
         icon: String,
@@ -177,6 +160,10 @@ extension OnboardingView {
                         .foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 10)
+                if !granted {
+                    Text(localization.text("onboarding.permission.not_enabled"))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 Image(systemName: granted ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 19))
                     .foregroundStyle(granted ? Color.green : Color.secondary)

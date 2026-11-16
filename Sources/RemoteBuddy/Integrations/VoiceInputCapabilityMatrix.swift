@@ -2,7 +2,7 @@ import Foundation
 
 // Public remote voice capability defaults. See docs/development.md for adapter boundaries.
 // Xiaomi and G9N9N physical recording follows ATVV start/stop notifications.
-// Tools requiring start/stop taps can use the existing software Fn conversion.
+// Tools requiring start/stop taps can use the existing software shortcut-tap conversion.
 // Siri capabilities remain separate and do not imply current hardware support.
 
 extension RemoteModel {
@@ -62,16 +62,6 @@ struct RemoteVoiceCapabilities: Equatable {
             supportsToggleVoiceRecording: model.supportsToggleVoiceRecording,
             supportsTouchSurface: model.supportsTouchSurface
         )
-    }
-}
-
-/// 「语音键模拟 Fn 点按」的适用性：界面据此决定是否展示该开关。
-///
-/// 该开关存在的唯一理由是把遥控器的「按住」模拟成「点按」，去驱动只认点按的输入工具。
-/// 因此只有在**不支持按一次收音**的遥控器档案页面上才适用。
-enum VoiceFunctionKeyTapApplicability {
-    static func isApplicable(capabilities: RemoteVoiceCapabilities) -> Bool {
-        !capabilities.supportsToggleVoiceRecording
     }
 }
 

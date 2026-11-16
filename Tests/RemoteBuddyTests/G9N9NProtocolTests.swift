@@ -6,6 +6,46 @@ import Testing
 
 @Suite("G9N9N public transports")
 struct G9N9NProtocolTests {
+    @Test(arguments: [Data([0]), Data([1, 0])]) @MainActor
+    func shortenedZeroReleaseClearsIndexedButtonsWithoutPressingPower(release: Data) throws {
+        let suite = "google-short-release-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = AppSettings(defaults: defaults)
+        settings.customMappingEnabled = true
+        let profileID = UUID()
+        var actions: [RemoteButton] = []
+        var active = Set<RemoteButton>()
+        let monitor = HIDRemoteMonitor(settings: settings, profileID: profileID,
+            runtimePermissions: { true }, actionPerformer: { button, _, _ in
+                actions.append(button); return true
+            }, diagnosticLogger: { _ in })
+        monitor.connectSimulatedDevice(fingerprint: "short-release-google", profileID: profileID)
+        defer { monitor.disconnectSimulatedDevice() }
+        monitor.onActiveButtons = { _, buttons in active = buttons }
+        let descriptor = G9N9NProtocol.indexedConsumerDescriptor
+        monitor.handleSimulatedGoogleReport(reportID: 1, data: Data([1, 7, 3]), descriptor: descriptor)
+        #expect(active == [.ok, .up])
+        monitor.handleSimulatedGoogleReport(reportID: 1, data: release, descriptor: descriptor)
+        #expect(active.isEmpty)
+        #expect(!actions.contains(.power))
+
+        // First-frame shortened zero release from a real IOHID callback must never trigger Power.
+        monitor.disconnectSimulatedDevice()
+        monitor.connectSimulatedDevice(fingerprint: "first-frame-short-release-device", profileID: profileID)
+        monitor.handleSimulatedGoogleReport(reportID: 1, data: Data([1, 0]), descriptor: descriptor, source: "device")
+        #expect(active.isEmpty)
+        #expect(!actions.contains(.power))
+
+        // A different simulated payload-only device may omit report IDs. Framing is reset.
+        monitor.disconnectSimulatedDevice()
+        monitor.connectSimulatedDevice(fingerprint: "payload-only-google", profileID: profileID)
+        monitor.handleSimulatedGoogleReport(reportID: 1, data: Data([1, 0]), descriptor: descriptor)
+        #expect(active == [.power])
+        monitor.handleSimulatedGoogleReport(reportID: 1, data: Data([0, 0]), descriptor: descriptor)
+        #expect(active.isEmpty)
+    }
+
     @Test(arguments: [(true, false), (false, true), (true, true)])
     func hidMatchingExcludesUnrelatedDevices(options: (Bool, Bool)) throws {
         let (xiaomi, google) = options

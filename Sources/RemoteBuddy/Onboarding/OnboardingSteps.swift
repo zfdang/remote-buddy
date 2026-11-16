@@ -5,14 +5,14 @@ enum OnboardingStep: String, CaseIterable, Codable {
     case remoteAvailability
     case permissions
     case remote
-    case audio
+    case voiceTrigger
     case voiceTest
     case controls
     case complete
 
     /// Match the main navigation: environment, connection, buttons, then integration.
     static let visibleCases: [Self] = [
-        .permissions, .remoteAvailability, .remote, .controls, .audio, .voiceTool,
+        .permissions, .remoteAvailability, .remote, .controls, .voiceTrigger, .voiceTool,
         .voiceTest, .complete,
     ]
 
@@ -20,7 +20,7 @@ enum OnboardingStep: String, CaseIterable, Codable {
         switch self {
         case .remoteAvailability:
             return false
-        case .permissions, .remote, .audio, .voiceTool, .voiceTest, .controls, .complete:
+        case .permissions, .remote, .voiceTrigger, .voiceTool, .voiceTest, .controls, .complete:
             return true
         }
     }
@@ -45,11 +45,19 @@ enum OnboardingPurpose: String, Codable {
     case addDevice
     case integration
 
+    var completionDestination: SettingsSection {
+        switch self {
+        case .initialSetup: return .general
+        case .addDevice: return .connection
+        case .integration: return .integration
+        }
+    }
+
     var steps: [OnboardingStep] {
         switch self {
         case .initialSetup: return OnboardingStep.visibleCases
         case .addDevice: return [.remoteAvailability, .remote, .controls, .complete]
-        case .integration: return [.voiceTool, .voiceTest, .complete]
+        case .integration: return [.voiceTrigger, .voiceTool, .voiceTest, .complete]
         }
     }
 
@@ -75,14 +83,6 @@ enum OnboardingRemoteAvailability: String, CaseIterable, Codable, Identifiable {
     case noRemote = "no_remote"
 
     var id: String { rawValue }
-
-    var titleKey: String {
-        "onboarding.remote_availability.\(rawValue).title"
-    }
-
-    var detailKey: String {
-        "onboarding.remote_availability.\(rawValue).detail"
-    }
 }
 
 enum OnboardingControlMethod: String, CaseIterable, Codable, Identifiable {
@@ -90,14 +90,6 @@ enum OnboardingControlMethod: String, CaseIterable, Codable, Identifiable {
     case physicalRemote = "physical_remote"
 
     var id: String { rawValue }
-
-    var titleKey: String {
-        "onboarding.control_method.\(rawValue).title"
-    }
-
-    var detailKey: String {
-        "onboarding.control_method.\(rawValue).detail"
-    }
 
     var requiresBluetoothPermission: Bool {
         self != .unselected

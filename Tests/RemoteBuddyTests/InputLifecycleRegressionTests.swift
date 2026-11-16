@@ -180,7 +180,7 @@ struct InputLifecycleRegressionTests {
                 operations.append(operation)
                 return ScheduledOperation(cancellation: {})
             },
-            setFunctionKeyPressed: { pressed in pressed || allowRelease },
+            setTriggerPressed: { pressed in pressed || allowRelease },
             enqueueAudio: { _ in }, drainAudio: { _, completion in completion() },
             onFailure: { _ in }
         )
@@ -350,7 +350,7 @@ struct InputLifecycleRegressionTests {
         let settings = AppSettings(defaults: values)
         #expect(settings.verifiedVoiceToolBinding != nil)
         settings.completeOnboarding()
-        settings.recordFirstUseEvent(.completed, step: .audio)
+        settings.recordFirstUseEvent(.completed, step: .voiceTrigger)
         settings.restartOnboarding()
         #expect(!settings.isOnboardingComplete)
         #expect(settings.firstUseEvents.isEmpty)
@@ -378,7 +378,7 @@ struct InputLifecycleRegressionTests {
     }
 
     @Test func mediaReleasePassesAfterFreshMediaDown() throws {
-        let filter = KeyboardEventSuppressor()
+        let filter = KeyboardEventSuppressor(uptime: { 0 })
         func event(_ state: Int) throws -> CGEvent {
             let ns = try #require(NSEvent.otherEvent(with: .systemDefined, location: .zero,
                 modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil,

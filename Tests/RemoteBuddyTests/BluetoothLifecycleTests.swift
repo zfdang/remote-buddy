@@ -631,4 +631,31 @@ struct BluetoothLifecycleTests {
         #expect(!XiaomiVoiceRemoteNameMatcher.matches("MI RC2"))
         #expect(!XiaomiVoiceRemoteNameMatcher.matches("小米"))
     }
+
+    @Test @MainActor func unacknowledgedWriteQueueCanSendReturnsFalseWithoutTransmitCharacteristic() throws {
+        @MainActor
+        final class DummyDelegate: BluetoothRemoteBridgeDelegate {
+            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didChange state: BluetoothBridgeState) {}
+            func bluetoothBridgeDidStartVoice(_ bridge: BluetoothRemoteBridge) {}
+            func bluetoothBridgeDidStopVoice(_ bridge: BluetoothRemoteBridge) {}
+            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didDecode samples: [Int16]) {}
+            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didUpdateBatteryLevel level: Int?) {}
+            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didIdentifyRemoteModel model: RemoteModel) {}
+            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didUpdatePowerState state: RemotePowerState?) {}
+            func bluetoothBridgeDeviceNameDidChange(_ bridge: BluetoothRemoteBridge) {}
+        }
+
+        let suite = "bt-can-send-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let bridge = BluetoothRemoteBridge(
+            settings: AppSettings(defaults: defaults),
+            delegate: DummyDelegate()
+        )
+        defer { bridge.stop() }
+        bridge.simulateReadyStateForTesting()
+
+        #expect(bridge.enqueueUnacknowledgedWriteForTesting(Data([0x0D, 0x01])))
+        #expect(bridge.hasPendingWriteWorkForTesting)
+    }
 }

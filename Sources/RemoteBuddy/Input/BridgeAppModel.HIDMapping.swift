@@ -8,7 +8,6 @@ import Foundation
 extension BridgeAppModel {
     func applyHIDSettings(
         allowVoiceKeyModeFallback: Bool = true,
-        restartSiriRemote: Bool = true,
         forceRestartMonitors: Bool = false
     ) {
         if audio.suspensionState.suspendsHIDMonitoring {
@@ -25,7 +24,7 @@ extension BridgeAppModel {
         if !permissionSnapshot.accessibilityGranted {
             _ = releaseVoiceKeyIfNeeded()
         }
-        if started, permissionSnapshot.inputMonitoringGranted {
+        if started, permissionSnapshot.inputMonitoringGranted, permissionSnapshot.accessibilityGranted {
             preferredInputSourceMonitor.start()
         } else {
             preferredInputSourceMonitor.stop(
@@ -41,11 +40,11 @@ extension BridgeAppModel {
             stopLongRecording(reason: "mapping_disabled")
         }
 
-        let requestedVoiceKeyMode = settings.voiceKeyMode
+        let requestedVoiceKeyMode = settings.effectiveVoiceKeyMode
         let accessibilityGranted = permissionSnapshot.accessibilityGranted
-        let requestedFnTapMode = settings.voiceFnTapModeEnabled && requestedVoiceKeyMode == .function
+        let requestedFnTapMode = settings.effectiveVoiceFnTapModeEnabled
 
-        if settings.voiceFnTapModeEnabled != requestedFnTapMode {
+        if !settings.isTestingVoiceTrigger && settings.effectiveVoiceFnTapModeEnabled != requestedFnTapMode {
             settings.voiceFnTapModeEnabled = requestedFnTapMode
         }
         if !requestedFnTapMode, voiceFnTapSession.requiresCleanupBeforeMapping {
@@ -53,7 +52,6 @@ extension BridgeAppModel {
                 guard cleaned else { return }
                 self?.applyHIDSettings(
                     allowVoiceKeyModeFallback: allowVoiceKeyModeFallback,
-                    restartSiriRemote: restartSiriRemote,
                     forceRestartMonitors: forceRestartMonitors
                 )
             }
@@ -77,7 +75,7 @@ extension BridgeAppModel {
             if settings.selectedRemoteProfile?.model.isT1Remote == true {
                 completeHIDMappingRecoveryIfNeeded()
                 if !voiceFunctionMapper.hasMatchingServices {
-                    scheduleHIDMappingRecoveryIfNeeded(restartSiriRemote: restartSiriRemote)
+                    scheduleHIDMappingRecoveryIfNeeded()
                 }
             }
             refreshVoiceKeyCompatibilityWarning()
@@ -115,11 +113,9 @@ extension BridgeAppModel {
                 AppLogger.shared.write(
                     "VOICE FN TAP mode_pending_mapping reason=no_matching_service"
                 )
-                scheduleHIDMappingRecoveryIfNeeded(
-                    restartSiriRemote: restartSiriRemote
-                )
+                scheduleHIDMappingRecoveryIfNeeded()
             } else {
-                settings.voiceFnTapModeEnabled = false
+                if !settings.isTestingVoiceTrigger { settings.voiceFnTapModeEnabled = false }
                 voiceFnTapSession.setEnabled(false)
                 powerKeySuppressed = applyVoiceFunctionMapping(neutralizeVoiceKey: false)
             }
@@ -133,7 +129,7 @@ extension BridgeAppModel {
                             "VOICE KEY mode_preserved reason=voice_active_mapping_failed " +
                                 "mode=\(requestedVoiceKeyMode.rawValue)"
                         )
-                    } else if canFallbackVoiceKeyMode {
+                    } else if canFallbackVoiceKeyMode && !settings.isTestingVoiceTrigger {
                         settings.voiceKeyMode = .function
                         powerKeySuppressed = applyVoiceFunctionMapping(neutralizeVoiceKey: false)
                         AppLogger.shared.write(
@@ -172,7 +168,7 @@ extension BridgeAppModel {
             }
         } else {
             if requestedFnTapMode {
-                settings.voiceFnTapModeEnabled = false
+                if !settings.isTestingVoiceTrigger { settings.voiceFnTapModeEnabled = false }
             }
             voiceFnTapSession.setEnabled(false)
             powerKeySuppressed = applyVoiceFunctionMapping(neutralizeVoiceKey: false)
@@ -184,14 +180,12 @@ extension BridgeAppModel {
         completeHIDMappingRecoveryIfNeeded()
         if !voiceFunctionMapper.hasMatchingServices,
            settings.customMappingEnabled || shouldNeutralizeNativeVoiceKey {
-            scheduleHIDMappingRecoveryIfNeeded(restartSiriRemote: restartSiriRemote)
+            scheduleHIDMappingRecoveryIfNeeded()
         }
         refreshVoiceKeyCompatibilityWarning()
     }
 
-    func scheduleHIDMappingRecoveryIfNeeded(
-        restartSiriRemote: Bool = true
-    ) {
+    func scheduleHIDMappingRecoveryIfNeeded() {
         if settings.selectedRemoteProfile?.model.isChromecastRemote == true {
             cancelHIDMappingRecovery(reason: "google_atvv_voice")
             return
@@ -243,11 +237,9 @@ extension BridgeAppModel {
                 "HID MAPPING RECOVERY applying attempt=\(attempt) " +
                     "ready_bridges=\(self.readyBluetoothBridgeCount)"
             )
-            self.applyHIDSettings(restartSiriRemote: restartSiriRemote)
+            self.applyHIDSettings()
             if !self.voiceFunctionMapper.hasMatchingServices {
-                self.scheduleHIDMappingRecoveryIfNeeded(
-                    restartSiriRemote: restartSiriRemote
-                )
+                self.scheduleHIDMappingRecoveryIfNeeded()
             }
         }
         hidMappingRecoveryWorkItem = workItem
@@ -314,6 +306,7 @@ extension BridgeAppModel {
             customMappingEnabled: settings.customMappingEnabled,
             backOnlyMode: backOnlyMode,
             powerKeySuppressed: powerKeySuppressed,
+            waitForMatchingServices: !voiceFunctionMapper.hasMatchingServices,
             allowedLocationIDs: allowedLocationIDs,
             targets: targets,
             compatibleHIDIdentities: settings.compatibleHIDIdentities(
@@ -366,7 +359,8 @@ extension BridgeAppModel {
             monitor.start(
                 powerKeySuppressed: powerKeySuppressed,
                 allowedLocationIDs: allowedLocationIDs,
-                allowBackOnly: backOnlyMode
+                allowBackOnly: backOnlyMode,
+                waitForMatchingServices: desiredConfiguration.waitForMatchingServices
             )
         }
         startHIDDiscoveryIfNeeded(allowBackOnly: backOnlyMode)
@@ -410,8 +404,38 @@ extension BridgeAppModel {
         AppLogger.shared.write("BUTTON CONFIGURATION phase=completed result=interactions_cancelled")
     }
 
+    func scheduleHIDFilterRetry(
+        after delay: TimeInterval = 30,
+        schedule: (TimeInterval, DispatchWorkItem) -> Void = { delay, work in
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
+        }
+    ) {
+        cancelHIDFilterRetry()
+        let token = UUID()
+        hidFilterRetryToken = token
+        let retry = DispatchWorkItem { [weak self] in
+            guard let self, self.hidFilterRetryToken == token else { return }
+            self.hidFilterRetryToken = nil
+            self.hidFilterRetryWorkItem = nil
+            guard self.started,
+                  self.hidMonitoringInterrupted,
+                  self.hidFilterFailureState == .systemDisabled
+            else { return }
+            self.refreshHIDAfterPermissionChange()
+        }
+        hidFilterRetryWorkItem = retry
+        schedule(delay, retry)
+    }
+
+    func cancelHIDFilterRetry() {
+        hidFilterRetryToken = nil
+        hidFilterRetryWorkItem?.cancel()
+        hidFilterRetryWorkItem = nil
+    }
+
     func stopHIDMonitors() {
         // Detach the blocking event tap before any synchronous IOKit close.
+        cancelHIDFilterRetry()
         appliedHIDMonitoringConfiguration = nil
         hidEventSuppressor.stop()
         hidMonitors.values.forEach { $0.stop() }
@@ -471,7 +495,7 @@ extension BridgeAppModel {
         guard canRefreshHIDMappingsNow else { return }
         let generation = hidServiceMappingRefreshGeneration
         // Defer outside IOHIDManager callbacks before probing/reapplying IOHIDEventSystem mappings.
-        DispatchQueue.main.async { [weak self] in
+        _ = scheduleHIDServiceMappingRefresh(0) { [weak self] in
             guard let self,
                   self.started,
                   !self.isTerminating,
@@ -492,12 +516,12 @@ extension BridgeAppModel {
             if let applyMappings {
                 applyMappings()
             } else {
-                applyHIDSettings(restartSiriRemote: false)
+                applyHIDSettings()
             }
         } else if applyMappings == nil,
                   !voiceFunctionMapper.hasMatchingServices,
                   settings.customMappingEnabled || shouldNeutralizeNativeVoiceKey {
-            scheduleHIDMappingRecoveryIfNeeded(restartSiriRemote: false)
+            scheduleHIDMappingRecoveryIfNeeded()
         }
     }
 

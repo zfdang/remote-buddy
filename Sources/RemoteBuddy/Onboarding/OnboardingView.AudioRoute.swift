@@ -1,21 +1,22 @@
 import SwiftUI
 
 extension OnboardingView {
-    var audioContent: some View {
+    var microphoneSetupContent: some View {
         VStack(alignment: .leading, spacing: 18) {
-            onboardingTitle("onboarding.audio.title")
+            Text(localization.text("onboarding.audio.title")).font(.headline)
             Text(verbatim: localization.text("onboarding.audio.detail"))
                 .foregroundStyle(.secondary)
-            statusCard(icon: "mic.fill", title: localization.text("settings.driver.title"),
-                detail: localization.text(microphoneDriverInstalled ? "settings.driver.installed" : "settings.driver.missing"),
-                isComplete: microphoneDriverInstalled)
-            statusCard(icon: "waveform", title: BuddyMicrophoneDevicePolicy.deviceName,
-                detail: localization.text(onboardingAudioReady ? "onboarding.audio.automatic_ready" : "onboarding.audio.checking"),
+            statusCard(icon: "mic.fill", title: BuddyMicrophoneDevicePolicy.deviceName,
+                detail: localization.text(microphoneSetupStatusKey),
                 isComplete: onboardingAudioReady)
-            if !microphoneDriverInstalled || !model.isAudioOutputVerified {
-                Text(localization.text("settings.driver.reload_help")).font(.callout).foregroundStyle(.secondary)
+            if microphoneSetupState == .failed {
+                Text(microphoneFailureDetail)
+                    .font(.callout).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if microphoneSetupState == .missing || microphoneSetupState == .failed {
                 HStack {
-                    Button(localization.text("audio.action.refresh_devices")) { prepareAutomaticDriverCheck() }
+                    Button(localization.text("onboarding.audio.retry")) { prepareAutomaticDriverCheck() }
                     Button(localization.text("audio.compatibility.open_install_guide")) { model.openVirtualMicrophoneSetupInstructions(using: localization) }
                 }.buttonStyle(.bordered)
             }
@@ -24,9 +25,55 @@ extension OnboardingView {
         .onChange(of: model.audioDevices) { _, _ in prepareAutomaticDriverCheck() }
     }
 
+    enum MicrophoneSetupState: String { case missing, preparing, failed, ready }
+
+    static func microphoneSetupState(installed: Bool, ready: Bool, preparing: Bool) -> MicrophoneSetupState {
+        if preparing { return .preparing }
+        if !installed { return .missing }
+        return ready ? .ready : .failed
+    }
+
+    var microphoneSetupState: MicrophoneSetupState {
+        Self.microphoneSetupState(installed: microphoneDriverInstalled, ready: onboardingAudioReady,
+            preparing: microphonePreparationInProgress || model.audio.startupPending || model.audio.activeConfigurationGeneration != nil)
+    }
+
+    private var microphoneSetupStatusKey: String { "onboarding.audio.state.\(microphoneSetupState.rawValue)" }
+
+    private var microphoneFailureDetail: String {
+        let key = model.audioStatus.key
+        if !["audio.output.none_selected", "audio.output.current_format", "audio.compatibility.checking"].contains(key) {
+            return model.audioStatus.text(using: localization)
+        }
+        return localization.text("onboarding.audio.failure_help")
+    }
+
+    var voiceTriggerContent: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            onboardingTitle("onboarding.voice_trigger.title")
+            Text(localization.text("onboarding.voice_tool.selected_trigger_help"))
+                .foregroundStyle(.secondary)
+            VoiceTriggerPicker(selection: settings.selectedVoiceTrigger.voiceKeyMode, onSelect: settings.selectOnboardingVoiceTrigger)
+            VStack(alignment: .leading, spacing: 6) {
+                Toggle(localization.text("connection.voice_fn_tap.enabled"), isOn: Binding(
+                    get: { settings.selectedVoiceTrigger.voiceFnTapModeEnabled },
+                    set: settings.selectOnboardingFnTapMode
+                ))
+                Text(localization.text("connection.voice_fn_tap.hint_short"))
+                    .font(.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Text(localization.text("onboarding.voice_trigger.save_hint"))
+                .font(.callout).foregroundStyle(.secondary)
+        }
+    }
+
     private func prepareAutomaticDriverCheck() {
-        guard interactionProbe == nil else { return }
+        guard interactionProbe == nil, !microphonePreparationInProgress else { return }
+        microphonePreparationInProgress = true
         model.refreshAudioDevices()
-        model.configureVirtualAudioOutput(reason: "onboarding_driver_check")
+        model.configureVirtualAudioOutput(reason: "onboarding_driver_check") { _ in
+            microphonePreparationInProgress = false
+        }
     }
 }

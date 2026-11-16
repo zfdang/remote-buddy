@@ -2,9 +2,9 @@
 
 Download the PKG for your Mac architecture from this project's GitHub Releases. It installs both the app and microphone driver. Open `/Applications/Remote Buddy.app`.
 
-The initial guide follows Permissions, Prepare Device, Connect Remote, Button Test, Driver Check, Input Tool, Voice Test, and Complete. Grant Bluetooth, Input Monitoring, and Accessibility permissions as requested. Xiaomi RC001/RC003 and G9N9N have connection adapters; GY3LE and Siri Remote adapters remain incomplete.
+The initial guide follows Permissions and Microphone, Remote Model, Connect Remote, Button Test, Voice Trigger, Input Tool, Voice Test, and Complete. Grant Bluetooth, Input Monitoring, and Accessibility permissions as requested. Xiaomi RC001/RC003 and G9N9N have connection adapters; GY3LE and Siri Remote adapters remain incomplete.
 
-**About G9N9N:** Because its key reports violate macOS specifications, **single-button mapping is unsupported** (voice input works normally). During setup, pass button checks using two-button pairs: press OK + Up for the initial check, then OK + Up followed by Back + Up for control tests. After setup, pressing OK + any direction sends Enter when custom mapping is enabled and the app has exclusive access. See the [standalone test report](https://github.com/zfdang/remote-buddy/blob/main/docs/g9n9n-compatibility.md) (Chinese).
+**G9N9N:** Validated versions support voice and configurable ordinary buttons. Press OK, then three different buttons during setup. See the [device guide](https://remote.zfdang.com/device_en.html) for supported versions.
 
 The app automatically routes audio to **Remote Buddy Mic**, without a loopback output picker. Select that microphone in your input tool, then configure and test its voice shortcut. Buddy routes audio and buttons; your input tool performs recognition. Buddy does not collect usage statistics, save recordings or transcript history, or upload logs.
 

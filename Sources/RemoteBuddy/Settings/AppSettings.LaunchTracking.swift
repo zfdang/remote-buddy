@@ -6,12 +6,14 @@ extension AppSettings {
         currentBuild: String,
         sparkleHadLaunchedBefore: Bool
     ) -> Bool {
+        guard let currentBuildNumber = Int(currentBuild) else {
+            return false
+        }
         let previousBuild = defaults.string(forKey: Keys.lastLaunchedBuild)
         let completedUpdate: Bool
         if
             let previousBuild,
-            let previousBuildNumber = Int(previousBuild),
-            let currentBuildNumber = Int(currentBuild)
+            let previousBuildNumber = Int(previousBuild)
         {
             completedUpdate = currentBuildNumber > previousBuildNumber
         } else {

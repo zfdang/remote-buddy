@@ -46,9 +46,13 @@ extension SettingsView {
                     selectedAction: configured.action,
                     installedBundleIdentifiers: installedBundleIdentifiers,
                     onSelect: { action in
-                        setMappingAction(action, for: button, trigger: trigger)
-                        shortcutCaptureTarget = nil
                         applicationShortcutCaptureProfileID = nil
+                        if action == .customShortcut {
+                            shortcutCaptureTarget = ShortcutEditingTarget(button: button, trigger: trigger)
+                        } else {
+                            setMappingAction(action, for: button, trigger: trigger)
+                            shortcutCaptureTarget = nil
+                        }
                     }
                 )
 
@@ -82,6 +86,15 @@ extension SettingsView {
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
             }
+        }
+        .sheet(isPresented: Binding(
+            get: { shortcutCaptureTarget == ShortcutEditingTarget(button: button, trigger: trigger) },
+            set: { if !$0 { shortcutCaptureTarget = nil } }
+        )) {
+            KeyboardShortcutEditor(shortcut: configured.shortcut, purpose: .mapping, onSelect: { shortcut in
+                setMappingShortcut(shortcut, for: button, trigger: trigger)
+                shortcutCaptureTarget = nil
+            }, onCancel: { shortcutCaptureTarget = nil })
         }
     }
 
@@ -222,102 +235,25 @@ extension SettingsView {
         configured: ConfiguredButtonAction
     ) -> some View {
         let target = ShortcutEditingTarget(button: button, trigger: trigger)
-        let contextID = target.id
-        VStack(alignment: .leading, spacing: 10) {
-            Text(localization.text("shortcut.editor.click_first_help"))
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
-
-            if shortcutCaptureTarget == target {
-                HStack(spacing: 10) {
-                    Label(localization.text("shortcut.editor.recording_prompt"), systemImage: "keyboard.fill")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Color.accentColor)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    Spacer(minLength: 10)
-
-                    Button(localization.text("common.action.cancel")) {
-                        shortcutCaptureTarget = nil
-                    }
-                    .compatibilityButtonStyle(.standard)
-                }
-                .padding(12)
-                .background(Color.accentColor.opacity(0.10), in: RoundedRectangle(cornerRadius: 9))
-
-                ShortcutCaptureView(
-                    onCapture: { shortcut in
-                        setMappingShortcut(shortcut, for: button, trigger: trigger)
-                        AppLogger.shared.write("SHORTCUT CAPTURE completed target=button")
-                        shortcutCaptureFeedback = ShortcutCaptureFeedback(
-                            contextID: contextID,
-                            result: .succeeded
-                        )
-                        shortcutCaptureTarget = nil
-                    },
-                    onFailure: { failure in
-                        AppLogger.shared.write("SHORTCUT CAPTURE failed reason=\(failure)")
-                        shortcutCaptureFeedback = ShortcutCaptureFeedback(
-                            contextID: contextID,
-                            result: .failed(failure)
-                        )
-                        shortcutCaptureTarget = nil
-                        if failure == .accessibilityPermissionRequired {
-                            _ = KeyboardInjector.requestAccessibilityAccess()
-                        }
-                    }
-                )
-                .frame(height: 1)
-            } else {
-                VStack(alignment: .leading, spacing: 12) {
-                        HStack(spacing: 10) {
-                            Label {
-                                Text(
-                                configured.shortcut?.visualDisplayName(using: localization) ??
-                                    localization.text("shortcut.editor.not_recorded")
-                                )
-                        } icon: {
-                            Image(systemName: configured.shortcut == nil ? "keyboard" : "keyboard.badge.checkmark")
-                                .foregroundStyle(configured.shortcut == nil ? Color.secondary : Color.green)
-                        }
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                        .foregroundStyle(configured.shortcut == nil ? Color.secondary : Color.primary)
-                        .frame(maxWidth: .infinity, minHeight: 42, alignment: .leading)
-                        .padding(.horizontal, 12)
-                        .background(.quaternary, in: RoundedRectangle(cornerRadius: 9))
-                        .help(configured.shortcut?.detailedDisplayName(using: localization) ?? "")
-
-                        Button(localization.text(configured.shortcut == nil ? "shortcut.action.record" : "shortcut.action.record_again")) {
-                            applicationShortcutCaptureProfileID = nil
-                            shortcutCaptureFeedback = nil
-                            shortcutCaptureTarget = target
-                        }
-                        .compatibilityButtonStyle(.standard)
-
-                        Button(localization.text("common.action.clear")) {
-                            setMappingShortcut(nil, for: button, trigger: trigger)
-                            shortcutCaptureFeedback = nil
-                        }
-                        .compatibilityButtonStyle(.standard)
-                        .disabled(configured.shortcut == nil)
-                    }
-
-                    shortcutCaptureFeedbackView(contextID: contextID)
-
-                    KeyboardShortcutPicker(
-                        shortcut: configured.shortcut,
-                        showsStandardKeyboardInitially: initialShortcutPickerShowsKeyboard,
-                        onSelect: { shortcut in
-                            setMappingShortcut(shortcut, for: button, trigger: trigger)
-                            shortcutCaptureFeedback = nil
-                        }
-                    )
-                    .id("mapping-shortcut-editor-\(contextID)")
-                }
+        HStack(spacing: 10) {
+            Text(configured.shortcut?.detailedDisplayName(using: localization, showsModifierSymbols: true)
+                 ?? localization.text("shortcut.editor.not_recorded"))
+                .font(.headline)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Button(localization.text("shortcut.keyboard.choose")) {
+                applicationShortcutCaptureProfileID = nil
+                shortcutCaptureTarget = target
             }
+            .compatibilityButtonStyle(.standard)
+            Button(localization.text("common.action.clear")) {
+                setMappingShortcut(nil, for: button, trigger: trigger)
+            }
+            .compatibilityButtonStyle(.standard)
+            .disabled(configured.shortcut == nil)
         }
         .padding(12)
         .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 10))
+
     }
 
     @ViewBuilder

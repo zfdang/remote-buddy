@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Download Remote Buddy · macOS Installers</title>
+  <meta name="description" content="Download Remote Buddy macOS installer packages and universal uninstaller directly from remote.zfdang.com or via GitHub Releases.">
+  <meta name="theme-color" content="#203a68">
+  <link rel="canonical" href="https://remote.zfdang.com/downloads/index.en.html">
+  <link rel="alternate" hreflang="zh-CN" href="https://remote.zfdang.com/downloads/">
+  <link rel="alternate" hreflang="en" href="https://remote.zfdang.com/downloads/index.en.html">
+  <link rel="alternate" hreflang="x-default" href="https://remote.zfdang.com/downloads/">
+  <link rel="icon" href="../assets/app-icon.png">
+  <link rel="stylesheet" href="../style.css?v=261115c">
+</head>
+<body>
+<header class="nav wrap">
+  <a class="brand" href="../index.en.html"><img src="../assets/app-icon.png" alt="" width="38" height="38"><span>Remote Buddy<small>Voice within reach</small></span></a>
+  <nav aria-label="Page navigation">
+    <a class="nav-home" href="../index.en.html">Home</a>
+    <span class="language-switch" aria-label="Language"><a href="index.html" lang="zh-CN">中文</a><b aria-current="page">English</b></span>
+  </nav>
+</header>
+
+<main class="wrap downloads-wrap">
+  <div class="downloads-head">
+    <p class="eyebrow">DOWNLOAD</p>
+    <h1 class="section-title">Download Remote Buddy for macOS</h1>
+    <span class="downloads-tag" id="release-tag" hidden></span>
+    <p class="lead-sub" id="mirror-status">Loading installer packages…</p>
+  </div>
+
+  <div class="downloads-grid" id="mirror-cards"></div>
+
+  <section class="download-card" id="mirror-fallback" hidden>
+    <h2>Download from GitHub Releases</h2>
+    <p>Choose the PKG matching your Mac architecture (<code>*_macOS_arm64.pkg</code> for Apple Silicon or <code>*_macOS_intel.pkg</code> for Intel).</p>
+    <div class="download-actions">
+      <a class="button secondary" href="https://github.com/zfdang/remote-buddy/releases/latest">Open GitHub Releases ↗</a>
+    </div>
+  </section>
+
+  <div class="download-note" style="margin-top:20px">
+    <strong>Architecture tip:</strong> Check  → About This Mac. Pick <strong>Apple Silicon (arm64)</strong> for M1 / M2 / M3 / M4 Macs, or <strong>Intel</strong> for Intel-based Macs. Installers are currently not Apple-notarized; if macOS blocks the installer, allow it in System Settings → Privacy &amp; Security.
+  </div>
+</main>
+
+<footer class="wrap">
+  <div><strong>Remote Buddy</strong><p>Voice input, at the press of a button.</p></div>
+  <div class="footer-links">
+    <a href="../index.en.html">Home</a>
+    <a href="../device_en.html">Supported Remotes</a>
+    <a href="https://github.com/zfdang/remote-buddy/releases">GitHub Releases</a>
+    <a href="https://github.com/zfdang/remote-buddy/blob/main/README.en.md">Docs &amp; References</a>
+    <a href="https://github.com/zfdang/remote-buddy/issues">Feedback</a>
+    <a href="https://github.com/zfdang/remote-buddy/blob/main/LICENSE">GPL-3.0-only</a>
+  </div>
+</footer>
+<script src="downloads.js?v=261115c"></script>
+</body>
+</html>

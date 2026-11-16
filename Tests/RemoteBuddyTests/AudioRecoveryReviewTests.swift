@@ -5,6 +5,103 @@ import Testing
 @Suite("Audio recovery review regressions")
 @MainActor
 struct AudioRecoveryReviewTests {
+    @Test func lateEngineNotificationAfterReleaseDoesNotReconfigureOrReportDegraded() throws {
+        let suite = UUID().uuidString
+        let values = try #require(UserDefaults(suiteName: suite))
+        defer { values.removePersistentDomain(forName: suite) }
+        let model = BridgeAppModel(settings: AppSettings(defaults: values))
+        model.started = true
+        defer { model.started = false }
+        var calls = 0
+        var logs: [String] = []
+        let stopped = VirtualAudioOutputDiagnosticSnapshot(engineRunning: false,
+            playerPlaying: false, boundToSelectedDevice: nil, pendingBuffers: 0, pendingSamples: 0)
+        model.completeAudioRecoveryDeviceRefresh(generation: 0, reason: "engine_configuration_change",
+            details: "", devices: [], outputSnapshot: stopped,
+            configureOutput: { _ in calls += 1 }, diagnosticLog: { logs.append($0) })
+        #expect(calls == 0)
+        #expect(logs.contains { $0.contains("result=ignored") && $0.contains("decision=virtual_audio_inactive") })
+        #expect(!logs.contains { $0.contains("result=degraded") })
+    }
+
+    @Test(arguments: [false, true])
+    func voiceEndingDuringRecoveryIsIgnoredButActiveFailureIsReported(hasTail: Bool) throws {
+        let suite = UUID().uuidString
+        let values = try #require(UserDefaults(suiteName: suite))
+        defer { values.removePersistentDomain(forName: suite) }
+        let model = BridgeAppModel(settings: AppSettings(defaults: values))
+        model.started = true
+        model.voiceSession.isActive = true
+        defer {
+            model.started = false
+            model.cancelVirtualAudioReleaseIfPending(trigger: "test_cleanup")
+        }
+        var logs: [String] = []
+        model.completeAudioRecoveryDeviceRefresh(generation: 0, reason: "engine_configuration_change",
+            details: "", devices: [], configureOutput: { done in
+                model.voiceSession.isActive = false
+                if hasTail { model.audio.output.registerPendingVoiceBuffer() }
+                done(false)
+            }, diagnosticLog: { logs.append($0) })
+        let expectedDecision = hasTail ? "virtual_audio_draining" : "virtual_audio_inactive"
+        #expect(logs.contains { $0.contains("decision=\(expectedDecision)") })
+        #expect(!logs.contains { $0.contains("result=degraded") })
+
+        logs.removeAll()
+        model.voiceSession.isActive = true
+        model.completeAudioRecoveryDeviceRefresh(generation: 0, reason: "engine_configuration_change",
+            details: "", devices: [], configureOutput: { $0(false) },
+            diagnosticLog: { logs.append($0) })
+        #expect(logs.contains { $0.contains("result=degraded") })
+        #expect(!logs.contains { $0.contains("decision=virtual_audio_inactive") })
+    }
+
+    @Test(arguments: [false, true])
+    func idleQueuedAudioUsesRealApplySettingsDrainWithoutDegradedRecovery(releaseFirst: Bool) async throws {
+        let suite = UUID().uuidString
+        let values = try #require(UserDefaults(suiteName: suite))
+        defer { values.removePersistentDomain(forName: suite) }
+        let clock = ControlledTestScheduler()
+        let output = VirtualAudioOutput(logger: { _ in },
+            uptime: { Double(clock.now) / 1_000 }, scheduleDrainDeadline: clock.voiceSchedule)
+        let model = BridgeAppModel(settings: AppSettings(defaults: values), initialAudioDevices: [],
+            audioRuntime: AudioRuntime(output: output))
+        model.started = true
+        defer {
+            model.started = false
+            model.cancelVirtualAudioReleaseIfPending(trigger: "test_cleanup")
+        }
+        output.registerPendingVoiceBuffer()
+        #expect(!model.shouldKeepVirtualAudioActive)
+        let generation = model.audio.configurationGeneration
+        var logs: [String] = []
+        var applied: [Bool] = []
+        if releaseFirst { model.applyAudioSettings { applied.append($0) } }
+        model.completeAudioRecoveryDeviceRefresh(generation: 0, reason: "engine_configuration_change",
+            details: "", devices: [], diagnosticLog: { logs.append($0) })
+        let release = try #require(model.audio.pendingVirtualAudioRelease)
+        if !releaseFirst { model.applyAudioSettings { applied.append($0) } }
+        #expect(applied == [false])
+        #expect(model.audio.configurationGeneration == generation)
+        #expect(model.audio.pendingVirtualAudioRelease?.generation == release.generation)
+        #expect(output.pendingVoiceBufferCountForDiagnostics == 1)
+        #expect(logs.contains { $0.contains("result=ignored") && $0.contains("decision=virtual_audio_draining") })
+        #expect(!logs.contains { $0.contains("result=degraded") })
+        // A repeated notification must not reset the drain's deadline.
+        model.completeAudioRecoveryDeviceRefresh(generation: 0, reason: "engine_configuration_change",
+            details: "", devices: [], diagnosticLog: { logs.append($0) })
+        #expect(model.audio.pendingVirtualAudioRelease?.generation == release.generation)
+        clock.advance(to: 749)
+        #expect(output.pendingVoiceBufferCountForDiagnostics == 1)
+        clock.advance(to: 750)
+        await withCheckedContinuation { continuation in
+            DispatchQueue.main.async { continuation.resume() }
+        }
+        #expect(output.pendingVoiceBufferCountForDiagnostics == 0)
+        #expect(model.audio.pendingVirtualAudioRelease == nil)
+        #expect(!logs.contains { $0.contains("result=degraded") })
+    }
+
     @Test func stoppedActiveOutputRequestsRecoveryWithoutTheDebounceGap() async throws {
         let name = UUID().uuidString
         let values = try #require(UserDefaults(suiteName: name))
@@ -64,6 +161,7 @@ struct AudioRecoveryReviewTests {
         defer { values.removePersistentDomain(forName: name) }
         let model = BridgeAppModel(settings: AppSettings(defaults: values))
         model.started = true
+        model.voiceSession.isActive = true
         defer { model.started = false }
         let device = AudioDeviceInfo(id: 101, uid: model.settings.selectedAudioDeviceUID, name: "Remote Buddy Mic")
         let inaudible = VirtualAudioOutputDiagnosticSnapshot(
@@ -92,6 +190,7 @@ struct AudioRecoveryReviewTests {
         defer { values.removePersistentDomain(forName: name) }
         let model = BridgeAppModel(settings: AppSettings(defaults: values))
         model.started = true
+        model.voiceSession.isActive = true
         defer { model.started = false }
         model.isAudioOutputReady = true
         let device = AudioDeviceInfo(id: 101, uid: model.settings.selectedAudioDeviceUID, name: "Test Mic")
@@ -122,6 +221,7 @@ struct AudioRecoveryReviewTests {
         defer { values.removePersistentDomain(forName: name) }
         let model = BridgeAppModel(settings: AppSettings(defaults: values))
         model.started = true
+        model.voiceSession.isActive = true
         defer { model.started = false }
         model.isAudioOutputReady = false
         let device = AudioDeviceInfo(id: 101, uid: model.settings.selectedAudioDeviceUID, name: "Test Mic")

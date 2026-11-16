@@ -31,22 +31,18 @@ extension OnboardingView {
     }
 
     var canContinue: Bool {
-        if settings.onboardingStep == .complete,
-           let completeRuntimeReadyOverride {
-            return completeRuntimeReadyOverride
-        }
         let policyAllowsContinue = OnboardingFlowPolicy.canContinue(
             from: settings.onboardingStep,
             voiceTool: settings.onboardingVoiceTool,
             remoteAvailability: settings.onboardingRemoteAvailability,
             controlMethod: settings.onboardingControlMethod,
-            voiceKeyMode: settings.voiceKeyMode,
-            voiceToolGuideStepsCompleted: inputMethodGuideStepsCompleted,
+            voiceKeyMode: settings.selectedVoiceTrigger.voiceKeyMode,
+            voiceToolSetupReady: voiceToolBlockingHintKey == nil && proposedPairingPlan != nil,
             selectedDevice: settings.onboardingDevice,
             capabilities: capabilities
         )
         if settings.onboardingStep == .voiceTest {
-            return policyAllowsContinue &&
+            return policyAllowsContinue && settings.isTestingVoiceTrigger &&
                 voiceAttempt.result == .passed &&
                 verifiedTranscriptionAppeared &&
                 selectedVoiceToolRuntimeReady
@@ -55,11 +51,6 @@ extension OnboardingView {
             (settings.onboardingStep != .voiceTool ||
                 (voiceToolSelectionIsValid &&
                     proposedPairingPlan != nil))
-    }
-
-    private var inputMethodGuideStepsCompleted: Bool {
-        let steps = inputMethodGuideSteps(for: settings.onboardingVoiceTool)
-        return !steps.isEmpty && steps.allSatisfy { completedInputMethodGuideSteps.contains($0.id) }
     }
 
     var visibleVoiceTools: [OnboardingVoiceTool] {
@@ -83,11 +74,35 @@ extension OnboardingView {
         }
     }
 
+    var voiceToolRequiresTapConfirmation: Bool {
+        VoiceToolAdapterProfile.profile(for: settings.onboardingVoiceTool).supportedModes == [.toggle]
+            && !settings.selectedVoiceTrigger.voiceFnTapModeEnabled
+    }
+
+    var voiceToolBlockingHintKey: String? {
+        if settings.onboardingVoiceTool == .unselected { return "onboarding.voice_tool.choose_required" }
+        if !voiceToolSelectionIsValid { return "onboarding.voice_tool.install_required" }
+        if settings.onboardingVoiceTool == .macosDictation && settings.selectedVoiceTrigger.voiceKeyMode != .function {
+            return "onboarding.voice_tool.trigger_incompatible"
+        }
+        if voiceToolRequiresTapConfirmation { return "onboarding.voice_tool.tap_required" }
+        if !hasViewedInputMethodGuideSteps(viewedInputMethodGuideSteps) {
+            return "onboarding.voice_tool.guide.continue_hint"
+        }
+        return nil
+    }
+
+    func hasViewedInputMethodGuideSteps(_ viewed: Set<Int>) -> Bool {
+        let steps = inputMethodGuideSteps(for: settings.onboardingVoiceTool)
+        return !steps.isEmpty && steps.allSatisfy { viewed.contains($0.id) }
+    }
+
     var effectivePreferredGesture: VoiceGestureMode {
         settings.onboardingPreferredGesture ?? proposedPairingPlan?.binding.gestureMode ?? .hold
     }
 
     var proposedPairingPlan: OnboardingVoicePairingPlan? {
+        guard !voiceToolRequiresTapConfirmation else { return nil }
         let selectedBinding: VoiceToolUserBinding?
         if let staged = settings.stagedVoiceToolBinding,
            staged.tool == settings.onboardingVoiceTool {
@@ -95,8 +110,7 @@ extension OnboardingView {
         } else if let verified = settings.verifiedVoiceToolBinding,
                   verified.tool == settings.onboardingVoiceTool,
                   verified.validationState == .verified {
-            // 重跑 Onboarding 时，已验证的用户 Binding 高于工具文档默认值。
-            // 如果它与当前来源不兼容，resolve 会拒绝并回退到可用的推荐路径。
+            // Keep the tool binding, but a newly selected trigger or gesture must be tested again.
             selectedBinding = verified
         } else {
             selectedBinding = nil
@@ -104,9 +118,9 @@ extension OnboardingView {
         return OnboardingVoicePairingPlan.resolve(
             tool: settings.onboardingVoiceTool,
             controlSource: settings.onboardingControlSource,
-            preferredGesture: settings.onboardingPreferredGesture,
+            preferredGesture: settings.selectedVoiceTrigger.voiceFnTapModeEnabled ? .toggle : .hold,
             userBinding: selectedBinding,
-            forceFunctionKey: true
+            selectedShortcut: settings.selectedVoiceTrigger.voiceKeyMode
         )
     }
 
@@ -124,11 +138,6 @@ extension OnboardingView {
     }
 
     var failureReason: FirstUseFailureReason? {
-        if settings.onboardingStep == .complete,
-           let completeRuntimeReadyOverride,
-           completeRuntimeReadyOverride {
-            return nil
-        }
         return diagnosticContext.failureReason
     }
 
@@ -202,22 +211,5 @@ extension OnboardingView {
         case .complete: return "onboarding.action.open_app"
         default: return "onboarding.action.continue"
         }
-    }
-
-    private var aiPromptCopyStatusKey: String {
-        switch aiPromptCopyResult {
-        case true: return "onboarding.welcome.ai_prompt.copied"
-        case false: return "onboarding.welcome.ai_prompt.failed"
-        case nil: return "onboarding.welcome.ai_prompt.action"
-        }
-    }
-
-    private func copyAIAssistantPrompt() {
-        let prompt = OnboardingAIAssistantPrompt.text(for: localization.locale)
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        let copied = pasteboard.setString(prompt, forType: .string)
-        aiPromptCopyResult = copied
-        AppLogger.shared.write("ONBOARDING AI_PROMPT copied=\(copied)")
     }
 }

@@ -913,9 +913,12 @@ extension KeyboardInjector {
     static func workBuddyComposerControlsMatch(_ labels: [String]) -> Bool {
         let labels = labels.map(normalizedComposerLabel)
         let send = ["发送", "send", "send message", "envoyer", "送信", "kirim", "send-message"]
+        let stop = ["停止", "停止生成", "stop", "stop generating", "stop generation"]
         let more = ["更多操作", "more actions", "plus d'actions", "その他の操作", "その他のアクション", "tindakan lainnya", "aksi lainnya", "more-actions"]
         let voice = ["语音输入", "voice input", "saisie vocale", "音声入力", "input suara", "masukan suara", "voice-input"]
-        return labels.contains(where: send.contains) && labels.contains(where: more.contains) &&
+        // WorkBuddy replaces Send with Stop while a reply is being generated.
+        // Both states still require the same local editor, More and Voice controls.
+        return labels.contains(where: { send.contains($0) || stop.contains($0) }) && labels.contains(where: more.contains) &&
             labels.contains { label in voice.contains { label == $0 || label.hasPrefix($0 + " ") } }
     }
 

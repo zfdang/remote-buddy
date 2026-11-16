@@ -10,17 +10,17 @@
   <link rel="alternate" hreflang="en" href="https://remote.zfdang.com/index.en.html">
   <link rel="alternate" hreflang="x-default" href="https://remote.zfdang.com/">
   <link rel="icon" href="assets/app-icon.png">
-  <link rel="stylesheet" href="style.css?v=261016">
+  <link rel="stylesheet" href="style.css?v=261115c">
   <title>Remote Buddy · Voice within reach</title>
 </head>
 <body>
 <header class="nav wrap">
   <a class="brand" href="#"><img src="assets/app-icon.png" alt="" width="38" height="38"><span>Remote Buddy<small>Voice within reach</small></span></a>
-  <nav aria-label="Main navigation"><a href="#how">How it works</a><a href="#interface">Interface</a><a href="#demo">Demo</a><a href="#start">Get started</a><a href="#compatibility">Compatibility</a><a href="#troubleshooting">Help</a><a href="https://github.com/zfdang/remote-buddy">GitHub ↗</a><span class="language-switch" aria-label="Language"><b aria-current="page">EN</b><a href="index.html" lang="zh-CN">中文</a></span></nav>
+  <nav aria-label="Main navigation"><a href="#how">How it works</a><a href="#interface">Interface</a><a href="#demo">Demo</a><a href="#start">Get started</a><a href="#compatibility">Compatibility</a><a href="#troubleshooting">Help</a><a href="https://github.com/zfdang/remote-buddy">GitHub ↗</a><span class="language-switch" aria-label="Language"><a href="index.html" lang="zh-CN">中文</a><b aria-current="page">English</b></span></nav>
 </header>
 <main>
 <section class="hero wrap">
-  <div class="hero-copy"><p class="eyebrow">HARDWARE × VOICE INPUT</p><h1>Voice input.<br>Within reach.</h1><p class="lead">Pick up your remote. Hold to talk. Release to finish.<br>Bring its microphone to your favorite input tool.</p><div class="actions"><a class="button primary" href="https://github.com/zfdang/remote-buddy/releases/latest">Download for macOS <span>↓</span></a><a class="text-link" href="#interface">Explore the app →</a><a class="text-link" href="#demo">Watch the demo video →</a></div><p class="small">macOS 14+ · Apple Silicon / Intel · Open source</p></div>
+  <div class="hero-copy"><p class="eyebrow">HARDWARE × VOICE INPUT</p><h1>Voice input.<br>Within reach.</h1><p class="lead">Pick up your remote. Hold to talk. Release to finish.<br>Bring its microphone to your favorite input tool.</p><div class="actions"><a class="button primary" href="downloads/index.en.html">Download from Website <span>↓</span></a><a class="button secondary" href="https://github.com/zfdang/remote-buddy/releases/latest">GitHub Releases <span>↗</span></a><a class="text-link" href="#interface">Explore the app →</a><a class="text-link" href="#demo">Watch the demo video →</a><a class="text-link" href="device_en.html">Choose a remote →</a></div><p class="small">macOS 14+ · Apple Silicon / Intel · Open source · Direct website mirror &amp; GitHub Releases</p></div>
   <div class="hero-art" aria-label="Illustration of a remote sending voice to a computer">
     <span class="art-label">FROM BUTTON TO TEXT</span>
     <div class="remote"><i class="power"></i><button id="talk" aria-label="Hold the button to preview the voice trigger" aria-describedby="demo-note">🎙</button><div class="dpad"><span>＋</span></div><div class="remote-small"><i></i><i></i><i></i></div></div>
@@ -43,12 +43,12 @@
     <div class="gallery-stage-container" role="region" aria-label="3D Interface Gallery">
       <button class="stage-nav stage-prev" type="button" aria-label="Previous screenshot">‹</button>
       <div class="gallery-stage" id="gallery-stage" tabindex="0" role="region" aria-label="Interface stage">
-        <div class="stage-slide slide-active" role="group" aria-label="Remote Connection (1/7)">
+        <div class="stage-slide slide-active" role="group" aria-label="General Settings (1/8)">
           <div class="window-top" aria-hidden="true">
             <div class="window-dots"><i></i><i></i><i></i></div>
-            <span class="window-title">Remote Connection · Remote Buddy</span>
+            <span class="window-title">General Settings · Remote Buddy</span>
           </div>
-          <img src="assets/screenshots/connection-en.png" alt="Remote Buddy Remote Connection interface: connected Xiaomi remote, battery level, microphone gain, and device information" width="1020" height="772" loading="eager">
+          <img src="assets/screenshots/general-en.png?v=261116screens" alt="Remote Buddy General Settings interface: three status cards, setup wizard entry, and grouped preferences" width="1020" height="772" loading="eager">
         </div>
       </div>
       <button class="stage-nav stage-next" type="button" aria-label="Next screenshot">›</button>
@@ -56,49 +56,90 @@
     <div class="gallery-indicators" id="gallery-indicators" role="tablist" aria-label="Quick slide selection"></div>
     <div class="gallery-caption-card" aria-live="polite">
       <div class="caption-header">
-        <span class="caption-badge" id="caption-badge">Multi-device</span>
-        <h3 class="caption-title" id="caption-title">Remote Connection</h3>
+        <span class="caption-badge" id="caption-badge">Preferences</span>
+        <h3 class="caption-title" id="caption-title">General Settings</h3>
       </div>
-      <p class="caption-desc" id="caption-desc">Check connection status, battery level, and device details for added remotes. Adjust microphone gain for each device (0–24 dB).</p>
+      <p class="caption-desc" id="caption-desc">Review permissions &amp; microphone, connected remotes, and input integration in three status cards. Open settings from each card, restart setup, or adjust display, launch, and language preferences.</p>
       <div class="caption-hint">
         <span>Click a screenshot to enlarge it; drag or use the arrow keys to browse.</span>
       </div>
     </div>
   </div>
-  <dialog id="gallery-lightbox" class="gallery-lightbox" aria-label="High-resolution screenshot preview">
+  <dialog id="gallery-lightbox" class="gallery-lightbox" closedby="any" aria-label="High-resolution screenshot preview">
     <div class="lightbox-content">
       <div class="lightbox-top">
         <span class="lightbox-title" id="lightbox-title">Interface Preview</span>
         <button class="lightbox-close" type="button" aria-label="Close">✕</button>
       </div>
-      <img id="lightbox-img" src="assets/screenshots/connection-en.png" alt="High-resolution interface preview" width="1020" height="772">
+      <img id="lightbox-img" src="assets/screenshots/general-en.png?v=261116screens" alt="High-resolution interface preview" width="1020" height="772">
     </div>
   </dialog>
 </section>
 <section class="section wrap demo-section" id="demo" aria-labelledby="demo-title">
-  <div class="demo-heading"><div><p class="eyebrow">WATCH IT IN ACTION</p><h2 class="section-title" id="demo-title">Turn your remote into a voice input button.</h2><p>A cartoon overview of remote voice input, installation and permissions, input tool integration, button mapping, and common phrases.</p></div><p class="demo-language">3 min 19 sec · Mandarin audio · Chinese captions</p></div>
-  <video class="demo-video" controls playsinline preload="metadata" poster="assets/video/demo-poster.jpg" width="1920" height="1080" aria-label="Remote Buddy features and usage demo, 3 minutes 19 seconds, with Mandarin narration and Chinese captions">
-    <source src="assets/video/Remote_Buddy_Demo_Natural_zh-CN.mp4" type="video/mp4">
-    <track kind="captions" src="assets/video/demo.zh-CN.vtt" srclang="zh-CN" label="简体中文">
-    <p>Your browser cannot play this video. <a href="assets/video/Remote_Buddy_Demo_Natural_zh-CN.mp4">Download the MP4</a></p>
+  <div class="demo-heading"><div><p class="eyebrow">WATCH IT IN ACTION</p><h2 class="section-title" id="demo-title">Turn your remote into a voice input button.</h2><p>Cartoon explanations and app screenshots covering Xiaomi and T1 voice controls, device support, installation, input tool setup, button mapping, and common phrases.</p></div><p class="demo-language">3 min 53 sec · Mandarin audio · Chinese captions</p></div>
+  <video class="demo-video" controls playsinline preload="metadata" poster="assets/video/demo-poster.jpg?v=261116screens" width="1920" height="1080" aria-label="Remote Buddy features and usage demo, 3 minutes 53 seconds, with Mandarin narration and Chinese captions">
+    <source src="assets/video/Remote_Buddy_Demo_Natural_zh-CN.mp4?v=261116screens" type="video/mp4">
+    <track kind="captions" src="assets/video/demo.zh-CN.vtt?v=261116screens" srclang="zh-CN" label="简体中文">
+    <p>Your browser cannot play this video. <a href="assets/video/Remote_Buddy_Demo_Natural_zh-CN.mp4?v=261116screens">Download the MP4</a></p>
   </video>
-  <div class="demo-links"><span>An overview of Remote Buddy’s features and setup.</span><a class="text-link" href="assets/video/Remote_Buddy_Demo_Natural_zh-CN.mp4" download>Download video ↓</a></div>
+  <div class="demo-links"><span>An overview of Remote Buddy’s features and setup.</span><a class="text-link" href="assets/video/Remote_Buddy_Demo_Natural_zh-CN.mp4?v=261116screens" download>Download video ↓</a></div>
 </section>
-<section class="section wrap start" id="start"><div><p class="eyebrow">GET STARTED</p><h2 class="section-title">Install, then follow the setup guide.</h2><p>One installer includes the app and virtual microphone driver.</p><a class="text-link" href="https://github.com/zfdang/remote-buddy/blob/main/docs/interface.md">Setup and troubleshooting ↗</a></div><ol class="steps"><li><span>01</span><div><h3>Install and open</h3><p>Download the PKG from Releases and open Remote Buddy in Applications.</p></div></li><li><span>02</span><div><h3>Grant permissions</h3><p>Follow the guide for Bluetooth, Input Monitoring, and Accessibility permissions.</p></div></li><li><span>03</span><div><h3>Connect and configure</h3><p>Connect your remote, test its buttons, and check the driver. Then select Remote Buddy Mic in your input tool and follow the guide to set its voice shortcut.</p></div></li><li><span>04</span><div><h3>Try a sentence</h3><p>Pass the voice test in the guide, then click where you want to type. Hold the remote voice button to speak and release to finish. For tap-based tools, follow the guide to configure how voice input starts and stops.</p></div></li></ol></section>
-<section class="section compatibility" id="compatibility"><div class="wrap"><p class="eyebrow">COMPATIBILITY</p><h2 class="section-title">Check device and input tool compatibility.</h2><div class="compat-grid"><article><h3>REMOTES</h3><div class="tools hardware"><span>Xiaomi Bluetooth Remote 2 / 2 Pro</span><span>T1 Air-Mouse &amp; Keyboard Voice Remote</span><span>Chromecast Voice Remote (G9N9N)</span><span>Google TV Streamer Voice Remote (GY3LE)</span><span>Apple Siri Remote</span></div><p>Xiaomi 2 / 2 Pro and T1 are supported. G9N9N supports voice input; single-button mapping is unsupported. GY3LE and Siri Remote support is planned.</p><a class="text-link" href="https://github.com/zfdang/remote-buddy/blob/main/README.en.md#which-devices-are-supported">See support by model ↗</a></article><article><h3>INPUT TOOLS</h3><div class="tools"><span>WeType</span><span>Doubao</span><span><a href="https://myvoicebuddy.com/en.html">Voice Buddy</a></span><span>NetEase Bageshuo</span><span>Typeless</span><span>macOS Dictation</span><span>Other tools</span></div><p>Choose your tool, follow the guide to configure Remote Buddy Mic and the voice shortcut, then try a spoken sentence. Includes <a href="https://myvoicebuddy.com/en.html">Voice Buddy</a> for 100% local offline Apple Silicon speech-to-text &amp; LLM polish.</p><p class="muted">Your tool needs microphone selection and a configurable voice shortcut. Settings vary by version; use the guide’s voice test to check your setup.</p></article></div></div></section>
+<section class="section wrap start" id="start"><div><p class="eyebrow">GET STARTED</p><h2 class="section-title">Install, then follow the setup guide.</h2><p>One installer includes the app and virtual microphone driver. Download via the <a href="downloads/index.en.html">website mirror</a> or <a href="https://github.com/zfdang/remote-buddy/releases/latest">GitHub Releases</a>.</p><a class="text-link" href="#troubleshooting">Common troubleshooting ↓</a></div><ol class="steps"><li><span>01</span><div><h3>Install and open</h3><p>Download the PKG for your Mac architecture, finish installation, and open Remote Buddy in Applications.</p></div></li><li><span>02</span><div><h3>Permissions &amp; audio driver</h3><p>Follow the guide for Bluetooth, Input Monitoring, Accessibility permissions, and Remote Buddy Mic readiness.</p></div></li><li><span>03</span><div><h3>Connect, shortcut, &amp; tool</h3><p>Pair your remote, test buttons, choose a voice shortcut (Fn/Globe or custom) and Hold/Tap mode, then configure your input tool to match.</p></div></li><li><span>04</span><div><h3>Try a sentence</h3><p>Pass the voice test to activate the setup, then click where you want to type and speak using the remote voice button.</p></div></li></ol></section>
+<section class="section compatibility" id="compatibility"><div class="wrap"><p class="eyebrow">COMPATIBILITY</p><h2 class="section-title">Check device and input tool compatibility.</h2><div class="compat-grid"><article><h3>Remotes</h3><div class="tools hardware"><span>Xiaomi Bluetooth Remote 2 / 2 Pro</span><span>T1 Air-Mouse &amp; Keyboard Voice Remote</span><span>Chromecast Voice Remote (G9N9N)</span><span>Google TV Streamer Voice Remote (GY3LE)</span><span>Apple Siri Remote</span></div><p>Xiaomi 2 / 2 Pro and T1 are supported. Validated G9N9N versions support voice input and button mapping; see the device guide for identification. GY3LE and Siri Remote support is planned.</p><a class="text-link" href="device_en.html">See support &amp; buying guide by model →</a></article><article><h3>Input Tools</h3><div class="tools"><span>WeType</span><span>Doubao</span><span><a href="https://myvoicebuddy.com/en.html">Voice Buddy</a></span><span>NetEase Bageshuo</span><span>Typeless</span><span>macOS Dictation</span><span>Other tools</span></div><p>Choose your tool, follow the guide to configure Remote Buddy Mic and the voice shortcut, then try a spoken sentence.</p><p class="muted">Your tool needs microphone selection and a configurable voice shortcut. Settings vary by version; use the guide’s voice test to check your setup.</p><div class="companion-box"><div class="companion-head"><span class="companion-badge">COMPANION APP</span><strong class="companion-name">Voice Buddy</strong></div><p>Our 100% local, offline AI speech-to-text and text-polishing app for Apple Silicon—no cloud uploads required. Supports both Hold and Toggle modes and works out of the box with Remote Buddy Mic and Fn trigger.</p><a class="text-link" href="https://myvoicebuddy.com/en.html">Explore Voice Buddy (myvoicebuddy.com) ↗</a></div></article></div></div></section>
 <section class="section wrap troubleshooting" id="troubleshooting" aria-labelledby="troubleshooting-title">
   <p class="eyebrow">TROUBLESHOOTING</p>
-  <h2 class="section-title" id="troubleshooting-title">Voice works, but buttons do not?</h2>
-  <div class="troubleshooting-card"><h3>Check device access in Karabiner-Elements and other key remappers.</h3>
-    <p>A remapper can take exclusive access to the remote, preventing Buddy from receiving its buttons. Ordinary buttons may stop performing their assigned actions while Bluetooth or voice input still works. For Xiaomi remotes, the defaults are: Home switches apps, TV plays or pauses media, Power sends Backspace, and Back sends Escape.</p>
-    <ol><li>Open <strong>Devices</strong> in Karabiner-Elements and find your remote, such as the Xiaomi Bluetooth Voice Remote.</li><li>Turn off <strong>Modify events for that remote</strong> so Buddy can handle it. Keep your other keyboard settings.</li><li>Reconnect the remote or restart Buddy, check its status in Button Mapping, and test the home, TV, power, and back buttons.</li></ol>
-    <p>If Buddy still reports that another input tool owns the device, restart Karabiner-Elements and try again. Also check Buddy’s Input Monitoring and Accessibility permissions.</p>
-    <a class="text-link" href="https://karabiner-elements.pqrs.org/docs/manual/configuration/configure-devices/">Karabiner’s official device settings guide ↗</a>
+  <h2 class="section-title" id="troubleshooting-title">Buttons or Fn voice trigger not working? Check these first.</h2>
+  <details class="troubleshooting-card">
+    <summary><span class="troubleshooting-question">Voice works, but buttons do not? Check device access in Karabiner-Elements and other key remappers.</span></summary>
+    <div class="troubleshooting-body">
+      <p>A remapper can take exclusive access to the remote, preventing Buddy from receiving its buttons. Ordinary buttons may stop performing their assigned actions while Bluetooth or voice input still works. For Xiaomi remotes, the defaults are: Home switches apps, TV plays or pauses media, Power sends Backspace, and Back sends Escape.</p>
+      <ol><li>Open <strong>Devices</strong> in Karabiner-Elements and find your remote, such as the Xiaomi Bluetooth Voice Remote.</li><li>Turn off <strong>Modify events for that remote</strong> so Buddy can handle it. Keep your other keyboard settings.</li><li>Reconnect the remote or restart Buddy, check its status in Button Mapping, and test the home, TV, power, and back buttons.</li></ol>
+      <p>If Buddy still reports that another input tool owns the device, restart Karabiner-Elements and try again. Also check Buddy’s Input Monitoring and Accessibility permissions.</p>
+      <a class="text-link" href="https://karabiner-elements.pqrs.org/docs/manual/configuration/configure-devices/">Karabiner’s official device settings guide ↗</a>
+    </div>
+  </details>
+  <details class="troubleshooting-card">
+    <summary><span class="troubleshooting-question">Chose Fn as your voice shortcut, but WeChat hijacks it? Clear WeChat’s global Fn shortcut.</span></summary>
+    <div class="troubleshooting-body">
+      <p>The WeChat macOS desktop app can register <strong>Fn</strong> as a global shortcut (such as global voice input or another hotkey). While WeChat holds that global shortcut, pressing your remote’s voice button sends <strong>Fn</strong> to WeChat instead of your chosen input tool (Doubao, WeType, Typeless, etc.).</p>
+      <ol><li>Open the <strong>WeChat desktop app → Settings → Shortcuts</strong>.</li><li>Check whether any global shortcut—especially a voice shortcut—is bound to <strong>Fn</strong> (or the <strong>🌐 Globe key</strong>).</li><li>If it conflicts, reassign or <strong>clear only the conflicting Fn shortcut</strong> (you can leave all other WeChat shortcuts as-is).</li><li>Return to your input tool or Buddy’s Voice Test step and press the remote voice button again.</li></ol>
+      <p>If you prefer to keep WeChat’s Fn binding, switch Buddy’s voice shortcut in <strong>Input Tools → Voice Shortcut</strong> to another combination such as <strong>Ctrl (⌃) + Option (⌥) + V</strong>.</p>
+    </div>
+  </details>
+  <details class="troubleshooting-card">
+    <summary><span class="troubleshooting-question">Chose Fn as your voice shortcut, but macOS hasn’t set Fn to “Do Nothing”?</span></summary>
+    <div class="troubleshooting-body">
+      <p>When using <strong>Fn/Globe</strong> with a third-party voice tool, pressing the remote button may pop up the Emoji &amp; Symbols picker, switch keyboard layouts, or trigger system Dictation instead if macOS intercepts the Globe key at the system level.</p>
+      <ol><li>Open <strong>System Settings → Keyboard</strong> on your Mac.</li><li>Locate <strong>Press 🌐 key to</strong> and change it to <strong>Do Nothing</strong>.</li><li>Once set to Do Nothing, macOS passes Fn events cleanly to your third-party voice tool.</li></ol>
+      <p>Note: If you selected <strong>macOS Dictation</strong> as your input tool, keep the system 🌐 key active and set <strong>Dictation → Shortcut</strong> to <strong>Press 🌐 key twice</strong> as shown in the Setup Wizard.</p>
+    </div>
+  </details>
+</section>
+<section class="section wrap privacy">
+  <img src="assets/app-icon.png" alt="Remote Buddy icon" width="90" height="90">
+  <div class="privacy-body">
+    <p class="eyebrow">PRIVACY, SECURITY &amp; INSTALLATION</p>
+    <h2>Open source, local-only audio bridging—zero saved recordings or text history.</h2>
+    <div class="privacy-cards">
+      <div class="privacy-card is-buddy">
+        <h3>Remote Buddy Itself</h3>
+        <ul>
+          <li><strong>No audio or transcript storage:</strong> Bluetooth audio is decoded solely in local memory and routed to the virtual microphone. Remote Buddy runs no speech model and stores no audio recordings or recognized text.</li>
+          <li><strong>Zero telemetry or background uploads:</strong> No usage analytics, no third-party tracking SDKs, and no automatic log uploads (diagnostic logs remain strictly local unless you inspect or copy them).</li>
+          <li><strong>100% open source:</strong> Both the macOS app and the bundled <code>Remote Buddy Mic</code> virtual audio driver are published under GPL-3.0-only so anyone can inspect or build from source.</li>
+          <li><strong>Strict API boundaries:</strong> Uses only public macOS integration and user-visible Accessibility APIs, never touching other apps’ private data.</li>
+        </ul>
+      </div>
+      <div class="privacy-card">
+        <h3>Your Chosen Input Method / Voice Tool (Separate Scope)</h3>
+        <p>Once audio leaves <code>Remote Buddy Mic</code>, speech recognition and text insertion are handled independently by the input tool you select. Whether recognition stays offline or uses cloud servers depends strictly on that tool’s own settings and privacy policy—Remote Buddy neither participates in nor reads its recognition output. For a completely offline end-to-end setup on Apple Silicon, pair it with <a class="text-link" href="https://myvoicebuddy.com/en.html">Voice Buddy</a>.</p>
+      </div>
+    </div>
+    <p class="small"><strong>Installation &amp; signing notes:</strong> Installing or updating the bundled <code>Remote Buddy Mic</code> driver requires administrator authorization and briefly restarts macOS audio. The PKG installer is currently not notarized with an Apple Developer ID, so macOS Gatekeeper may ask you to allow it in System Settings → Privacy &amp; Security (see <a class="text-link" href="https://github.com/zfdang/remote-buddy/blob/main/docs/build-and-signing.md">Build &amp; Signing Notes ↗</a>).</p>
   </div>
 </section>
-<section class="section wrap privacy"><img src="assets/app-icon.png" alt="Remote Buddy icon" width="90" height="90"><div><p class="eyebrow">PRIVACY & INSTALLATION</p><h2>No saved recordings or text history.</h2><p>Buddy does not collect usage statistics or upload logs. Check your input tool’s settings for its own network and recognition behavior.</p><p class="small">Installation requires administrator authorization. A first install or driver change briefly restarts audio. The current PKG is unsigned and not notarized by Apple, so macOS may block installation.</p></div></section>
 </main>
-<footer class="wrap"><div><strong>Remote Buddy</strong><p>Voice input, at the press of a button.</p></div><div class="footer-links"><a href="https://github.com/zfdang/remote-buddy/releases">Download</a><a href="https://github.com/zfdang/remote-buddy/blob/main/README.en.md">Docs & References</a><a href="https://github.com/zfdang/remote-buddy/issues">Feedback</a><a href="https://github.com/zfdang/remote-buddy/blob/main/LICENSE">GPL-3.0-only</a></div></footer>
-<script src="demo.js"></script>
+<footer class="wrap"><div><strong>Remote Buddy</strong><p>Voice input, at the press of a button.</p></div><div class="footer-links"><a href="downloads/index.en.html">Website Download</a><a href="device_en.html">Supported Remotes</a><a href="https://github.com/zfdang/remote-buddy/releases">GitHub Releases</a><a href="https://github.com/zfdang/remote-buddy/blob/main/README.en.md">Docs &amp; References</a><a href="https://github.com/zfdang/remote-buddy/issues">Feedback</a><a href="https://github.com/zfdang/remote-buddy/blob/main/LICENSE">GPL-3.0-only</a></div></footer>
+<script src="demo.js?v=261116screens"></script>
 </body>
 </html>

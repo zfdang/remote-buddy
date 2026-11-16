@@ -71,7 +71,6 @@ struct OnboardingVoicePairingPlan: Equatable {
     let binding: VoiceToolUserBinding
     let controlSource: OnboardingControlSource
     let fnTapModeEnabled: Bool
-    let chromecastVoiceMode: ChromecastVoiceMode?
     let evidenceState: VoiceToolEvidenceState
 
     static func resolve(
@@ -79,22 +78,27 @@ struct OnboardingVoicePairingPlan: Equatable {
         controlSource: OnboardingControlSource,
         preferredGesture: VoiceGestureMode? = nil,
         userBinding: VoiceToolUserBinding? = nil,
-        forceFunctionKey: Bool = false
+        selectedShortcut: VoiceKeyMode? = nil
     ) -> Self? {
         guard tool != .unselected, controlSource != .unselected else { return nil }
         let profile = VoiceToolAdapterProfile.profile(for: tool)
+        // The Dictation adapter implements the system's double-Fn start sequence.
+        guard tool != .macosDictation || (selectedShortcut ?? userBinding?.shortcut ?? .function) == .function else {
+            return nil
+        }
 
         if let userBinding {
             var effectiveBinding = userBinding
-            if forceFunctionKey {
+            if selectedShortcut != nil && selectedShortcut != userBinding.shortcut ||
+                preferredGesture != nil && preferredGesture != userBinding.gestureMode {
                 effectiveBinding = VoiceToolUserBinding(
                     tool: userBinding.tool,
-                    shortcut: .function,
-                    gestureMode: userBinding.gestureMode,
-                    source: userBinding.source,
-                    validationState: userBinding.validationState,
-                    verifiedToolVersion: userBinding.verifiedToolVersion,
-                    verifiedAt: userBinding.verifiedAt
+                    shortcut: selectedShortcut ?? userBinding.shortcut,
+                    gestureMode: preferredGesture ?? userBinding.gestureMode,
+                    source: .manuallyConfirmed,
+                    validationState: .staged,
+                    verifiedToolVersion: nil,
+                    verifiedAt: nil
                 )
             }
             guard effectiveBinding.tool == tool,
@@ -117,7 +121,7 @@ struct OnboardingVoicePairingPlan: Equatable {
             preferredGesture: preferredGesture
         )
         for gesture in candidates {
-            let shortcut = forceFunctionKey ? VoiceKeyMode.function : profile.defaultShortcutByMode[gesture]
+            let shortcut = selectedShortcut ?? profile.defaultShortcutByMode[gesture]
             guard let shortcut,
                   canDrive(gesture: gesture, shortcut: shortcut, from: controlSource)
             else { continue }
@@ -126,7 +130,7 @@ struct OnboardingVoicePairingPlan: Equatable {
                     tool: tool,
                     shortcut: shortcut,
                     gestureMode: gesture,
-                    source: .documentedDefault,
+                    source: selectedShortcut == nil ? .documentedDefault : .manuallyConfirmed,
                     validationState: .staged,
                     verifiedToolVersion: nil,
                     verifiedAt: nil
@@ -165,7 +169,6 @@ struct OnboardingVoicePairingPlan: Equatable {
     ) -> Bool {
         if source.supportedGestureModes.contains(gesture) { return true }
         return gesture == .toggle &&
-            shortcut == .function &&
             source.supportedGestureModes == [.hold]
     }
 
@@ -175,16 +178,11 @@ struct OnboardingVoicePairingPlan: Equatable {
         evidenceState: VoiceToolEvidenceState
     ) -> Self {
         let fnTap = binding.gestureMode == .toggle &&
-            binding.shortcut == .function &&
             !controlSource.supportedGestureModes.contains(.toggle)
-        let chromecastMode: ChromecastVoiceMode? = controlSource == .chromecastRemote
-            ? (binding.gestureMode == .toggle ? .toggle : .hold)
-            : nil
         return Self(
             binding: binding,
             controlSource: controlSource,
             fnTapModeEnabled: fnTap,
-            chromecastVoiceMode: chromecastMode,
             evidenceState: evidenceState
         )
     }
@@ -372,30 +370,31 @@ enum OnboardingFlowPolicy {
         remoteAvailability: OnboardingRemoteAvailability = .hasRemote,
         controlMethod: OnboardingControlMethod = .physicalRemote,
         voiceKeyMode: VoiceKeyMode = .function,
-        voiceToolGuideStepsCompleted: Bool = false,
+        voiceToolSetupReady: Bool = false,
         selectedDevice: RemoteSetupDevice? = nil,
         capabilities: OnboardingCapabilities
     ) -> Bool {
-        if [.remote, .controls, .audio, .voiceTest].contains(step),
+        if [.remote, .controls, .voiceTrigger, .voiceTest].contains(step),
            missingRuntimePermission(controlMethod: controlMethod, capabilities: capabilities) != nil {
             return false
         }
         switch step {
         case .voiceTool:
-            return voiceTool != .unselected && voiceToolGuideStepsCompleted
+            return voiceTool != .unselected && voiceToolSetupReady
         case .remoteAvailability:
             return selectedDevice?.canStartSetup == true
         case .permissions:
             // Environment setup must work before a control device is selected.
             return capabilities.bluetoothGranted &&
                 capabilities.inputMonitoringGranted &&
-                capabilities.accessibilityGranted
-        case .remote:
-            return capabilities.remoteConnected && capabilities.remoteButtonObserved
-        case .audio:
-            return capabilities.microphoneDriverInstalled &&
+                capabilities.accessibilityGranted &&
+                capabilities.microphoneDriverInstalled &&
                 capabilities.audioOutputSelected &&
                 capabilities.audioReady
+        case .remote:
+            return capabilities.remoteConnected && capabilities.remoteButtonObserved
+        case .voiceTrigger:
+            return true
         case .voiceTest:
             return capabilities.voiceSessionStarted &&
                 capabilities.voiceSamplesReceived &&
@@ -403,19 +402,9 @@ enum OnboardingFlowPolicy {
                 capabilities.transcriptionAppeared &&
                 !capabilities.manualTranscriptInputObserved
         case .controls:
-            return capabilities.testedRemoteButtonCount >= 3
+            return capabilities.remoteConnected && capabilities.testedRemoteButtonCount >= 3
         case .complete:
-            return isControlSelectionValid(
-                remoteAvailability: remoteAvailability,
-                controlMethod: controlMethod
-            ) &&
-                (!controlMethod.requiresBluetoothPermission || capabilities.bluetoothGranted) &&
-                (!controlMethod.requiresInputMonitoringPermission ||
-                    capabilities.inputMonitoringGranted) &&
-                capabilities.accessibilityGranted &&
-                capabilities.remoteConnected &&
-                capabilities.audioOutputSelected &&
-                capabilities.audioReady
+            return true
         }
     }
 
@@ -447,22 +436,6 @@ enum OnboardingFlowPolicy {
             hasSelectedAudioUID: hasSelectedAudioUID
         )
         guard let failure = context.failureReason else { return nil }
-        if step == .complete, failure == .completeRuntimeRegressed {
-            if !isControlSelectionValid(
-                remoteAvailability: remoteAvailability,
-                controlMethod: controlMethod
-            ) {
-                return .remoteAvailability
-            }
-            if (controlMethod.requiresBluetoothPermission && !capabilities.bluetoothGranted) ||
-                (controlMethod.requiresInputMonitoringPermission &&
-                    !capabilities.inputMonitoringGranted) ||
-                !capabilities.accessibilityGranted {
-                return .permissions
-            }
-            if !capabilities.remoteConnected { return .remote }
-            return .audio
-        }
         return failure.recoveryStep
     }
 

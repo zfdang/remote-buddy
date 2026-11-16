@@ -78,43 +78,47 @@ struct RemoteGainAndDriverTests {
         #expect(!OnboardingAudioSelectionPolicy.isSupportedDevice(uid: "BlackHole2ch_UID", name: "BlackHole 2ch"))
     }
 
+    @Test func microphoneSetupDistinguishesPreparationFromFailure() {
+        #expect(OnboardingView.microphoneSetupState(installed: false, ready: false, preparing: true) == .preparing)
+        #expect(OnboardingView.microphoneSetupState(installed: false, ready: false, preparing: false) == .missing)
+        #expect(OnboardingView.microphoneSetupState(installed: true, ready: false, preparing: false) == .failed)
+        #expect(OnboardingView.microphoneSetupState(installed: true, ready: true, preparing: false) == .ready)
+    }
+
     @Test func driverStepRequiresAConfiguredOutput() {
         var capabilities = OnboardingCapabilities(bluetoothGranted: true, inputMonitoringGranted: true, accessibilityGranted: true, microphoneDriverInstalled: true, audioOutputSelected: true)
-        for method in [OnboardingControlMethod.physicalRemote] {
-            #expect(!OnboardingFlowPolicy.canContinue(from: .audio, voiceTool: .unselected,
-                controlMethod: method, capabilities: capabilities))
-        }
+        #expect(!OnboardingFlowPolicy.canContinue(from: .permissions, voiceTool: .unselected,
+            controlMethod: .physicalRemote, capabilities: capabilities))
         capabilities.audioReady = true
-        #expect(OnboardingFlowPolicy.canContinue(from: .audio, voiceTool: .unselected,
+        #expect(OnboardingFlowPolicy.canContinue(from: .permissions, voiceTool: .unselected,
             controlMethod: .physicalRemote, capabilities: capabilities))
     }
 
-    @Test func driverCheckKeepsManualNavigationInBothDirections() throws {
+    @Test func permissionsCheckIncludesAudioAndFifthStepSelectsTheTrigger() throws {
         let name = "driver-navigation-" + UUID().uuidString
         let defaults = try #require(UserDefaults(suiteName: name))
         defer { defaults.removePersistentDomain(forName: name) }
         let settings = AppSettings(defaults: defaults)
-        settings.setOnboardingControlSource(.xiaomiRemote)
-        settings.setOnboardingStep(.audio)
+        settings.setOnboardingStep(.permissions)
         let device = AudioDeviceInfo(id: 1, uid: BuddyMicrophoneDevicePolicy.deviceUID,
             name: BuddyMicrophoneDevicePolicy.deviceName)
         let model = BridgeAppModel(settings: settings, initialAudioDevices: [device])
         let view = OnboardingView(model: model, permissionOverrides: .allGranted)
         #expect(!view.canContinue)
         view.continueFlow()
-        #expect(settings.onboardingStep == .audio)
+        #expect(settings.onboardingStep == .permissions)
         model.isAudioOutputReady = true
         #expect(view.canContinue)
-        #expect(settings.onboardingStep == .audio)
+        view.continueFlow()
+        #expect(settings.onboardingStep == .remoteAvailability)
+        settings.setOnboardingStep(.voiceTrigger)
+        settings.voiceKeyMode = .suggestedShortcut
+        #expect(view.canContinue)
         view.continueFlow()
         #expect(settings.onboardingStep == .voiceTool)
         settings.setOnboardingStep(try #require(settings.onboardingPurpose.previousStep(before: .voiceTool)))
-        #expect(settings.onboardingStep == .audio)
-        #expect(view.canContinue)
-        settings.setOnboardingStep(try #require(settings.onboardingPurpose.previousStep(before: .audio)))
-        #expect(settings.onboardingStep == .controls)
-        #expect(OnboardingStep.visibleCases[2] == .remote)
-        #expect(OnboardingStep.visibleCases[3] == .controls)
-        #expect(OnboardingStep.visibleCases[4] == .audio)
+        #expect(settings.onboardingStep == .voiceTrigger)
+        #expect(settings.voiceKeyMode == .suggestedShortcut)
+        #expect(OnboardingStep.visibleCases[4] == .voiceTrigger)
     }
 }

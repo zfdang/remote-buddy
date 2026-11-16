@@ -29,11 +29,40 @@ extension BridgeAppModel {
             )
             bridge.start()
         }
-        startBluetoothDiscoveryIfNeeded()
+        synchronizeBluetoothDiscovery()
+    }
+
+    var shouldDiscoverNewBluetoothRemotes: Bool {
+        settings.remoteDeviceProfiles.isEmpty || !remoteDiscoveryRequests.isEmpty ||
+            (!settings.isOnboardingComplete &&
+                [.remoteAvailability, .remote, .controls].contains(settings.onboardingStep))
+    }
+
+    func beginRemoteDiscovery(requestID: UUID) {
+        remoteDiscoveryRequests.insert(requestID)
+        synchronizeBluetoothDiscovery()
+    }
+
+    func endRemoteDiscovery(requestID: UUID) {
+        remoteDiscoveryRequests.remove(requestID)
+        synchronizeBluetoothDiscovery()
+    }
+
+    func synchronizeBluetoothDiscovery() {
+        guard started else { return }
+        if shouldDiscoverNewBluetoothRemotes {
+            startBluetoothDiscoveryIfNeeded()
+        } else if let bridge = connections.discoveryBridge {
+            connections.discoveryBridge = nil
+            bridge.stop()
+            connections.states.removeValue(forKey: ObjectIdentifier(bridge))
+            refreshBluetoothPresentation()
+            AppLogger.shared.write("BLE DISCOVERY phase=completed result=stopped reason=no_discovery_demand")
+        }
     }
 
     func startBluetoothDiscoveryIfNeeded() {
-        guard started, connections.discoveryBridge == nil else { return }
+        guard started, shouldDiscoverNewBluetoothRemotes, connections.discoveryBridge == nil else { return }
         let bridge = BluetoothRemoteBridge(
             settings: settings,
             delegate: self,
@@ -90,8 +119,8 @@ extension BridgeAppModel {
             connections.bridges[identifier] = bridge
             attachedBridge = true
         }
-        let appliedTelemetry = applyPendingRemoteTelemetry(identifier: identifier, profileID: profileID)
-        if existingProfileID == nil || attachedBridge || appliedTelemetry {
+        let appliedStatus = applyPendingRemoteStatus(identifier: identifier, profileID: profileID)
+        if existingProfileID == nil || attachedBridge || appliedStatus {
             diagnosticLog(
                 "REMOTE PROFILE phase=completed result=persisted reason=verified_remote_path " +
                     "created=\(existingProfileID == nil)"
@@ -101,7 +130,7 @@ extension BridgeAppModel {
     }
 
     @discardableResult
-    private func applyPendingRemoteTelemetry(identifier: UUID, profileID: UUID) -> Bool {
+    private func applyPendingRemoteStatus(identifier: UUID, profileID: UUID) -> Bool {
         let hadBattery = pendingRemoteBatteryLevels[identifier] != nil
         let hadPower = pendingRemotePowerStates[identifier] != nil
         let hadModel = pendingRemoteModels[identifier] != nil

@@ -5,6 +5,13 @@ enum AppLinks {
         string: "https://github.com/zfdang/remote-buddy"
     )!
     static let githubReleases = URL(string: "https://github.com/zfdang/remote-buddy/releases")!
+    static let githubReleasesLatest = URL(string: "https://github.com/zfdang/remote-buddy/releases/latest")!
+    static let chineseDownloads = URL(string: "https://remote.zfdang.com/downloads/")!
+    static let englishDownloads = URL(string: "https://remote.zfdang.com/downloads/index.en.html")!
+
+    static func downloads(for locale: Locale) -> URL {
+        locale.identifier.lowercased().hasPrefix("zh") ? chineseDownloads : englishDownloads
+    }
     static let chineseWebsite = URL(string: "https://remote.zfdang.com/")!
     static let englishWebsite = URL(
         string: "https://remote.zfdang.com/index.en.html"
@@ -20,6 +27,12 @@ enum AppLinks {
     static let voiceBuddyEnglishWebsite = URL(
         string: "https://myvoicebuddy.com/en.html"
     )!
+
+    static func devices(for locale: Locale) -> URL {
+        URL(string: locale.identifier.lowercased().hasPrefix("zh")
+            ? "https://remote.zfdang.com/device.html"
+            : "https://remote.zfdang.com/device_en.html")!
+    }
 
     static func website(for locale: Locale) -> URL {
         locale.identifier.lowercased().hasPrefix("zh")

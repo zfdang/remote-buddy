@@ -423,4 +423,52 @@ struct UpdateDialogTests {
         }
         #expect(content.actionButtons.last?.keyEquivalent == "\r")
     }
+
+    @Test func fallbackErrorSuppressionKeepsDownloadingAndAutoConfirmsRetry() throws {
+        let suite = "update-fallback-driver-" + UUID().uuidString
+        defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
+        let loc = try localization(suite)
+        let driver = LocalizedUpdateUserDriver(localization: loc, presentsWindows: false)
+
+        driver.prepareForFallbackDownload(autoConfirmVersion: "867")
+        var acks = 0
+        driver.showUpdaterError(NSError(domain: NSURLErrorDomain, code: NSURLErrorTimedOut)) {
+            acks += 1
+        }
+        #expect(acks == 1)
+        #expect(driver.title == loc.text("update.dialog.downloading"))
+        // Sparkle's abort path calls dismissUpdateInstallation inside acknowledgement; fallback suppresses it once.
+        driver.dismissUpdateInstallation()
+
+        var cancellationCalls = 0
+        driver.showUserInitiatedUpdateCheck { cancellationCalls += 1 }
+        #expect(driver.title == loc.text("update.dialog.downloading"))
+        #expect(cancellationCalls == 0)
+
+        var readyChoices: [SPUUserUpdateChoice] = []
+        driver.showReady(toInstallAndRelaunch: { readyChoices.append($0) })
+        #expect(driver.title == loc.text("update.dialog.ready"))
+
+        // Cycle 2 matching found update auto-confirms .install and arms installAndRelaunchWhenReady.
+        var foundChoices: [SPUUserUpdateChoice] = []
+        driver.showUpdateFound(UpdateDialogVersion(version: "v26-11-15.867", commitCount: "867")) {
+            foundChoices.append($0)
+        }
+        #expect(foundChoices == [.install])
+        #expect(driver.title == loc.text("update.dialog.downloading"))
+
+        driver.showReady(toInstallAndRelaunch: { readyChoices.append($0) })
+        #expect(readyChoices == [.install])
+
+        // If a retry aborts during appcast fetch before showUpdateFound, the error is shown instead of suppressed.
+        driver.prepareForFallbackDownload(autoConfirmVersion: "868")
+        driver.showUpdaterError(NSError(domain: NSURLErrorDomain, code: NSURLErrorTimedOut)) { acks += 1 }
+        driver.dismissUpdateInstallation()
+        var retryCancelCalls = 0
+        driver.showUserInitiatedUpdateCheck { retryCancelCalls += 1 }
+        #expect(retryCancelCalls == 0)
+        driver.showUpdaterError(NSError(domain: NSURLErrorDomain, code: NSURLErrorCannotConnectToHost)) { acks += 1 }
+        #expect(driver.title == loc.text("update.dialog.error"))
+        driver.dismissUpdateInstallation()
+    }
 }

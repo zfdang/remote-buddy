@@ -32,6 +32,9 @@ final class LocalizedUpdateUserDriver: NSObject, SPUUserDriver, NSWindowDelegate
     private var isPresented = false
     private var installAndRelaunchWhenReady = false
     private var candidateVersion: UpdateDialogVersion?
+    private var fallbackAutoConfirmVersion: String?
+    private var suppressNextErrorForFallback = false
+    private var suppressNextDismissForFallback = false
     private var actions: [Action] = []
     private var closeActionIndex: Int?
     private var detailArguments: [String] = []
@@ -164,7 +167,10 @@ final class LocalizedUpdateUserDriver: NSObject, SPUUserDriver, NSWindowDelegate
     func performAction(at index: Int) {
         guard actions.indices.contains(index) else { return }
         let action = actions[index]
-        if action.completes { dismissUpdateInstallation() }
+        if action.completes {
+            clearFallbackState()
+            dismissUpdateInstallation()
+        }
         action.handler()
     }
 
@@ -197,15 +203,48 @@ final class LocalizedUpdateUserDriver: NSObject, SPUUserDriver, NSWindowDelegate
         ])
     }
 
+    func prepareForFallbackDownload(autoConfirmVersion version: String) {
+        fallbackAutoConfirmVersion = version
+        suppressNextErrorForFallback = true
+        suppressNextDismissForFallback = true
+    }
+
+    func clearFallbackState() {
+        fallbackAutoConfirmVersion = nil
+        suppressNextErrorForFallback = false
+        suppressNextDismissForFallback = false
+    }
+
     func showUserInitiatedUpdateCheck(cancellation: @escaping () -> Void) {
         installAndRelaunchWhenReady = false
+        suppressNextErrorForFallback = false
+        suppressNextDismissForFallback = false
+        if fallbackAutoConfirmVersion != nil {
+            present("update.dialog.downloading", progress: -1, closeActionIndex: 0, activate: false,
+                    actions: [Action(key: "common.action.cancel", completes: true, handler: cancellation)])
+            return
+        }
         candidateVersion = nil
         present("update.dialog.checking", progress: -1, closeActionIndex: 0,
                 actions: [Action(key: "common.action.cancel", completes: true, handler: cancellation)])
     }
 
     func showUpdateFound(with appcastItem: SUAppcastItem, state: SPUUserUpdateState, reply: @escaping (SPUUserUpdateChoice) -> Void) {
-        showAvailableUpdate(UpdateDialogVersion(version: appcastItem.displayVersionString, commitCount: appcastItem.versionString), reply: reply)
+        showUpdateFound(
+            UpdateDialogVersion(version: appcastItem.displayVersionString, commitCount: appcastItem.versionString),
+            reply: reply
+        )
+    }
+
+    func showUpdateFound(_ version: UpdateDialogVersion, reply: @escaping (SPUUserUpdateChoice) -> Void) {
+        if fallbackAutoConfirmVersion == version.commitCount {
+            clearFallbackState()
+            candidateVersion = version
+            beginDownloadAfterInstallChoice(reply: reply)
+            return
+        }
+        clearFallbackState()
+        showAvailableUpdate(version, reply: reply)
     }
 
     func showAvailableUpdate(_ version: UpdateDialogVersion, reply: @escaping (SPUUserUpdateChoice) -> Void) {
@@ -216,16 +255,19 @@ final class LocalizedUpdateUserDriver: NSObject, SPUUserDriver, NSWindowDelegate
             Action(key: "update.dialog.later", completes: true) { reply(.dismiss) },
             Action(key: "update.dialog.skip", completes: true) { reply(.skip) },
             Action(key: "update.dialog.install", completes: false) { [weak self] in
-                // The first confirmation explicitly includes restarting. Carry
-                // that choice through download and system authorization only.
-                guard let self else { return }
-                self.installAndRelaunchWhenReady = true
-                self.expectedLength = 0
-                self.receivedLength = 0
-                self.present("update.dialog.downloading", progress: -1, activate: false)
-                reply(.install)
+                self?.beginDownloadAfterInstallChoice(reply: reply)
             },
         ])
+    }
+
+    private func beginDownloadAfterInstallChoice(reply: @escaping (SPUUserUpdateChoice) -> Void) {
+        // The first confirmation explicitly includes restarting. Carry
+        // that choice through download and system authorization only.
+        installAndRelaunchWhenReady = true
+        expectedLength = 0
+        receivedLength = 0
+        present("update.dialog.downloading", progress: -1, activate: false)
+        reply(.install)
     }
 
     func showUpdateReleaseNotes(with downloadData: SPUDownloadData) {}
@@ -242,6 +284,7 @@ final class LocalizedUpdateUserDriver: NSObject, SPUUserDriver, NSWindowDelegate
     }
 
     func showNoUpdate(latestVersion: UpdateDialogVersion?, acknowledgement: @escaping () -> Void) {
+        clearFallbackState()
         candidateVersion = latestVersion
         let isCurrent = candidateVersion.map {
             $0.commitCount == currentVersion.commitCount &&
@@ -253,6 +296,13 @@ final class LocalizedUpdateUserDriver: NSObject, SPUUserDriver, NSWindowDelegate
     }
 
     func showUpdaterError(_ error: Error, acknowledgement: @escaping () -> Void) {
+        if suppressNextErrorForFallback {
+            suppressNextErrorForFallback = false
+            present("update.dialog.downloading", progress: -1, activate: false)
+            acknowledgement()
+            return
+        }
+        clearFallbackState()
         installAndRelaunchWhenReady = false
         let error = error as NSError
         present("update.dialog.error", diagnostic: LocalizedMessage("update.dialog.error_code",
@@ -330,6 +380,11 @@ final class LocalizedUpdateUserDriver: NSObject, SPUUserDriver, NSWindowDelegate
     }
 
     func dismissUpdateInstallation() {
+        if suppressNextDismissForFallback {
+            suppressNextDismissForFallback = false
+            return
+        }
+        clearFallbackState()
         installAndRelaunchWhenReady = false
         isPresented = false
         actions = []

@@ -50,7 +50,7 @@ struct ApplicationTerminationTests {
     @Test func quitAllowsNormalDrainFallbackBeforeItsFinalDeadline() {
         let clock = ControlledTestScheduler()
         let session = VoiceFnTapSessionController(schedule: clock.voiceSchedule,
-            setFunctionKeyPressed: { _ in true }, enqueueAudio: { _ in },
+            setTriggerPressed: { _ in true }, enqueueAudio: { _ in },
             drainAudio: { _, _ in }, onFailure: { _ in Issue.record("Unexpected failure") },
             pendingPlaybackDuration: { 5 })
         session.setEnabled(true)

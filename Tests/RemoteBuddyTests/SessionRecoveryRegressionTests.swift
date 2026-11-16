@@ -16,7 +16,10 @@ private final class LifecycleLoginController: LoginItemControlling {
 @Suite("Session recovery regressions")
 @MainActor
 struct SessionRecoveryRegressionTests {
-    private func defaults() -> UserDefaults { UserDefaults(suiteName: "lifecycle-" + UUID().uuidString)! }
+    private func makeDefaults() -> (defaults: UserDefaults, suite: String) {
+        let suite = "lifecycle-" + UUID().uuidString
+        return (UserDefaults(suiteName: suite)!, suite)
+    }
 
     @Test func releaseRetriesWithoutAnotherVoiceEventAndOnlyThenCompletes() {
         let clock = ControlledTestScheduler()
@@ -24,7 +27,7 @@ struct SessionRecoveryRegressionTests {
         var completions = 0
         let session = VoiceFnTapSessionController(startDelay: 0, tapDuration: 0.1,
             schedule: clock.voiceSchedule,
-            setFunctionKeyPressed: { down in down || canRelease }, enqueueAudio: { _ in },
+            setTriggerPressed: { down in down || canRelease }, enqueueAudio: { _ in },
             drainAudio: { _, done in done() }, onFailure: { _ in })
         session.setEnabled(true)
         #expect(session.startVoice())
@@ -45,7 +48,7 @@ struct SessionRecoveryRegressionTests {
         var canRelease = false
         let session = VoiceFnTapSessionController(startDelay: 0, tapDuration: 0.1,
             schedule: clock.voiceSchedule,
-            setFunctionKeyPressed: { down in down || canRelease }, enqueueAudio: { _ in },
+            setTriggerPressed: { down in down || canRelease }, enqueueAudio: { _ in },
             drainAudio: { _, done in done() }, onFailure: { _ in })
         session.setEnabled(true)
         #expect(session.startVoice())
@@ -79,7 +82,7 @@ struct SessionRecoveryRegressionTests {
         var allowRelease = false
         var answers: [Bool] = []
         let session = VoiceFnTapSessionController(startDelay: 0, tapDuration: 0.1,
-            schedule: clock.voiceSchedule, setFunctionKeyPressed: { $0 || allowRelease },
+            schedule: clock.voiceSchedule, setTriggerPressed: { $0 || allowRelease },
             enqueueAudio: { _ in }, drainAudio: { _, completion in completion() }, onFailure: { _ in })
         session.setEnabled(true)
         #expect(session.startVoice())
@@ -106,7 +109,7 @@ struct SessionRecoveryRegressionTests {
         var allowRelease = false
         var answers: [Bool] = []
         let session = VoiceFnTapSessionController(startDelay: 0, tapDuration: 0.1,
-            schedule: clock.voiceSchedule, setFunctionKeyPressed: { $0 || allowRelease },
+            schedule: clock.voiceSchedule, setTriggerPressed: { $0 || allowRelease },
             enqueueAudio: { _ in }, drainAudio: { _, done in done() }, onFailure: { _ in })
         session.setEnabled(true)
         #expect(session.startVoice())
@@ -126,7 +129,9 @@ struct SessionRecoveryRegressionTests {
 
     @Test func unmappedHIDUsageDoesNotAllocateRecoveryTimer() {
         let clock = ControlledTestScheduler()
-        let monitor = HIDRemoteMonitor(settings: AppSettings(defaults: defaults()),
+        let (prefs, suite) = makeDefaults()
+        defer { prefs.removePersistentDomain(forName: suite) }
+        let monitor = HIDRemoteMonitor(settings: AppSettings(defaults: prefs),
             profileID: nil, scheduler: clock, runtimePermissions: { true },
             actionPerformer: { _, _, _ in true }, diagnosticLogger: { _ in })
         monitor.connectSimulatedDevice(fingerprint: "test", profileID: UUID())
@@ -138,7 +143,8 @@ struct SessionRecoveryRegressionTests {
     @Test func nonRepeatingGestureExpiresAfterSilence() {
         let action = ButtonAction.commandCopy
         let clock = ControlledTestScheduler()
-        let prefs = defaults()
+        let (prefs, suite) = makeDefaults()
+        defer { prefs.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: prefs)
         settings.customMappingEnabled = true
         settings.setAction(action, for: .right)
@@ -165,7 +171,9 @@ struct SessionRecoveryRegressionTests {
     @Test(arguments: [ButtonAction.deleteBackward, .arrowUp])
     func silentRepeatingHoldSurvivesWatchdogAndStopsAtHardCeiling(action: ButtonAction) {
         let clock = ControlledTestScheduler()
-        let settings = AppSettings(defaults: defaults())
+        let (prefs, suite) = makeDefaults()
+        defer { prefs.removePersistentDomain(forName: suite) }
+        let settings = AppSettings(defaults: prefs)
         settings.customMappingEnabled = true
         settings.setAction(action, for: .power)
         settings.setAction(.repeatSingleClick, for: .power, trigger: .longPress)
@@ -173,6 +181,7 @@ struct SessionRecoveryRegressionTests {
         var actions = 0, releases = 0
         let monitor = HIDRemoteMonitor(settings: settings, profileID: profile, scheduler: clock,
             runtimePermissions: { true }, actionPerformer: { _, _, _ in actions += 1; return true },
+            frontmostBundleIdentifier: { "test.editor" },
             diagnosticLogger: { _ in })
         monitor.onRuntimeButton = { _, _, phase in
             if phase == .release { releases += 1 }
@@ -202,7 +211,9 @@ struct SessionRecoveryRegressionTests {
 
     @Test func silentNativePassthroughSurvivesWatchdogAndReleasesAtCeiling() {
         let clock = ControlledTestScheduler()
-        let settings = AppSettings(defaults: defaults())
+        let (prefs, suite) = makeDefaults()
+        defer { prefs.removePersistentDomain(forName: suite) }
+        let settings = AppSettings(defaults: prefs)
         settings.customMappingEnabled = true
         let profile = UUID()
         var releases = 0, keyUps = 0
@@ -229,14 +240,17 @@ struct SessionRecoveryRegressionTests {
 
     @Test func stoppedRepeatRecoversOnNextSilenceCheck() {
         let clock = ControlledTestScheduler()
-        let settings = AppSettings(defaults: defaults())
+        let (prefs, suite) = makeDefaults()
+        defer { prefs.removePersistentDomain(forName: suite) }
+        let settings = AppSettings(defaults: prefs)
         settings.customMappingEnabled = true
         settings.setAction(.arrowUp, for: .power)
         settings.setAction(.repeatSingleClick, for: .power, trigger: .longPress)
         let profile = UUID()
         var failActions = false, releases = 0
         let monitor = HIDRemoteMonitor(settings: settings, profileID: profile, scheduler: clock,
-            runtimePermissions: { true }, actionPerformer: { _, _, _ in !failActions }, diagnosticLogger: { _ in })
+            runtimePermissions: { true }, actionPerformer: { _, _, _ in !failActions },
+            frontmostBundleIdentifier: { "test.editor" }, diagnosticLogger: { _ in })
         monitor.onRuntimeButton = { _, _, phase in
             if phase == .release { releases += 1 }; return false
         }
@@ -260,7 +274,8 @@ struct SessionRecoveryRegressionTests {
 
     @Test func repeatedReportsWhileHeldDoNotInterruptHeldButton() {
         let clock = ControlledTestScheduler()
-        let prefs = defaults()
+        let (prefs, suite) = makeDefaults()
+        defer { prefs.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: prefs)
         settings.customMappingEnabled = true
         let profile = UUID()
@@ -295,7 +310,8 @@ struct SessionRecoveryRegressionTests {
 
     @Test func staleUsageExpiryTimerDoesNotCancelSubsequentPressToken() {
         let clock = ControlledTestScheduler()
-        let prefs = defaults()
+        let (prefs, suite) = makeDefaults()
+        defer { prefs.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: prefs)
         settings.customMappingEnabled = true
         let profile = UUID()
@@ -342,8 +358,10 @@ struct SessionRecoveryRegressionTests {
     }
 
     @Test func hidMonitorContextWeakBoxGuardsAgainstDeallocatedMonitorCallback() {
+        let (prefs, suite) = makeDefaults()
+        defer { prefs.removePersistentDomain(forName: suite) }
         var monitor: HIDRemoteMonitor? = HIDRemoteMonitor(
-            settings: AppSettings(defaults: defaults()),
+            settings: AppSettings(defaults: prefs),
             profileID: UUID(),
             scheduler: ControlledTestScheduler(),
             runtimePermissions: { true },
@@ -361,7 +379,7 @@ struct SessionRecoveryRegressionTests {
         let clock = ControlledTestScheduler()
         var logs: [String] = []
         let session = VoiceFnTapSessionController(startDelay: 0,
-            schedule: clock.voiceSchedule, setFunctionKeyPressed: { _ in true },
+            schedule: clock.voiceSchedule, setTriggerPressed: { _ in true },
             enqueueAudio: { _ in }, drainAudio: { _, done in done() },
             onFailure: { _ in }, logger: { logs.append($0) })
         #expect(!session.startVoice())
@@ -378,7 +396,9 @@ struct SessionRecoveryRegressionTests {
 
     @Test func manualUpdateCheckCancelsInformationDeadlineAndWaitsForUpdater() {
         let clock = ControlledTestScheduler()
-        let store = UpdateInformationStore(userDefaults: defaults(), checkingTimeout: 1, schedule: clock.voiceSchedule)
+        let (prefs, suite) = makeDefaults()
+        defer { prefs.removePersistentDomain(forName: suite) }
+        let store = UpdateInformationStore(userDefaults: prefs, checkingTimeout: 1, schedule: clock.voiceSchedule)
         store.beginChecking()
         clock.advance(to: 500)
         store.beginChecking(timeoutEnabled: false)
@@ -404,7 +424,7 @@ struct SessionRecoveryRegressionTests {
         var events: [Bool] = []
         var session: VoiceFnTapSessionController? = VoiceFnTapSessionController(startDelay: 0,
             schedule: clock.voiceSchedule,
-            setFunctionKeyPressed: { events.append($0); return true }, enqueueAudio: { _ in },
+            setTriggerPressed: { events.append($0); return true }, enqueueAudio: { _ in },
             drainAudio: { _, done in done() }, onFailure: { _ in })
         weak let observed = session
         session!.setEnabled(true)
@@ -420,7 +440,8 @@ struct SessionRecoveryRegressionTests {
 
     @Test func missingButtonReleaseDoesNotLatchForever() {
         let clock = ControlledTestScheduler()
-        let prefs = defaults()
+        let (prefs, suite) = makeDefaults()
+        defer { prefs.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: prefs)
         settings.setAction(.disabled, for: .power, trigger: .longPress)
         let monitor = HIDRemoteMonitor(settings: settings, scheduler: clock,
@@ -436,7 +457,8 @@ struct SessionRecoveryRegressionTests {
 
     @Test func continuousHeldReportsSurviveBeyondEightSecondsAndRecoverAfterLossOfSignal() {
         let clock = ControlledTestScheduler()
-        let prefs = defaults()
+        let (prefs, suite) = makeDefaults()
+        defer { prefs.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: prefs)
         settings.customMappingEnabled = true
         var releaseCount = 0
@@ -474,7 +496,8 @@ struct SessionRecoveryRegressionTests {
 
     @Test func continuousHeldReportsSurviveBeyondEightSecondsAndReleasePromptly() {
         let clock = ControlledTestScheduler()
-        let prefs = defaults()
+        let (prefs, suite) = makeDefaults()
+        defer { prefs.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: prefs)
         settings.customMappingEnabled = true
         var releaseCount = 0
@@ -513,7 +536,8 @@ struct SessionRecoveryRegressionTests {
 
     @Test func pressAfterLostReleaseRecoveryIsAcceptedPromptlyWithoutIntermediateReleaseReport() {
         let clock = ControlledTestScheduler()
-        let prefs = defaults()
+        let (prefs, suite) = makeDefaults()
+        defer { prefs.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: prefs)
         settings.customMappingEnabled = true
         var pressCount = 0
@@ -558,7 +582,8 @@ struct SessionRecoveryRegressionTests {
 
     @Test func continuousHeldReportsExceedingHardCeilingAreForceReleasedAndSuppressed() {
         let clock = ControlledTestScheduler()
-        let prefs = defaults()
+        let (prefs, suite) = makeDefaults()
+        defer { prefs.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: prefs)
         settings.customMappingEnabled = true
         var pressCount = 0
@@ -616,7 +641,8 @@ struct SessionRecoveryRegressionTests {
 
     @Test func hardCeilingSuppressionExpiresAfterSilenceEvenIfReleaseReportWasLost() {
         let clock = ControlledTestScheduler()
-        let prefs = defaults()
+        let (prefs, suite) = makeDefaults()
+        defer { prefs.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: prefs)
         settings.customMappingEnabled = true
         var pressCount = 0
@@ -663,7 +689,8 @@ struct SessionRecoveryRegressionTests {
 
     @Test func backOnlyModeSustainsContinuousHoldAndRecoversAfterSilence() {
         let clock = ControlledTestScheduler()
-        let prefs = defaults()
+        let (prefs, suite) = makeDefaults()
+        defer { prefs.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: prefs)
         settings.customMappingEnabled = false
         var performedActions: [ConfiguredButtonAction] = []
@@ -725,7 +752,8 @@ struct SessionRecoveryRegressionTests {
 
     @Test func rawPressAfterExplicitReleaseIsAcceptedPromptly() {
         let clock = ControlledTestScheduler()
-        let prefs = defaults()
+        let (prefs, suite) = makeDefaults()
+        defer { prefs.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: prefs)
         settings.setAction(.disabled, for: .back, trigger: .longPress)
         settings.setAction(.disabled, for: .back, trigger: .doubleClick)
@@ -766,7 +794,9 @@ struct SessionRecoveryRegressionTests {
 
     @Test func abandonedUpdateCheckExpiresButCompletedResultDoesNot() {
         let clock = ControlledTestScheduler()
-        let store = UpdateInformationStore(userDefaults: defaults(), checkingTimeout: 1, schedule: clock.voiceSchedule)
+        let (prefs, suite) = makeDefaults()
+        defer { prefs.removePersistentDomain(forName: suite) }
+        let store = UpdateInformationStore(userDefaults: prefs, checkingTimeout: 1, schedule: clock.voiceSchedule)
         store.beginChecking()
         clock.advance(to: 1000)
         #expect(store.state == .unavailable)
@@ -781,14 +811,16 @@ struct SessionRecoveryRegressionTests {
     }
 
     @Test func sparkleLaunchAloneDoesNotSkipFirstUseWizard() {
-        let prefs = defaults()
+        let (prefs, suite) = makeDefaults()
+        defer { prefs.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: prefs)
         _ = settings.recordLaunchAndDetectCompletedUpdate(currentBuild: "73", sparkleHadLaunchedBefore: true)
         #expect(!settings.isOnboardingComplete)
     }
 
     @Test func savedPreferencesDoNotBypassIncompleteOnboarding() {
-        let prefs = defaults()
+        let (prefs, suite) = makeDefaults()
+        defer { prefs.removePersistentDomain(forName: suite) }
         prefs.set(10.0, forKey: "gainDB")
         let settings = AppSettings(defaults: prefs)
         _ = settings.recordLaunchAndDetectCompletedUpdate(currentBuild: "73", sparkleHadLaunchedBefore: false)
@@ -807,4 +839,97 @@ struct SessionRecoveryRegressionTests {
         if case .immediate = coordinator(protected: false, text: "Search").waitUntilReady(completion: { _ in }) {} else { Issue.record("Explicit search typing rejected") }
     }
 
+    @Test func staleDoubleClickAndLongPressTimerTokensDoNotAffectSubsequentPress() throws {
+        let clock = ControlledTestScheduler()
+        let (prefs, suite) = makeDefaults()
+        defer { prefs.removePersistentDomain(forName: suite) }
+        let settings = AppSettings(defaults: prefs)
+        settings.customMappingEnabled = true
+        let profile = UUID()
+        settings.setBaseBinding(.init(action: .arrowLeft, shortcut: nil), for: .ok, trigger: .singleClick, profileID: profile)
+        settings.setBaseBinding(.init(action: .arrowRight, shortcut: nil), for: .ok, trigger: .doubleClick, profileID: profile)
+        settings.setBaseBinding(.init(action: .commandReturn, shortcut: nil), for: .ok, trigger: .longPress, profileID: profile)
+
+        var performed: [ButtonAction] = []
+        let monitor = HIDRemoteMonitor(
+            settings: settings,
+            profileID: profile,
+            scheduler: clock,
+            runtimePermissions: { true },
+            actionPerformer: { _, _, configured in
+                performed.append(configured.action)
+                return true
+            },
+            diagnosticLogger: { _ in }
+        )
+        monitor.connectSimulatedDevice(fingerprint: "gesture-token-test", profileID: profile)
+        let usage = RemoteButton.ok.hidUsage
+        let press = Data([UInt8(usage & 255), UInt8(usage >> 8)])
+        let release = Data([0, 0])
+
+        // Press #1 at t=0 -> long-press task scheduled at t=550.
+        monitor.handleSimulatedReport(reportID: 1, data: press)
+        let firstLongPressTask = try #require(
+            clock.tasks.first(where: { $0.due == HIDRemoteTiming.longPressMilliseconds })
+        )
+
+        // Release at t=100 -> double-click task scheduled at t=400.
+        clock.advance(to: 100)
+        monitor.handleSimulatedReport(reportID: 1, data: release)
+        let firstDoubleClickTask = try #require(
+            clock.tasks.first(where: { $0.due == 100 + HIDRemoteTiming.doubleClickMilliseconds })
+        )
+
+        // Press #2 at t=200 -> issues new tokens. Even if the cancelled first-press tasks execute manually, they are ignored.
+        clock.advance(to: 200)
+        monitor.handleSimulatedReport(reportID: 1, data: press)
+        firstLongPressTask.fire(includingCancelled: true)
+        firstDoubleClickTask.fire(includingCancelled: true)
+        #expect(performed.isEmpty)
+
+        // Advance past t=550 (first long-press time) to t=650: second press has only been held 450ms -> must NOT fire yet.
+        clock.advance(to: 650)
+        #expect(performed.isEmpty)
+
+        // Advance to t=750 (200 + 550): second press triggers longPress cleanly.
+        clock.advance(to: 750)
+        #expect(performed == [.commandReturn])
+        monitor.handleSimulatedReport(reportID: 1, data: release)
+        monitor.disconnectSimulatedDevice()
+    }
+
+    @Test func rawGesturePathLogsSecondaryTriggerAndProfileBindingDiagnostics() throws {
+        let clock = ControlledTestScheduler()
+        let (prefs, suite) = makeDefaults()
+        defer { prefs.removePersistentDomain(forName: suite) }
+        let settings = AppSettings(defaults: prefs)
+        settings.customMappingEnabled = true
+        let profile = UUID()
+        settings.setBaseBinding(.init(action: .returnKey, shortcut: nil), for: .ok, trigger: .singleClick, profileID: profile)
+        settings.setBaseBinding(.disabled, for: .ok, trigger: .doubleClick, profileID: profile)
+        settings.setBaseBinding(.disabled, for: .ok, trigger: .longPress, profileID: profile)
+
+        var logs: [String] = []
+        let monitor = HIDRemoteMonitor(
+            settings: settings,
+            profileID: profile,
+            scheduler: clock,
+            runtimePermissions: { true },
+            actionPerformer: { _, _, _ in true },
+            diagnosticLogger: { logs.append($0) }
+        )
+        monitor.connectSimulatedDevice(fingerprint: "gesture-raw-log-test", profileID: profile)
+        let usage = RemoteButton.ok.hidUsage
+        monitor.handleSimulatedReport(reportID: 1, data: Data([UInt8(usage & 255), UInt8(usage >> 8)]))
+        monitor.handleSimulatedReport(reportID: 1, data: Data([0, 0]))
+        monitor.disconnectSimulatedDevice()
+
+        #expect(logs.contains {
+            $0.contains("HID GESTURE button=ok trigger=singleClick path=raw") &&
+                $0.contains("long_press=disabled") &&
+                $0.contains("double_click=disabled") &&
+                $0.contains("hold_repeat=false") &&
+                $0.contains("preflight_bound=true")
+        })
+    }
 }

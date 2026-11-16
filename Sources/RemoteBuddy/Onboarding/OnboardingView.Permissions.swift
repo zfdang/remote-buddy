@@ -41,71 +41,8 @@ extension OnboardingView {
                     action: requestAccessibilityPermission
                 )
             }
+            microphoneSetupContent
 
-        }
-    }
-
-    private var shortcutLearningCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(verbatim: localization.text("onboarding.shortcut_learning.title"))
-                .font(.system(size: 14, weight: .semibold))
-            Text(verbatim: localization.text("onboarding.shortcut_learning.detail"))
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            if VoiceToolAdapterProfile.profile(
-                for: settings.onboardingVoiceTool
-            ).supportedModes.count > 1 {
-                gestureModeChoice
-            }
-
-            if let binding = settings.stagedVoiceToolBinding,
-               binding.source == .userLearned {
-                Label(
-                    LocalizedMessage(
-                        "onboarding.shortcut_learning.captured",
-                        arguments: [localization.text(binding.shortcut.localizationKey)]
-                    ).text(using: localization),
-                    systemImage: "checkmark.circle.fill"
-                )
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(Color.green)
-            } else {
-                onboardingActionButton(id: "shortcut.start") {
-                    shortcutCaptureErrorKey = nil
-                    isCapturingVoiceShortcut = true
-                } label: {
-                    Text(verbatim: localization.text(
-                        isCapturingVoiceShortcut
-                            ? "onboarding.shortcut_learning.waiting"
-                            : "onboarding.shortcut_learning.start"
-                    ))
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(!accessibilityGranted || !inputMonitoringGranted)
-            }
-
-            if let shortcutCaptureErrorKey {
-                Text(localization.text(shortcutCaptureErrorKey))
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.red)
-            }
-
-            if isCapturingVoiceShortcut {
-                ShortcutCaptureView(
-                    onCapture: handleLearnedShortcut,
-                    onFailure: handleShortcutCaptureFailure
-                )
-                .frame(width: 1, height: 1)
-            }
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.accentColor.opacity(0.07), in: RoundedRectangle(cornerRadius: 12))
-        .overlay {
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.accentColor.opacity(0.18), lineWidth: 1)
         }
     }
 

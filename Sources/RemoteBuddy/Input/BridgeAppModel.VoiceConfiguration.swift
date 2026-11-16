@@ -6,16 +6,68 @@ import CoreBluetooth
 import Foundation
 
 extension BridgeAppModel {
-    /// Fn-tap pre-roll covers one shared four-second focus/destination budget.
+    func makeVoiceFnTapSession(
+        schedule: @escaping OperationScheduler = ScheduledOperation.mainQueue
+    ) -> VoiceFnTapSessionController {
+        VoiceFnTapSessionController(
+            startTapCount: { [weak self] in
+                self?.settings.onboardingVoiceTool.functionKeyStartTapCount ?? 1
+            },
+            schedule: schedule,
+            destinationReadiness: { [weak self] completion in
+                self?.prepareIntegratedVoiceInputDestination(completion: completion) ?? .immediate
+            },
+            setTriggerPressed: { [weak self, trigger = voiceTapTrigger] pressed in
+                let submitted = trigger.setPressed(pressed)
+                if pressed {
+                    self?.completeApplicationIntegrationVoiceTrigger(started: submitted)
+                    if submitted { self?.preferredInputSourceMonitor.markVoiceTriggerSubmitted() }
+                }
+                return submitted
+            },
+            enqueueAudio: { [weak self] samples in
+                self?.enqueueVoiceFnTapAudio(samples)
+            },
+            drainAudio: { [weak self] operationID, completion in
+                guard let self else {
+                    completion()
+                    return
+                }
+                self.audio.output.endSessionAfterDraining(
+                    source: "voice_fn_tap",
+                    operationID: operationID,
+                    maximumDelay: self.audio.output.pendingPlaybackDuration + 0.75
+                ) { outcome in
+                    AppLogger.shared.write(
+                        "VOICE FN TAP playback_stop operation_id=\(operationID) " +
+                            "phase=completed result=\(outcome.rawValue)"
+                    )
+                    completion()
+                }
+            },
+            onFailure: { [weak self] failure in
+                self?.handleVoiceFnTapFailure(failure)
+            },
+            enqueuePreRollAudio: { [weak self] in self?.enqueueVoiceFnTapAudio($0, isPreRoll: true) },
+            pendingPlaybackDuration: { [weak self] in self?.audio.output.pendingPlaybackDuration ?? 0 },
+            logger: { AppLogger.shared.write($0) },
+            onIdle: { [weak self, trigger = voiceTapTrigger] in
+                trigger.reset()
+                self?.preferredInputSourceMonitor.endVoiceSession()
+                self?.flushPendingVoiceToolMappingRefresh()
+                self?.releaseVirtualAudioOutputIfUnused(reason: "voice_fn_tap_idle")
+            }
+        )
+    }
+
+
+    /// Tap pre-roll covers one shared four-second focus/input-source/destination budget.
     /// Cancelling the returned wait is silent because the Fn session owns stop.
     func prepareIntegratedVoiceInputDestination(
         completion: @escaping (VoiceInputDestinationWaitResult) -> Void,
         schedule: @escaping OperationScheduler = ScheduledOperation.mainQueue
     ) -> VoiceInputDestinationWait {
         clearApplicationIntegrationStatus()
-        guard !settings.enabledApplicationIntegrations.isEmpty else {
-            return voiceInputDestinationCoordinator.waitUntilReady(completion: completion)
-        }
         let report: (VoiceInputDestinationWaitResult) -> Void = { [weak self] result in
             if case let .cancelled(reason) = result {
                 self?.recordApplicationIntegrationStatus(.cancelled(reason))
@@ -25,12 +77,34 @@ extension BridgeAppModel {
         let sequence = VoiceInputPreparationSequence(schedule: schedule)
         let wait = sequence.start(stages: [
             { [weak self] done in self?.applicationIntegrationController.prepareForVoiceInput(completion: done) ?? .cancelled(.superseded) },
+            { [weak self] done in self?.prepareTapInputSource(completion: done) ?? .cancelled(.superseded) },
             { [weak self] done in self?.voiceInputDestinationCoordinator.waitUntilReady(completion: done) ?? .cancelled(.superseded) },
         ], completion: report)
         if case let .cancelled(reason) = wait {
             recordApplicationIntegrationStatus(.cancelled(reason))
         }
         return wait
+    }
+
+    /// Adapt the source monitor's callback to a cancellable preparation stage.
+    /// Cancelling invalidates activation before any delayed completion can submit a key.
+    func prepareTapInputSource(
+        completion: @escaping (VoiceInputDestinationWaitResult) -> Void
+    ) -> VoiceInputDestinationWait {
+        var starting = true
+        var immediateResult: Bool?
+        preferredInputSourceMonitor.beginVoiceSession { ready in
+            if starting { immediateResult = ready }
+            else { completion(ready ? .ready : .cancelled(.actionFailed)) }
+        }
+        starting = false
+        if let immediateResult {
+            if !immediateResult { preferredInputSourceMonitor.endVoiceSession() }
+            return immediateResult ? .immediate : .cancelled(.actionFailed)
+        }
+        return .waiting(.mainQueueCancellation { [weak self] in
+            self?.preferredInputSourceMonitor.endVoiceSession()
+        })
     }
 
     // Main-queue lifecycle, like HID settings and the remote voice callbacks.
@@ -62,120 +136,23 @@ extension BridgeAppModel {
         flushPendingHIDServiceMappingRefreshIfNeeded(applyMappings: applyMappings)
     }
     var requiresOrderedVoiceFn: Bool {
-        (settings.voiceKeyMode == .function && !settings.voiceFnTapModeEnabled &&
+        (settings.effectiveVoiceKeyMode == .function && !settings.effectiveVoiceFnTapModeEnabled &&
             !settings.enabledApplicationIntegrations.isEmpty) || OrderedVoiceActivationPolicy.needsSoftwareFn(
-            mode: settings.voiceKeyMode,
-            fnTapEnabled: settings.voiceFnTapModeEnabled,
+            mode: settings.effectiveVoiceKeyMode,
+            fnTapEnabled: settings.effectiveVoiceFnTapModeEnabled,
             preferredInputSourceID: settings.onboardingVoiceTool.preferredInputSourceID
         )
     }
     /// Native Xiaomi services remain present when the selected card is a
     /// G9N9N. Their mapping follows the global trigger, not the selected family.
     var shouldNeutralizeNativeVoiceKey: Bool {
-        settings.voiceKeyMode != .function || settings.voiceFnTapModeEnabled || requiresOrderedVoiceFn
-    }
-
-    func setVoiceFnTapModeEnabled(_ enabled: Bool) {
-        guard settings.voiceKeyMode == .function else {
-            settings.voiceFnTapModeEnabled = false
-            return
-        }
-        if enabled {
-            enableVoiceFnTapMode()
-            return
-        }
-        settings.voiceFnTapModeEnabled = false
-        voiceFnTapSession.setEnabled(false) { [weak self] cleaned in
-            guard cleaned else { return }
-            self?.applyHIDSettings(restartSiriRemote: false)
-        }
+        settings.effectiveVoiceKeyMode != .function || settings.effectiveVoiceFnTapModeEnabled || requiresOrderedVoiceFn
     }
 
     var isVoiceConfigurationBusy: Bool {
         isStreaming || hasActiveVirtualAudioSource || voiceKeyLatch.isHeld ||
             voiceKeyActivationInProgress || voiceSession.pendingStart.identifier != nil ||
             voiceFnTapSession.requiresCleanupBeforeMapping || voiceKeyReleaseRetry != nil
-    }
-
-    func setVoiceKeyMode(_ mode: VoiceKeyMode) {
-        guard mode != settings.voiceKeyMode else { return }
-        let previousMode = settings.voiceKeyMode.rawValue
-        AppLogger.shared.write(
-            "VOICE KEY mode_change requested from=\(previousMode) to=\(mode.rawValue)"
-        )
-        guard !isStreaming else {
-            AppLogger.shared.write(
-                "VOICE KEY mode_change_rejected reason=voice_active requested=\(mode.rawValue)"
-            )
-            return
-        }
-
-        guard releaseVoiceKeyIfNeeded() else {
-            AppLogger.shared.write(
-                "VOICE KEY mode_change_rejected reason=release_failed requested=\(mode.rawValue)"
-            )
-            return
-        }
-        preferredInputSourceMonitor.endVoiceSession()
-        if mode != .function {
-            settings.voiceFnTapModeEnabled = false
-            voiceFnTapSession.setEnabled(false) { [weak self] cleaned in
-                guard cleaned else { return }
-                guard let self else { return }
-                self.settings.voiceKeyMode = mode
-                self.applyHIDSettings(restartSiriRemote: false)
-                AppLogger.shared.write(
-                    "VOICE KEY mode_change completed from=\(previousMode) to=\(mode.rawValue) result=applied"
-                )
-            }
-            return
-        }
-
-        settings.voiceKeyMode = .function
-        applyHIDSettings(restartSiriRemote: false)
-        AppLogger.shared.write(
-            "VOICE KEY mode_change completed from=\(previousMode) to=fn result=applied"
-        )
-    }
-
-    private func enableVoiceFnTapMode() {
-        guard KeyboardInjector.isAccessibilityTrusted else {
-            settings.voiceFnTapModeEnabled = false
-            requestNextHIDPermissionIfNeeded(voiceFnTapModeRequested: true)
-            applyHIDSettings(restartSiriRemote: false)
-            return
-        }
-
-        if settings.selectedRemoteProfile?.model.isATVVRemote == true {
-            settings.voiceFnTapModeEnabled = true
-            voiceFnTapSession.setEnabled(true)
-            startHIDMonitors(powerKeySuppressed: applyVoiceFunctionMapping(
-                neutralizeVoiceKey: shouldNeutralizeNativeVoiceKey))
-            return
-        }
-
-        var powerKeySuppressed = applyVoiceFunctionMapping(neutralizeVoiceKey: true)
-        guard voiceFunctionMapper.isVoiceKeyNeutralized else {
-            voiceFnTapSession.setEnabled(false)
-            if HIDMappingRecoveryPolicy.shouldPreserveFnTapPreferenceAfterMappingFailure(
-                hasMatchingServices: voiceFunctionMapper.hasMatchingServices
-            ) {
-                settings.voiceFnTapModeEnabled = true
-                AppLogger.shared.write(
-                    "VOICE FN TAP mode_pending_mapping reason=no_matching_service"
-                )
-                startHIDMonitors(powerKeySuppressed: powerKeySuppressed)
-                scheduleHIDMappingRecoveryIfNeeded(restartSiriRemote: false)
-                return
-            }
-            settings.voiceFnTapModeEnabled = false
-            powerKeySuppressed = applyVoiceFunctionMapping(neutralizeVoiceKey: false)
-            startHIDMonitors(powerKeySuppressed: powerKeySuppressed)
-            return
-        }
-        settings.voiceFnTapModeEnabled = true
-        voiceFnTapSession.setEnabled(true)
-        startHIDMonitors(powerKeySuppressed: powerKeySuppressed)
     }
 
     func handleVoiceFnTapFailure(_ failure: VoiceFnTapFailure) {
@@ -186,9 +163,13 @@ extension BridgeAppModel {
             return
         }
         AppLogger.shared.write("VOICE FN TAP failed reason=\(failure.rawValue) fallback=hardware_fn")
-        settings.voiceFnTapModeEnabled = false
+        if settings.isTestingVoiceTrigger {
+            settings.discardOnboardingVoiceTrial()
+        } else {
+            settings.voiceFnTapModeEnabled = false
+        }
         voiceFnTapSession.setEnabled(false)
-        applyHIDSettings(restartSiriRemote: false)
+        applyHIDSettings()
     }
 
     func requestNextHIDPermissionIfNeeded(
@@ -197,8 +178,8 @@ extension BridgeAppModel {
     ) {
         let request = HIDPermissionGate.nextPermissionRequest(
             mappingEnabled: settings.customMappingEnabled,
-            voiceFnTapModeEnabled: (voiceFnTapModeRequested ?? settings.voiceFnTapModeEnabled) || requiresOrderedVoiceFn,
-            voiceKeyMode: voiceKeyModeRequested ?? settings.voiceKeyMode,
+            voiceFnTapModeEnabled: (voiceFnTapModeRequested ?? settings.effectiveVoiceFnTapModeEnabled) || requiresOrderedVoiceFn,
+            voiceKeyMode: voiceKeyModeRequested ?? settings.effectiveVoiceKeyMode,
             inputMonitoringGranted: HIDRemoteMonitor.isInputMonitoringGranted,
             accessibilityGranted: KeyboardInjector.isAccessibilityTrusted
         )

@@ -10,6 +10,8 @@ final class AcknowledgedBluetoothWriteQueue {
     private var sequence: UInt64 = 0
     private var timeout: HIDRemoteScheduledTask?
 
+    var hasPendingWork: Bool { inFlight || !pending.isEmpty }
+
     init(scheduler: HIDRemoteScheduling = DispatchHIDRemoteScheduler(),
          send: @escaping (Data) -> Void, onFailure: @escaping () -> Void) {
         self.scheduler = scheduler

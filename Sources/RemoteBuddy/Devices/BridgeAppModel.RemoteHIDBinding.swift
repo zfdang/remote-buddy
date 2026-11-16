@@ -65,7 +65,7 @@ extension BridgeAppModel {
             }
         }
         if select { selectRemoteProfile(profileID) }
-        if started { applyHIDSettings(restartSiriRemote: false) }
+        if started { applyHIDSettings() }
         AppLogger.shared.write("REMOTE HID binding_saved custom_identity=\(!candidate.binding.identity.isStandard)")
         return true
     }

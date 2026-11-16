@@ -78,8 +78,8 @@ extension BridgeAppModel {
             )
         let reapplyMappings = Self.shouldReapplyHIDSettingsBeforeVoiceStart(
             customMappingEnabled: settings.customMappingEnabled,
-            mode: settings.voiceKeyMode,
-            fnTapModeEnabled: settings.voiceFnTapModeEnabled,
+            mode: settings.effectiveVoiceKeyMode,
+            fnTapModeEnabled: settings.effectiveVoiceFnTapModeEnabled,
             requiresOrderedFn: requiresOrderedVoiceFn,
             hasHardwareVoiceKey: !(bridge.identifiedModel?.isATVVRemote == true),
             hasMatchingHIDServices: voiceFunctionMapper.hasMatchingServices,
@@ -98,11 +98,11 @@ extension BridgeAppModel {
             applyHIDSettings(allowVoiceKeyModeFallback: false)
         } else if !voiceFunctionMapper.hasMatchingServices,
                   settings.customMappingEnabled || neutralizeVoiceKey {
-            scheduleHIDMappingRecoveryIfNeeded(restartSiriRemote: false)
+            scheduleHIDMappingRecoveryIfNeeded()
         }
         guard Self.canStartBluetoothVoice(
-            mode: settings.voiceKeyMode,
-            voiceFnTapModeEnabled: settings.voiceFnTapModeEnabled,
+            mode: settings.effectiveVoiceKeyMode,
+            voiceFnTapModeEnabled: settings.effectiveVoiceFnTapModeEnabled,
             isVoiceKeyNeutralized: voiceFunctionMapper.isVoiceKeyNeutralized,
             hasHardwareVoiceKey: !(bridge.identifiedModel?.isATVVRemote == true),
             accessibilityGranted: currentPermissionSnapshot.accessibilityGranted,
@@ -112,7 +112,7 @@ extension BridgeAppModel {
             cancelPendingBluetoothVoiceStart(for: identifier)
             AppLogger.shared.write(
                 "ATVV STREAM rejected reason=voice_key_not_neutralized " +
-                    "mode=\(settings.voiceKeyMode.rawValue)"
+                    "mode=\(settings.effectiveVoiceKeyMode.rawValue)"
             )
 
             return
@@ -136,7 +136,7 @@ extension BridgeAppModel {
         updateVoiceKeyState(
             streaming: true,
             forceSoftware: requiresOrderedVoiceFn ||
-                (bridge.identifiedModel?.isATVVRemote == true && !settings.voiceFnTapModeEnabled),
+                (bridge.identifiedModel?.isATVVRemote == true && !settings.effectiveVoiceFnTapModeEnabled),
             owner: .bluetooth,
             completion: { [self] activated in
             guard activated else {
@@ -146,7 +146,7 @@ extension BridgeAppModel {
                 voiceSession.pendingStart.cancel()
                 voiceSession.stopRequested = false
                 AppLogger.shared.write(
-                    "ATVV STREAM rejected reason=voice_key mode=\(settings.voiceKeyMode.rawValue)"
+                    "ATVV STREAM rejected reason=voice_key mode=\(settings.effectiveVoiceKeyMode.rawValue)"
                 )
 
                 return
@@ -330,6 +330,7 @@ extension BridgeAppModel {
         )
         AppLogger.shared.write(
             "ATVV STREAM summary trace=\(traceID) model=\(voiceSession.bluetoothVoiceTraceModel.rawValue) " +
+                "stop_reason=\(bridge.lastVoiceStopReason?.rawValue ?? "unknown") " +
                 "duration_ms=\(durationMilliseconds) batches=\(voiceSession.bluetoothVoiceDecodedBatchCount) " +
                 "samples=\(voiceSession.bluetoothVoiceDecodedSampleCount) " +
                 "enqueue_failures=\(voiceSession.bluetoothVoiceEnqueueFailureCount) " +
@@ -380,7 +381,7 @@ extension BridgeAppModel {
         }
         let id = UUID()
         voiceSession.pendingKeyRelease = (id, deviceIdentifier)
-        let maximumDelay = audio.output.pendingPlaybackDuration + 0.75
+        let maximumDelay = max(0.75, audio.output.pendingPlaybackDuration + 0.75)
         AppLogger.shared.write("VOICE HOLD playback_stop id=\(id) phase=requested timeout_ms=\(Int(maximumDelay * 1_000))")
         let drain = drainAudio ?? { [weak self] delay, completion in
             self?.audio.output.endSessionAfterDraining(
@@ -566,7 +567,8 @@ extension BridgeAppModel {
         batteryLevels: [UUID: Int],
         powerStates: [UUID: RemotePowerState]
     ) {
-        guard ProcessInfo.processInfo.environment["REMOTE_BUDDY_SETTINGS_SCREENSHOT_DIR"] != nil else {
+        guard ProcessInfo.processInfo.environment["REMOTE_BUDDY_SETTINGS_SCREENSHOT_DIR"] != nil ||
+                ProcessInfo.processInfo.environment["REMOTE_BUDDY_ONBOARDING_SCREENSHOT_DIR"] != nil else {
             return
         }
         connectedRemoteProfileIDs = profileIDs

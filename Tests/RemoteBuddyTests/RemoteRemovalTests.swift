@@ -228,7 +228,7 @@ struct RemoteRemovalTests {
         #expect(settings.bindCompatibleHID(.init(identity: .xiaomi, fingerprint: "xiaomi-selected"), to: selectedTransient))
         settings.selectRemoteProfile(selectedTransient)
 
-        for step in [OnboardingStep.controls, .audio, .voiceTool, .voiceTest, .complete] {
+        for step in [OnboardingStep.controls, .voiceTrigger, .voiceTool, .voiceTest, .complete] {
             settings.setOnboardingStep(step)
             #expect(settings.allowsSetupCandidate(bluetoothIdentifier: selectedID, model: .rc003))
             #expect(settings.allowsSetupCandidate(hidFingerprint: "xiaomi-selected", model: .rc003))

@@ -46,9 +46,12 @@ class FeedDeploymentTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.tag = 'v26-10-12.043'
         self.release = {'tagName': self.tag, 'assets': []}
+        uninstaller = self.root / f'Remote_Buddy_Uninstaller_{self.tag}_macOS_universal.pkg'
+        uninstaller.write_bytes(b'uninstaller-pkg')
+        self.release['assets'].append({'name': uninstaller.name, 'size': uninstaller.stat().st_size})
         for arch in ['arm64', 'intel']:
             package = self.root / f'Remote_Buddy_{self.tag}_macOS_{arch}.pkg'
-            package.write_bytes(b'package')
+            package.write_bytes(f'package-{arch}'.encode())
             self.release['assets'].append({'name': package.name, 'size': package.stat().st_size})
             appcast.generate(package, self.tag, '43', base64.b64encode(bytes(64)).decode(), self.root / f'appcast-{arch}.xml')
 
@@ -71,7 +74,7 @@ class FeedDeploymentTests(unittest.TestCase):
         for path in self.root.glob('appcast-*.xml'):
             tree = ET.parse(path)
             enclosure = tree.find('channel/item/enclosure')
-            enclosure.set('url', enclosure.get('url').replace('/remote-buddy/', '/voice-input-buddy/'))
+            enclosure.set('url', f'https://github.com/zfdang/voice-input-buddy/releases/download/{self.tag}/Remote_Buddy_{self.tag}_macOS_arm64.pkg')
             tree.write(path)
         with self.assertRaises(ValueError):
             feeds.verify(self.root, self.release)
@@ -81,8 +84,11 @@ class FeedDeploymentTests(unittest.TestCase):
         xml = ET.parse(path); enclosure = xml.find('channel/item/enclosure')
         enclosure.set('url', 'https://example.invalid/package.pkg'); xml.write(path)
         with self.assertRaises(ValueError): feeds.verify(self.root, self.release)
-        enclosure.set('url', f'https://github.com/zfdang/remote-buddy/releases/download/{self.tag}/Remote_Buddy_{self.tag}_macOS_intel.pkg')
+        enclosure.set('url', f'https://remote.zfdang.com/downloads/Remote_Buddy_{self.tag}_macOS_intel.pkg')
         enclosure.set(f'{{{appcast.SPARKLE}}}edSignature', ''); xml.write(path)
+        with self.assertRaises(ValueError): feeds.verify(self.root, self.release)
+        enclosure.set('url', f'https://github.com/zfdang/remote-buddy/releases/download/{self.tag}/Remote_Buddy_{self.tag}_macOS_intel.pkg')
+        enclosure.set(f'{{{appcast.SPARKLE}}}edSignature', base64.b64encode(bytes(64)).decode()); xml.write(path)
         with self.assertRaises(ValueError): feeds.verify(self.root, self.release)
 
     def test_enclosure_length_mismatch_is_rejected(self):
@@ -101,6 +107,54 @@ class FeedDeploymentTests(unittest.TestCase):
         (self.root / 'appcast-intel.xml').unlink()
         with self.assertRaises(FileNotFoundError): feeds.verify(self.root, self.release)
 
+    def test_mismatched_build_version_and_missing_arm64_requirement_are_rejected(self):
+        path = self.root / 'appcast-arm64.xml'
+        xml = ET.parse(path)
+        ver = xml.find(f'channel/item/{{{appcast.SPARKLE}}}version')
+        # Carry-over thousands digit matching tag suffix passes (e.g. 1043 for .043).
+        ver.text = '1043'
+        xml.write(path)
+        feeds.verify(self.root, self.release)
+
+        # Mismatched suffix fails.
+        ver.text = '44'
+        xml.write(path)
+        with self.assertRaises(ValueError) as ctx:
+            feeds.verify(self.root, self.release)
+        self.assertIn("Mismatched build version", str(ctx.exception))
+
+        # Restore version, break arm64 hardwareRequirements.
+        ver.text = '43'
+        req = xml.find(f'channel/item/{{{appcast.SPARKLE}}}hardwareRequirements')
+        req.text = 'x86_64'
+        xml.write(path)
+        with self.assertRaises(ValueError) as ctx:
+            feeds.verify(self.root, self.release)
+        self.assertIn("Missing Apple Silicon requirement", str(ctx.exception))
+
+    def test_oversized_mirrored_package_is_rejected(self):
+        downloads = self.root / 'downloads'
+        downloads.mkdir()
+        for path in self.root.glob('*.pkg'):
+            shutil.copy2(path, downloads / path.name)
+        feeds.write_latest_manifest(self.root, self.release)
+
+        oversized_size = feeds.MAX_PAGES_FILE_BYTES + 1
+        arm64_name = f'Remote_Buddy_{self.tag}_macOS_arm64.pkg'
+        with open(downloads / arm64_name, 'wb') as handle:
+            handle.seek(oversized_size - 1)
+            handle.write(b'\0')
+        for asset in self.release['assets']:
+            if asset['name'] == arm64_name:
+                asset['size'] = oversized_size
+        xml = ET.parse(self.root / 'appcast-arm64.xml')
+        xml.find('channel/item/enclosure').set('length', str(oversized_size))
+        xml.write(self.root / 'appcast-arm64.xml')
+
+        with self.assertRaises(ValueError) as ctx:
+            feeds.verify(self.root, self.release, require_packages=True)
+        self.assertIn("25 MB limit", str(ctx.exception))
+
     def deploy(self, artifact, valid=True, live_valid=True, release_assets=False, prebuilt_pages=False, recent_run=False):
         project = self.root / 'project'
         scripts = project / 'scripts'; scripts.mkdir(parents=True, exist_ok=True)
@@ -108,39 +162,44 @@ class FeedDeploymentTests(unittest.TestCase):
         for name in ['prepare-pages-update-feeds.sh', 'verify-pages-update-feeds.py']:
             shutil.copy2(Path(__file__).with_name(name), scripts / name)
         artifact_directory = self.root / 'artifact'; artifact_directory.mkdir(parents=True, exist_ok=True)
-        for path in self.root.glob('appcast-*.xml'):
+        for path in [*self.root.glob('appcast-*.xml'), *self.root.glob('*.pkg')]:
             shutil.copy2(path, artifact_directory / path.name)
         if not valid:
             path = artifact_directory / 'appcast-arm64.xml'
             path.write_text(path.read_text().replace(self.tag, 'v26-10-12.042'))
         live_directory = self.root / 'live'; live_directory.mkdir(parents=True, exist_ok=True)
-        for path in self.root.glob('appcast-*.xml'):
+        for path in [*self.root.glob('appcast-*.xml'), *self.root.glob('*.pkg')]:
             shutil.copy2(path, live_directory / path.name)
         if not live_valid:
             path = live_directory / 'appcast-arm64.xml'
             path.write_text(path.read_text().replace(self.tag, 'v26-10-12.042'))
         if prebuilt_pages:
+            (pages_dir / 'downloads').mkdir(parents=True, exist_ok=True)
             for path in self.root.glob('appcast-*.xml'):
                 shutil.copy2(path, pages_dir / path.name)
+            for path in self.root.glob('*.pkg'):
+                shutil.copy2(path, pages_dir / 'downloads' / path.name)
         release = self.root / 'release.json'; release.write_text(json.dumps(self.release))
         binaries = self.root / 'bin'; binaries.mkdir(parents=True, exist_ok=True)
         gh = binaries / 'gh'
         gh.write_text("""#!/usr/bin/env python3
-import os, pathlib, shutil, sys
+import fnmatch, os, pathlib, shutil, sys
 args=sys.argv[1:]
 if args[:2]==['release','view']:
     print(pathlib.Path(os.environ['FIXTURE_RELEASE']).read_text())
 elif args[:2]==['run','download']:
     if os.environ.get('FIXTURE_ARTIFACT')=='1' or os.environ.get('FIXTURE_RECENT_RUN')=='1':
-        destination=pathlib.Path(args[args.index('--dir')+1]); destination.mkdir(exist_ok=True)
-        for source in pathlib.Path(os.environ['FIXTURE_ARTIFACT_DIR']).glob('appcast-*.xml'):
+        destination=pathlib.Path(args[args.index('--dir')+1]); destination.mkdir(parents=True, exist_ok=True)
+        for source in pathlib.Path(os.environ['FIXTURE_ARTIFACT_DIR']).iterdir():
             shutil.copy2(source,destination/source.name)
     else:
         sys.exit(1)
 elif args[:2]==['release','download'] and os.environ.get('FIXTURE_RELEASE_ASSETS')=='1':
-    destination=pathlib.Path(args[args.index('--dir')+1]); destination.mkdir(exist_ok=True)
-    for source in pathlib.Path(os.environ['FIXTURE_ARTIFACT_DIR']).glob('appcast-*.xml'):
-        shutil.copy2(source,destination/source.name)
+    destination=pathlib.Path(args[args.index('--dir')+1]); destination.mkdir(parents=True, exist_ok=True)
+    patterns=[args[i+1] for i,a in enumerate(args) if a=='--pattern']
+    for source in pathlib.Path(os.environ['FIXTURE_ARTIFACT_DIR']).iterdir():
+        if not patterns or any(fnmatch.fnmatch(source.name, p) for p in patterns):
+            shutil.copy2(source,destination/source.name)
 elif args[:2]==['run','list']:
     if os.environ.get('FIXTURE_RECENT_RUN')=='1':
         print("99999")
@@ -166,7 +225,7 @@ shutil.copy2(pathlib.Path(os.environ['FIXTURE_LIVE'])/filename,args[args.index('
                        'FIXTURE_ARTIFACT_DIR': str(artifact_directory), 'FIXTURE_LIVE': str(live_directory)}
         subprocess.run(['bash', str(scripts / 'prepare-pages-update-feeds.sh')], env=environment,
                        capture_output=True, check=True)
-        feeds.verify(project / 'pages', self.release)
+        feeds.verify(project / 'pages', self.release, require_packages=True)
 
     def test_release_workflow_downloads_metadata_artifact(self):
         self.deploy(artifact=True)
@@ -179,6 +238,31 @@ shutil.copy2(pathlib.Path(os.environ['FIXTURE_LIVE'])/filename,args[args.index('
 
     def test_stale_live_recovers_from_release_assets_when_artifact_missing(self):
         self.deploy(artifact=False, live_valid=False, release_assets=True)
+
+    def test_release_asset_fallback_migrates_legacy_github_enclosure_urls(self):
+        for arch in ['arm64', 'intel']:
+            path = self.root / f'appcast-{arch}.xml'
+            tree = ET.parse(path)
+            pkg = f'Remote_Buddy_{self.tag}_macOS_{arch}.pkg'
+            tree.find('channel/item/enclosure').set(
+                'url',
+                f'https://github.com/zfdang/remote-buddy/releases/download/{self.tag}/{pkg}'
+            )
+            tree.write(path)
+        self.deploy(artifact=False, live_valid=False, release_assets=True)
+
+    def test_require_packages_rejects_missing_or_mismatched_mirrored_pkg(self):
+        with self.assertRaises(FileNotFoundError):
+            feeds.verify(self.root, self.release, require_packages=True)
+        downloads = self.root / 'downloads'
+        downloads.mkdir()
+        for path in self.root.glob('*.pkg'):
+            shutil.copy2(path, downloads / path.name)
+        feeds.write_latest_manifest(self.root, self.release)
+        feeds.verify(self.root, self.release, require_packages=True)
+        (downloads / f'Remote_Buddy_{self.tag}_macOS_arm64.pkg').write_bytes(b'corrupted')
+        with self.assertRaises(ValueError):
+            feeds.verify(self.root, self.release, require_packages=True)
 
     def test_stale_live_recovers_from_prebuilt_pages_feeds_when_artifact_missing(self):
         self.deploy(artifact=False, live_valid=False, prebuilt_pages=True)

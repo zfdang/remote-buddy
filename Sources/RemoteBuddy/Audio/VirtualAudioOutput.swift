@@ -59,7 +59,7 @@ final class AudibilityCache: @unchecked Sendable {
     }
 
     func value(for deviceID: AudioObjectID, at time: TimeInterval, query: () -> Bool) -> Bool {
-        while true {
+        for _ in 0..<4 {
             let state = lock.withLock { () -> (Bool?, UInt64) in
                 if let cached, cached.deviceID == deviceID, time - cached.checkTime < 2.0 {
                     return (cached.healthy, generation)
@@ -75,6 +75,7 @@ final class AudibilityCache: @unchecked Sendable {
             }
             if accepted { return value }
         }
+        return query()
     }
 }
 
@@ -380,6 +381,15 @@ final class VirtualAudioOutput {
             logStage("verify_output")
             refreshOutputStateOnEngineQueue()
             guard isReadyForTestTone else {
+                // Capture before teardown clears the engine and selected/actual route.
+                let snapshot = diagnosticSnapshot()
+                logger(
+                    "AUDIO CONFIGURE failed reason=verify_output queue=audio_output " +
+                        "elapsed_ms=\(elapsedMilliseconds()) " +
+                        "engine_running=\(snapshot.engineRunning) player_playing=\(snapshot.playerPlaying) " +
+                        "bound_to_selected=\(snapshot.boundToSelectedDevice.map(String.init) ?? "unknown") " +
+                        "audibility_healthy=\(snapshot.audibilityHealthy) state={\(diagnosticState())}"
+                )
                 stopOnEngineQueue()
                 status = LocalizedMessage("audio.output.selected_unavailable")
                 return false
@@ -551,7 +561,8 @@ final class VirtualAudioOutput {
     var pendingPlaybackDuration: TimeInterval {
         playbackLock.lock()
         defer { playbackLock.unlock() }
-        return Double(pendingVoiceSampleCount) / 16_000
+        let sampleRate = sourceFormat.sampleRate > 0 ? sourceFormat.sampleRate : 16_000
+        return Double(pendingVoiceSampleCount) / sampleRate
     }
 
     func endSession() {
@@ -582,12 +593,13 @@ final class VirtualAudioOutput {
         playbackLock.lock()
         nextDrainOperationID &+= 1
         let resolvedOperationID = operationID ?? nextDrainOperationID
+        let now = uptime()
         let request = DrainRequest(
             source: source,
             operationID: resolvedOperationID,
-            startedAtUptime: uptime(),
+            startedAtUptime: now,
             requestedOnMainThread: Thread.isMainThread,
-            deadline: maximumDelay.map { uptime() + max(0, $0) },
+            deadline: maximumDelay.map { now + max(0, $0) },
             completion: completion
         )
         let shouldCompleteImmediately = pendingVoiceBufferCount == 0
@@ -634,7 +646,7 @@ final class VirtualAudioOutput {
             return
         }
         if let sharedDeadline, let generation {
-            _ = scheduleDrainDeadline(max(0, sharedDeadline - uptime())) { [weak self] in
+            _ = scheduleDrainDeadline(max(0, sharedDeadline - now)) { [weak self] in
                 self?.finishDrainIfNeeded(generation: generation)
             }
         }
@@ -698,19 +710,6 @@ final class VirtualAudioOutput {
         for context in interruptedContexts {
             AppLogger.shared.write("AUDIO PLAYBACK interrupted \(context)")
         }
-        defer {
-            completeDrainRequests(
-                interruptedDrains,
-                outcome: .forced,
-                phase: "completed",
-                result: "forced",
-                reason: "player_flush",
-                pendingBuffers: 0,
-                pendingSamples: 0,
-                interruptedBuffers: interruptedBuffers,
-                interruptedSamples: interruptedSamples
-            )
-        }
         let restartPlayer = { [weak self] in
             guard let self,
                   let player = self.player,
@@ -728,6 +727,17 @@ final class VirtualAudioOutput {
         } else {
             engineQueue.async(execute: restartPlayer)
         }
+        completeDrainRequests(
+            interruptedDrains,
+            outcome: .forced,
+            phase: "completed",
+            result: "forced",
+            reason: "player_flush",
+            pendingBuffers: 0,
+            pendingSamples: 0,
+            interruptedBuffers: interruptedBuffers,
+            interruptedSamples: interruptedSamples
+        )
     }
 
     func stop() {
@@ -780,19 +790,6 @@ final class VirtualAudioOutput {
         for context in interruptedContexts {
             AppLogger.shared.write("AUDIO PLAYBACK interrupted \(context)")
         }
-        defer {
-            completeDrainRequests(
-                interruptedDrains,
-                outcome: .forced,
-                phase: "completed",
-                result: "forced",
-                reason: "output_stop",
-                pendingBuffers: 0,
-                pendingSamples: 0,
-                interruptedBuffers: interruptedBuffers,
-                interruptedSamples: interruptedSamples
-            )
-        }
         removeEngineConfigurationObserver()
         if let player { _ = RemoteBuddyTryAudioOperation { player.stop() } }
         if let engine { _ = RemoteBuddyTryAudioOperation { engine.stop() } }
@@ -806,6 +803,17 @@ final class VirtualAudioOutput {
             $0.engineRunning = false
             $0.playerPlaying = false
         }
+        completeDrainRequests(
+            interruptedDrains,
+            outcome: .forced,
+            phase: "completed",
+            result: "forced",
+            reason: "output_stop",
+            pendingBuffers: 0,
+            pendingSamples: 0,
+            interruptedBuffers: interruptedBuffers,
+            interruptedSamples: interruptedSamples
+        )
     }
 
     private func scheduledVoiceBufferDidFinish(

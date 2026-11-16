@@ -22,9 +22,15 @@ SwiftPM 主执行目标为 RemoteBuddy。采用公开源码的默认构建，不
 
 系统停用 event tap 的回调只安排后续处理并立即返回。超时或系统用户输入停用通知均在回调外重新检查权限；权限有效时恢复当前端口；恢复调用未能启用端口时继续有界退避，不依赖系统再发一次通知。暂时停用只立即关闭非独占设备的注入安全门，保留端口与 HID 监听；权限无效或恢复预算耗尽后，才在回调外停止过滤器与设备映射。监听中断用显式状态记录，不依赖界面文案；实际监听与过滤恢复后清除中断状态。端口或恢复代次已改变时，丢弃旧恢复任务。快捷键录制对象继续在析构时注销端口。语音快捷键释放失败时保留 held 状态，不绕过辅助功能权限检查；权限恢复后再尝试释放。
 
+已绑定遥控器的 HID 服务尚未出现时，目标监听器以 `waiting_for_services` 模式等待：只接收设备匹配通知，不打开设备或处理输入；服务出现后安排映射恢复，再重建正常监听。等待服务不算监听中断，也不反复触发权限恢复；服务存在而电源键屏蔽写入失败仍作为真实失败处理。`HID PERMISSIONS recovery` 区分 `monitoring_interrupted` 和 `permissions_changed`。
+
 辅助功能消息超时仅在本进程首次查询时配置一次为 50 毫秒，不修改其他进程，也不逐属性重复配置；首次配置失败时记录一次日志。跨进程辅助功能调用沿用这个超时，输入框树遍历同时受节点数和单调时钟的一秒预算限制，子节点优先级计算也消耗预算。预算阻止开始新的节点；已开始的节点仍需完成其有超时限制的消息，不能将这一秒理解为整项操作的硬截止。
 
 蓝牙未授权时取消重连、释放连接与语音状态，不继续自动连接。应用的正式音频路径接收蓝牙遥控器的 PCM 并写入虚拟音频设备，没有直接采集 Mac 物理麦克风的录音路径；输入工具的麦克风权限由对应第三方应用管理。
+
+音频恢复在评估前及异步配置完成后检查激活需求；语音／测试音等需求已结束且没有待播放缓冲时，记录 `result=ignored decision=virtual_audio_inactive`，不把正常停机记为 `degraded`，也不重启空闲音频。语音需求已结束但仍有尾音缓冲时，沿用 `applyAudioSettings` 的有界排空释放流程，记录 `result=ignored decision=virtual_audio_draining`；重复恢复通知不重建引擎或重置排空期限。仍有活跃需求的真实故障继续走恢复流程。 `verify_output` 失败时在停止引擎前记录引擎／播放器状态、设备绑定和可听性健康状态；保留现有 250ms 自动重试，首次验证失败的具体时序原因仍需新日志或真机复现确认。
+
+已有遥控器档案时，日常运行不创建用于发现新设备的 `discoveryBridge`。未配置任何设备、向导中的设备选择／连接／按键验证阶段、或重绑窗口的显式请求期间才启用发现；离开这些阶段即停止额外扫描，已绑定设备自己的重连不受影响。系统已连接候选在记录日志前过滤已管理／已忽略的标识。多个重绑请求独立持有发现需求，最后一个结束后才停扫。 设置订阅在属性提交后的主 RunLoop 回合调用幂等同步，只由 `shouldDiscoverNewBluetoothRemotes` 决定是否启停；需求结束时统一记录 `reason=no_discovery_demand`。
 
 已配置遥控器处于扫描或失败重试等待时，每 2 秒查询其系统蓝牙连接状态；只有标识匹配的设备已连接，才取消剩余退避并接入语音服务。该查询不重启广播扫描，也不向离线设备追加连接请求。已绑定 HID 的连接通知或按键活动也会在输入回调结束后触发提前重试。正在连接、初始化、已就绪、断开清理或系统挂起时不重复触发。原有 20 秒扫描兜底和离线失败退避保留，本地日志中的 `BLE WAKE RECOVERY` 记录恢复原因、结果和耗时。真机验收应覆盖遥控器休眠后唤醒、长时间离线后按键、连续按键及 Mac 睡眠恢复。
 
@@ -64,7 +70,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test -c release -
 
 覆盖率报告位于 `.build/debug/codecov/RemoteBuddy.json`。按文件检查未覆盖的行为，尤其是错误处理与资源释放；文件覆盖率包含系统适配代码，不能把模拟状态机的通过当作真实系统权限或硬件操作的验证。
 
-异步边界测试使用可控调度器，显式送达已经取消的旧回调，不依赖睡眠等待。权限轮询、快捷键发送与输入目标测试注入状态和事件接收器，不修改真实权限、发送系统按键或切换其他应用。常用语插入测试注入目标与按键接口，剪贴板事务只使用测试专用 pasteboard，不读取或修改系统通用剪贴板；持久化和文件锁测试使用独立 UserDefaults 域及临时目录，不读取或修改用户的应用设置。结构化诊断测试仅验证本地日志；没有诊断上传和待上传事件存储。
+异步边界测试使用可控调度器，显式送达已经取消的旧回调，不依赖睡眠等待。HID 服务映射刷新测试也显式执行受控刷新任务，检查重复回调合并和停止后的旧任务隔离；不以一次主队列往返作为完成标志，避免真实设备回调影响探测次数。权限轮询、快捷键发送与输入目标测试注入状态和事件接收器，不修改真实权限、发送系统按键或切换其他应用。常用语插入测试注入目标与按键接口，剪贴板事务只使用测试专用 pasteboard，不读取或修改系统通用剪贴板；持久化和文件锁测试使用独立 UserDefaults 域及临时目录，不读取或修改用户的应用设置。结构化诊断测试仅验证本地日志；没有诊断上传和待上传事件存储。
 
 所有映射键盘事件统一排除隐式导航标志：小米遥控器原生 Home 实测带有 `0x800100` 标志，其中包含 Fn，且不一定带数字键盘标志。普通按键、内置／自定义快捷键、独立修饰键、应用切换器和滚动动作不继承硬件状态中的 Fn／数字键盘导航标志，仍保留 Shift、Control、Option、Command 等实际修饰键；只有映射明确配置 Fn 时才在生成事件中加入 Fn。媒体键本身使用空修饰键，不合并原始 Home 状态；无需改写的原生方向键仍按原事件透传。语音 Fn 使用独立路径，保持其按住和松开行为。`MAPPED KEY EVENT` 与 `SHORTCUT SEQUENCE phase=event` 记录实际提交的键码、边沿和修饰键标志；`submitted` 不代表目标应用已经响应。回归测试覆盖原生 Home 状态下的完整选择／取消序列、普通映射键、内置快捷键和显式 Fn 映射，修复后的切换器显示和确认仍需实机复测。
 
@@ -102,7 +108,7 @@ HID 设备发现仅用受支持的 VendorID／ProductID 组合。IOHIDManager �
 
 共享日志器不再创建持久化的公开诊断上传队列；没有配置上传服务。运行日志以 UTF-8 文本保存在 `~/Library/Logs/RemoteBuddy/`，无需公钥或解密工具，用户可以自行查看；每个文件限制为 10 MiB，达到上限会在当前会话内轮转，最多保留五份旧日志，跳过仍在使用的日志及符号链接。日志不保存录音或识别正文，也不会上传。菜单“显示日志”会先刷新日志，再定位到当前 `.log` 文件。常用语 JSON 由 `scripts/generate-common-phrases.py` 从 Markdown 编辑源生成，打包测试校验生成资源确实存在。
 
-向导第六步的每种输入工具包含五个设置步骤，第三个为输入工具自身的麦克风选择；macOS 听写包含四个步骤：打开听写、把快捷键设为“按两下 🌐 键”、选择麦克风来源、清空微信 App 的 Fn 快捷键。它需要系统 🌐 键用于听写，所以不包含“去除系统 Fn 占用”。三个听写步骤使用 2026-10-25 从本机系统设置截取并标注的真实浅色 JPG：开启听写、双击 🌐 快捷键、Remote Buddy Mic 麦克风来源；深色界面回退到同一真实截图。首次开启须确认系统隐私提示，并等待所需语言支持下载完成。遥控搭子按住遥控器时连按两次 Fn 开始听写，松开并送完音频后按一次 Fn 结束；设置指引不要求手动勾选确认；查看每个步骤后可进入第七步实际测试，步骤完成标记仅表示用户已查看，不表示已检测第三方设置。第七步仅根据按键、声音和文字结果判断通过，不再重复询问设置。豆包和微信的菜单、语音设置、麦克风六张浅色截图于 2026-10-12 从本机安装版本截取并标注，使用 JPG 保存，显示时整图按原比例缩放。Voice Buddy 的触发按键与麦克风使用本地浅色截图。新增 JPG 长边最多 1600 像素，并压缩文件大小。加载和打包校验支持 JPG、JPEG、PNG；优先匹配当前主题，再回退浅色。既有深色截图保持不变；新增截图只有真实浅色版本时，深色界面使用浅色截图回退。微信 App 快捷键及未安装工具的截图保留原素材。
+向导第六步先显示所选工具的设置说明与麦克风选择；Fn 用于第三方工具时另有系统 Fn 设置检查。微信 App 热键冲突检查独立放在可整行展开的帮助区，不作为必读步骤。macOS 听写包含三个步骤：打开听写、把快捷键设为“按两下 🌐 键”、选择麦克风来源。它需要系统 🌐 键用于听写，所以不包含“去除系统 Fn 占用”。三个听写步骤使用 2026-10-25 从本机系统设置截取并标注的真实浅色 JPG：开启听写、双击 🌐 快捷键、Remote Buddy Mic 麦克风来源；深色界面回退到同一真实截图。首次开启须确认系统隐私提示，并等待所需语言支持下载完成。遥控搭子按住遥控器时连按两次 Fn 开始听写，松开并送完音频后按一次 Fn 结束；设置指引不要求手动勾选确认；必须逐一查看当前工具的设置说明后，才能进入第七步实际测试；点开的说明只标记“已查看”，不使用验证成功标记。继续按钮的阻塞说明区分未选工具、工具不可用、热键不兼容、待确认点按模式和设置说明尚未看完。第七步仅根据按键、声音和文字结果判断通过，不再重复询问设置。豆包和微信的菜单、语音设置、麦克风六张浅色截图于 2026-10-12 从本机安装版本截取并标注，使用 JPG 保存，显示时整图按原比例缩放。Voice Buddy 的触发按键与麦克风使用本地浅色截图。新增 JPG 长边最多 1600 像素，并压缩文件大小。加载和打包校验支持 JPG、JPEG、PNG；优先匹配当前主题，再回退浅色。既有深色截图保持不变；新增截图只有真实浅色版本时，深色界面使用浅色截图回退。微信 App 快捷键及未安装工具的截图保留原素材。
 
 说明图片在固定显示区内按原比例缩放，整图显示，不采用超出区域的放大和偏移裁剪；同时关闭图片命中测试，确保不会挡住步骤按钮。Debug 构建可在现有向导截图模式中设置 `REMOTE_BUDDY_ONBOARDING_SCREENSHOT_INTERACTIVE=1`，使用隔离设置打开输入工具页面，最多停留五分钟以进行真实鼠标验证；Release 构建不会启用此交互模式。
 
@@ -140,10 +146,10 @@ The product device list is limited to Xiaomi Bluetooth Remote 2 / 2 Pro, T1-Remo
 Air-Mouse & Keyboard (and compatible clones), Google Chromecast Voice Remote (G9N9N),
 Google TV Streamer Voice Remote (GY3LE), and Apple Siri Remote. `RemoteSetupDevice` defines
 this scope; it does not grant connection support. All five entries can be selected.
-Continue advances Xiaomi, T1, and both Google choices to connection setup; Siri remains on
-the device page with an unsupported notice.
+Continue advances Xiaomi, T1, and G9N9N to connection setup. GY3LE and Siri remain on
+the device page with an unsupported notice and a disabled Continue button.
 The GY3LE setup entry does not admit it through the G9N9N adapter. G9N9N connection
-validation remains mandatory. G9N9N currently has partial voice support; control-button mapping is unsupported following the A0 / firmware 26.7 hardware investigation. See the [standalone report](g9n9n-compatibility.md). The
+validation remains mandatory. The validated G9N9N supports voice and fourteen configurable ordinary buttons. See the [standalone report](g9n9n-compatibility.md). The
 validated Xiaomi admission catalog remains separate, so a planned Google model
 cannot accidentally connect through the Xiaomi bridge. Third-party replacement
 remotes need individual validation.
@@ -182,10 +188,6 @@ link is secured. Do not classify an inaccessible service as absent, label a
 unit counterfeit, or switch to the computer microphone while claiming remote
 audio works. This integration uses public APIs without driver injection or private app access.
 
-[vibe-mote's hardware notes](https://github.com/Tilkmilk/vibe-mote#九遥控器怎么挑原装--兼容款--山寨)
-report different ATVV behavior across two G9N9N-labelled replacements. These are
-Windows observations and research references, not macOS acceptance evidence or
-confirmation of GY3LE compatibility.
 
 ### Unsupported remote integrations
 
@@ -226,11 +228,7 @@ layouts, protocols or codecs still require additional evidence/adapters.
 Power and input-source keys can use infrared and are excluded from the public
 Bluetooth mapping canvas until supported reports are captured.
 
-These parser paths do not establish usable button mapping. Raw Bluetooth capture of the A0 / firmware 26.7 unit shows one-byte single-key and release values where its descriptor requires two slots; only the full two-byte combination reaches public IOHID callbacks. G9N9N control-button mapping is currently unsupported; its separately transported voice path has been tested working. Onboarding now explains OK + Up for the initial check and OK + Up followed by Back + Up for three distinct controls. These combinations only satisfy setup report checks; they do not establish usable button mapping. Existing permission, audio, and voice validation gates remain required.
-
-Further hardware acceptance remains necessary: test an original unit and each replacement
-separately for pairing, microphone samples, stop/tail, long sessions, HID/GATT
-coexistence, sleep/wake and reconnect. Automated tests cannot establish these.
+The validated HID VersionNumber 0x0110 unit delivers complete single-button and release snapshots through report 1. All fourteen ordinary controls enter the shared configurable gesture engine, while Voice remains an ATVV audio control. Setup uses single OK and three distinct ordinary buttons. Battery readings from the standard BLE service are shown when available. Version details and the physical test record are documented in [the device guide](g9n9n-compatibility.md).
 
 ### Adding compatible remote identities
 
@@ -302,38 +300,6 @@ rendering accepts `REMOTE_BUDDY_SETTINGS_SCREENSHOT_SIZE=720x500` and
 remains reachable. Preview fixtures do not start remote or audio hardware.
 
 Hold-to-repeat is represented by the `repeatSingleClick` action in the long-press binding, using the existing per-device binding persistence. Navigation, volume, and Power buttons default to this value; Back defaults to no long-press action. Power repeats Delete, while Back sends Escape once. The mapping cards display these values explicitly. The HID runtime uses the configured hold value instead of a repeat-capable button allowlist; repeat starts at 350 ms and executes the current single-press action until release. Independent long-press actions retain the 550 ms threshold. Double-click recognition remains available and is cancelled when a held press starts repeating, avoiding a trailing click on release. Timer tokens reject stale repeat callbacks after release or reset.
-
-### G9N9N first hardware inspection (2026-10-19)
-
-Public CoreBluetooth reads on the connected reference unit returned:
-
-- Name: `Chromecast Remote`; manufacturer: `Google Inc.`
-- DIS model: `A3`; hardware revision: `CR PVT/MP`; firmware/software: `26.0`.
-- DIS PnP bytes: `01 D1 18 50 94 10 01` (VID/PID `18D1:9450`).
-- ATVV service: `AB5E0001-5A21-4F05-BC7D-AF01F617B664`.
-- Transmit characteristic `0002`: properties `0x04` (write without response).
-  Audio `0003` and control `0004`: properties `0x10` (notify).
-- Both notifications enabled successfully. Capability request
-  `0A 01 00 00 03 03` returned `0B 01 00 02 03 00 F0 01 00 1A`:
-  ATVV v1.0, codec mask `0x02`, interaction `0x03`, frame size 240, 16 kHz ADPCM.
-- No authentication/encryption error occurred during these reads, subscriptions,
-  or the capability exchange. Link encryption was **not independently measured**;
-  notification properties and successful access do not prove an unencrypted link.
-
-The previous exact `G9N9N` DIS model check rejected this unit's `A3` before
-initialization completed. Admission now uses PnP identity and negotiated audio
-capabilities; missing or differing model strings do not reject a remote.
-The HID descriptor also exposes report ID 1 with two 8-bit array indices
-(logical range 1–17), rather than report ID 2 with 16-bit usages. The adapter
-recognizes this exact descriptor before decoding indexed reports; unknown
-descriptors are not interpreted as this format. Index zero releases a slot.
-The descriptor lists input usage `0x0089`, alongside the previously documented
-variant using `0x0189`.
-
-This inspection does not yet establish correct physical button mappings, intelligible
-microphone audio, end-to-end stop behavior, long sessions, or sleep/wake acceptance.
-See the [hardware debugging record](g9n9n-hardware-debugging.md) for the completed
-test attempts, evidence limits, signing checks, and next acceptance steps.
 
 ## App integration accessibility and preparation boundaries
 
@@ -558,3 +524,17 @@ Validation after the latency and trigger-observation changes (runtime `1cb1d94`)
 - Integration/frame/privacy filter reported 70 tests / 4 suites passed (both live probes skipped by default). Voice activation/session/review filter reported 33 tests / 3 suites passed, including scoped modifier delivery and synthetic-owner isolation.
 - Full serial run reported 730 tests / 107 suites, both live probes skipped, with one issue at the same `HIDHotPathIdempotencyTests.swift:1307` service-provider-count assertion (6 versus 5). All other executed tests passed; the full suite remains non-green.
 - Debug app build passed and produced local build 745. Installed build 737 remains running until explicitly replaced; first-press physical-remote acceptance on 745 is pending.
+
+点按模式与按住模式都在发送热键前等待目标输入法激活；点按的应用聚焦、输入法切换和目标输入框检查共享准备时限。取消准备会撤销输入法会话并使迟到回调失效；成功发送触发键后结束会话时保留目标输入法。音频排空和结束点按仍由原状态机处理。
+
+WorkBuddy 输入框通过同一局部布局内的唯一编辑框、“更多操作”和“语音输入”控件联合识别。生成回复期间“发送”会替换为“停止”，两种状态都可识别；不读取输入框内容或对话文本，不自动发送消息或停止生成。
+
+蓝牙语音停止在清理状态前记录 `ATVV STREAM STOP session=... reason=... close_requested=... partial_frame_bytes=...`，并在 `ATVV STREAM summary` 附带 `stop_reason`。`remote_notification` 仅表示收到了 ATVV 结束通知，不等于证明用户松开按键；`close_requested` 表示本进程此前是否请求过关闭，可区分主动关闭后的设备确认和设备自行报告结束。其他原因包括 `remote_microphone_refused`、`close_unacknowledged`、`close_retry_exhausted`、`write_response_failure`、`flow_control_timeout`、`decode_backlog`、`session_replaced`、`disconnected`、`system_suspended` 和 `bridge_stopped` 等。每次流只记录一次停止，后续清理不会覆盖最初的来源。`fn_pressed_at_stop` 仍仅表示系统 Fn 状态，不能当作遥控器物理语音键状态；日志不推断第三方输入工具是否仍在收音。
+
+### Website screenshots (2026-11-16)
+
+Run `python3 scripts/generate-website-screenshots.py` to build the current Debug app and capture Chinese/English settings and onboarding views. The website examples select G9N9N and use its photo and model defaults. Device connection and battery states are screenshot fixtures, not hardware measurements. The renderer uses an isolated preferences suite and does not start hardware monitoring. After refreshing these assets, rerender `scripts/demo-video/render.py` so the video uses the same current UI.
+
+向导完成页只展示已完成设置的总结，不重新检查权限、蓝牙或音频，不发起 HID／音频重配置，也不因运行状态变化禁用完成按钮。权限与连接阻塞在对应前置步骤处理；三键测试只有在蓝牙语音连接就绪且收到三个不同按键时才允许进入完成页。
+
+语音热键菜单提供九个预置：Fn、右 Option、右 Command；Ctrl+Shift、Ctrl+Option、Ctrl+Command 分别与 V 或 R 组合。V 和 R 的主键码分别为 9、15。自定义热键入口保留；从菜单移除的左侧修饰键仍可通过自定义编辑器选择。

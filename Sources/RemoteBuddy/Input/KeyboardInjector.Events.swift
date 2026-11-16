@@ -38,6 +38,29 @@ extension KeyboardInjector {
         postMarkedKeyState(code: code, isDown: isDown, flags: flags, marker: orderedVoiceEventMarker)
     }
 
+    static func postVoiceShortcutState(code: CGKeyCode, isDown: Bool, flags: CGEventFlags) -> Bool {
+        postVoiceShortcutState(code: code, isDown: isDown, flags: flags,
+            eventPoster: { location, event in event.post(tap: location) })
+    }
+
+    static func postVoiceShortcutState(
+        code: CGKeyCode, isDown: Bool, flags: CGEventFlags,
+        eventPoster: (CGEventTapLocation, CGEvent) -> Void
+    ) -> Bool {
+        // HeldVoiceShortcut already composes the complete physical + owned flags.
+        // Do not read them again here: HID posting can leave a synthetic modifier
+        // in the snapshot, which would reassert it during its release.
+        guard let event = makeMarkedKeyEvent(code: code, isDown: isDown, flags: flags,
+            marker: orderedVoiceEventMarker, hardwareFlags: { [] })
+        else { return false }
+        // Match standalone voice keys: an input tool's HID tap runs before the
+        // session entry point and cannot observe events posted only at that point.
+        eventPoster(.cghidEventTap, event)
+        AppLogger.shared.write("VOICE SHORTCUT EVENT key_code=\(code) edge=\(isDown ? "down" : "up") " +
+            "modifier_flags=\(event.flags.rawValue) tap=hid result=submitted target_response=unknown")
+        return true
+    }
+
     static func makeMappedKeyEvent(
         code: CGKeyCode, isDown: Bool, flags: CGEventFlags,
         hardwareFlags: () -> CGEventFlags = KeyboardHardwareModifierPolicy.current
@@ -64,10 +87,17 @@ extension KeyboardInjector {
               let event = CGEvent(keyboardEventSource: source, virtualKey: code, keyDown: isDown)
         else { return nil }
         event.type = keyEventType(code: code, isDown: isDown)
-        // Posting Fn down can make the HID snapshot retain Fn. Re-inheriting
-        // that bit on key-up turns every tap into a continuous hold.
-        let inheritedFlags = code == VoiceKeyMode.function.keyCode
-            ? hardwareFlags().subtracting(.maskSecondaryFn) : hardwareFlags()
+        // Voice modifiers must not re-inherit their own HID state on release.
+        // Preserve other physical modifiers, including the opposite-side key.
+        let observedFlags = hardwareFlags()
+        let inheritedFlags: CGEventFlags
+        if marker == orderedVoiceEventMarker {
+            inheritedFlags = ShortcutEventSequence.hardwareFlags(observedFlags,
+                excludingOwned: ShortcutEventSequence.modifierFlags(for: code))
+        } else {
+            inheritedFlags = code == VoiceKeyMode.function.keyCode
+                ? observedFlags.subtracting(.maskSecondaryFn) : observedFlags
+        }
         event.flags = flags.union(inheritedFlags)
         event.setIntegerValueField(.eventSourceUserData, value: marker)
         return event

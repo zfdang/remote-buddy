@@ -190,7 +190,7 @@ struct ApplicationIntegrationTests {
             let clock = ControlledTestScheduler()
             let session = VoiceFnTapSessionController(schedule: clock.voiceSchedule,
                 destinationReadiness: { model.prepareIntegratedVoiceInputDestination(completion: $0, schedule: clock.voiceSchedule) },
-                setFunctionKeyPressed: { edges.append($0); return true }, enqueueAudio: { _ in },
+                setTriggerPressed: { edges.append($0); return true }, enqueueAudio: { _ in },
                 drainAudio: { _, callback in callback() }, onFailure: { _ in })
             if tapMode {
                 session.setEnabled(true)
@@ -291,7 +291,7 @@ struct ApplicationIntegrationTests {
             })
             let session = VoiceFnTapSessionController(schedule: clock.voiceSchedule,
                 destinationReadiness: { model.prepareIntegratedVoiceInputDestination(completion: $0, schedule: clock.voiceSchedule) },
-                setFunctionKeyPressed: { edges.append($0); return true }, enqueueAudio: { audio.append($0) },
+                setTriggerPressed: { edges.append($0); return true }, enqueueAudio: { audio.append($0) },
                 drainAudio: { _, done in done() }, onFailure: { _ in Issue.record("Unexpected failure") })
             controller.start()
             defer { session.shutdown(); controller.stop() }
@@ -359,7 +359,7 @@ struct ApplicationIntegrationTests {
             var edges: [Bool] = []
             let session = VoiceFnTapSessionController(schedule: clock.voiceSchedule,
                 destinationReadiness: { model.prepareIntegratedVoiceInputDestination(completion: $0, schedule: clock.voiceSchedule) },
-                setFunctionKeyPressed: { edges.append($0); return true }, enqueueAudio: { _ in },
+                setTriggerPressed: { edges.append($0); return true }, enqueueAudio: { _ in },
                 drainAudio: { _, done in done() }, onFailure: { _ in })
             controller.start()
             defer { session.shutdown(); controller.stop() }
@@ -727,6 +727,43 @@ struct ApplicationIntegrationTests {
         #expect(!KeyboardInjector.workBuddyComposerGroupMatches(0,
             role: { $0 == 0 ? "AXGroup" : "AXTextArea" }, children: { $0 == 0 ? [1, 2] : [] },
             controlLabels: { _ in ["Send", "More actions", "Voice input"] }))
+    }
+
+    @Test func integratedAppsCanFocusTheirComposerWithEitherSendOrStopControls() {
+        let fields: [(ApplicationIntegration, KeyboardInjector.AccessibilityTextCandidate)] = [
+            (.chatGPT, candidate("Ask anything")), (.antigravity, candidate("Message input")),
+            (.claude, candidate("Write your prompt to Claude")),
+            (.weChat, candidate(identifier: "chat_input_field")),
+        ]
+        for (app, field) in fields {
+            for action in ["发送", "停止", "Send", "Stop generating"] {
+                var focused: [Int] = []
+                let candidates = [(element: 0, snapshot: candidate(action, role: "AXButton")),
+                                  (element: 1, snapshot: field)]
+                let result = KeyboardInjector.focusIntegratedCandidates(candidates, integration: app,
+                    windowFrame: window, canContinue: { true },
+                    focus: { focused.append($0); return true },
+                    click: { _, _ in Issue.record("Focusing the editor must not click Send or Stop"); return false })
+                #expect(result)
+                #expect(focused == [1])
+            }
+        }
+    }
+
+    @Test func workBuddyComposerRemainsRecognizableWhileGeneratingAReply() {
+        let roles = [0: "AXGroup", 1: "AXTextArea", 2: "AXPopUpButton", 3: "AXGroup", 4: "AXButton", 5: "AXButton"]
+        let tree = [0: [1, 2, 3], 3: [4, 5]]
+        for action in ["发送", "停止", "停止生成", "Send", "Stop", "Stop generating"] {
+            let recognized = KeyboardInjector.workBuddyComposerGroupMatches(0,
+                role: { roles[$0] ?? "" }, children: { tree[$0] ?? [] },
+                controlLabels: { [2: ["更多操作"], 4: ["语音输入 ⌘D 或长按 ⌥"], 5: [action]][$0] ?? [] })
+            #expect(recognized)
+            #expect(KeyboardInjector.integratedComposerScore(candidate(workBuddyControls: recognized),
+                integration: .workBuddy, windowFrame: window) != nil)
+        }
+        #expect(!KeyboardInjector.workBuddyComposerControlsMatch(["停止", "更多操作"]))
+        #expect(!KeyboardInjector.workBuddyComposerControlsMatch(["停止", "语音输入"]))
+        #expect(!KeyboardInjector.workBuddyComposerControlsMatch(["取消", "更多操作", "语音输入"]))
     }
 
     @Test func workBuddyUnlabeledComposerUsesOnlyItsSurroundingControls() {

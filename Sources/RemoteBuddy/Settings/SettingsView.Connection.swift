@@ -8,7 +8,14 @@ extension SettingsView {
     var connectionPage: some View {
         settingsPage {
             HStack(spacing: 16) {
-                PageHeader(title: localization.text("connection.page.title"))
+                HStack(alignment: .firstTextBaseline, spacing: 12) {
+                    PageHeader(title: localization.text("connection.page.title"))
+                    Link(destination: AppLinks.devices(for: localization.locale)) {
+                        Text(localization.text("connection.action.device_comparison"))
+                            .font(.system(size: 13))
+                    }
+                    .accessibilityIdentifier("connection.device-comparison-link")
+                }
                 Spacer()
                 Button {
                     SettingsPageBehavior.beginDeviceSetup(settings: settings)
@@ -31,7 +38,12 @@ extension SettingsView {
                         runtimePermissionIssuePanel(runtimeIssue)
                     }
                     if profiles.isEmpty {
-                        GlassPanel { remoteDeviceSelector(vertical: true) }
+                        ContentUnavailableView(
+                            localization.text("connection.empty.title"),
+                            systemImage: "appletvremote.gen4",
+                            description: Text(localization.text("connection.empty.detail"))
+                        )
+                        .frame(maxWidth: .infinity, minHeight: 240)
                     }
                     ForEach(profiles) { profile in
                         connectionDeviceGroup(profile)

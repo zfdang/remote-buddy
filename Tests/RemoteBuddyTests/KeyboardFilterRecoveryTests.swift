@@ -90,4 +90,43 @@ struct KeyboardFilterRecoveryTests {
         #expect(actions == 1)
         monitor.disconnectSimulatedDevice()
     }
+
+    @Test func hidFilterRetryReplacementAndStopCancelPreviousTimersAndGuardStaleCallbacks() throws {
+        let name = "filter-retry-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let model = BridgeAppModel(settings: AppSettings(defaults: defaults))
+        model.started = true
+        defer {
+            model.stopHIDMonitors()
+            model.started = false
+        }
+        model.hidMonitoringInterrupted = true
+        model.hidFilterFailureState = .systemDisabled
+
+        var scheduled: [(delay: TimeInterval, work: DispatchWorkItem)] = []
+        model.scheduleHIDFilterRetry(after: 30) { delay, work in
+            scheduled.append((delay, work))
+        }
+        let first = try #require(scheduled.first?.work)
+        #expect(scheduled.first?.delay == 30)
+
+        model.scheduleHIDFilterRetry(after: 30) { delay, work in
+            scheduled.append((delay, work))
+        }
+        let second = try #require(scheduled.last?.work)
+        #expect(scheduled.count == 2)
+        #expect(first.isCancelled)
+        #expect(!second.isCancelled)
+        #expect(model.hidFilterRetryWorkItem === second)
+
+        // Even if the superseded block executes directly, its stale token must not clear the latest work item.
+        first.perform()
+        #expect(model.hidFilterRetryWorkItem === second)
+
+        model.stopHIDMonitors()
+        #expect(second.isCancelled)
+        #expect(model.hidFilterRetryWorkItem == nil)
+        #expect(model.hidFilterRetryToken == nil)
+    }
 }

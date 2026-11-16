@@ -71,7 +71,7 @@ class AppBundleTests(unittest.TestCase):
         self.assertFalse((self.app / 'Contents/Resources/RemoteIllustrations').exists())
         self.assertTrue((self.root / 'Resources/IconArtwork').is_dir())
         self.assertFalse((self.app / 'Contents/Resources/IconArtwork').exists())
-        for name in ('ChromecastG9N9NIllustration', 'GoogleStreamerGY3LEIllustration', 'SiriRemoteA2854Illustration'):
+        for name in ('ChromecastG9N9NPhoto', 'GoogleStreamerGY3LEIllustration', 'SiriRemoteA2854Illustration'):
             self.assertTrue((self.app / f'Contents/Resources/{name}.png').exists())
         phrases = json.loads((self.app / 'Contents/Resources/CommonPhrases.json').read_text())
         self.assertEqual(len(phrases['entries']), 12)
@@ -98,7 +98,7 @@ class AppBundleTests(unittest.TestCase):
     def test_missing_planned_remote_image_preserves_previous_bundle(self):
         result = self.build()
         self.assertEqual(result.returncode, 0, result.stderr)
-        for name in ('ChromecastG9N9NIllustration', 'GoogleStreamerGY3LEIllustration', 'SiriRemoteA2854Illustration'):
+        for name in ('ChromecastG9N9NPhoto', 'GoogleStreamerGY3LEIllustration', 'SiriRemoteA2854Illustration'):
             self.assertTrue((self.app / f'Contents/Resources/{name}.png').exists())
         marker = self.app / 'Contents/Resources/previous-build.txt'
         marker.write_text('keep previous build')

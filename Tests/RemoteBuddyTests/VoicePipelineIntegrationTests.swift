@@ -28,7 +28,7 @@ struct VoicePipelineIntegrationTests {
         var drainCompletion: (() -> Void)?
         var keys: [Bool] = []
         let session = VoiceFnTapSessionController(schedule: clock.voiceSchedule,
-            setFunctionKeyPressed: { keys.append($0); return true },
+            setTriggerPressed: { keys.append($0); return true },
             enqueueAudio: { sink.enqueue($0, isPreRoll: false) },
             drainAudio: { _, done in drainCompletion = done },
             onFailure: { _ in Issue.record("Unexpected key failure") },
@@ -62,7 +62,7 @@ struct VoicePipelineIntegrationTests {
         var completions: [() -> Void] = []
         var keys: [Bool] = []
         let session = VoiceFnTapSessionController(schedule: clock.voiceSchedule,
-            setFunctionKeyPressed: { keys.append($0); return true }, enqueueAudio: { _ in },
+            setTriggerPressed: { keys.append($0); return true }, enqueueAudio: { _ in },
             drainAudio: { _, done in completions.append(done) },
             onFailure: { _ in Issue.record("Unexpected key failure") })
         session.setEnabled(true)

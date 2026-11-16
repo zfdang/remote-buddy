@@ -34,11 +34,15 @@ class AppcastTests(unittest.TestCase):
             self.assertEqual(enclosure.get('length'), str(package.stat().st_size))
             self.assertEqual(item.find(f'{{{appcast.SPARKLE}}}hardwareRequirements').text, 'arm64')
             self.assertEqual(enclosure.get(f'{{{appcast.SPARKLE}}}installationType'), 'package')
-            self.assertTrue(enclosure.get('url').endswith('/v26-10-11.021/' + package.name))
+            self.assertEqual(enclosure.get('url'), 'https://remote.zfdang.com/downloads/' + package.name)
             for tag, version, sig in [('bad', '21', signature), ('v26-10-11.021', '0', signature),
                                       ('v26-10-11.021', '22', signature), ('v26-10-11.021', '21', 'bad'), ('v26-10-11.022', '22', signature)]:
                 with self.assertRaises(ValueError):
                     appcast.generate(package, tag, version, sig, output)
+            legacy_named = Path(directory) / 'Voice_Input_Buddy_v26-10-11.021_macOS_arm64.pkg'
+            legacy_named.write_bytes(b'package')
+            with self.assertRaises(ValueError):
+                appcast.generate(legacy_named, 'v26-10-11.021', '21', signature, output)
 
     def test_display_suffix_wraps_without_wrapping_update_version(self):
         with tempfile.TemporaryDirectory() as directory:

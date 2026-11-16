@@ -80,7 +80,7 @@ extension OnboardingView {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            if tool.requiresFunctionKeySetup {
+            if tool.requiresInputSourceSelection {
                 inputSourceSwitchStatus(for: tool)
             }
 
@@ -92,39 +92,41 @@ extension OnboardingView {
                 spacing: 8
             ) {
                 ForEach(Array(steps.enumerated()), id: \.element.id) { index, step in
-                    let isCompleted = completedInputMethodGuideSteps.contains(step.id)
+                    let isViewed = viewedInputMethodGuideSteps.contains(step.id)
                     onboardingActionButton(id: "input-guide.\(index)") {
                         selectedInputMethodGuideStep = index
-                        completedInputMethodGuideSteps.insert(step.id)
+                        viewedInputMethodGuideSteps.insert(step.id)
                     } label: {
                         HStack(alignment: .center, spacing: 8) {
                             Group {
-                                if isCompleted {
-                                    Image(systemName: "checkmark")
+                                if isViewed {
+                                    Image(systemName: "eye")
                                         .font(.system(size: 11, weight: .bold))
                                 } else {
-                                    Text("\(step.id)")
+                                    Text("\(index + 1)")
                                         .font(.system(size: 12, weight: .bold))
                                 }
                             }
                                 .frame(width: 22, height: 22)
                                 .background(
-                                    isCompleted
-                                        ? Color.green
-                                        : selectedIndex == index
-                                        ? Color.accentColor
-                                        : Color.primary.opacity(0.08),
+                                    selectedIndex == index ? Color.accentColor : Color.primary.opacity(0.08),
                                     in: Circle()
                                 )
                                 .foregroundStyle(
-                                    isCompleted || selectedIndex == index ? Color.white : Color.primary
+                                    selectedIndex == index ? Color.white : Color.primary
                                 )
-                            Text(localization.text(step.titleKey))
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(.primary)
-                                .multilineTextAlignment(.leading)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .frame(maxHeight: .infinity, alignment: .center)
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(voiceToolGuideText(step.titleKey))
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundStyle(.primary)
+                                if isViewed {
+                                    Text(localization.text("onboarding.guide.viewed"))
+                                        .font(.caption2).foregroundStyle(.secondary)
+                                }
+                            }
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxHeight: .infinity, alignment: .center)
                             Spacer(minLength: 0)
                         }
                         .padding(.horizontal, 10)
@@ -168,12 +170,33 @@ extension OnboardingView {
                     .frame(maxWidth: .infinity, minHeight: 120, alignment: .center)
                     .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 10))
             }
+            wechatShortcutHelp
         }
         .padding(16)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
         .overlay {
             RoundedRectangle(cornerRadius: 14)
                 .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+        }
+    }
+
+    private var wechatShortcutHelp: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            onboardingActionButton(id: "wechat-conflict.toggle") {
+                wechatHelpExpanded.toggle()
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: wechatHelpExpanded ? "chevron.down" : "chevron.right")
+                    Text(localization.text("onboarding.voice_tool.guide.release_wechat_shortcut"))
+                    Spacer(minLength: 0)
+                }
+                .frame(maxWidth: .infinity, minHeight: 36, alignment: .leading)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            if wechatHelpExpanded {
+                onboardingGuideScreenshot(resourceName: "weixin-app-shortcuts")
+            }
         }
     }
 
@@ -237,25 +260,12 @@ extension OnboardingView {
                     .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 10))
             }
             Group {
-                Text(verbatim: localization.text(
+                Text(verbatim: voiceToolGuideText(
                     "onboarding.voice_tool.guide.screenshot." +
                         resourceName.replacingOccurrences(of: "-", with: "_")
                 ))
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            if resourceName == "doubao-settings", let binding = proposedPairingPlan?.binding {
-                Text(LocalizedMessage("onboarding.voice_tool.guide.match_shortcut",
-                    arguments: [localization.text(binding.shortcut.localizationKey)]).text(using: localization))
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            if resourceName == "voicebuddy-setting-fn", proposedPairingPlan?.binding.gestureMode == .toggle {
-                Text(verbatim: localization.text("onboarding.voice_tool.guide.voice_buddy.match_toggle_mode"))
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Color.accentColor)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -279,7 +289,7 @@ extension OnboardingView {
                 .font(.system(size: 22, weight: .medium))
                 .foregroundStyle(Color.accentColor)
                 .frame(width: 34)
-            Text(verbatim: localization.text(detailKey))
+            Text(verbatim: voiceToolGuideText(detailKey))
                 .font(.system(size: 13))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -426,11 +436,6 @@ extension OnboardingView {
                     titleKey: "onboarding.voice_tool.guide.select_microphone",
                     content: .microphoneIntegration
                 ),
-                OnboardingInputMethodGuideStep(
-                    id: 4,
-                    titleKey: "onboarding.voice_tool.guide.release_wechat_fn",
-                    content: .screenshot("weixin-app-shortcuts")
-                ),
             ]
         case .other:
             toolSteps = [
@@ -455,40 +460,32 @@ extension OnboardingView {
             return []
         }
 
-        return toolSteps + [
+        var steps = toolSteps + [
             OnboardingInputMethodGuideStep(
                 id: 3,
                 titleKey: "onboarding.voice_tool.guide.select_microphone",
                 content: .microphoneIntegration
             ),
-            OnboardingInputMethodGuideStep(
+        ]
+        if settings.selectedVoiceTrigger.voiceKeyMode == .function {
+            steps.append(OnboardingInputMethodGuideStep(
                 id: 4,
                 titleKey: "onboarding.voice_tool.guide.release_system_fn",
                 content: .systemFunctionKey
-            ),
-            OnboardingInputMethodGuideStep(
-                id: 5,
-                titleKey: "onboarding.voice_tool.guide.release_wechat_fn",
-                content: .screenshot("weixin-app-shortcuts")
-            ),
-        ]
+            ))
+        }
+        return steps
     }
 
-    func defaultBindingSummary(profile: VoiceToolAdapterProfile) -> String {
-        let descriptions = VoiceGestureMode.allCases.compactMap { mode -> String? in
-            guard let shortcut = profile.defaultShortcutByMode[mode] else { return nil }
-            return "\(localization.text("onboarding.gesture.\(mode.rawValue)")): " +
-                localization.text(shortcut.localizationKey)
-        }
-        if descriptions.isEmpty {
-            return localization.text("onboarding.voice_tool.binding.no_documented_default")
-        }
-        let evidence = localization.text(
-            profile.evidenceState == .verified
-                ? "onboarding.voice_tool.binding.evidence_verified"
-                : "onboarding.voice_tool.binding.evidence_pending"
-        )
-        return descriptions.joined(separator: " · ") + " · " + evidence
+    var voiceToolGuideGesture: VoiceGestureMode {
+        settings.selectedVoiceTrigger.voiceFnTapModeEnabled ? .toggle : .hold
+    }
+
+    func voiceToolGuideText(_ key: String) -> String {
+        LocalizedMessage(key, arguments: [
+            settings.selectedVoiceTrigger.voiceKeyMode.displayName(using: localization),
+            localization.text("onboarding.gesture.\(voiceToolGuideGesture.rawValue)"),
+        ]).text(using: localization)
     }
 
     private func onboardingGuideImage(resourceName: String) -> NSImage? {
@@ -501,27 +498,22 @@ extension OnboardingView {
         return OnboardingImageCache.image(at: url)
     }
 
-    private func selectVoiceTool(_ tool: OnboardingVoiceTool) {
+    func selectVoiceTool(_ tool: OnboardingVoiceTool) {
         settings.setOnboardingVoiceTool(tool)
         AppLogger.shared.write(
-            "ONBOARDING VOICE_TOOL selected=\(tool.rawValue) binding_policy=function_key"
+            "ONBOARDING VOICE_TOOL selected=\(tool.rawValue) binding_policy=selected_voice_key"
         )
         selectedInputMethodGuideStep = nil
-        completedInputMethodGuideSteps.removeAll()
+        wechatHelpExpanded = false
+        viewedInputMethodGuideSteps.removeAll()
         refreshSelectedInputMethodStatus()
         refreshSystemFunctionKeyUsage()
         stageCurrentDocumentedPairingPlanIfPossible()
     }
 
-    func selectPreferredGesture(_ gesture: VoiceGestureMode) {
-        settings.setOnboardingPreferredGesture(gesture)
-    }
-
     func stageCurrentDocumentedPairingPlanIfPossible() {
         guard let plan = proposedPairingPlan else { return }
-        settings.beginOnboardingVoiceTrial(plan, applyVoiceSettings: false)
-        model.setVoiceKeyMode(plan.binding.shortcut)
-        model.setVoiceFnTapModeEnabled(plan.fnTapModeEnabled)
+        settings.beginOnboardingVoiceTrial(plan)
     }
 }
 struct OnboardingInputMethodGuideStep: Identifiable {

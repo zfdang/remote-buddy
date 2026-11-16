@@ -21,7 +21,6 @@ enum FirstUseFailureReason: String, Codable, Equatable {
     case voiceAudioDeliveryFailed = "voice.audio_delivery_failed"
     case voiceExternalToolNoCommit = "voice.external_tool_no_commit"
     case controlsNotConfirmed = "controls.not_confirmed"
-    case completeRuntimeRegressed = "complete.runtime_regressed"
 
     var recoveryStep: OnboardingStep {
         switch self {
@@ -33,7 +32,7 @@ enum FirstUseFailureReason: String, Codable, Equatable {
         case .remoteNotFound, .remoteButtonNotReady:
             return .remote
         case .audioNoOutputDevice, .audioSelectedDeviceMissing, .audioOutputNotReady:
-            return .audio
+            return .permissions
         case .voiceSessionNotStarted,
              .voiceNoSamples,
              .voiceSessionNotEnded,
@@ -46,8 +45,6 @@ enum FirstUseFailureReason: String, Codable, Equatable {
             return .voiceTest
         case .controlsNotConfirmed:
             return .controls
-        case .completeRuntimeRegressed:
-            return .permissions
         }
     }
 }
@@ -242,11 +239,11 @@ struct FirstUseDiagnosticContext: Equatable {
     }
 
     var failureReason: FirstUseFailureReason? {
-        if [.remote, .controls, .audio, .voiceTest].contains(step),
+        if [.remote, .controls, .voiceTrigger, .voiceTest].contains(step),
            runtimePermissionIssue?.isPermissionDesynced == true {
             return .permissionDesynced
         }
-        if [.remote, .controls, .audio, .voiceTest].contains(step),
+        if [.remote, .controls, .voiceTrigger, .voiceTest].contains(step),
            let permission = OnboardingFlowPolicy.missingRuntimePermission(
                controlMethod: controlMethod, capabilities: capabilities) {
             return permission
@@ -265,15 +262,16 @@ struct FirstUseDiagnosticContext: Equatable {
             if runtimePermissionIssue?.isPermissionDesynced == true {
                 return .permissionDesynced
             }
-        case .remote:
-            if !capabilities.remoteConnected { return .remoteNotFound }
-            if !capabilities.remoteButtonObserved { return .remoteButtonNotReady }
-        case .audio:
             if !hasSelectedAudioUID { return .audioNoOutputDevice }
             if !capabilities.audioOutputSelected { return .audioSelectedDeviceMissing }
             if !capabilities.audioReady {
                 return .audioOutputNotReady
             }
+        case .voiceTrigger:
+            break
+        case .remote:
+            if !capabilities.remoteConnected { return .remoteNotFound }
+            if !capabilities.remoteButtonObserved { return .remoteButtonNotReady }
         case .voiceTest:
             if let voiceAttempt {
                 return voiceAttempt.failureReason
@@ -284,15 +282,10 @@ struct FirstUseDiagnosticContext: Equatable {
             if capabilities.manualTranscriptInputObserved { return .voiceManualInput }
             if !capabilities.transcriptionAppeared { return .voiceNoTranscript }
         case .controls:
+            if !capabilities.remoteConnected { return .remoteNotFound }
             if capabilities.testedRemoteButtonCount < 3 { return .controlsNotConfirmed }
         case .complete:
-            guard OnboardingFlowPolicy.canContinue(
-                from: .complete,
-                voiceTool: .other,
-                remoteAvailability: remoteAvailability,
-                controlMethod: controlMethod,
-                capabilities: capabilities
-            ) else { return .completeRuntimeRegressed }
+            break
         }
         return nil
     }

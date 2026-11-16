@@ -8,9 +8,62 @@ final class AudioRuntime {
     typealias AudioHardwareListenerRemover = (
         inout AudioObjectPropertyAddress, DispatchQueue, @escaping AudioObjectPropertyListenerBlock
     ) -> OSStatus
-    let output = VirtualAudioOutput()
+    let output: VirtualAudioOutput
+
+    init(output: VirtualAudioOutput = VirtualAudioOutput()) {
+        self.output = output
+    }
     let preparationQueue = DispatchQueue(label: "RemoteBuddy.audioPreparation", qos: .userInitiated)
     var configurationGeneration: UInt64 = 0
+    var activeConfigurationGeneration: UInt64?
+    var activeConfigurationDeviceUID: String?
+    private(set) var configurationWaiters: [UInt64: [(Bool) -> Void]] = [:]
+
+    func beginConfiguration(
+        generation: UInt64,
+        deviceUID: String,
+        adoptExistingWaiters: Bool = false
+    ) {
+        if let previousGeneration = activeConfigurationGeneration,
+           previousGeneration != generation {
+            if adoptExistingWaiters,
+               let previousWaiters = configurationWaiters.removeValue(forKey: previousGeneration),
+               !previousWaiters.isEmpty {
+                configurationWaiters[generation, default: []].append(contentsOf: previousWaiters)
+            } else {
+                resolveConfigurationWaiters(generation: previousGeneration, configured: false)
+            }
+        }
+        activeConfigurationGeneration = generation
+        activeConfigurationDeviceUID = deviceUID
+    }
+
+    func addConfigurationWaiter(generation: UInt64, _ completion: @escaping (Bool) -> Void) {
+        configurationWaiters[generation, default: []].append(completion)
+    }
+
+    func resolveConfigurationWaiters(generation: UInt64, configured: Bool) {
+        if activeConfigurationGeneration == generation {
+            activeConfigurationGeneration = nil
+            activeConfigurationDeviceUID = nil
+        }
+        guard let waiters = configurationWaiters.removeValue(forKey: generation) else { return }
+        for waiter in waiters {
+            waiter(configured)
+        }
+    }
+
+    func cancelAllConfigurationWaiters() {
+        activeConfigurationGeneration = nil
+        activeConfigurationDeviceUID = nil
+        let pending = configurationWaiters
+        configurationWaiters.removeAll()
+        for generation in pending.keys.sorted() {
+            for waiter in pending[generation] ?? [] {
+                waiter(false)
+            }
+        }
+    }
     var startupGeneration: UInt64 = 0
     var deviceRefreshGeneration: UInt64 = 0
     var startupPending = false
@@ -62,6 +115,7 @@ final class AudioRuntime {
         startupGeneration &+= 1
         deviceRefreshGeneration &+= 1
         configurationGeneration &+= 1
+        cancelAllConfigurationWaiters()
         startupPending = false
         testToneStartupPending = false
         recoveryGeneration &+= 1

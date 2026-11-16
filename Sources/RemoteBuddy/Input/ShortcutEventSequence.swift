@@ -12,7 +12,7 @@ enum ShortcutEventSequence {
         let rightDeviceBit: CGEventFlags
     }
 
-    private struct SelectedModifier {
+    struct SelectedModifier {
         let flag: CGEventFlags
         let key: CGKeyCode
         let deviceBit: CGEventFlags
@@ -60,7 +60,29 @@ enum ShortcutEventSequence {
         )
     ]
 
-    private static func selectedModifiers(for requested: CGEventFlags) -> [SelectedModifier] {
+    static func modifierFlags(for keyCode: CGKeyCode) -> CGEventFlags {
+        for family in modifierFamilies {
+            if keyCode == family.leftKey { return family.flag.union(family.leftDeviceBit) }
+            if keyCode == family.rightKey { return family.flag.union(family.rightDeviceBit) }
+        }
+        return []
+    }
+
+    /// HID-entry voice events can appear in subsequent HID flag snapshots. Do not
+    /// mistake our owned modifiers for physical keys, including after key-up.
+    static func hardwareFlags(_ observed: CGEventFlags, excludingOwned owned: CGEventFlags) -> CGEventFlags {
+        var result = observed.subtracting(owned)
+        for family in modifierFamilies where owned.contains(family.flag) {
+            let otherLeft = !family.leftDeviceBit.isEmpty && observed.contains(family.leftDeviceBit)
+                && !owned.contains(family.leftDeviceBit)
+            let otherRight = !family.rightDeviceBit.isEmpty && observed.contains(family.rightDeviceBit)
+                && !owned.contains(family.rightDeviceBit)
+            if otherLeft || otherRight { result.formUnion(family.flag) }
+        }
+        return result
+    }
+
+    static func selectedModifiers(for requested: CGEventFlags) -> [SelectedModifier] {
         modifierFamilies.compactMap { family in
             guard requested.contains(family.flag) else { return nil }
             if let rightKey = family.rightKey,

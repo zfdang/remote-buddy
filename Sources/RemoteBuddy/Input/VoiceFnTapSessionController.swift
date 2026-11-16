@@ -15,7 +15,7 @@ final class VoiceFnTapSessionController {
     }
 
     typealias Scheduler = OperationScheduler
-    typealias FunctionKeySetter = (Bool) -> Bool
+    typealias TriggerSetter = (Bool) -> Bool
     typealias AudioEnqueuer = ([Int16]) -> Void
     typealias AudioDrainer = (UInt64, @escaping () -> Void) -> Void
     typealias DestinationReadiness = (
@@ -41,7 +41,7 @@ final class VoiceFnTapSessionController {
     private let maximumPreRollSampleCount: Int
     private let schedule: Scheduler
     private let destinationReadiness: DestinationReadiness
-    private let setFunctionKeyPressed: FunctionKeySetter
+    private let setTriggerPressed: TriggerSetter
     private let enqueueAudio: AudioEnqueuer
     private let enqueuePreRollAudio: AudioEnqueuer
     private let drainAudio: AudioDrainer
@@ -58,7 +58,7 @@ final class VoiceFnTapSessionController {
     private var remoteEnded = false
     private var pendingVoice: PendingVoice?
     private var scheduledTasks: [ScheduledOperation] = []
-    private var functionKeyIsPressed = false
+    private var triggerIsPressed = false
     /// Once the first start tap is sent, the rest of the start sequence must follow.
     private var startSequenceBegan = false
     private var keyReleaseRetryTask: ScheduledOperation?
@@ -87,7 +87,7 @@ final class VoiceFnTapSessionController {
     }
 
     var requiresCleanupBeforeMapping: Bool {
-        phase != .idle || functionKeyIsPressed
+        phase != .idle || triggerIsPressed
     }
 
     init(
@@ -98,7 +98,7 @@ final class VoiceFnTapSessionController {
         maximumPreRollSampleCount: Int = VoicePlaybackQueueCapacity.maximumPreRollSamples,
         schedule: @escaping Scheduler = ScheduledOperation.mainQueue,
         destinationReadiness: @escaping DestinationReadiness = { _ in .immediate },
-        setFunctionKeyPressed: @escaping FunctionKeySetter,
+        setTriggerPressed: @escaping TriggerSetter,
         enqueueAudio: @escaping AudioEnqueuer,
         drainAudio: @escaping AudioDrainer,
         onFailure: @escaping (VoiceFnTapFailure) -> Void,
@@ -115,7 +115,7 @@ final class VoiceFnTapSessionController {
         self.maximumPreRollSampleCount = maximumPreRollSampleCount
         self.schedule = schedule
         self.destinationReadiness = destinationReadiness
-        self.setFunctionKeyPressed = setFunctionKeyPressed
+        self.setTriggerPressed = setTriggerPressed
         self.enqueueAudio = enqueueAudio
         self.enqueuePreRollAudio = enqueuePreRollAudio ?? enqueueAudio
         self.pendingPlaybackDuration = pendingPlaybackDuration
@@ -129,7 +129,7 @@ final class VoiceFnTapSessionController {
     deinit {
         scheduledTasks.forEach { $0.cancel() }
         keyReleaseRetryTask?.cancel()
-        if functionKeyIsPressed { _ = setFunctionKeyPressed(false) }
+        if triggerIsPressed { _ = setTriggerPressed(false) }
     }
 
     func setEnabled(_ enabled: Bool, completion: ((Bool) -> Void)? = nil) {
@@ -165,7 +165,7 @@ final class VoiceFnTapSessionController {
         releaseRecoveryBlocked = false
         failedKeyReleaseAttempts = 0
         nextKeyReleaseRetryDelay = 1
-        _ = releaseFunctionKeyIfNeeded()
+        _ = releaseTriggerIfNeeded()
         runIdleCompletions()
     }
 
@@ -191,7 +191,7 @@ final class VoiceFnTapSessionController {
             if pendingVoice == nil { pendingVoice = PendingVoice() }
             return true
         }
-        guard !functionKeyIsPressed else {
+        guard !triggerIsPressed else {
             logger("VOICE FN TAP start rejected reason=key_held")
             return false
         }
@@ -237,7 +237,7 @@ final class VoiceFnTapSessionController {
         switch phase {
         case let .starting(sessionGeneration):
             remoteEnded = true
-            if !functionKeyIsPressed && !startSequenceBegan {
+            if !triggerIsPressed && !startSequenceBegan {
                 // A released button must not start dictation after the start
                 // delay or destination wait finally completes.
                 cancelSessionAwaitingDestination(generation: sessionGeneration)
@@ -251,7 +251,7 @@ final class VoiceFnTapSessionController {
             remoteEnded = true
             return true
         case .idle:
-            releaseFunctionKeyIfNeeded()
+            releaseTriggerIfNeeded()
             runIdleCompletions()
             return false
         }
@@ -265,7 +265,7 @@ final class VoiceFnTapSessionController {
         let needsStopTap: Bool
         switch phase {
         case .active, .draining: needsStopTap = true
-        case .starting where functionKeyIsPressed || startSequenceBegan:
+        case .starting where triggerIsPressed || startSequenceBegan:
             // Finish the start pulses before issuing a full-duration stop pulse.
             remoteEnded = true
             preRoll.removeAll()
@@ -280,7 +280,7 @@ final class VoiceFnTapSessionController {
         if needsStopTap {
             phase = .stopping(generation)
             let token = generation
-            performFunctionKeyTap(generation: token) { [weak self] success in
+            performTriggerTap(generation: token) { [weak self] success in
                 guard let self, self.generation == token else { return }
                 if !success { self.onFailure(.stopTapFailed) }
                 self.logDrainTerminalIfNeeded(result: "cancelled", reason: "shutdown")
@@ -350,7 +350,7 @@ final class VoiceFnTapSessionController {
     /// Tools such as macOS Dictation start on a double press but stop on one press.
     private func performStartTaps(remaining: Int, generation sessionGeneration: UInt64) {
         guard phase == .starting(sessionGeneration), generation == sessionGeneration else { return }
-        performFunctionKeyTap(generation: sessionGeneration) { [weak self] success in
+        performTriggerTap(generation: sessionGeneration) { [weak self] success in
             guard let self,
                   self.phase == .starting(sessionGeneration),
                   self.generation == sessionGeneration
@@ -425,7 +425,7 @@ final class VoiceFnTapSessionController {
     private func beginStopTap(generation sessionGeneration: UInt64) {
         guard phase == .draining(sessionGeneration), generation == sessionGeneration else { return }
         phase = .stopping(sessionGeneration)
-        performFunctionKeyTap(generation: sessionGeneration) { [weak self] success in
+        performTriggerTap(generation: sessionGeneration) { [weak self] success in
             guard let self,
                   self.phase == .stopping(sessionGeneration),
                   self.generation == sessionGeneration
@@ -439,23 +439,23 @@ final class VoiceFnTapSessionController {
         }
     }
 
-    private func performFunctionKeyTap(
+    private func performTriggerTap(
         generation sessionGeneration: UInt64,
         completion: @escaping (Bool) -> Void
     ) {
         guard generation == sessionGeneration else { completion(false); return }
-        guard setFunctionKeyPressed(true) else {
+        guard setTriggerPressed(true) else {
             completion(false)
             return
         }
-        functionKeyIsPressed = true
+        triggerIsPressed = true
         let result = TapResult(completion)
         let task = schedule(tapDuration) { [weak self] in
             guard let self, self.generation == sessionGeneration else {
                 result.finish(false)
                 return
             }
-            result.finish(self.releaseFunctionKeyIfNeeded())
+            result.finish(self.releaseTriggerIfNeeded())
         }
         scheduledTasks.append(ScheduledOperation.mainQueueCancellation {
             task.cancel()
@@ -475,10 +475,10 @@ final class VoiceFnTapSessionController {
         suppressAudioUntilRemoteStop = suppressUntilRemoteStop
         switch phase {
         case .idle:
-            releaseFunctionKeyIfNeeded()
+            releaseTriggerIfNeeded()
             runIdleCompletions()
         case .starting:
-            if functionKeyIsPressed || startSequenceBegan {
+            if triggerIsPressed || startSequenceBegan {
                 // Keep the start taps' scheduled work, then drain and stop normally.
                 remoteEnded = true
                 preRoll.removeAll()
@@ -511,7 +511,7 @@ final class VoiceFnTapSessionController {
         pendingVoice = nil
         generation &+= 1
         cancelScheduledTasks()
-        releaseFunctionKeyIfNeeded()
+        releaseTriggerIfNeeded()
         logDrainTerminalIfNeeded(result: "failed", reason: failure.rawValue)
         resetSessionState()
         runIdleCompletions()
@@ -526,7 +526,7 @@ final class VoiceFnTapSessionController {
         drainOperationID = nil
         drainStartedAtUptime = nil
         cancelScheduledTasks()
-        releaseFunctionKeyIfNeeded()
+        releaseTriggerIfNeeded()
     }
 
     private func cancelScheduledTasks() {
@@ -535,10 +535,10 @@ final class VoiceFnTapSessionController {
     }
 
     @discardableResult
-    private func releaseFunctionKeyIfNeeded() -> Bool {
-        guard functionKeyIsPressed else { return false }
-        let success = setFunctionKeyPressed(false)
-        functionKeyIsPressed = !success
+    private func releaseTriggerIfNeeded() -> Bool {
+        guard triggerIsPressed else { return false }
+        let success = setTriggerPressed(false)
+        triggerIsPressed = !success
         if success {
             keyReleaseRetryTask?.cancel()
             keyReleaseRetryTask = nil
@@ -561,7 +561,7 @@ final class VoiceFnTapSessionController {
             keyReleaseRetryTask = schedule(delay) { [weak self] in
                 guard let self else { return }
                 self.keyReleaseRetryTask = nil
-                _ = self.releaseFunctionKeyIfNeeded()
+                _ = self.releaseTriggerIfNeeded()
                 self.runIdleCompletions()
             }
         }
@@ -598,9 +598,9 @@ final class VoiceFnTapSessionController {
 
     private func runIdleCompletions() {
         if releaseRecoveryBlocked { finishCleanupCompletions(success: false); return }
-        guard phase == .idle, !functionKeyIsPressed else { return }
+        guard phase == .idle, !triggerIsPressed else { return }
         finishCleanupCompletions(success: true)
-        if phase == .idle, !functionKeyIsPressed { onIdle() }
+        if phase == .idle, !triggerIsPressed { onIdle() }
     }
 
     private func finishCleanupCompletions(success: Bool) {

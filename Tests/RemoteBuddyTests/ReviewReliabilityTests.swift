@@ -73,6 +73,8 @@ struct ReviewReliabilityTests {
         #expect(!result.isReady)
         result.after = .init(output: .init(mute: false, volume: 1))
         #expect(result.isReady)
+        result.writeFailed = true
+        #expect(!result.isReady)
         #expect(!VirtualAudioDeviceLevelPolicy.requiresVolumeRestore(volume: 0.2))
         #expect(VirtualAudioDeviceLevelPolicy.requiresVolumeRestore(volume: 0.199))
         for value in [Float.nan, .infinity, -.infinity] {

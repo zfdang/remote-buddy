@@ -290,12 +290,14 @@ struct SystemSleepAudioTests {
 
             // On resume when the bridge remained .ready (no .ready transition callback),
             // applyHIDSettings() restores discovery/suppressor/input-source monitors and reschedules HID mapping recovery.
-            // configuredMonitor stays stopped until recovery matches services and suppresses power key.
+            // The configured monitor observes service arrival without opening/routing input
+            // until recovery suppresses the power key.
             model.handleSystemAudioLifecycle(.sessionDidBecomeActive)
             #expect(model.discoveryHIDMonitor?.isMonitoring == true)
             #expect(model.hidEventSuppressor.isRunning)
             #expect(model.preferredInputSourceMonitor.isMonitoring)
-            #expect(model.hidMonitoringInterrupted)
+            #expect(!model.hidMonitoringInterrupted)
+            #expect(model.hidMonitors["test-remote"]?.isWaitingForMatchingServices == true)
             #expect(model.hidMappingRecoveryWorkItem != nil)
             #expect(isReady(bridge.state))
         }
@@ -445,7 +447,7 @@ struct SystemSleepAudioTests {
             model.handleSystemAudioLifecycle(.systemDidWake)
             #expect(!model.audio.suspensionState.pendingSystemWakeRecovery)
             #expect(!model.connections.bridges.isEmpty)
-            #expect(model.connections.discoveryBridge != nil)
+            #expect(model.connections.discoveryBridge == nil)
         }
 
         // finishAudioStartup with empty bridges/discoveryBridge runs completeBluetoothResume and resumes Fn-tap when connected.
@@ -469,7 +471,7 @@ struct SystemSleepAudioTests {
             #expect(model.hidMonitors["test-remote"]?.isMonitoring == true)
             #expect(!model.voiceFnTapSession.isSuspended)
             #expect(!model.connections.bridges.isEmpty)
-            #expect(model.connections.discoveryBridge != nil)
+            #expect(model.connections.discoveryBridge == nil)
         }
     }
 
@@ -510,6 +512,68 @@ struct SystemSleepAudioTests {
             model.handleSystemAudioLifecycle(.screenDidWake)
             #expect(isReady(bridge.state))
             #expect(scheduledReconnects().isEmpty)
+        }
+    }
+
+    @Test func suspendActiveAudioEndsLocalStreamEvenIfRemoteStopNeverArrives() throws {
+        try withReadyBridgeModel { model, bridge, _ in
+            var written: [Data] = []
+            bridge.simulateT1ReadyStateForTesting()
+            bridge.testingControlWriteHandler = { data in
+                written.append(data)
+                return true
+            }
+            bridge.simulateControlPacketForTesting(Data([0x04, 0x03, 0x02, 0x01]))
+            #expect(!bridge.requestMicrophoneOpen())
+
+            model.handleSystemAudioLifecycle(.sessionDidResignActive)
+
+            #expect(written == [Data([0x0D, 0x01])])
+            #expect(!bridge.hasPendingVoiceWork)
+            #expect(!bridge.isMicrophoneOpen)
+            #expect(!bridge.isMicrophoneClosePending)
+            #expect(isReady(bridge.state))
+
+            model.handleSystemAudioLifecycle(.sessionDidBecomeActive)
+            #expect(isReady(bridge.state))
+            #expect(bridge.requestMicrophoneOpen())
+        }
+    }
+
+    @Test func suspendActiveAudioRecoversConnectionWhenRemoteCloseFailsOrRemainsQueued() throws {
+        try withReadyBridgeModel { model, bridge, _ in
+            bridge.simulateT1ReadyStateForTesting()
+            bridge.testingControlWriteHandler = { _ in false }
+            bridge.simulateControlPacketForTesting(Data([0x04, 0x03, 0x02, 0x01]))
+
+            model.handleSystemAudioLifecycle(.sessionDidResignActive)
+
+            #expect(!bridge.hasPendingVoiceWork)
+            #expect(!bridge.isMicrophoneOpen)
+            #expect(!bridge.isMicrophoneClosePending)
+            #expect(!bridge.isLifecycleReadyForTesting)
+            #expect(isReconnecting(bridge.state))
+            #expect(bridge.isConnectionCycleNeededForTesting)
+
+            model.handleSystemAudioLifecycle(.sessionDidBecomeActive)
+            #expect(!bridge.isConnectionCycleNeededForTesting)
+            #expect(bridge.state != .stopped)
+        }
+
+        try withReadyBridgeModel { model, bridge, _ in
+            bridge.simulateT1ReadyStateForTesting()
+            bridge.testingControlWriteHandler = { _ in true }
+            bridge.simulateControlPacketForTesting(Data([0x04, 0x03, 0x02, 0x01]))
+            #expect(bridge.enqueueUnacknowledgedWriteForTesting(Data([0x0D, 0x01])))
+            #expect(bridge.hasPendingWriteWorkForTesting)
+
+            model.handleSystemAudioLifecycle(.sessionDidResignActive)
+
+            #expect(!bridge.hasPendingVoiceWork)
+            #expect(!bridge.hasPendingWriteWorkForTesting)
+            #expect(!bridge.isLifecycleReadyForTesting)
+            #expect(isReconnecting(bridge.state))
+            #expect(bridge.isConnectionCycleNeededForTesting)
         }
     }
 }

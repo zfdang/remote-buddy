@@ -4,7 +4,6 @@ import Foundation
 struct SettingsOverviewState: Equatable {
     let missingRequirementKeys: [String]
     let connectedRemoteNames: [String]
-    let mappingEnabled: Bool
     let integrationTool: OnboardingVoiceTool
 
     var permissionsReady: Bool { missingRequirementKeys.isEmpty }
@@ -13,7 +12,7 @@ struct SettingsOverviewState: Equatable {
 
     init(bluetoothGranted: Bool, inputMonitoringGranted: Bool, accessibilityGranted: Bool,
          audioDevices: [AudioDeviceInfo], profiles: [RemoteDeviceProfile], connectedIDs: Set<UUID>,
-         mappingEnabled: Bool, integrationTool: OnboardingVoiceTool,
+         integrationTool: OnboardingVoiceTool,
          remoteName: (RemoteDeviceProfile) -> String) {
         var missing: [String] = []
         if !bluetoothGranted { missing.append("permission.bluetooth.title") }
@@ -24,7 +23,6 @@ struct SettingsOverviewState: Equatable {
         }) { missing.append("settings.driver.title") }
         missingRequirementKeys = missing
         connectedRemoteNames = profiles.filter { connectedIDs.contains($0.id) }.map(remoteName)
-        self.mappingEnabled = mappingEnabled
         self.integrationTool = integrationTool
     }
 

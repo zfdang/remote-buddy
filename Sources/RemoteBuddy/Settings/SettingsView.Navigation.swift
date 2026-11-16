@@ -29,19 +29,17 @@ extension SettingsView {
 
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 0) {
-                    ForEach(visibleSections) { section in
-                        sidebarButton(section)
+                    ForEach(Array(SettingsPageBehavior.sidebarSectionGroups.enumerated()), id: \.offset) { index, sections in
+                        if index > 0 {
+                            Divider().padding(.horizontal, 10).padding(.vertical, 6)
+                        }
+                        ForEach(sections) { section in sidebarButton(section) }
                     }
                 }
                 .padding(.top, 6)
             }
         }
         .background(Color(nsColor: .controlBackgroundColor))
-    }
-
-    private var visibleSections: [SettingsSection] {
-        SettingsPageBehavior.sidebarSections()
-
     }
 
     private func sidebarButton(_ section: SettingsSection) -> some View {

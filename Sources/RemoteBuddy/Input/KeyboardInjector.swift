@@ -294,7 +294,7 @@ enum KeyboardInjector {
     static func setFunctionKeyPressed(
         _ isPressed: Bool,
         accessibilityTrusted: () -> Bool = { isAccessibilityTrusted },
-        keyStatePoster: KeyStatePoster = postVoiceKeyState
+        keyStatePoster: @escaping KeyStatePoster = postVoiceKeyState
     ) -> Bool {
         setVoiceKeyPressed(
             .function,
@@ -309,11 +309,18 @@ enum KeyboardInjector {
         _ mode: VoiceKeyMode,
         isPressed: Bool,
         accessibilityTrusted: () -> Bool = { isAccessibilityTrusted },
-        keyStatePoster: KeyStatePoster = postVoiceKeyState,
-        secureInputEnabled: () -> Bool = SecureInputMonitor.isEnabled
+        keyStatePoster: @escaping KeyStatePoster = postVoiceKeyState,
+        secureInputEnabled: () -> Bool = SecureInputMonitor.isEnabled,
+        shortcutSession: HeldVoiceShortcut = .shared,
+        shortcutKeyStatePoster: @escaping KeyStatePoster = postVoiceShortcutState,
+        shortcutHardwareFlags: @escaping () -> CGEventFlags = KeyboardHardwareModifierPolicy.currentForMappedAction
     ) -> Bool {
         guard !isPressed || !secureInputEnabled() else { return false }
         guard accessibilityTrusted() else { return false }
+        if case let .shortcut(shortcut) = mode {
+            return shortcutSession.setPressed(isPressed, shortcut: shortcut, post: shortcutKeyStatePoster,
+                hardwareFlags: shortcutHardwareFlags)
+        }
         let flags = isPressed ? mode.eventFlags : []
         return keyStatePoster(
             mode.keyCode,

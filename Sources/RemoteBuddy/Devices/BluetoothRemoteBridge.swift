@@ -222,13 +222,18 @@ final class BluetoothRemoteBridge: NSObject {
             self.microphoneClosePending = false
             self.microphoneCloseSessionID = nil
             self.microphoneOpened = false
-            self.stopStreaming()
+            self.stopStreaming(reason: .writeResponseFailure)
             AppLogger.shared.write("BLE WRITE failed reason=response_or_timeout")
             self.scheduleReconnect()
         }
     )
     private lazy var unacknowledgedWrites = FlowControlledBluetoothWriteQueue(
-        canSend: { [weak self] in self?.peripheral?.canSendWriteWithoutResponse == true },
+        canSend: { [weak self] in
+            guard let self, self.transmitCharacteristic != nil, let peripheral = self.peripheral else {
+                return false
+            }
+            return peripheral.canSendWriteWithoutResponse
+        },
         send: { [weak self] data in
             guard let self, let peripheral = self.peripheral,
                   let characteristic = self.transmitCharacteristic else { return }
@@ -240,11 +245,15 @@ final class BluetoothRemoteBridge: NSObject {
             self.microphoneClosePending = false
             self.microphoneCloseSessionID = nil
             self.microphoneOpened = false
-            self.stopStreaming()
+            self.stopStreaming(reason: .flowControlTimeout)
             AppLogger.shared.write("BLE WRITE failed reason=flow_control_timeout")
             self.scheduleReconnect()
         }
     )
+    private let voiceDiagnosticLogger: (String) -> Void
+    private(set) var lastVoiceStopReason: BluetoothVoiceStopReason?
+    private var streamStopRecorded = false
+    private var localMicrophoneCloseRequested = false
     // This is a requested-open flag; ATVV stream notifications establish actual streaming.
     private var microphoneOpened = false
     private var microphoneClosePending = false
@@ -266,19 +275,34 @@ final class BluetoothRemoteBridge: NSObject {
     var isMicrophoneClosePending: Bool { microphoneClosePending }
     var isMicrophoneOpen: Bool { microphoneOpened }
 
+#if DEBUG
+    func enqueueUnacknowledgedWriteForTesting(_ data: Data) -> Bool {
+        unacknowledgedWrites.enqueue(data)
+    }
+
+    func enqueueAcknowledgedWriteForTesting(_ data: Data) -> Bool {
+        acknowledgedWrites.enqueue(data)
+    }
+
+    var hasPendingWriteWorkForTesting: Bool {
+        acknowledgedWrites.hasPendingWork || unacknowledgedWrites.hasPendingWork
+    }
+
+    var isLifecycleReadyForTesting: Bool { lifecycle.isReady }
+    var isConnectionCycleNeededForTesting: Bool { systemSuspension.connectionCycleNeeded }
+
     func simulateMicrophoneOpenedForTesting(_ opened: Bool) {
         microphoneOpened = opened
     }
 
     func simulateStreamStopForTesting() {
-        handleRemoteStreamStop()
+        handleRemoteStreamStop(reason: .remoteNotification)
     }
 
     func simulateLocalStopStreamingForTesting() {
-        stopStreaming()
+        stopStreaming(reason: .localStop)
     }
 
-#if DEBUG
     func simulateReadyStateForTesting(deviceName: String = "Test remote") {
         shouldRun = true
         generationCounter &+= 1
@@ -388,6 +412,7 @@ final class BluetoothRemoteBridge: NSObject {
         allowsT1Remote: Bool = false,
         adoptUnidentifiedATVVAsT1: @escaping () -> Bool = { false },
         audioPipeline: BluetoothAudioPipeline = BluetoothAudioPipeline(),
+        voiceDiagnosticLogger: @escaping (String) -> Void = { AppLogger.shared.write($0) },
         scheduleMicrophoneClose: @escaping OperationScheduler = ScheduledOperation.mainQueue,
         excludedIdentifiers: @escaping () -> Set<UUID> = { [] },
         scheduleReconnect: @escaping (TimeInterval, DispatchWorkItem) -> Void = { delay, work in
@@ -396,6 +421,7 @@ final class BluetoothRemoteBridge: NSObject {
     ) {
         self.settings = settings
         self.audioDecoder = audioPipeline
+        self.voiceDiagnosticLogger = voiceDiagnosticLogger
         self.scheduleMicrophoneClose = scheduleMicrophoneClose
         self.allowsG9N9N = allowsG9N9N
         self.allowsT1Remote = allowsT1Remote
@@ -450,7 +476,7 @@ final class BluetoothRemoteBridge: NSObject {
         reconnectPolicy.reset()
         stopScan()
         closeMicrophoneIfNeeded()
-        resetSession()
+        resetSession(reason: .bridgeStopped)
         if let central, let peripheral, peripheral.state != .disconnected {
             central.cancelPeripheralConnection(peripheral)
         }
@@ -514,13 +540,15 @@ final class BluetoothRemoteBridge: NSObject {
             guard systemSuspension.suspend(phase: lifecycle) else { return }
             stopBatteryPolling(reason: "system_suspended")
             stopScan()
-            if !lifecycle.isReady,
-               let central,
-               let peripheral,
-               peripheral.state != .disconnected {
-                requestedReconnectDelay = nil
-                lifecycle = .disconnecting(lifecycle.generation ?? generationCounter)
-                central.cancelPeripheralConnection(peripheral)
+            if !lifecycle.isReady {
+                disconnectWatchdog.cancel()
+                if let central,
+                   let peripheral,
+                   peripheral.state != .disconnected {
+                    requestedReconnectDelay = nil
+                    lifecycle = .disconnecting(lifecycle.generation ?? generationCounter)
+                    central.cancelPeripheralConnection(peripheral)
+                }
             }
             reconnectWorkItem?.cancel()
             reconnectWorkItem = nil
@@ -694,6 +722,7 @@ final class BluetoothRemoteBridge: NSObject {
     @discardableResult
     func requestMicrophoneClose() -> Bool {
         guard microphoneOpened || streaming || microphoneClosePending else { return true }
+        localMicrophoneCloseRequested = true
         microphoneKeepalive?.cancel()
         microphoneKeepalive = nil
         let currentSession = sessionID
@@ -744,7 +773,7 @@ final class BluetoothRemoteBridge: NSObject {
                   self.sessionID == session
             else { return }
             AppLogger.shared.write("ATVV STREAM_STOP timeout reason=close_unacknowledged session=\(session)")
-            self.handleRemoteStreamStop()
+            self.handleRemoteStreamStop(reason: .closeUnacknowledged)
         }
     }
 
@@ -771,7 +800,7 @@ final class BluetoothRemoteBridge: NSObject {
             self.microphoneClosePending = false
             self.microphoneCloseSessionID = nil
             self.cancelMicrophoneCloseWatchdog()
-            self.stopStreaming()
+            self.stopStreaming(reason: .closeRetryExhausted)
             self.scheduleReconnect()
         }
     }
@@ -799,6 +828,7 @@ final class BluetoothRemoteBridge: NSObject {
             },
             connectedCandidates: {
                 let candidates = central.retrieveConnectedPeripherals(withServices: [serviceUUID])
+                    .filter { acceptsCandidateIdentifier($0.identifier) }
                 if !candidates.isEmpty {
                     AppLogger.shared.write(
                         "BLE SYSTEM CONNECTED CANDIDATES count=\(candidates.count) names=" +
@@ -887,15 +917,19 @@ final class BluetoothRemoteBridge: NSObject {
             let cachedProfile = settings.remoteDeviceProfiles.first {
                 $0.bluetoothIdentifier == candidate.identifier
             }
+            let resolvedName = VoiceRemoteAdmission.resolvedName(
+                advertisedName: advertisedName,
+                peripheralName: candidate.name
+            )
             googleCandidate = allowsG9N9N && (
-                G9N9NProtocol.isCandidateName(advertisedName ?? candidate.name) ||
+                G9N9NProtocol.isCandidateName(resolvedName) ||
                 cachedProfile?.model.isChromecastRemote == true
             )
             t1Candidate = !googleCandidate && allowsT1Remote && (
-                T1RemoteProtocol.isCandidateName(advertisedName ?? candidate.name) ||
+                T1RemoteProtocol.isCandidateName(resolvedName) ||
                 cachedProfile?.model.isT1Remote == true ||
                 (adoptUnidentifiedATVVAsT1() &&
-                    XiaomiVoiceRemoteNameMatcher.recognizedName(advertisedName ?? candidate.name) == nil)
+                    XiaomiVoiceRemoteNameMatcher.recognizedName(resolvedName) == nil)
             )
             connect(
                 candidate,
@@ -950,7 +984,7 @@ final class BluetoothRemoteBridge: NSObject {
         AppLogger.shared.write("BLE CONNECTING source=\(source) name=\(DiagnosticRedactor.redactedDeviceName(candidate.name))")
     }
 
-    private func resetPeripheral() {
+    private func resetPeripheral(reason: BluetoothVoiceStopReason = .peripheralReset) {
         acknowledgedWrites.reset()
         unacknowledgedWrites.reset()
         disconnectWatchdog.cancel()
@@ -986,7 +1020,7 @@ final class BluetoothRemoteBridge: NSObject {
         reportedHIDIdentity = nil
         capabilities = Self.defaultCapabilities
         currentAttemptUsesCachedTarget = false
-        resetSession()
+        resetSession(reason: reason)
         audioDecoder.reset(peripheral: true)
     }
 
@@ -1051,7 +1085,41 @@ final class BluetoothRemoteBridge: NSObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + 8, execute: work)
     }
 
-    private func resetSession() {
+    func suspendVoiceTransferState() {
+        recordStreamStop(reason: .systemSuspended)
+        let needsReconnect = microphoneClosePending ||
+            microphoneOpened ||
+            acknowledgedWrites.hasPendingWork ||
+            unacknowledgedWrites.hasPendingWork
+        let wasStreaming = streaming
+        let hadVoiceStartNotified = voiceStartNotified
+        activeStreamSessionID = nil
+        microphoneOpened = false
+        audioDecoder.reset()
+        if hadVoiceStartNotified {
+            voiceStartNotified = false
+            delegate?.bluetoothBridgeDidStopVoice(self)
+        }
+        if wasStreaming {
+            lastStopAt = nowUptime()
+        }
+        cancelMicrophoneCloseWatchdog()
+        cancelStreamStopWatchdog()
+        microphoneKeepalive?.cancel()
+        microphoneKeepalive = nil
+        microphoneKeepaliveCount = 0
+        microphoneClosePending = false
+        microphoneCloseSessionID = nil
+        acknowledgedWrites.reset()
+        unacknowledgedWrites.reset()
+        if needsReconnect, shouldRun {
+            AppLogger.shared.write("ATVV MIC_CLOSE suspended_incomplete result=reconnect_needed")
+            scheduleReconnect()
+        }
+    }
+
+    private func resetSession(reason: BluetoothVoiceStopReason) {
+        recordStreamStop(reason: reason)
         cancelMicrophoneCloseWatchdog()
         cancelStreamStopWatchdog()
         microphoneClosePending = false
@@ -1079,13 +1147,13 @@ final class BluetoothRemoteBridge: NSObject {
     private func scheduleReconnect(bypassCachedTarget: Bool = false) {
         guard shouldRun else { return }
         guard !systemSuspension.isSuspended else {
-            systemSuspension.markConnectionCycleNeeded()
+            disconnectWatchdog.cancel()
             reconnectWorkItem?.cancel()
             reconnectWorkItem = nil
-            publishReconnectingState()
-            AppLogger.shared.write(
-                "BLE RECONNECT deferred reason=system_suspended"
-            )
+            if let central, let peripheral, peripheral.state != .disconnected {
+                central.cancelPeripheralConnection(peripheral)
+            }
+            finishAttempt(reconnectAfter: 0)
             return
         }
         reconnectWorkItem?.cancel()
@@ -1129,12 +1197,12 @@ final class BluetoothRemoteBridge: NSObject {
         )
     }
 
-    private func finishAttempt(reconnectAfter delay: TimeInterval?) {
+    private func finishAttempt(reconnectAfter delay: TimeInterval?, stopReason: BluetoothVoiceStopReason = .peripheralReset) {
         finishRemoteWakeRecovery(result: "interrupted")
         let finishedGeneration = lifecycle.generation ?? generationCounter
         stopScan()
         requestedReconnectDelay = nil
-        resetPeripheral()
+        resetPeripheral(reason: stopReason)
 
         guard shouldRun, let delay else {
             central?.delegate = nil
@@ -1145,6 +1213,9 @@ final class BluetoothRemoteBridge: NSObject {
         }
 
         guard !systemSuspension.isSuspended else {
+            central?.delegate = nil
+            central = nil
+            centralGeneration = nil
             systemSuspension.markConnectionCycleNeeded()
             lifecycle = .stopped
             publishReconnectingState()
@@ -1223,8 +1294,16 @@ final class BluetoothRemoteBridge: NSObject {
               let peripheral
         else { return }
         guard !capabilitiesRequested else { return }
+        if !write(ATVVProtocol.getCapabilitiesV10) {
+            AppLogger.shared.write("ATVV CAPABILITIES write_failed")
+            if googleCandidate {
+                failInitialization(LocalizedMessage("google.remote.unconfirmed_identity"))
+            } else {
+                scheduleReconnect(bypassCachedTarget: currentAttemptUsesCachedTarget)
+            }
+            return
+        }
         capabilitiesRequested = true
-        write(ATVVProtocol.getCapabilitiesV10)
         lifecycle = .awaitingCapabilities(generation)
         state = .discovering
         AppLogger.shared.write("ATVV CAPABILITIES requested name=\(DiagnosticRedactor.redactedDeviceName(peripheral.name ?? "MI RC"))")
@@ -1360,7 +1439,7 @@ final class BluetoothRemoteBridge: NSObject {
         case 0x04:
             if googleCandidate && (bytes.count < 4 || bytes[2] != 0x02) {
                 _ = requestMicrophoneClose()
-                stopStreaming()
+                stopStreaming(reason: .unsupportedCodec)
                 return
             }
             guard ATVVSessionGate.canOpenMicrophone(
@@ -1409,17 +1488,17 @@ final class BluetoothRemoteBridge: NSObject {
                 activeSessionID: activeStreamSessionID,
                 incomingSessionID: explicitSessionID
             ) {
-                stopStreaming()
+                stopStreaming(reason: .sessionReplaced)
             }
             sessionID = receivedSessionID
             if let explicitSessionID { activeStreamSessionID = explicitSessionID }
             startStreaming()
         case 0x00:
             guard lifecycle.acceptsProtocolData(generation: generation) else { return }
-            handleRemoteStreamStop()
+            handleRemoteStreamStop(reason: .remoteNotification)
         case 0x0C:
             guard googleCandidate || t1Candidate, lifecycle.acceptsProtocolData(generation: generation) else { return }
-            handleRemoteStreamStop()
+            handleRemoteStreamStop(reason: .remoteMicrophoneRefused)
             state = .failed(
                 t1Candidate
                     ? LocalizedMessage("t1.remote.microphone_refused")
@@ -1489,6 +1568,9 @@ final class BluetoothRemoteBridge: NSObject {
             return
         }
         guard !streaming else { return }
+        lastVoiceStopReason = nil
+        streamStopRecorded = false
+        localMicrophoneCloseRequested = false
         cancelStreamStopWatchdog()
         microphoneKeepaliveCount = 0
         let partialFrameBytes = audioDecoder.pendingByteCount
@@ -1509,14 +1591,25 @@ final class BluetoothRemoteBridge: NSObject {
         AppLogger.shared.write("ATVV STREAM START session=\(sessionID)")
     }
 
-    private func stopStreaming() {
+    private func recordStreamStop(reason: BluetoothVoiceStopReason) {
+        guard streaming || voiceStartNotified, !streamStopRecorded else { return }
+        streamStopRecorded = true
+        lastVoiceStopReason = reason
+        voiceDiagnosticLogger(
+            "ATVV STREAM STOP session=\(sessionID) reason=\(reason.rawValue) " +
+                "close_requested=\(localMicrophoneCloseRequested) " +
+                "partial_frame_bytes=\(audioDecoder.pendingByteCount)"
+        )
+    }
+
+    private func stopStreaming(reason: BluetoothVoiceStopReason) {
+        recordStreamStop(reason: reason)
         activeStreamSessionID = nil
         microphoneKeepalive?.cancel()
         microphoneKeepalive = nil
         microphoneKeepaliveCount = 0
         cancelStreamStopWatchdog()
         guard streaming else { return }
-        let partialFrameBytes = audioDecoder.pendingByteCount
         let gain = settings.gainDB(forBluetoothIdentifier: deviceIdentifier)
         audioDecoder.endStream(
             frameSize: capabilities.frameSize,
@@ -1532,18 +1625,16 @@ final class BluetoothRemoteBridge: NSObject {
             }
         )
         lastStopAt = nowUptime()
-        AppLogger.shared.write(
-            "ATVV STREAM STOP session=\(sessionID) partial_frame_bytes=\(partialFrameBytes)"
-        )
     }
 
-    private func handleRemoteStreamStop() {
+    private func handleRemoteStreamStop(reason: BluetoothVoiceStopReason) {
+        recordStreamStop(reason: reason)
         microphoneOpened = false
         microphoneClosePending = false
         microphoneCloseSessionID = nil
         cancelMicrophoneCloseWatchdog()
         cancelStreamStopWatchdog()
-        stopStreaming()
+        stopStreaming(reason: reason)
     }
 
     private func handleAudio(_ data: Data) {
@@ -1596,7 +1687,7 @@ final class BluetoothRemoteBridge: NSObject {
         if !accepted {
             AppLogger.shared.write("ATVV AUDIO rejected reason=decode_backlog")
             _ = requestMicrophoneClose()
-            stopStreaming()
+            stopStreaming(reason: .decodeBacklog)
         }
     }
 
@@ -1604,7 +1695,7 @@ final class BluetoothRemoteBridge: NSObject {
         state = .failed(message)
         closeMicrophoneIfNeeded()
         if streaming {
-            stopStreaming()
+            stopStreaming(reason: .unsupportedAudio)
         } else {
             audioDecoder.reset()
         }
@@ -1640,7 +1731,7 @@ extension BluetoothRemoteBridge: @preconcurrency CBCentralManagerDelegate {
                 central: central,
                 generation: generation
             )
-            resetPeripheral()
+            resetPeripheral(reason: .bluetoothPoweredOff)
             state = .bluetoothUnavailable(LocalizedMessage(BluetoothStatusKeys.off))
         case .unauthorized:
             applyCentralRecovery(
@@ -1662,7 +1753,7 @@ extension BluetoothRemoteBridge: @preconcurrency CBCentralManagerDelegate {
                 central: central,
                 generation: generation
             )
-            resetPeripheral()
+            resetPeripheral(reason: .bluetoothResetting)
             state = .bluetoothUnavailable(LocalizedMessage("bluetooth.status.resetting"))
         case .unknown:
             state = .bluetoothUnavailable(LocalizedMessage("bluetooth.status.initializing"))
@@ -1688,7 +1779,7 @@ extension BluetoothRemoteBridge: @preconcurrency CBCentralManagerDelegate {
         }
         lifecycle = transition.phase
         if transition.shouldReleaseCentral {
-            resetPeripheral()
+            resetPeripheral(reason: .centralReleased)
             stopScan()
             central.delegate = nil
             self.central = nil
@@ -1813,10 +1904,10 @@ extension BluetoothRemoteBridge: @preconcurrency CBCentralManagerDelegate {
               let generation = centralGeneration,
               lifecycle.acceptsDisconnect(generation: generation)
         else { return }
-        handleDisconnect(error: error)
+        handleDisconnect(error: error, isReconnecting: isReconnecting)
     }
 
-    private func handleDisconnect(error: Error?) {
+    private func handleDisconnect(error: Error?, isReconnecting: Bool? = nil) {
         let shouldBypassCachedTarget: Bool
         switch lifecycle {
         case .connecting, .discovering, .awaitingCapabilities:
@@ -1825,12 +1916,13 @@ extension BluetoothRemoteBridge: @preconcurrency CBCentralManagerDelegate {
             shouldBypassCachedTarget = false
         }
         AppLogger.shared.write(
-            "BLE DISCONNECTED phase=\(lifecycle) " + AppLogger.optionalErrorFields(error)
+            "BLE DISCONNECTED phase=\(lifecycle) is_reconnecting=\(isReconnecting.map(String.init) ?? "unknown") " +
+                AppLogger.optionalErrorFields(error)
         )
         let delay = reconnectDelayAfterFailure(
             bypassCachedTarget: shouldBypassCachedTarget || currentAttemptUsesCachedTarget
         )
-        finishAttempt(reconnectAfter: delay)
+        finishAttempt(reconnectAfter: delay, stopReason: .disconnected)
         if !shouldRun { state = .stopped }
     }
 }
@@ -1880,7 +1972,9 @@ extension BluetoothRemoteBridge {
             $0.uuid == deviceInformationServiceUUID
         }) {
             peripheral.discoverCharacteristics([modelNumberUUID, pnpIDUUID, firmwareRevisionUUID], for: deviceInformationService)
-        } else if !googleCandidate {
+        } else if googleCandidate {
+            failInitialization(LocalizedMessage("google.remote.unconfirmed_identity"))
+        } else {
             modelFormatResolved = true
             finishInitializationIfReady(generation: generation)
         }
@@ -1961,14 +2055,21 @@ extension BluetoothRemoteBridge {
                     "BLE MODEL characteristic_discovery_failed " +
                         AppLogger.errorFields(error)
                 )
-                if !googleCandidate {
-                    modelFormatResolved = true
-                    finishInitializationIfReady(generation: generation)
+                if googleCandidate {
+                    failInitialization(LocalizedMessage("google.remote.unconfirmed_identity"))
+                    return
                 }
+                modelFormatResolved = true
+                finishInitializationIfReady(generation: generation)
                 return
             }
             let characteristics = service.characteristics ?? []
             let hasModelNumber = characteristics.contains(where: { $0.uuid == modelNumberUUID })
+            let hasPnPID = characteristics.contains(where: { $0.uuid == pnpIDUUID })
+            if googleCandidate && !hasPnPID {
+                failInitialization(LocalizedMessage("google.remote.unconfirmed_identity"))
+                return
+            }
             if !hasModelNumber && !googleCandidate {
                 modelFormatResolved = true
                 finishInitializationIfReady(generation: generation)
@@ -2113,6 +2214,15 @@ extension BluetoothRemoteBridge {
                 hasObservedPowerState = false
                 lastObservedPowerState = nil
                 delegate?.bluetoothBridge(self, didUpdatePowerState: nil)
+            } else if characteristic.uuid == pnpIDUUID, googleCandidate {
+                if G9N9NProtocol.requiresPairing(error) {
+                    failInitialization(LocalizedMessage("google.remote.pairing_required"))
+                    return
+                }
+                AppLogger.shared.write(
+                    "BLE PNP G9N9N read_failed " + AppLogger.errorFields(error)
+                )
+                failInitialization(LocalizedMessage("google.remote.unconfirmed_identity"))
             } else if characteristic.uuid == pnpIDUUID, t1Candidate {
                 AppLogger.shared.write(
                     "BLE PNP T1 read_failed " + AppLogger.errorFields(error)
@@ -2163,7 +2273,6 @@ extension BluetoothRemoteBridge {
                     return
                 }
                 t1Candidate = true
-                audioDecoder.configureFormat(lowNibbleFirst: false)
                 identifiedModel = .t1Remote
                 delegate?.bluetoothBridge(self, didIdentifyRemoteModel: .t1Remote)
                 finishInitializationIfReady(generation: generation)
@@ -2210,24 +2319,23 @@ extension BluetoothRemoteBridge {
                 AppLogger.shared.write("BLE MODEL observed modelNumber=\(normalizedModelNumber)")
                 return
             }
+            let identifiedCatalogModel = RemoteModel.identified(by: modelNumber)
+            if let identifiedCatalogModel,
+               !identifiedCatalogModel.isT1Remote,
+               !identifiedCatalogModel.isChromecastRemote {
+                t1Candidate = false
+            }
             if t1Candidate {
                 AppLogger.shared.write(
                     "BLE MODEL T1 observed modelNumber=\(DiagnosticRedactor.redactedDeviceName(normalizedModelNumber))"
                 )
-                audioDecoder.configureFormat(lowNibbleFirst: false)
                 modelFormatResolved = true
                 finishInitializationIfReady(generation: generation)
                 return
             }
 
-            audioDecoder.configureFormat(lowNibbleFirst: normalizedModelNumber.contains("ARN9"))
-            if normalizedModelNumber.contains("ARN9") {
-                // ARN9 firmware encodes ADPCM low-nibble-first; flipping the
-                // default high-first order is required for intelligible audio.
-                AppLogger.shared.write("BLE MODEL ARN9 adpcm=low-nibble-first")
-            }
             modelFormatResolved = true
-            if let model = RemoteModel.identified(by: modelNumber) {
+            if let model = identifiedCatalogModel {
                 // 原始型号串必须一起记：广播名与型号**不是**一一对应（本机这台广播名是
                 // 「小米蓝牙语音遥控器」，DIS 报的却是 RC003），只有原始串能支撑型号目录。
                 AppLogger.shared.write(

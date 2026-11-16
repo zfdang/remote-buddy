@@ -1,6 +1,6 @@
 # Remote illustrations
 
-These four SVG files are original schematic drawings distributed under the
+These three SVG files are original schematic drawings distributed under the
 project's GPL-3.0-only license. Matching transparent PNGs in the parent directory
 are the app's thumbnails. They contain no copied manufacturer photographs,
 logos, or traced image paths. Buttons use generic symbols or short text labels.
@@ -17,14 +17,13 @@ Official visual and button-layout references:
 - [Siri Remote third-generation USB-C](https://support.apple.com/en-us/111844)
   and [model identification](https://support.apple.com/en-au/103233)
 
-Manufacturer images remain on their official sites and are not included in the distribution.
+Planned device illustrations are original schematic assets. The G9N9N photo is supplied by the project owner.
 
 `T1RemoteIllustration.svg` provides the editable geometric front layout for `T1-Remote`, paired with original GPL-3.0-only studio renders (`T1RemoteIllustration.png` for the button-mapping canvas and `T1RemoteSetupIllustration.png` combining front and rear QWERTY layouts for device setup).
 
 To regenerate a thumbnail from its editable vector source, from the repo root:
 
 ```sh
-rsvg-convert Resources/RemoteIllustrations/ChromecastG9N9NIllustration.svg -o Resources/ChromecastG9N9NIllustration.png
 rsvg-convert Resources/RemoteIllustrations/GoogleStreamerGY3LEIllustration.svg -o Resources/GoogleStreamerGY3LEIllustration.png
 rsvg-convert Resources/RemoteIllustrations/SiriRemoteA2854Illustration.svg -o Resources/SiriRemoteA2854Illustration.png
 rsvg-convert Resources/RemoteIllustrations/T1RemoteIllustration.svg -o Resources/T1RemoteIllustration.png
@@ -41,3 +40,5 @@ After changing the drawing, regenerate the PNG and check the mapping page:
 ```sh
 swift scripts/generate-remote-layout-reference.swift Resources/BuddyRemoteIllustration.png
 ```
+
+G9N9N uses the supplied real photograph in `Resources/ChromecastG9N9NPhoto.png` and `pages/assets/devices/g9n9n.png`, with its background removed. It has no SVG source. Button connector anchors follow the photograph.

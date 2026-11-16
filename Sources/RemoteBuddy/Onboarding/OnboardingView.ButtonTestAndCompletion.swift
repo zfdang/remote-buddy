@@ -4,10 +4,6 @@ import CoreBluetooth
 import SwiftUI
 
 extension OnboardingView {
-    var usesG9N9NButtonTestWorkaround: Bool {
-        settings.onboardingControlSource == .chromecastRemote &&
-            (settings.onboardingDevice ?? .chromecastG9N9N) == .chromecastG9N9N
-    }
 
     var controlsContent: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -21,13 +17,7 @@ extension OnboardingView {
                 secureInputWarningCard
             }
 
-            if usesG9N9NButtonTestWorkaround {
-                VStack(alignment: .leading, spacing: 12) {
-                    Label(localization.text("onboarding.controls.g9n9n.first"), systemImage: "1.circle")
-                    Label(localization.text("onboarding.controls.g9n9n.second"), systemImage: "2.circle")
-                }
-                .font(.callout)
-            } else if let buttons = displayedControlButtons {
+            if let buttons = displayedControlButtons {
                 LazyVGrid(
                     columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3),
                     spacing: 8
@@ -98,9 +88,7 @@ extension OnboardingView {
         secondStep: String,
         thirdStep: String?
     ) {
-        let keys = Self.physicalRemotePairingKeys(for: settings.onboardingControlSource)
-        return (keys.title, keys.firstStep, keys.secondStep,
-            usesG9N9NButtonTestWorkaround ? "onboarding.remote.g9n9n_pairing.third" : keys.thirdStep)
+        Self.physicalRemotePairingKeys(for: settings.onboardingControlSource)
     }
 
     static func physicalRemotePairingKeys(
@@ -139,9 +127,7 @@ extension OnboardingView {
     }
 
     var controlsDetailKey: String {
-        usesG9N9NButtonTestWorkaround
-            ? "onboarding.controls.g9n9n.detail"
-            : Self.controlsDetailKey(for: settings.onboardingControlSource)
+        Self.controlsDetailKey(for: settings.onboardingControlSource)
     }
 
     static func controlsDetailKey(for source: OnboardingControlSource) -> String {
@@ -249,11 +235,6 @@ extension OnboardingView {
                 if let verified = summary.voiceVerified {
                     completionSummaryLine("checkmark.bubble", "onboarding.step.voiceTest",
                         value: localization.text(verified ? "onboarding.summary.passed" : "onboarding.summary.not_tested"))
-                }
-                if usesG9N9NButtonTestWorkaround && settings.onboardingPurpose != .integration {
-                    Text(localization.text("onboarding.complete.g9n9n.voice_only"))
-                        .font(.caption).foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
         }
@@ -411,13 +392,6 @@ extension OnboardingView {
     }
 
     private func recoveryDetailKey(for failure: FirstUseFailureReason) -> String {
-        if usesG9N9NButtonTestWorkaround {
-            switch failure {
-            case .remoteButtonNotReady: return "onboarding.remote.g9n9n.button_waiting_detail"
-            case .controlsNotConfirmed: return "onboarding.controls.g9n9n.detail"
-            default: break
-            }
-        }
         if failure == .permissionDesynced {
             return canOfferPermissionRelaunch
                 ? "onboarding.recovery.permission.desynced.detail.with_restart"

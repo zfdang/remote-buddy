@@ -862,29 +862,6 @@ final class HIDRemoteMonitor {
             "HID REPORT accepted source=\(source) id=\(reportID) bytes=\(data.count) " +
                 "usage_count=\(observedAll.count) buttons=\(Self.buttonList(for: observedAll))"
         )
-        // The tested indexed G9N9N drops its release reports before IOHID.
-        // Treat each complete chord report as a tap, never as a held key.
-        // Require exclusive ownership: otherwise the system may also deliver
-        // the original buttons, including a down with no corresponding up.
-        if G9N9NProtocol.usesChordWorkaround(isGoogleProtocol: currentReportIsGoogle,
-                                            reportID: reportID, descriptor: currentReportDescriptor),
-           usages.count > 1, !backOnlyMode,
-           !OnboardingControlValidationPolicy.suppressConfiguredActions(
-               at: settings.onboardingStep,
-               source: settings.onboardingControlSource,
-               reportingModel: .chromecastVoiceRemote,
-               onboardingWindowIsActive: onboardingWindowIsActive()
-           ) {
-            if G9N9NProtocol.isEnterChord(usages) {
-                processG9N9NEnterChord()
-            } else {
-                // Unsupported pairs cannot safely enter the held-button pipeline:
-                // their missing release reports otherwise cause eight seconds of repeats.
-                resetInputState()
-                diagnosticLogger("HID G9N9N chord ignored reason=unsupported_pair")
-            }
-            return
-        }
         processT1PassthroughReleases(for: releasedPassthrough)
         if !pressedPassthrough.isEmpty {
             processT1PassthroughPresses(for: pressedPassthrough)
@@ -980,25 +957,6 @@ final class HIDRemoteMonitor {
         }
     }
 
-    private func processG9N9NEnterChord() {
-        resetInputState()
-        guard activeDeviceIsSeized else {
-            diagnosticLogger("HID G9N9N enter_chord ignored reason=device_not_exclusive")
-            return
-        }
-        if let deviceFingerprint,
-           let routing = onButtonPressed?(profileID, deviceFingerprint, .ok) {
-            if profileID == nil { profileID = routing.profileID }
-            guard routing.shouldPerformAction else { return }
-        }
-        guard profileID != nil else { return }
-        let action = ConfiguredButtonAction(action: .returnKey, shortcut: nil)
-        guard actionPerformer(.ok, .singleClick, action) else {
-            if !runtimePermissionsAreValid() { releaseForRevokedPermissions() }
-            return
-        }
-        diagnosticLogger("HID G9N9N enter_chord action=return")
-    }
 
     func disconnectSimulatedDevice() {
         deviceFingerprint = nil

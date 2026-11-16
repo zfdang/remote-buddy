@@ -198,11 +198,6 @@ extension OnboardingView {
     }
 
     private var physicalRemoteButtonStatusDetail: String {
-        if usesG9N9NButtonTestWorkaround {
-            return localization.text(observedRemoteButtons.isEmpty
-                ? "onboarding.remote.g9n9n.button_waiting_detail"
-                : "onboarding.remote.g9n9n.button_detail")
-        }
         let instructionKey = remoteInputDiagnostic.shouldShowVoiceButtonCorrection
             ? "onboarding.remote.voice_button_mistake.detail"
             : observedRemoteButtons.isEmpty

@@ -28,6 +28,12 @@ enum AppLinks {
         string: "https://myvoicebuddy.com/en.html"
     )!
 
+    static func devices(for locale: Locale) -> URL {
+        URL(string: locale.identifier.lowercased().hasPrefix("zh")
+            ? "https://remote.zfdang.com/device.html"
+            : "https://remote.zfdang.com/device_en.html")!
+    }
+
     static func website(for locale: Locale) -> URL {
         locale.identifier.lowercased().hasPrefix("zh")
             ? chineseWebsite

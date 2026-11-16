@@ -56,10 +56,13 @@ extension SettingsView {
     var mappingPage: some View {
         hardwareMappingPage {
             if settings.selectedRemoteProfile?.model.isChromecastRemote == true {
-                googleChordInformation
-                Text(localization.text("google.remote.ir_controls"))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text(localization.text("button_mapping.google.version_notice"))
+                        .foregroundStyle(.secondary)
+                    Link(localization.text("button_mapping.google.device_guide"),
+                         destination: AppLinks.devices(for: localization.locale))
+                }
+                .font(.caption)
             } else if settings.selectedRemoteProfile?.model.isT1Remote == true {
                 Text(localization.text("t1.remote.keyboard_airmouse_note"))
                     .font(.caption)
@@ -94,23 +97,6 @@ extension SettingsView {
         }
     }
 
-    private var googleChordInformation: some View {
-        GlassPanel {
-            VStack(alignment: .leading, spacing: 8) {
-                Label(localization.text("button_mapping.google.enter.title"), systemImage: "return")
-                    .font(.system(size: 15, weight: .semibold))
-                Text(localization.text("button_mapping.google.enter.detail"))
-                    .font(.system(size: 13))
-                    .fixedSize(horizontal: false, vertical: true)
-                Text(localization.text("button_mapping.google.enter.limit"))
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .accessibilityIdentifier("button-mapping.google-enter-info")
-    }
 
     private func hardwareMappingPage<HardwareCanvas: View>(
         @ViewBuilder hardwareCanvas: @escaping () -> HardwareCanvas

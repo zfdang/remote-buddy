@@ -97,22 +97,22 @@ enum RemoteMappingLayout {
 enum G9N9NMappingLayout {
     static let canvasHeight: CGFloat = 650
     static let remoteSize = CGSize(width: 160, height: 480)
-    static let voiceAnchor = UnitPoint(x: 0.675, y: 0.354)
+    static let voiceAnchor = UnitPoint(x: 0.71, y: 0.38)
     static let placements: [RemoteMappingPlacement] = [
-        .init(button: .up, side: .left, anchor: .init(x: 0.5, y: 0.095), targetY: 0.065),
-        .init(button: .left, side: .left, anchor: .init(x: 0.28, y: 0.174), targetY: 0.21),
-        .init(button: .back, side: .left, anchor: .init(x: 0.325, y: 0.354), targetY: 0.355),
-        .init(button: .home, side: .left, anchor: .init(x: 0.325, y: 0.472), targetY: 0.50),
-        .init(button: .youtube, side: .left, anchor: .init(x: 0.325, y: 0.590), targetY: 0.645),
-        .init(button: .volumeUp, side: .left, anchor: .init(x: 0.87, y: 0.155), targetY: 0.79),
-        .init(button: .power, side: .left, anchor: .init(x: 0.325, y: 0.756), targetY: 0.935),
-        .init(button: .right, side: .right, anchor: .init(x: 0.72, y: 0.174), targetY: 0.195),
-        .init(button: .ok, side: .right, anchor: .init(x: 0.5, y: 0.174), targetY: 0.32),
-        .init(button: .down, side: .right, anchor: .init(x: 0.5, y: 0.253), targetY: 0.445),
-        .init(button: .mute, side: .right, anchor: .init(x: 0.675, y: 0.472), targetY: 0.57),
-        .init(button: .netflix, side: .right, anchor: .init(x: 0.675, y: 0.590), targetY: 0.695),
-        .init(button: .volumeDown, side: .right, anchor: .init(x: 0.87, y: 0.253), targetY: 0.82),
-        .init(button: .input, side: .right, anchor: .init(x: 0.675, y: 0.756), targetY: 0.94),
+        .init(button: .up, side: .left, anchor: .init(x: 0.50, y: 0.072), targetY: 0.065),
+        .init(button: .left, side: .left, anchor: .init(x: 0.15, y: 0.185), targetY: 0.21),
+        .init(button: .back, side: .left, anchor: .init(x: 0.27, y: 0.38), targetY: 0.355),
+        .init(button: .home, side: .left, anchor: .init(x: 0.27, y: 0.505), targetY: 0.50),
+        .init(button: .youtube, side: .left, anchor: .init(x: 0.27, y: 0.625), targetY: 0.645),
+        .init(button: .volumeUp, side: .left, anchor: .init(x: 0.95, y: 0.25), targetY: 0.79),
+        .init(button: .power, side: .left, anchor: .init(x: 0.27, y: 0.74), targetY: 0.935),
+        .init(button: .right, side: .right, anchor: .init(x: 0.83, y: 0.185), targetY: 0.195),
+        .init(button: .ok, side: .right, anchor: .init(x: 0.50, y: 0.185), targetY: 0.32),
+        .init(button: .down, side: .right, anchor: .init(x: 0.50, y: 0.295), targetY: 0.445),
+        .init(button: .mute, side: .right, anchor: .init(x: 0.71, y: 0.505), targetY: 0.57),
+        .init(button: .netflix, side: .right, anchor: .init(x: 0.71, y: 0.625), targetY: 0.695),
+        .init(button: .volumeDown, side: .right, anchor: .init(x: 0.95, y: 0.30), targetY: 0.82),
+        .init(button: .input, side: .right, anchor: .init(x: 0.71, y: 0.74), targetY: 0.94),
     ]
 }
 
@@ -171,7 +171,7 @@ struct RemoteMappingCanvas: View {
         isT1 ? T1RemoteMappingLayout.voiceTargetY : RemoteMappingLayout.voiceTargetY
     }
     private var illustrationResourceName: String {
-        if isGoogle { return "ChromecastG9N9NIllustration" }
+        if isGoogle { return "ChromecastG9N9NPhoto" }
         if isT1 { return "T1RemoteIllustration" }
         return "BuddyRemoteIllustration"
     }

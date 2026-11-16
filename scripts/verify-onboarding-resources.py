@@ -111,8 +111,8 @@ for name in sorted(names):
 # Product catalog and button-mapping resources are required even while adapters remain planned.
 catalog = (app_sources / 'Devices/RemoteSetupDevice.swift').read_text()
 device_catalog = (app_sources / 'Devices/XiaomiRemoteCatalog.swift').read_text()
-illustrations = set(re.findall(r'return "(\w+Illustration)"', catalog))
-illustrations.update(re.findall(r'"(\w+Illustration)"', device_catalog))
+illustrations = set(re.findall(r'return "(\w+(?:Illustration|Photo))"', catalog))
+illustrations.update(re.findall(r'"(\w+(?:Illustration|Photo))"', device_catalog))
 assert illustrations, 'No product catalog illustrations found'
 files.extend(resources / f'{name}.png' for name in sorted(illustrations))
 for path in files:

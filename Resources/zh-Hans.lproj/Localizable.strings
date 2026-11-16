@@ -313,12 +313,9 @@
 "audio.compatibility.help_plain" = "如果常用的语音工具收不到声音，可选择随安装包提供的兼容麦克风；已有音频设备不会被替换。";
 "button_mapping.page.title" = "按键映射";
 "button_mapping.page.subtitle" = "点击按键进行设置";
-"button_mapping.google.subtitle" = "G9N9N 仅支持 OK＋方向键发送 Enter，单键映射不可用";
+"button_mapping.google.subtitle" = "G9N9N 支持自定义单击、双击和长按动作";
 "button_mapping.t1.subtitle" = "点击返回、主页、菜单、静音、音量或电源键自定义；语音键按一下松开开始说话，再按一下结束（确认、方向键、飞鼠与背面全键盘保持系统默认输入）";
 "t1.remote.keyboard_airmouse_note" = "返回、主页、菜单、静音、音量与电源键支持单击、双击与长按映射；确认、方向键、空中飞鼠与背面 QWERTY 全键盘保持系统默认输入（直接打字和移动鼠标）。";
-"button_mapping.google.enter.title" = "OK＋方向键 → Enter（固定）";
-"button_mapping.google.enter.detail" = "开启上方“自定义按键”且应用已接管按键输入时，短按 OK＋任意方向键可发送 Enter。该组合为固定动作，不受下方单键设置影响。";
-"button_mapping.google.enter.limit" = "由于 G9N9N 发送的蓝牙 HID 按键报文不符合 macOS 标准规范，单键与松开事件会被系统底层忽略，因此下方的单键配置对该设备无效。仅 OK＋方向键可发送 Enter；长按双键可能重复输入。";
 "button_mapping.toggle.enabled" = "自定义按键";
 "button_mapping.permission_prompt.title" = "需要开启按键权限";
 "button_mapping.permission_prompt.message" = "自定义按键需要“输入监控”和“辅助功能”权限，请前往权限页面完成设置。";
@@ -649,9 +646,6 @@
 "onboarding.remote.searching_detail" = "保持遥控器靠近 Mac；首次连接按上方步骤操作，已配对时按任意键唤醒。";
 "onboarding.remote.button_waiting" = "等待控制按键";
 "onboarding.remote.button_waiting_detail" = "请短按圆盘中间的确定键或任意方向键，不要按麦克风/语音键。";
-"onboarding.remote.g9n9n.button_waiting_detail" = "受限于 G9N9N 单键蓝牙 HID 报文与 macOS 的兼容性，请同时按下 OK＋上方向键进行检测，收到输入后松开（请勿按语音键）。";
-"onboarding.remote.g9n9n.button_detail" = "已检测到按键输入，可继续进行语音设置。";
-"onboarding.remote.g9n9n_pairing.third" = "在 Mac 蓝牙中连接遥控器，然后同时按下 OK＋上方向键完成按键检测。";
 "onboarding.remote.button_received" = "已收到控制按键";
 "onboarding.remote.button_detail" = "语音键以外的任意普通按键都可以。";
 "onboarding.remote.voice_button_mistake.title" = "刚才按的是语音键";
@@ -691,9 +685,6 @@
 "onboarding.controls.siri.detail" = "在苹果遥控器上连续按下三个不同的普通按键，例如方向、中心、返回、TV、播放或音量。";
 "onboarding.controls.chromecast.detail" = "在 Chromecast 遥控器上连续按下三个不同的普通按键，例如方向、确定、返回、主页、静音或音量。";
 "onboarding.controls.t1.detail" = "在 T1 遥控器正面连续按下三个不同的可映射按键，例如返回、主页、菜单、静音、音量或电源键。";
-"onboarding.controls.g9n9n.detail" = "依次测试下面两组组合键，每组松开后再进行下一组。";
-"onboarding.side.g9n9n_test_enabled" = "按键测试已开启";
-"onboarding.complete.g9n9n.voice_only" = "G9N9N 支持语音输入与 OK＋方向键发送 Enter（普通单键映射不受支持）";
 "onboarding.controls.mobile_slot" = "第 %@ 个不同控制";
 "onboarding.controls.ready" = "按键检测通过";
 "onboarding.secure_input.title" = "系统安全输入可能影响遥控器按键";
@@ -1036,7 +1027,6 @@
 "t1.remote.microphone_refused" = "T1 遥控器拒绝开启麦克风。请在系统蓝牙设置中重新配对后重试。";
 "google.remote.microphone_refused" = "遥控器拒绝开启麦克风。请重新配对后重试。";
 "google.remote.pairing_required" = "蓝牙配对认证尚未完成。请在 macOS 蓝牙设置中移除并重新配对遥控器，再重新连接。";
-"google.remote.ir_controls" = "电源和信源键在发送蓝牙信号时可以自定义映射；如果遥控器将它们设为红外模式（直接控制电视），电脑将无法收到这些按键。";
 
 "connection.action.add_device" = "添加新设备";
 "remote.hid_binding.title" = "关联遥控器按键设备";
@@ -1171,8 +1161,6 @@
 "onboarding.button_help.expanded" = "已展开";
 "onboarding.button_help.collapsed" = "已收起";
 "onboarding.controls.progress" = "已检测到 %@/3 个不同按键";
-"onboarding.controls.g9n9n.first" = "同时按 OK＋上，然后松开";
-"onboarding.controls.g9n9n.second" = "同时按返回＋上，然后松开";
 "onboarding.voice_tool.choose_required" = "请选择输入工具。";
 "onboarding.voice_tool.install_required" = "请先安装并在系统中启用所选输入工具，再回到此页。";
 "onboarding.voice_tool.tap_required" = "此工具需要点按模式：将当前按住模式改为自动点按语音热键开始和结束，通过语音测试后才生效。";
@@ -1215,3 +1203,6 @@
 
 "onboarding.voice_test.trial_missing" = "本次语音测试配置已失效，请返回输入工具重新配置后再测试。";
 "onboarding.voice_test.reconfigure" = "返回配置输入工具";
+
+"button_mapping.google.version_notice" = "G9N9N 兼容款众多，不同硬件版本的功能支持可能不同，购买时请注意挑选硬件版本，详见";
+"button_mapping.google.device_guide" = "设备指南 ↗";

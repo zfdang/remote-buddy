@@ -24,7 +24,7 @@ enum G9N9NProtocol {
         0x0089: .input,
     ]
 
-    // Captured from the A3 / firmware 26.0 reference unit. Report 1 contains
+    // The validated G9N9N report 1 contains
     // two 8-bit indices into the descriptor's usage list, not 16-bit usages.
     static let indexedConsumerDescriptor = Data([
         0x05, 0x0c, 0x09, 0x01, 0xa1, 0x01, 0x85, 0x01,
@@ -41,20 +41,13 @@ enum G9N9NProtocol {
         0x00ea, 0x0077, 0x0078, 0x0079, 0x0089,
     ]
 
-    // Compatible units (firmware 0x0110) append a vendor collection with other
+    // The validated HID version 0x0110 unit appends a vendor collection with other
     // report IDs after this complete report 1 collection. Report 1 is unchanged.
     static func usesIndexedConsumerLayout(_ descriptor: Data?) -> Bool {
         descriptor?.starts(with: indexedConsumerDescriptor) ?? false
     }
 
-    static func usesChordWorkaround(isGoogleProtocol: Bool, reportID: UInt32, descriptor: Data?) -> Bool {
-        isGoogleProtocol && reportID == 1 && usesIndexedConsumerLayout(descriptor)
-    }
 
-    static func isEnterChord(_ usages: Set<UInt16>) -> Bool {
-        guard usages.count == 2, usages.contains(RemoteButton.ok.hidUsage) else { return false }
-        return [RemoteButton.up, .down, .left, .right].contains { usages.contains($0.hidUsage) }
-    }
 
     /// Known Consumer Control layouts, with or without their report-ID byte.
     /// Malformed or unrelated reports are ignored; unknown usages in a valid
@@ -106,7 +99,7 @@ struct G9N9NReadiness {
     private(set) var audioConfirmed = false
     var isReady: Bool { identityConfirmed && audioConfirmed }
 
-    // Retail model and DIS model strings differ (the tested G9N9N reports A3).
+    // Retail model and DIS model strings can differ across compatible versions.
     // Validate the same peripheral's PnP identity, never gate on its model string.
     @discardableResult mutating func acceptIdentity(_ identity: RemoteHIDIdentity?) -> Bool {
         identityConfirmed = identity == .chromecast

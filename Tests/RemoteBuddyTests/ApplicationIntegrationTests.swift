@@ -884,4 +884,81 @@ struct ApplicationIntegrationTests {
         #expect(throws: (any Error).self) { try SettingsScreenshotRenderer.integrationState(from: "unknown") }
     }
 
+    @Test func autoFocusedComposerMovesCaretToEndViaAXRangeBeforeFallingBackToCommandDown() {
+        // 1. Empty composer needs no range write or shortcut keystroke.
+        var writes = 0
+        var keys = 0
+        #expect(KeyboardInjector.moveIntegratedComposerCaretToEnd(
+            readNumberOfCharacters: { 0 },
+            readSelectedRange: { CFRange(location: 0, length: 0) },
+            isSelectedRangeSettable: { true },
+            writeSelectedRange: { _ in writes += 1; return true },
+            canContinue: { true },
+            postMoveToEndKey: { keys += 1; return true },
+            pause: {}
+        ))
+        #expect(writes == 0 && keys == 0)
+
+        // 2. Non-empty composer already ending at count stays untouched.
+        #expect(KeyboardInjector.moveIntegratedComposerCaretToEnd(
+            readNumberOfCharacters: { 10 },
+            readSelectedRange: { CFRange(location: 10, length: 0) },
+            isSelectedRangeSettable: { true },
+            writeSelectedRange: { _ in writes += 1; return true },
+            canContinue: { true },
+            postMoveToEndKey: { keys += 1; return true },
+            pause: {}
+        ))
+        #expect(writes == 0 && keys == 0)
+
+        // 3. Click landing after first character (location=1 of 10) moves cleanly to 10 via AX range.
+        var range = CFRange(location: 1, length: 0)
+        #expect(KeyboardInjector.moveIntegratedComposerCaretToEnd(
+            readNumberOfCharacters: { 10 },
+            readSelectedRange: { range },
+            isSelectedRangeSettable: { true },
+            writeSelectedRange: { updated in writes += 1; range = updated; return true },
+            canContinue: { true },
+            postMoveToEndKey: { keys += 1; return true },
+            pause: {}
+        ))
+        #expect(writes == 1 && range.location == 10 && range.length == 0 && keys == 0)
+
+        // 4. Ignored AX writes or missing character count fall back to Command+Down when still safe.
+        var pauses = 0
+        #expect(KeyboardInjector.moveIntegratedComposerCaretToEnd(
+            readNumberOfCharacters: { 10 },
+            readSelectedRange: { CFRange(location: 1, length: 0) },
+            isSelectedRangeSettable: { true },
+            writeSelectedRange: { _ in writes += 1; return true },
+            canContinue: { true },
+            postMoveToEndKey: { keys += 1; return true },
+            pause: { pauses += 1 }
+        ))
+        #expect(writes == 2 && keys == 1 && pauses == 1)
+
+        #expect(KeyboardInjector.moveIntegratedComposerCaretToEnd(
+            readNumberOfCharacters: { nil },
+            readSelectedRange: { nil },
+            isSelectedRangeSettable: { false },
+            writeSelectedRange: { _ in writes += 1; return false },
+            canContinue: { true },
+            postMoveToEndKey: { keys += 1; return true },
+            pause: { pauses += 1 }
+        ))
+        #expect(keys == 2 && pauses == 2)
+
+        // 5. Cancelled or unfocused target aborts before writing or posting keys.
+        #expect(!KeyboardInjector.moveIntegratedComposerCaretToEnd(
+            readNumberOfCharacters: { 10 },
+            readSelectedRange: { CFRange(location: 1, length: 0) },
+            isSelectedRangeSettable: { true },
+            writeSelectedRange: { _ in writes += 1; return true },
+            canContinue: { false },
+            postMoveToEndKey: { keys += 1; return true },
+            pause: {}
+        ))
+        #expect(writes == 2 && keys == 2)
+    }
+
 }

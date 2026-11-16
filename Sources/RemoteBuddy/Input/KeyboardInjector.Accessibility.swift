@@ -132,10 +132,31 @@ extension KeyboardInjector {
                 candidates.map(\.snapshot),
                 windowFrame: axFrame(window)
             ) else { continue }
+            let targetElement = candidates[candidateIndex].element
+            let wasAlreadyFocused = accessibilityElementIsFocused(
+                targetElement,
+                applicationElement: applicationElement,
+                requiresApplicationFocusedElement: false
+            )
             if focusAccessibilityElement(
-                candidates[candidateIndex].element,
+                targetElement,
                 applicationElement: applicationElement
             ) {
+                if !wasAlreadyFocused {
+                    _ = moveAccessibilityCaretToEnd(
+                        of: targetElement,
+                        canContinue: {
+                            applicationIsFrontmost(processIdentifier) &&
+                                isAccessibilityTrusted &&
+                                !SecureInputMonitor.isEnabled() &&
+                                accessibilityElementIsFocused(
+                                    targetElement,
+                                    applicationElement: applicationElement,
+                                    requiresApplicationFocusedElement: false
+                                )
+                        }
+                    )
+                }
                 return true
             }
         }
@@ -248,27 +269,52 @@ extension KeyboardInjector {
                   CFEqual(window, current), axElements(window, attribute: "AXSheets").isEmpty else { return false }
             return true
         }
+        var focusedCandidateElement: AXUIElement?
         let resolved = focusIntegratedCandidates(candidates, integration: integration, windowFrame: frame,
             canContinue: targetIsCurrent,
             preserveFocus: preserveCurrentFocus,
-            focus: { element in focusAccessibilityElement(element, applicationElement: app,
-                requiresApplicationFocusedElement: true, allowPress: integration == .antigravity,
-                canWriteFocus: { targetIsCurrent() && !preserveInput(excluding: element) }) },
+            focus: { element in
+                guard focusAccessibilityElement(element, applicationElement: app,
+                    requiresApplicationFocusedElement: true, allowPress: integration == .antigravity,
+                    canWriteFocus: { targetIsCurrent() && !preserveInput(excluding: element) }) else {
+                    return false
+                }
+                focusedCandidateElement = element
+                return true
+            },
             click: { element, snapshot in
                 guard !clickAttempted else { return false }
                 clickAttempted = true
-                return clickIntegratedComposer(snapshot, integration: integration, windowFrame: frame,
+                guard clickIntegratedComposer(snapshot, integration: integration, windowFrame: frame,
                     canContinue: targetIsCurrent,
                     preserveFocus: { preserveInput(excluding: element) },
                     hitTest: { accessibilityHitTestMatchesTarget(element, processIdentifier: processIdentifier, point: $0) },
                     isFocused: { accessibilityElementIsFocused(element, applicationElement: app,
-                        requiresApplicationFocusedElement: true) })
+                        requiresApplicationFocusedElement: true) }) else {
+                    return false
+                }
+                focusedCandidateElement = element
+                return true
             })
         guard resolved, canContinue() else { return .unavailable }
         if let preservedElement {
             guard let current = axElement(app, attribute: kAXFocusedUIElementAttribute),
                   CFEqual(current, preservedElement) else { return .unavailable }
             return .preserved
+        }
+        if let focusedCandidateElement {
+            _ = moveAccessibilityCaretToEnd(
+                of: focusedCandidateElement,
+                canContinue: {
+                    targetIsCurrent() &&
+                        !preserveInput(excluding: focusedCandidateElement) &&
+                        accessibilityElementIsFocused(
+                            focusedCandidateElement,
+                            applicationElement: app,
+                            requiresApplicationFocusedElement: true
+                        )
+                }
+            )
         }
         return .focused
     }
@@ -541,7 +587,19 @@ extension KeyboardInjector {
             restore.post(tap: .cghidEventTap)
         }
         usleep(30_000)
-        return isWeChatComposerFocused(applicationElement: applicationElement)
+        guard isWeChatComposerFocused(applicationElement: applicationElement) else { return false }
+        if let focusedElement = axElement(applicationElement, attribute: kAXFocusedUIElementAttribute) {
+            _ = moveAccessibilityCaretToEnd(
+                of: focusedElement,
+                canContinue: {
+                    applicationIsFrontmost(processIdentifier) &&
+                        isAccessibilityTrusted &&
+                        !SecureInputMonitor.isEnabled() &&
+                        isWeChatComposerFocused(applicationElement: applicationElement)
+                }
+            )
+        }
+        return true
     }
 
     static func isWeChatComposerFocused(applicationElement: AXUIElement) -> Bool {
@@ -1358,6 +1416,96 @@ extension KeyboardInjector {
 
     private static func axBool(_ element: AXUIElement, attribute: String) -> Bool? {
         axAttribute(element, attribute: attribute) as? Bool
+    }
+
+    static func axNumberOfCharacters(_ element: AXUIElement) -> Int? {
+        (axAttribute(element, attribute: kAXNumberOfCharactersAttribute) as? NSNumber)?.intValue
+    }
+
+    static func axSelectedTextRange(_ element: AXUIElement) -> CFRange? {
+        guard let value = axAttribute(element, attribute: kAXSelectedTextRangeAttribute),
+              CFGetTypeID(value) == AXValueGetTypeID()
+        else { return nil }
+        var range = CFRange(location: 0, length: 0)
+        guard AXValueGetValue(value as! AXValue, .cfRange, &range) else { return nil }
+        return range
+    }
+
+    /// Moves the caret to the end of a newly auto-focused composer without reading
+    /// any text contents: prefers writing `kAXSelectedTextRangeAttribute` to the
+    /// character count, falling back to Command+Down when the host editor ignores AX writes.
+    @discardableResult
+    static func moveAccessibilityCaretToEnd(
+        of element: AXUIElement,
+        canContinue: () -> Bool,
+        postMoveToEndKey: () -> Bool = {
+            ShortcutEventSequence.send(
+                keyCode: 125,
+                modifiers: .maskCommand,
+                hardwareFlags: { [] },
+                eventPoster: ShortcutEventSequence.post
+            )
+        },
+        pause: () -> Void = { usleep(20_000) }
+    ) -> Bool {
+        moveIntegratedComposerCaretToEnd(
+            readNumberOfCharacters: { axNumberOfCharacters(element) },
+            readSelectedRange: { axSelectedTextRange(element) },
+            isSelectedRangeSettable: {
+                var settable = DarwinBoolean(false)
+                return AXUIElementIsAttributeSettable(
+                    element,
+                    kAXSelectedTextRangeAttribute as CFString,
+                    &settable
+                ) == .success && settable.boolValue
+            },
+            writeSelectedRange: { range in
+                var mutableRange = range
+                guard let axRange = AXValueCreate(.cfRange, &mutableRange) else { return false }
+                return AXUIElementSetAttributeValue(
+                    element,
+                    kAXSelectedTextRangeAttribute as CFString,
+                    axRange
+                ) == .success
+            },
+            canContinue: canContinue,
+            postMoveToEndKey: postMoveToEndKey,
+            pause: pause
+        )
+    }
+
+    @discardableResult
+    static func moveIntegratedComposerCaretToEnd(
+        readNumberOfCharacters: () -> Int?,
+        readSelectedRange: () -> CFRange?,
+        isSelectedRangeSettable: () -> Bool,
+        writeSelectedRange: (CFRange) -> Bool,
+        canContinue: () -> Bool,
+        postMoveToEndKey: () -> Bool,
+        pause: () -> Void = { usleep(20_000) }
+    ) -> Bool {
+        guard canContinue() else { return false }
+        if let characterCount = readNumberOfCharacters() {
+            if characterCount <= 0 {
+                return true
+            }
+            if let current = readSelectedRange(),
+               current.location == characterCount,
+               current.length == 0 {
+                return true
+            }
+            if isSelectedRangeSettable(),
+               writeSelectedRange(CFRange(location: characterCount, length: 0)),
+               let updated = readSelectedRange(),
+               updated.location == characterCount,
+               updated.length == 0 {
+                return true
+            }
+        }
+        guard canContinue() else { return false }
+        let sent = postMoveToEndKey()
+        if sent { pause() }
+        return sent
     }
 
     private static func axElement(_ element: AXUIElement, attribute: String) -> AXUIElement? {

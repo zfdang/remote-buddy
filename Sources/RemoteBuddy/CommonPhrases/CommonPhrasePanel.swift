@@ -235,8 +235,14 @@ struct CommonPhrasePanelView: View {
             .accessibilityLabel(localization.text("common_phrases.close"))
         }
         .foregroundStyle(.white)
-        .background(Color(white: 0.075), in: RoundedRectangle(cornerRadius: 22))
-        .opacity(0.8)
+        .background(
+            RoundedRectangle(cornerRadius: 22)
+                .fill(Color(white: 0.11).opacity(0.93))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 22)
+                .stroke(Color.white.opacity(0.18), lineWidth: 1)
+        )
         .environment(\.colorScheme, .dark)
     }
 }

@@ -129,7 +129,11 @@ final class CommonPhraseStore: ObservableObject {
                     var savedCandidate = try JSONDecoder().decode(CommonPhraseArchive.self, from: saved)
                     try savedCandidate.validate()
                     let known = Set(savedCandidate.builtInIDs ?? savedCandidate.entries.filter { $0.id.hasPrefix("builtin-") }.map(\.id))
-                    let knownBindingKeys = Set(savedCandidate.builtInBindingKeys ?? Array(savedCandidate.bindings.keys))
+                    // Archives saved before `builtInBindingKeys` existed only offered `baseButtons`;
+                    // treating them as known prevents re-filling a base key the user intentionally cleared.
+                    let knownBindingKeys = Set(
+                        savedCandidate.builtInBindingKeys ?? Self.baseButtons.map(\.rawValue)
+                    )
                     savedCandidate.entries = savedCandidate.entries.compactMap { phrase in
                         phrase.id.hasPrefix("builtin-") ? builtIns.first { $0.id == phrase.id } : phrase
                     }

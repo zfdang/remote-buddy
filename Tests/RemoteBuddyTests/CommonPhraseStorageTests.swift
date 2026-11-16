@@ -154,20 +154,24 @@ struct CommonPhraseStorageTests {
         }
     }
 
-    @Test func reopeningSavedArchiveWithOnlyBaseBindingsBackfillsNewlyIntroducedKeys() throws {
+    @Test func reopeningSavedArchiveWithOnlyBaseBindingsBackfillsNewlyIntroducedKeysWithoutRefillingClearedBaseKeys() throws {
         let name = "phrase-upgrade-" + UUID().uuidString
         let defaults = try #require(UserDefaults(suiteName: name))
         defer { defaults.removePersistentDomain(forName: name) }
         let oldSaved = CommonPhraseArchive(
             entries: [phrase("builtin-one"), phrase("builtin-two", text: "第二项")],
+            // Simulate a pre-upgrade user who cleared .left (e.g. reassigned then deleted that phrase)
+            // while keeping .ok bound to "builtin-two".
             bindings: ["ok": "builtin-two"],
             builtInIDs: ["builtin-one", "builtin-two"]
         )
         defaults.set(try JSONEncoder().encode(oldSaved), forKey: "commonPhrases.archive.v2")
         let data = try JSONEncoder().encode(bundled)
         let upgraded = CommonPhraseStore(defaults: defaults, builtInData: data)
-        // Existing user assignment on .ok stays intact, while newly added .home is backfilled.
+        // Existing user assignment on .ok stays intact, cleared base key .left stays nil,
+        // and newly introduced extra key .home is backfilled.
         #expect(upgraded.phrase(for: .ok)?.id == "builtin-two")
+        #expect(upgraded.phrase(for: .left) == nil)
         #expect(upgraded.phrase(for: .home)?.id == "builtin-two")
 
         // Deleting a phrase after upgrade removes its binding and keeps it unassigned on reload.
@@ -365,6 +369,56 @@ struct CommonPhraseVoiceKeyTests {
         #expect(voiceSource == hidSource)
         #expect(controller.closeForVoiceKey(source: voiceSource))
         #expect(!controller.isVisible)
+    }
+
+    @Test(arguments: [RemoteModel.chromecastVoiceRemote, .rc003, .t1Remote])
+    func bluetoothBridgeDidStartVoiceClosesOwningPanelWithoutStartingVoice(remoteModel: RemoteModel) throws {
+        let name = "phrase-bridge-voice-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let settings = AppSettings(defaults: defaults)
+        let ownerBluetoothID = UUID()
+        let foreignBluetoothID = UUID()
+        let ownerProfileID = settings.registerBluetoothRemote(identifier: ownerBluetoothID, model: remoteModel)
+        _ = settings.registerBluetoothRemote(identifier: foreignBluetoothID, model: .rc001)
+        let data = try JSONEncoder().encode(CommonPhraseArchive(
+            entries: [CommonPhrase(id: "builtin-one", text: "好的", label: "好的")], bindings: [:]))
+        let store = CommonPhraseStore(defaults: defaults, builtInData: data)
+        let appModel = BridgeAppModel(settings: settings, commonPhraseStore: store)
+        let ownerBridge = BluetoothRemoteBridge(settings: settings, delegate: appModel, targetIdentifier: ownerBluetoothID)
+        let foreignBridge = BluetoothRemoteBridge(settings: settings, delegate: appModel, targetIdentifier: foreignBluetoothID)
+        appModel.connections.bridges[ownerBluetoothID] = ownerBridge
+        appModel.connections.bridges[foreignBluetoothID] = foreignBridge
+        defer {
+            appModel.commonPhrases.close(reason: "test_cleanup")
+            ownerBridge.stop()
+            foreignBridge.stop()
+        }
+
+        let ownerSource = BridgeAppModel.commonPhraseHIDSource(ownerProfileID)
+        #expect(appModel.performInternalAction(.openCommonPhrases, source: ownerSource))
+        #expect(appModel.commonPhrases.isVisible)
+
+        // Long recording protects an active request instead of closing the panel.
+        appModel.longRecordingRequested = true
+        appModel.bluetoothBridgeDidStartVoice(ownerBridge)
+        #expect(appModel.commonPhrases.isVisible)
+        #expect(!appModel.voiceSession.isActive)
+        #expect(appModel.voiceSession.pendingStart.identifier == nil)
+        appModel.longRecordingRequested = false
+
+        // Owning remote's ATVV voice start closes the panel without beginning a voice session.
+        appModel.bluetoothBridgeDidStartVoice(ownerBridge)
+        #expect(!appModel.commonPhrases.isVisible)
+        #expect(!appModel.voiceSession.isActive)
+        #expect(appModel.voiceSession.pendingStart.identifier == nil)
+
+        // Foreign remote voice start must not close the owner's panel.
+        #expect(appModel.performInternalAction(.openCommonPhrases, source: ownerSource))
+        #expect(appModel.commonPhrases.isVisible)
+        appModel.bluetoothBridgeDidStartVoice(foreignBridge)
+        #expect(appModel.commonPhrases.isVisible)
+        appModel.endVoiceSessionIfNeeded(flushAudio: false)
     }
 }
 

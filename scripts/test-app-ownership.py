@@ -112,6 +112,39 @@ class AppOwnershipTests(unittest.TestCase):
         (self.staging / 'chown').write_text('#!/bin/bash\n[[ "$1" != -h ]]\n')
         self.assertNotEqual(self.run_install().returncode, 0)
 
+    def test_quarantine_is_cleared_after_driver_without_following_external_links(self):
+        outside = self.root / 'outside'
+        outside.write_text('external fixture')
+        (self.app / 'Contents/external-link').symlink_to(outside)
+        quarantined = [self.app, self.helper, outside]
+        for path in quarantined:
+            subprocess.run(['/usr/bin/xattr', '-w', 'com.apple.quarantine',
+                            '0081;0;installer-test;', str(path)], check=True)
+        subprocess.run(['/usr/bin/xattr', '-w', 'com.example.fixture', 'keep', str(self.helper)], check=True)
+        original_driver = self.driver_script.read_text()
+        # The driver still sees quarantine: clearing must be the final installation step.
+        self.driver_script.write_text(original_driver +
+            f'/usr/bin/xattr -p com.apple.quarantine "{self.app}" > /dev/null || exit 41\n')
+        result = self.run_install()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for path in [self.app, self.helper]:
+            attributes = subprocess.check_output(['/usr/bin/xattr', str(path)], text=True).splitlines()
+            self.assertNotIn('com.apple.quarantine', attributes)
+        self.assertIn('com.apple.quarantine', subprocess.check_output(
+            ['/usr/bin/xattr', str(outside)], text=True).splitlines())
+        self.assertEqual(subprocess.check_output(
+            ['/usr/bin/xattr', '-p', 'com.example.fixture', str(self.helper)], text=True).strip(), 'keep')
+        self.driver_script.write_text(original_driver)
+        result = self.run_install()  # No attribute remaining is a successful reinstall.
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_quarantine_cleanup_failure_warns_without_failing_installation(self):
+        self.stub('/usr/bin/xattr', 'exit 1')
+        result = self.run_install()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(self.driver_calls.exists())
+        self.assertIn('Unable to clear App download quarantine', result.stderr)
+
     def test_real_ownership_command_preserves_signature_modes_and_bundle_symlinks(self):
         # Build a minimal framework so this check needs no downloaded artifacts.
         framework = self.app / 'Contents/Frameworks/Sparkle.framework'
@@ -138,6 +171,9 @@ class AppOwnershipTests(unittest.TestCase):
         subprocess.run(['codesign', '--force', '--sign', '-', str(self.app)], capture_output=True, check=True)
         signature = (self.app / 'Contents/_CodeSignature/CodeResources').read_bytes()
         modes = executable.stat().st_mode
+        for path in [self.app, executable, self.helper]:
+            subprocess.run(['/usr/bin/xattr', '-w', 'com.apple.quarantine',
+                            '0081;0;installer-test;', str(path)], check=True)
         # Use the actual recursive command, with this test user's existing ownership.
         # Record the invocation while executing chown on the disposable bundle.
         observer = self.staging / 'observe-chown'

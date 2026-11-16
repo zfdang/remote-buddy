@@ -35,4 +35,17 @@ if [[ "${3:-/}" == / ]]; then
 fi
 
 # Keep driver fingerprinting and conditional Core Audio restart in one place.
-exec /bin/bash "$(dirname "$0")/driver-postinstall" "$@"
+/bin/bash "$(dirname "$0")/driver-postinstall" "$@"
+
+# Clear download quarantine only after the App and driver installation finish.
+# Act on symlinks themselves so recursion cannot change files outside this App.
+if [[ "${3:-/}" == / ]]; then
+    buddy_check_bundle "$app" com.zfdang.remote-buddy
+    if [[ -d "$app" ]]; then
+        if /usr/bin/xattr -dr -s com.apple.quarantine "$app"; then
+            echo 'App download quarantine cleared.'
+        else
+            echo 'Unable to clear App download quarantine; first launch may require manual approval.' >&2
+        fi
+    fi
+fi

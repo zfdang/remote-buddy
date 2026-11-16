@@ -22,6 +22,7 @@ struct G9N9NCompatibilityModeTests {
         defer { defaults.removePersistentDomain(forName: suite) }
 
         let settings = AppSettings(defaults: defaults)
+        settings.onboardingPurpose = .addDevice
         let googleID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         let xiaomiID = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
 
@@ -33,8 +34,57 @@ struct G9N9NCompatibilityModeTests {
         #expect(reloaded.g9n9nInputMode(for: googleID) == .twoKeyCompatibility)
         #expect(reloaded.g9n9nInputMode(for: xiaomiID) == .full)
 
+        // Completed setup or integration-only flow cannot mutate compatibility mode arbitrarily.
+        reloaded.completeOnboarding()
+        reloaded.setG9N9NInputMode(.full, for: googleID)
+        #expect(reloaded.g9n9nInputMode(for: googleID) == .twoKeyCompatibility)
+
+        SettingsPageBehavior.beginIntegrationSetup(tool: .doubao, settings: reloaded)
+        reloaded.setG9N9NInputMode(.full, for: googleID)
+        #expect(reloaded.g9n9nInputMode(for: googleID) == .twoKeyCompatibility)
+
+        SettingsPageBehavior.beginDeviceSetup(settings: reloaded)
         reloaded.setG9N9NInputMode(.full, for: googleID)
         #expect(AppSettings(defaults: defaults).g9n9nInputMode(for: googleID) == .full)
+    }
+
+    @Test func partialSupportModeBlocksAllMappingEditsAndResetsUntilRestoredToFull() throws {
+        let suite = "g9n9n-mode-lock-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let settings = AppSettings(defaults: defaults)
+        settings.onboardingPurpose = .initialSetup
+        let googleID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+        settings.selectRemoteProfile(googleID)
+        settings.setAction(.escape, for: .ok, trigger: .singleClick)
+        settings.setG9N9NInputMode(.twoKeyCompatibility, for: googleID)
+        settings.completeOnboarding()
+
+        #expect(!settings.allowsMappingEdits(for: googleID))
+        let shortcut = CustomKeyboardShortcut(keyCode: 9, modifierFlags: [.command], keyLabel: "V")
+        settings.setAction(.deleteBackward, for: .ok, trigger: .singleClick)
+        settings.setAction(.volumeUp, for: .ok, trigger: .doubleClick)
+        settings.setShortcut(shortcut, for: .ok, trigger: .singleClick)
+        settings.setBaseBinding(
+            ConfiguredButtonAction(action: .returnKey, shortcut: nil),
+            for: .up,
+            trigger: .singleClick,
+            profileID: googleID
+        )
+        settings.resetBindings()
+
+        #expect(settings.action(for: .ok, profileID: googleID) == .escape)
+        #expect(settings.configuredAction(for: .ok, trigger: .doubleClick, profileID: googleID).action == .disabled)
+        #expect(settings.shortcut(for: .ok, profileID: googleID) == nil)
+        #expect(settings.action(for: .up, profileID: googleID) == .arrowUp)
+
+        SettingsPageBehavior.beginDeviceSetup(settings: settings)
+        settings.setG9N9NInputMode(.full, for: googleID)
+        settings.completeOnboarding()
+        #expect(settings.allowsMappingEdits(for: googleID))
+        settings.setAction(.deleteBackward, for: .ok, trigger: .singleClick)
+        #expect(settings.action(for: .ok, profileID: googleID) == .deleteBackward)
     }
 
     @Test func onboardingDetectionRequiresExplicitOptInBeforeAcceptingTwoKeyCombos() {
@@ -159,10 +209,10 @@ struct G9N9NCompatibilityModeTests {
 
         let settings = AppSettings(defaults: defaults)
         settings.customMappingEnabled = true
-        settings.onboardingStep = .complete
         let profileID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         settings.selectRemoteProfile(profileID)
         settings.setG9N9NInputMode(.twoKeyCompatibility, for: profileID)
+        settings.completeOnboarding()
 
         let clock = ControlledTestScheduler()
         var actions: [ButtonAction] = []
@@ -201,9 +251,11 @@ struct G9N9NCompatibilityModeTests {
         monitor.handleSimulatedGoogleReport(reportID: 1, data: Data([1, 7, 3]), descriptor: descriptor)
         #expect(actions.count == 3)
 
-        // Switching the same profile back to full mode restores configurable single-button support.
+        // Re-running Add Device setup to restore full mode unlocks single-button mapping.
         nativeFilterAvailable = true
+        SettingsPageBehavior.beginDeviceSetup(settings: settings)
         settings.setG9N9NInputMode(.full, for: profileID)
+        settings.completeOnboarding()
         settings.setAction(.escape, for: .ok, trigger: .singleClick)
         settings.setAction(.disabled, for: .ok, trigger: .doubleClick)
         settings.setAction(.disabled, for: .ok, trigger: .longPress)

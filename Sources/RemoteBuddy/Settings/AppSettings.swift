@@ -79,6 +79,7 @@ final class AppSettings: ObservableObject {
 
     func setBaseBinding(_ configured: ConfiguredButtonAction, for button: RemoteButton,
                         trigger: ButtonTrigger, profileID: UUID?) {
+        guard allowsMappingEdits(for: profileID) else { return }
         var bindings = unifiedBaseBindings
         bindings.removeAll { $0.remoteProfileID == profileID && $0.button == button && $0.trigger == trigger }
         bindings.append(UnifiedButtonBinding(remoteProfileID: profileID, button: button,

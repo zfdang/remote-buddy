@@ -1242,15 +1242,12 @@
 "onboarding.summary.partial_buttons_passed" = "Voice works; Arrow + OK sends Enter";
 
 "button_mapping.google.partial_subtitle" = "Partial support (two-key compatibility): Voice works; only Arrow + OK emits Return/Enter";
-"button_mapping.google.mode.title" = "G9N9N Hardware Compatibility Mode";
-"button_mapping.google.mode.hint" = "Use Full Support if single presses work; switch to Partial Support if only two-key combos register";
-"button_mapping.google.mode.full" = "Full Support (14 Keys)";
-"button_mapping.google.mode.partial" = "Partial Support (2-Key)";
 "button_mapping.google.partial.card_title" = "Partial Support Mode (Two-Key Compatibility)";
 "button_mapping.google.partial.card_detail" = "This G9N9N hardware/firmware revision sends 1-byte single-key reports that macOS drops before IOHID. Limited support is active:";
 "button_mapping.google.partial.voice_rule" = "1. Voice button (Google Assistant): hold to speak and release to stop";
 "button_mapping.google.partial.enter_rule" = "2. Arrow + OK (e.g. Up + OK): sends Return/Enter once when pressed together (requires mapping enabled above)";
-"button_mapping.google.partial.unsupported_rule" = "3. Individual single buttons, double-click/long-press, and single-key common phrases are unavailable";
+"button_mapping.google.partial.unsupported_rule" = "3. Modifying any button mapping, individual buttons, double-click/long-press, and phrase assignments are disabled in this mode";
+"button_mapping.google.partial.setup_only_hint" = "Compatibility mode is locked during initial or Add Device setup and is read-only here. If you replace the hardware unit, remove it in Connection and run Add Device again.";
 "button_mapping.voice.settings_button" = "Open Voice Integration";
 "common_phrases.g9n9n_partial_notice" = "The selected G9N9N is in Partial Support (two-key compatibility) mode, which only supports Voice and Arrow + OK for Enter; single-key common phrases are unavailable.";
 "onboarding.chromecast.replace_hardware_advice" = "Partial Support mode omits most button features and is intended only as a fallback. Replace with a verified macOS-compatible remote unit for full support.";

@@ -70,7 +70,6 @@ extension SettingsView {
                          destination: AppLinks.devices(for: localization.locale))
                 }
                 .font(.caption)
-                g9n9nModeSelectorPanel
             } else if settings.selectedRemoteProfile?.model.isT1Remote == true {
                 Text(localization.text("t1.remote.keyboard_airmouse_note"))
                     .font(.caption)
@@ -296,11 +295,11 @@ extension SettingsView {
         GlassPanel {
             VStack(alignment: .leading, spacing: 12) {
                 mappingHIDStatus
-                Divider()
-                HStack {
-                    mappingSelectionLockControl
-                    Spacer()
-                    if !isSelectedChromecastPartialSupport {
+                if !isSelectedChromecastPartialSupport {
+                    Divider()
+                    HStack {
+                        mappingSelectionLockControl
+                        Spacer()
                         Button {
                             selectSection(.commonPhrases)
                         } label: {
@@ -310,41 +309,6 @@ extension SettingsView {
                         .font(.system(size: 12))
                     }
                 }
-            }
-        }
-    }
-
-    private var g9n9nModeSelectorPanel: some View {
-        GlassPanel {
-            HStack(alignment: .center, spacing: 14) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(localization.text("button_mapping.google.mode.title"))
-                        .font(.system(size: 13, weight: .semibold))
-                    Text(localization.text("button_mapping.google.mode.hint"))
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer(minLength: 12)
-                Picker(localization.text("button_mapping.google.mode.title"), selection: Binding(
-                    get: { settings.g9n9nInputMode(for: settings.selectedRemoteProfileID) },
-                    set: { newMode in
-                        model.setG9N9NInputMode(newMode, for: settings.selectedRemoteProfileID)
-                        if newMode == .twoKeyCompatibility {
-                            mappingEditingTarget = nil
-                            shortcutCaptureTarget = nil
-                            applicationShortcutCaptureProfileID = nil
-                        }
-                    }
-                )) {
-                    Text(localization.text("button_mapping.google.mode.full"))
-                        .tag(G9N9NInputMode.full)
-                    Text(localization.text("button_mapping.google.mode.partial"))
-                        .tag(G9N9NInputMode.twoKeyCompatibility)
-                }
-                .labelsHidden()
-                .pickerStyle(.segmented)
-                .frame(width: 240)
             }
         }
     }
@@ -382,6 +346,13 @@ extension SettingsView {
                             .foregroundStyle(.secondary)
                         Text(localization.text("button_mapping.google.partial.unsupported_rule"))
                             .foregroundStyle(.secondary)
+                    }
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "info.circle")
+                            .foregroundStyle(.secondary)
+                        Text(localization.text("button_mapping.google.partial.setup_only_hint"))
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                     HStack(alignment: .top, spacing: 8) {
                         Image(systemName: "exclamationmark.triangle.fill")

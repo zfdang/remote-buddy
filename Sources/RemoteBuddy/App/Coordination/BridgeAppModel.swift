@@ -310,7 +310,9 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
     private(set) var isTerminating = false
 
     func setG9N9NInputMode(_ mode: G9N9NInputMode, for profileID: UUID? = nil) {
-        guard let targetID = profileID ?? settings.selectedRemoteProfileID,
+        guard !settings.isOnboardingComplete,
+              settings.onboardingPurpose != .integration,
+              let targetID = profileID ?? settings.selectedRemoteProfileID,
               settings.remoteDeviceProfiles.contains(where: { $0.id == targetID && $0.model.isChromecastRemote })
         else { return }
         settings.setG9N9NInputMode(mode, for: targetID)

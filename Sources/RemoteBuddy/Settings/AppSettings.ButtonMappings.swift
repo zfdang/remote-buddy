@@ -188,6 +188,7 @@ extension AppSettings {
     }
 
     func setAction(_ action: ButtonAction, for button: RemoteButton) {
+        guard allowsMappingEdits(for: selectedRemoteProfileID) else { return }
         buttonBindings[button] = action
     }
 
@@ -203,6 +204,7 @@ extension AppSettings {
     }
 
     func setShortcut(_ shortcut: CustomKeyboardShortcut?, for button: RemoteButton) {
+        guard allowsMappingEdits(for: selectedRemoteProfileID) else { return }
         buttonShortcuts[button] = shortcut
     }
 
@@ -378,8 +380,14 @@ extension AppSettings {
         return profile.effectiveG9N9NInputMode
     }
 
+    func allowsMappingEdits(for profileID: UUID?) -> Bool {
+        g9n9nInputMode(for: profileID ?? selectedRemoteProfileID) != .twoKeyCompatibility
+    }
+
     func setG9N9NInputMode(_ mode: G9N9NInputMode, for profileID: UUID?) {
-        guard let profileID,
+        // Hardware compatibility mode can only be determined during initial or add-device setup.
+        guard !isOnboardingComplete, onboardingPurpose != .integration,
+              let profileID,
               let index = remoteDeviceProfiles.firstIndex(where: { $0.id == profileID }),
               remoteDeviceProfiles[index].model.isChromecastRemote else { return }
         let stored: G9N9NInputMode? = mode == .full ? nil : mode
@@ -573,6 +581,7 @@ extension AppSettings {
     }
 
     func setAction(_ action: ButtonAction, for button: RemoteButton, trigger: ButtonTrigger) {
+        guard allowsMappingEdits(for: selectedRemoteProfileID) else { return }
         guard trigger != .singleClick else {
             setAction(action, for: button)
             return
@@ -594,6 +603,7 @@ extension AppSettings {
         for button: RemoteButton,
         trigger: ButtonTrigger
     ) {
+        guard allowsMappingEdits(for: selectedRemoteProfileID) else { return }
         guard trigger != .singleClick else {
             buttonApplicationProfileIDs[button] = applicationProfileID
             return
@@ -611,6 +621,7 @@ extension AppSettings {
         for button: RemoteButton,
         trigger: ButtonTrigger
     ) {
+        guard allowsMappingEdits(for: selectedRemoteProfileID) else { return }
         guard trigger != .singleClick else {
             setShortcut(shortcut, for: button)
             return
@@ -624,6 +635,7 @@ extension AppSettings {
     }
 
     func resetBindings() {
+        guard allowsMappingEdits(for: selectedRemoteProfileID) else { return }
         withResettingBindings {
             let mappings = Self.defaultMappings(for: selectedRemoteProfile?.model ?? .unknown)
             buttonBindings = mappings.parsedButtonBindings

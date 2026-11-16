@@ -8,7 +8,9 @@ extension OnboardingView {
         buttonHelpExpanded = false
         diagnosticCopySucceeded = nil
         refreshPermissionStates()
-        model.applyHIDSettings(allowVoiceKeyModeFallback: false)
+        if allowsHardwareMonitoring {
+            model.applyHIDSettings(allowVoiceKeyModeFallback: false)
+        }
         switch step {
         case .voiceTool:
             refreshVoiceToolAvailability()

@@ -77,6 +77,7 @@ extension OnboardingView {
     }
 
     func prepareSelectedControlConnection() {
+        guard allowsHardwareMonitoring else { return }
         switch settings.onboardingControlSource {
         case .xiaomiRemote, .t1Remote, .chromecastRemote:
             model.refreshRemoteDiscovery()

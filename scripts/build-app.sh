@@ -31,8 +31,8 @@ verify_sparkle_checkout
 swift build --disable-keychain --scratch-path "$scratch" -c "$configuration" --arch "$BUILD_ARCH" --product RemoteBuddy
 verify_sparkle_checkout
 bin="$(swift build --disable-keychain --scratch-path "$scratch" -c "$configuration" --arch "$BUILD_ARCH" --show-bin-path)"
-destination="$root/dist/Remote Buddy.app"
-mkdir -p "$root/dist"
+destination="${APP_BUNDLE_DESTINATION:-$root/dist/Remote Buddy.app}"
+mkdir -p "$root/dist" "$(dirname "$destination")"
 staging="$(mktemp -d "$root/dist/.app-build.XXXXXX")"
 trap 'rm -rf "$staging"' EXIT
 app="$staging/Remote Buddy.app"

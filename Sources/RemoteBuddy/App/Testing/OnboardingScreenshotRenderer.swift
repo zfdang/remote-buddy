@@ -244,6 +244,7 @@ enum OnboardingScreenshotRenderer {
                         model: model,
                         completeRuntimeReadyOverride: true,
                         allowsInputSourceSwitching: false,
+                        allowsHardwareMonitoring: false,
                         systemFunctionKeyAvailableOverride: systemFunctionKeyAvailable,
                         voiceToolAvailabilityOverride: [
                             .weixin: allVoiceToolsUnavailable ? .notInstalled : .available,

@@ -530,3 +530,7 @@ Validation after the latency and trigger-observation changes (runtime `1cb1d94`)
 WorkBuddy 输入框通过同一局部布局内的唯一编辑框、“更多操作”和“语音输入”控件联合识别。生成回复期间“发送”会替换为“停止”，两种状态都可识别；不读取输入框内容或对话文本，不自动发送消息或停止生成。
 
 蓝牙语音停止在清理状态前记录 `ATVV STREAM STOP session=... reason=... close_requested=... partial_frame_bytes=...`，并在 `ATVV STREAM summary` 附带 `stop_reason`。`remote_notification` 仅表示收到了 ATVV 结束通知，不等于证明用户松开按键；`close_requested` 表示本进程此前是否请求过关闭，可区分主动关闭后的设备确认和设备自行报告结束。其他原因包括 `remote_microphone_refused`、`close_unacknowledged`、`close_retry_exhausted`、`write_response_failure`、`flow_control_timeout`、`decode_backlog`、`session_replaced`、`disconnected`、`system_suspended` 和 `bridge_stopped` 等。每次流只记录一次停止，后续清理不会覆盖最初的来源。`fn_pressed_at_stop` 仍仅表示系统 Fn 状态，不能当作遥控器物理语音键状态；日志不推断第三方输入工具是否仍在收音。
+
+### Website screenshots (2026-11-16)
+
+Run `python3 scripts/generate-website-screenshots.py` to build the current Debug app and capture Chinese/English settings and onboarding views. The website examples select G9N9N and use its photo and model defaults. Device connection and battery states are screenshot fixtures, not hardware measurements. The renderer uses an isolated preferences suite and does not start hardware monitoring. After refreshing these assets, rerender `scripts/demo-video/render.py` so the video uses the same current UI.

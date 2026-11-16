@@ -87,6 +87,7 @@ enum SettingsScreenshotRenderer {
         var remoteCardSystemNames: [UUID: String] = [:]
         var remoteCardBatteryLevels: [UUID: Int] = [:]
         var remoteCardPowerStates: [UUID: RemotePowerState] = [:]
+        var chromecastScreenshotProfileID: UUID?
         let screenshotAudioDevices: [AudioDeviceInfo] = switch ProcessInfo.processInfo.environment[
             "REMOTE_BUDDY_SETTINGS_SCREENSHOT_AUDIO_DRIVER"
         ] {
@@ -149,6 +150,7 @@ enum SettingsScreenshotRenderer {
             )
             settings.bindHIDFingerprint("settings-screenshot-xiaomi", to: xiaomiID)
             let chromecastID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+            chromecastScreenshotProfileID = chromecastID
             settings.selectRemoteProfile(xiaomiID)
             remoteCardSystemNames = [
                 xiaomiID: language == .simplifiedChinese ? "书房遥控器" : "Study Remote",
@@ -165,8 +167,15 @@ enum SettingsScreenshotRenderer {
         }
         _ = usesSiriRemote
         if usesChromecast {
-            let identifier = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+            let identifier = chromecastScreenshotProfileID
+                ?? settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
             settings.selectRemoteProfile(identifier)
+            settings.customMappingEnabled = true
+            if !showsRemoteCards {
+                remoteCardSystemNames[identifier] = "Chromecast Remote"
+                remoteCardBatteryLevels[identifier] = 64
+                remoteCardPowerStates[identifier] = .onBattery
+            }
         }
         if opensShortcutEditor {
             settings.customMappingEnabled = true
@@ -177,7 +186,7 @@ enum SettingsScreenshotRenderer {
                 trigger: .singleClick
             )
         }
-        if showsRemoteCards {
+        if showsRemoteCards || usesChromecast {
             model.configureRemoteCardsForSettingsScreenshot(
                 profileIDs: Set(remoteCardSystemNames.keys),
                 systemNames: remoteCardSystemNames,

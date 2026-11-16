@@ -11,6 +11,7 @@ struct OnboardingView: View {
     @Environment(\.colorSchemeContrast) var colorSchemeContrast
     let completeRuntimeReadyOverride: Bool?
     let allowsInputSourceSwitching: Bool
+    let allowsHardwareMonitoring: Bool
     let systemFunctionKeyAvailableOverride: Bool?
     let voiceToolAvailabilityOverride: [OnboardingVoiceTool: OnboardingVoiceToolAvailability]?
     let remoteInputDiagnosticOverride: FirstUseRemoteInputDiagnostic?
@@ -66,6 +67,7 @@ struct OnboardingView: View {
         model: BridgeAppModel,
         completeRuntimeReadyOverride: Bool? = nil,
         allowsInputSourceSwitching: Bool = true,
+        allowsHardwareMonitoring: Bool = true,
         systemFunctionKeyAvailableOverride: Bool? = nil,
         voiceToolAvailabilityOverride: [OnboardingVoiceTool: OnboardingVoiceToolAvailability]? = nil,
         initialInputMethodGuideStep: Int? = nil,
@@ -79,6 +81,7 @@ struct OnboardingView: View {
         settings = model.settings
         self.completeRuntimeReadyOverride = completeRuntimeReadyOverride
         self.allowsInputSourceSwitching = allowsInputSourceSwitching
+        self.allowsHardwareMonitoring = allowsHardwareMonitoring
         self.systemFunctionKeyAvailableOverride = systemFunctionKeyAvailableOverride
         self.voiceToolAvailabilityOverride = voiceToolAvailabilityOverride
         self.remoteInputDiagnosticOverride = remoteInputDiagnosticOverride

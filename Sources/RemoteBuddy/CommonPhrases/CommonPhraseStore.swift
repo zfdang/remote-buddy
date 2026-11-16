@@ -58,21 +58,36 @@ final class CommonPhraseStore: ObservableObject {
     enum StoreError: Error { case invalidData, unavailable }
     nonisolated static let maximumImportBytes = 4_000_000
     nonisolated static let baseButtons: [RemoteButton] = [.ok, .left, .up, .right, .down]
-    /// Row order of the panel grid below the directional pad for each remote family.
-    nonisolated static let chromecastExtraButtons: [RemoteButton] = [.home, .mute, .youtube, .netflix, .input]
-    nonisolated static let xiaomiExtraButtons: [RemoteButton] = [.home, .menu, .volumeUp, .volumeDown, .tv]
-    nonisolated static let t1ExtraButtons: [RemoteButton] = [.mute, .home, .menu]
+    /// Physical 2-column grid rows below the directional pad for each remote.
+    /// `nil` reserves an empty slot so visible buttons keep their physical left/right position.
+    nonisolated static let chromecastExtraRows: [[RemoteButton?]] = [
+        [.home, .mute],
+        [.youtube, .netflix],
+        [nil, .input],
+    ]
+    nonisolated static let xiaomiExtraRows: [[RemoteButton?]] = [
+        [nil, .volumeUp],
+        [.home, .volumeDown],
+        [.menu, .tv],
+    ]
+    nonisolated static let t1ExtraRows: [[RemoteButton?]] = [
+        [.mute, .home],
+        [nil, .menu],
+    ]
     nonisolated static let allExtraButtons: [RemoteButton] = [
         .home, .mute, .menu, .tv, .volumeUp, .volumeDown, .youtube, .netflix, .input,
     ]
     nonisolated static let buttons = baseButtons + allExtraButtons
-    nonisolated static func extraButtons(for model: RemoteModel?) -> [RemoteButton] {
+    nonisolated static func extraButtonRows(for model: RemoteModel?) -> [[RemoteButton?]] {
         switch model {
-        case .chromecastVoiceRemote: chromecastExtraButtons
-        case .rc001, .rc003, .unknown: xiaomiExtraButtons
-        case .t1Remote: t1ExtraButtons
+        case .chromecastVoiceRemote: chromecastExtraRows
+        case .rc001, .rc003, .unknown: xiaomiExtraRows
+        case .t1Remote: t1ExtraRows
         case .appleSiriRemoteA2854, .appleSiriRemoteA2540, nil: []
         }
+    }
+    nonisolated static func extraButtons(for model: RemoteModel?) -> [RemoteButton] {
+        extraButtonRows(for: model).flatMap { $0.compactMap { $0 } }
     }
     nonisolated static func buttons(for model: RemoteModel?) -> [RemoteButton] {
         baseButtons + extraButtons(for: model)

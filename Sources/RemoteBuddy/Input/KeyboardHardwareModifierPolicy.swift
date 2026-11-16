@@ -22,6 +22,14 @@ enum KeyboardHardwareModifierPolicy {
             let sessionHasFn = combinedFlags.contains(.maskSecondaryFn) || combinedFnKeyDown
             return sessionHasFn ? flags.union(.maskSecondaryFn) : flags.subtracting(.maskSecondaryFn)
         }
+        if flags.contains(.maskSecondaryFn),
+           !fnKeyDown,
+           !combinedFnKeyDown,
+           !combinedFlags.contains(.maskSecondaryFn) {
+            // Suppressed Home/End/PageUp/PageDown (keys 115/116/119/121) set HID
+            // maskSecondaryFn without maskNumericPad and leave it stale after key-up.
+            return flags.subtracting(.maskSecondaryFn)
+        }
         return fnKeyDown ? flags.union(.maskSecondaryFn) : flags
     }
 

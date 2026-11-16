@@ -176,20 +176,26 @@ struct CommonPhraseStorageTests {
     }
 
     @Test func deviceButtonListsMatchEachRemoteLayout() {
+        #expect(CommonPhraseStore.extraButtonRows(for: .chromecastVoiceRemote)
+            == [[.home, .mute], [.youtube, .netflix], [nil, .input]])
+        #expect(CommonPhraseStore.extraButtonRows(for: .rc001)
+            == [[nil, .volumeUp], [.home, .volumeDown], [.menu, .tv]])
+        #expect(CommonPhraseStore.extraButtonRows(for: .rc003)
+            == [[nil, .volumeUp], [.home, .volumeDown], [.menu, .tv]])
+        #expect(CommonPhraseStore.extraButtonRows(for: .t1Remote)
+            == [[.mute, .home], [nil, .menu]])
         #expect(CommonPhraseStore.buttons(for: .chromecastVoiceRemote)
             == [.ok, .left, .up, .right, .down, .home, .mute, .youtube, .netflix, .input])
-        #expect(CommonPhraseStore.buttons(for: .rc001)
-            == [.ok, .left, .up, .right, .down, .home, .menu, .volumeUp, .volumeDown, .tv])
         #expect(CommonPhraseStore.buttons(for: .rc003)
-            == [.ok, .left, .up, .right, .down, .home, .menu, .volumeUp, .volumeDown, .tv])
+            == [.ok, .left, .up, .right, .down, .volumeUp, .home, .volumeDown, .menu, .tv])
         #expect(CommonPhraseStore.buttons(for: .t1Remote)
             == [.ok, .left, .up, .right, .down, .mute, .home, .menu])
         #expect(CommonPhraseStore.buttons(for: .appleSiriRemoteA2854) == CommonPhraseStore.baseButtons)
         #expect(CommonPhraseStore.buttons(for: nil) == CommonPhraseStore.baseButtons)
-        #expect(CommonPhrasePanelView.size(for: CommonPhraseStore.buttons(for: nil)).height == 360)
-        #expect(CommonPhrasePanelView.size(for: CommonPhraseStore.buttons(for: .t1Remote)).height == 550)
-        #expect(CommonPhrasePanelView.size(for: CommonPhraseStore.buttons(for: .rc003)).height == 640)
-        #expect(CommonPhrasePanelView.size(for: CommonPhraseStore.buttons(for: .chromecastVoiceRemote)).height == 640)
+        #expect(CommonPhrasePanelView.size(for: nil).height == 360)
+        #expect(CommonPhrasePanelView.size(for: .t1Remote).height == 550)
+        #expect(CommonPhrasePanelView.size(for: .rc003).height == 640)
+        #expect(CommonPhrasePanelView.size(for: .chromecastVoiceRemote).height == 640)
     }
 
     @Test func allPhraseButtonLocalizationKeysResolveInBothLanguages() throws {
@@ -281,14 +287,11 @@ struct CommonPhraseVoiceKeyTests {
         let t1ID = settings.registerBluetoothRemote(identifier: UUID(), model: .t1Remote)
         settings.selectRemoteProfile(xiaomiID)
 
-        #expect(BridgeAppModel.commonPhraseButtons(
-            forSource: BridgeAppModel.commonPhraseHIDSource(t1ID), settings: settings)
-            == CommonPhraseStore.buttons(for: .t1Remote))
-        #expect(BridgeAppModel.commonPhraseButtons(
-            forSource: BridgeAppModel.commonPhraseHIDSource(xiaomiID), settings: settings)
-            == CommonPhraseStore.buttons(for: .rc003))
-        #expect(BridgeAppModel.commonPhraseButtons(forSource: "host_action", settings: settings)
-            == CommonPhraseStore.buttons(for: .rc003))
+        #expect(BridgeAppModel.commonPhraseModel(
+            forSource: BridgeAppModel.commonPhraseHIDSource(t1ID), settings: settings) == .t1Remote)
+        #expect(BridgeAppModel.commonPhraseModel(
+            forSource: BridgeAppModel.commonPhraseHIDSource(xiaomiID), settings: settings) == .rc003)
+        #expect(BridgeAppModel.commonPhraseModel(forSource: "host_action", settings: settings) == .rc003)
     }
 
     @Test func hiddenPanelIgnoresVoiceKey() throws {
@@ -348,7 +351,7 @@ struct CommonPhraseOwnershipTests {
             #expect(routing.handle(button, phase: .release, source: "first") == .consumed)
         }
     }
-    @Test(arguments: CommonPhraseStore.chromecastExtraButtons)
+    @Test(arguments: CommonPhraseStore.extraButtons(for: .chromecastVoiceRemote))
     func chromecastKeysInsertWhenPanelIsOpen(button: RemoteButton) {
         var routing = CommonPhraseRouting()
         routing.open(source: "first", buttons: CommonPhraseStore.buttons(for: .chromecastVoiceRemote))
@@ -356,7 +359,7 @@ struct CommonPhraseOwnershipTests {
         #expect(routing.handle(button, phase: .press, source: "first") == .insert(button))
         #expect(routing.handle(button, phase: .release, source: "first") == .consumed)
     }
-    @Test(arguments: CommonPhraseStore.xiaomiExtraButtons)
+    @Test(arguments: CommonPhraseStore.extraButtons(for: .rc003))
     func xiaomiKeysInsertWhenPanelIsOpen(button: RemoteButton) {
         var routing = CommonPhraseRouting()
         routing.open(source: "first", buttons: CommonPhraseStore.buttons(for: .rc003))
@@ -364,7 +367,7 @@ struct CommonPhraseOwnershipTests {
         #expect(routing.handle(button, phase: .press, source: "first") == .insert(button))
         #expect(routing.handle(button, phase: .release, source: "first") == .consumed)
     }
-    @Test(arguments: CommonPhraseStore.t1ExtraButtons)
+    @Test(arguments: CommonPhraseStore.extraButtons(for: .t1Remote))
     func t1KeysInsertWhenPanelIsOpen(button: RemoteButton) {
         var routing = CommonPhraseRouting()
         routing.open(source: "first", buttons: CommonPhraseStore.buttons(for: .t1Remote))

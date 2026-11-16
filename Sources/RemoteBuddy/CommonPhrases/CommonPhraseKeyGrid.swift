@@ -47,12 +47,11 @@ struct CommonPhraseKeyGlyphView: View {
     }
 }
 
-/// Device-specific extra phrase keys below the directional pad, laid out two per
-/// row. Like `CommonPhrasePad`, callers decide whether a press inserts text or
-/// selects the assignment position.
+/// Device-specific extra phrase keys below the directional pad, laid out in
+/// physical rows where `nil` keeps an empty slot for alignment.
 struct CommonPhraseKeyGrid: View {
     @ObservedObject var store: CommonPhraseStore
-    var buttons: [RemoteButton]
+    var rows: [[RemoteButton?]]
     var keyDiameter: CGFloat
     var selectedButton: RemoteButton? = nil
     var onSelect: (RemoteButton) -> Void
@@ -60,10 +59,18 @@ struct CommonPhraseKeyGrid: View {
 
     var body: some View {
         Grid(alignment: .top, horizontalSpacing: 12, verticalSpacing: 12) {
-            ForEach(Array(stride(from: 0, to: buttons.count, by: 2)), id: \.self) { index in
+            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
                 GridRow {
-                    key(buttons[index])
-                    if index + 1 < buttons.count { key(buttons[index + 1]) }
+                    ForEach(Array(row.enumerated()), id: \.offset) { _, button in
+                        if let button {
+                            key(button)
+                        } else {
+                            Color.clear
+                                .frame(height: 1)
+                                .frame(minWidth: keyDiameter * 1.6, maxWidth: .infinity)
+                                .accessibilityHidden(true)
+                        }
+                    }
                 }
             }
         }

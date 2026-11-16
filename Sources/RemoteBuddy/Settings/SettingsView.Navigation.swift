@@ -115,7 +115,7 @@ extension SettingsView {
         case .commonPhrases:
             CommonPhraseSettingsView(
                 store: model.commonPhraseStore,
-                phraseButtons: CommonPhraseStore.buttons(for: settings.selectedRemoteProfile?.model)
+                remoteModel: settings.selectedRemoteProfile?.model
             ) {
                 selectSection(.mapping)
             }

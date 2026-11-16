@@ -11,7 +11,7 @@ final class CommonPhraseController: ObservableObject {
     let store: CommonPhraseStore
     @Published private(set) var messageKey = "common_phrases.panel_hint"
     @Published private(set) var isVisible = false
-    @Published private(set) var phraseButtons = CommonPhraseStore.baseButtons
+    @Published private(set) var extraRows: [[RemoteButton?]] = []
     var onWillOpen: (() -> Void)?
     private var routing = CommonPhraseRouting()
     private var panel: NSPanel?
@@ -57,7 +57,7 @@ final class CommonPhraseController: ObservableObject {
     deinit { for (center, observer) in observers { center.removeObserver(observer) } }
 
     @discardableResult
-    @MainActor func open(source: String, buttons: [RemoteButton], localization: LocalizationStore) -> Bool {
+    @MainActor func open(source: String, model: RemoteModel? = nil, localization: LocalizationStore) -> Bool {
         guard store.isAvailable else {
             AppLogger.shared.write("COMMON_PHRASES PANEL phase=failed reason=resource_unavailable")
             return false
@@ -71,11 +71,13 @@ final class CommonPhraseController: ObservableObject {
         self.localization = localization.snapshot
         generation &+= 1
         targetPID = frontmostProcessID()
+        let buttons = CommonPhraseStore.buttons(for: model)
+        let rows = CommonPhraseStore.extraButtonRows(for: model)
         routing.open(source: source, buttons: buttons)
-        phraseButtons = buttons
+        extraRows = rows
         messageKey = "common_phrases.panel_hint"
         isVisible = true
-        let size = CommonPhrasePanelView.size(for: buttons)
+        let size = CommonPhrasePanelView.size(forRows: rows)
         let window = CommonPhrasePanel(contentRect: NSRect(origin: .zero, size: size),
             styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         window.level = .floating
@@ -192,19 +194,17 @@ final class CommonPhraseController: ObservableObject {
 }
 
 struct CommonPhrasePanelView: View {
-    static func size(for buttons: [RemoteButton]) -> CGSize {
-        let extraCount = extraKeys(in: buttons).count
-        guard extraCount > 0 else { return CGSize(width: 300, height: 360) }
-        let rows = (extraCount + 1) / 2
-        let height: CGFloat = switch rows {
+    static func size(for model: RemoteModel?) -> CGSize {
+        size(forRows: CommonPhraseStore.extraButtonRows(for: model))
+    }
+    static func size(forRows rows: [[RemoteButton?]]) -> CGSize {
+        guard !rows.isEmpty else { return CGSize(width: 300, height: 360) }
+        let height: CGFloat = switch rows.count {
         case 1: 460
         case 2: 550
         default: 640
         }
         return CGSize(width: 300, height: height)
-    }
-    static func extraKeys(in buttons: [RemoteButton]) -> [RemoteButton] {
-        buttons.filter { !CommonPhraseStore.baseButtons.contains($0) }
     }
     @ObservedObject var controller: CommonPhraseController
     @EnvironmentObject private var localization: LocalizationStore
@@ -218,16 +218,15 @@ struct CommonPhrasePanelView: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, minHeight: 48, alignment: .top)
             CommonPhrasePad(store: controller.store, diameter: 272, onSelect: controller.insert)
-            let extraKeys = Self.extraKeys(in: controller.phraseButtons)
-            if !extraKeys.isEmpty {
-                CommonPhraseKeyGrid(store: controller.store, buttons: extraKeys, keyDiameter: 44,
+            if !controller.extraRows.isEmpty {
+                CommonPhraseKeyGrid(store: controller.store, rows: controller.extraRows, keyDiameter: 44,
                                     onSelect: controller.insert)
             }
             Spacer(minLength: 0)
         }
         .padding(14)
-        .frame(width: Self.size(for: controller.phraseButtons).width,
-               height: Self.size(for: controller.phraseButtons).height)
+        .frame(width: Self.size(forRows: controller.extraRows).width,
+               height: Self.size(forRows: controller.extraRows).height)
         .overlay(alignment: .topTrailing) {
             Button { controller.close(reason: "close_button") } label: {
                 Image(systemName: "xmark").font(.system(size: 16, weight: .semibold))

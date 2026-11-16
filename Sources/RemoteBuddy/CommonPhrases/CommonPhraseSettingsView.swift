@@ -5,8 +5,10 @@ import UniformTypeIdentifiers
 struct CommonPhraseSettingsView: View {
     @ObservedObject private var clipboardPaste = CommonPhraseClipboardPaste.shared
     @ObservedObject var store: CommonPhraseStore
-    var phraseButtons = CommonPhraseStore.baseButtons
+    var remoteModel: RemoteModel? = nil
     var onReturn: () -> Void = {}
+    private var phraseButtons: [RemoteButton] { CommonPhraseStore.buttons(for: remoteModel) }
+    private var extraRows: [[RemoteButton?]] { CommonPhraseStore.extraButtonRows(for: remoteModel) }
     @EnvironmentObject private var localization: LocalizationStore
     @State private var selectedButton: RemoteButton?
     @State private var selectedID: String?
@@ -94,9 +96,8 @@ struct CommonPhraseSettingsView: View {
                     .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 CommonPhrasePad(store: store, diameter: diameter, selectedButton: selectedButton, onSelect: selectPosition)
                     .padding(.vertical, 10)
-                let extraKeys = CommonPhrasePanelView.extraKeys(in: phraseButtons)
-                if !extraKeys.isEmpty {
-                    CommonPhraseKeyGrid(store: store, buttons: extraKeys, keyDiameter: 44,
+                if !extraRows.isEmpty {
+                    CommonPhraseKeyGrid(store: store, rows: extraRows, keyDiameter: 44,
                                         selectedButton: selectedButton, onSelect: selectPosition)
                         .frame(width: diameter)
                 }

@@ -332,7 +332,7 @@ enum SettingsScreenshotRenderer {
 
         // Capture the same nonactivating panel view used for real input. This
         // hidden renderer neither opens a remote session nor posts text.
-        let panelSize = CommonPhrasePanelView.size(for: model.commonPhrases.phraseButtons)
+        let panelSize = CommonPhrasePanelView.size(forRows: model.commonPhrases.extraRows)
         let phrasePanel = NSPanel(contentRect: NSRect(origin: .zero, size: panelSize),
             styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         phrasePanel.contentView = NSHostingView(rootView:

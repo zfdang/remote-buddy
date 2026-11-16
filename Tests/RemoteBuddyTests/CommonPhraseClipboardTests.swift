@@ -202,11 +202,27 @@ struct CommonPhraseClipboardTests {
 
     @Test func externalKeyboardFnWithoutNavigationDecorationIsNeverRemoved() {
         let flags = KeyboardHardwareModifierPolicy.normalized(.maskSecondaryFn,
-            fnKeyDown: false, combinedFlags: [], combinedFnKeyDown: false)
+            fnKeyDown: false, combinedFlags: .maskSecondaryFn, combinedFnKeyDown: false)
         #expect(KeyboardHardwareModifierPolicy.normalized([], fnKeyDown: true,
             combinedFlags: [], combinedFnKeyDown: false).contains(.maskSecondaryFn))
         #expect(flags.contains(.maskSecondaryFn))
         #expect(!CommonPhraseClipboardPaste.permitsPasteShortcut(flags: flags))
+    }
+
+    @Test func staleHIDFnAfterSuppressedHomeKeyDoesNotBlockPaste() {
+        // Observed in runtime log after suppressing Xiaomi Home (key 115):
+        // HID flags=0x800100 (8388864, no maskNumericPad), fnKeyDown=false,
+        // combinedFlags=0 or 0x20000100 (536871168), combinedFnKeyDown=false.
+        for combined in [CGEventFlags(rawValue: 0), CGEventFlags(rawValue: 0x20000100)] {
+            let effective = KeyboardHardwareModifierPolicy.normalized(
+                CGEventFlags(rawValue: 0x800100),
+                fnKeyDown: false,
+                combinedFlags: combined,
+                combinedFnKeyDown: false
+            )
+            #expect(!effective.contains(.maskSecondaryFn))
+            #expect(CommonPhraseClipboardPaste.permitsPasteShortcut(flags: effective))
+        }
     }
 
     @Test func navigationReleaseRaceWaitsBeforeReadingOrReplacingClipboard() {

@@ -72,11 +72,10 @@ extension BridgeAppModel {
         return commonPhraseHIDSource(profile.id)
     }
 
-    static func commonPhraseButtons(forSource source: String, settings: AppSettings) -> [RemoteButton] {
-        let model = commonPhraseProfileID(fromSource: source)
+    static func commonPhraseModel(forSource source: String, settings: AppSettings) -> RemoteModel? {
+        commonPhraseProfileID(fromSource: source)
             .flatMap { id in settings.remoteDeviceProfiles.first { $0.id == id }?.model }
             ?? settings.selectedRemoteProfile?.model
-        return CommonPhraseStore.buttons(for: model)
     }
 
     func cancelPendingCommonPhraseButtonActions() {
@@ -93,7 +92,7 @@ extension BridgeAppModel {
             return MainActor.assumeIsolated {
                 commonPhrases.open(
                     source: source,
-                    buttons: Self.commonPhraseButtons(forSource: source, settings: settings),
+                    model: Self.commonPhraseModel(forSource: source, settings: settings),
                     localization: LocalizationStore(settings: settings))
             }
         }

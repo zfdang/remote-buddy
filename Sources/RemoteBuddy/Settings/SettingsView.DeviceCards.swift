@@ -103,9 +103,6 @@ extension SettingsView {
                     }
                     .font(.system(size: 12))
                     .lineLimit(1)
-                    if profile.model.isChromecastRemote {
-                        g9n9nSupportBadge(for: profile.effectiveG9N9NInputMode)
-                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .center)
                 .contentShape(Rectangle())

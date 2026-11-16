@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import Testing
 @testable import RemoteBuddy
@@ -301,5 +302,54 @@ struct G9N9NCompatibilityModeTests {
         monitor.handleSimulatedGoogleReport(reportID: 1, data: Data([1, 7, 3]), descriptor: descriptor)
         #expect(actions.isEmpty)
         #expect(observedCombos == [[.ok, .up], [.ok, .up]])
+    }
+
+    @Test func unseizedCompatibilityModeSuppressesNativeEventsOnSetupAndUnsupportedReports() throws {
+        let suite = "g9n9n-compat-suppress-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let settings = AppSettings(defaults: defaults)
+        settings.customMappingEnabled = true
+        settings.onboardingControlSource = .chromecastRemote
+        let profileID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+        settings.selectRemoteProfile(profileID)
+        settings.setG9N9NInputMode(.twoKeyCompatibility, for: profileID)
+
+        let suppressor = KeyboardEventSuppressor(uptime: { 0 })
+        var actions: [ButtonAction] = []
+        let monitor = HIDRemoteMonitor(
+            settings: settings,
+            profileID: profileID,
+            eventSuppressor: suppressor,
+            runtimePermissions: { true },
+            nativeSuppressionAvailable: { true },
+            actionPerformer: { _, _, configured in
+                actions.append(configured.action)
+                return true
+            },
+            diagnosticLogger: { _ in }
+        )
+        monitor.onboardingWindowIsActive = { true }
+        monitor.connectSimulatedDevice(fingerprint: "google", profileID: profileID, isSeized: false)
+        defer { monitor.disconnectSimulatedDevice() }
+
+        func keyDown(_ keyCode: CGKeyCode) throws -> CGEvent {
+            try #require(CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: true))
+        }
+
+        let descriptor = G9N9NProtocol.indexedConsumerDescriptor
+        for step in [OnboardingStep.remote, .controls] {
+            settings.onboardingStep = step
+            monitor.handleSimulatedGoogleReport(reportID: 1, data: Data([1, 7, 3]), descriptor: descriptor)
+            #expect(suppressor.handle(type: .keyDown, event: try keyDown(126)))
+            #expect(suppressor.handle(type: .keyDown, event: try keyDown(36)))
+        }
+        #expect(actions.isEmpty)
+
+        settings.completeOnboarding()
+        monitor.handleSimulatedGoogleReport(reportID: 1, data: Data([1, 7, 11]), descriptor: descriptor)
+        #expect(actions.isEmpty)
+        #expect(suppressor.handle(type: .keyDown, event: try keyDown(36)))
     }
 }

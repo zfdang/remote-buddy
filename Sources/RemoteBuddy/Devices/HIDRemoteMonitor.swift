@@ -900,6 +900,13 @@ final class HIDRemoteMonitor {
             resetInputState()
             return
         }
+        // Arm native event suppression before any early returns (onboarding suppression or
+        // unsupported-input ignore) so unseized monitors never leak physical OS key events.
+        if !activeDeviceIsSeized {
+            for button in observedButtons {
+                eventSuppressor.arm(button: button, edge: .down)
+            }
+        }
         let targetProfileID = profileID ?? settings.selectedRemoteProfileID
         let representative = observedButtons.contains(.ok)
             ? RemoteButton.ok
@@ -941,11 +948,6 @@ final class HIDRemoteMonitor {
         guard mappingDeliveryIsSafe else {
             pauseForUnavailableNativeFilter()
             return
-        }
-        if !activeDeviceIsSeized {
-            for button in observedButtons {
-                eventSuppressor.arm(button: button, edge: .down)
-            }
         }
         let action = ConfiguredButtonAction(action: .returnKey, shortcut: nil)
         guard actionPerformer(.ok, .singleClick, action) else {

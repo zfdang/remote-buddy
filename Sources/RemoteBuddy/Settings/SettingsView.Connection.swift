@@ -211,25 +211,26 @@ extension SettingsView {
                     if settings.selectedRemoteProfileID == profile.id {
                         connectionStatusLine(symbol: "mic.fill", text: model.voiceShortcutStatus.text(using: localization), tint: .blue)
                     }
-                    if profile.model.isChromecastRemote {
-                        if profile.effectiveG9N9NInputMode == .twoKeyCompatibility {
-                            connectionStatusLine(
-                                symbol: "exclamationmark.circle.fill",
-                                text: localization.text("connection.g9n9n.partial_support_notice"),
-                                tint: .orange
-                            )
-                        } else {
-                            connectionStatusLine(
-                                symbol: "checkmark.circle.fill",
-                                text: localization.text("connection.g9n9n.full_support_notice"),
-                                tint: .green
-                            )
-                        }
-                    }
                     if let identifier = profile.bluetoothIdentifier,
                        let information = model.remoteDeviceInformation[identifier],
                        information != RemoteDeviceInformation() {
                         connectionDeviceInformation(information)
+                    }
+                    if profile.model.isChromecastRemote {
+                        let mode = profile.effectiveG9N9NInputMode
+                        Divider()
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            g9n9nSupportBadge(for: mode)
+                                .fixedSize()
+                            Text(localization.text(
+                                mode == .twoKeyCompatibility
+                                    ? "connection.g9n9n.partial_support_notice"
+                                    : "connection.g9n9n.full_support_notice"
+                            ))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        }
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading).padding(.top, 10)
             }

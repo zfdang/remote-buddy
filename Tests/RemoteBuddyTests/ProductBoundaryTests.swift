@@ -385,6 +385,10 @@ struct ProductBoundaryTests {
         #expect(OnboardingRemotePhotoKind.resolve(source: .chromecastRemote,
             selectedModel: .rc003, selectedDevice: .xiaomi)
             == .bundled(resourceName: RemoteSetupDevice.chromecastG9N9N.illustrationResource))
+        #expect(AppLinks.devices(for: Locale(identifier: "zh_CN")).absoluteString
+            == "https://remote.zfdang.com/device.html")
+        #expect(AppLinks.devices(for: Locale(identifier: "en_US")).absoluteString
+            == "https://remote.zfdang.com/device_en.html")
     }
 
     @Test func wizardRequiresEachPermissionAndKeepsRemoteControl() {

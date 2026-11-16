@@ -631,7 +631,7 @@
 "onboarding.remote.siri_pairing.first" = "打开“系统设置 → 蓝牙”，让苹果遥控器靠近 Mac。";
 "onboarding.remote.siri_pairing.second" = "同时按住返回键和音量加键约 5 秒，看到遥控器后完成连接。";
 "onboarding.remote.siri_pairing.third" = "蓝牙名称可能不会显示为“苹果遥控器”。重置后请关注蓝牙列表中新出现的设备，不要只按名称判断。";
-"onboarding.remote.chromecast_pairing.title" = "Google 遥控器配对（G9N9N / GY3LE）";
+"onboarding.remote.chromecast_pairing.title" = "Google 遥控器配对（G9N9N）";
 "onboarding.remote.chromecast_pairing.first" = "打开“系统设置 → 蓝牙”，将遥控器靠近 Mac。";
 "onboarding.remote.chromecast_pairing.second" = "同时按住返回（Back）和主页（Home）约 3 秒，直到指示灯开始闪烁。";
 "onboarding.remote.t1_pairing.title" = "配对 T1 飞鼠键盘遥控器（及同款兼容版）";
@@ -1204,3 +1204,4 @@
 
 "connection.empty.title" = "尚未添加遥控器";
 "connection.empty.detail" = "点击右上角“添加新设备”，连接你的遥控器。";
+"connection.action.device_comparison" = "设备对比与选购指南 ↗";

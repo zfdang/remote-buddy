@@ -532,7 +532,25 @@ extension AppSettings {
               let index = remoteDeviceProfiles.firstIndex(where: { $0.id == profileID }),
               remoteDeviceProfiles[index].model != model
         else { return }
-        remoteDeviceProfiles[index].model = model
+        var profile = remoteDeviceProfiles[index]
+        let resolvesUnknownModel = profile.model == .unknown
+        if resolvesUnknownModel {
+            let defaults = Self.defaultMappings(for: model)
+            profile.mappings.buttonBindings = defaults.buttonBindings.merging(profile.mappings.buttonBindings) {
+                _, saved in saved
+            }
+            profile.mappings.secondaryButtonBindings = defaults.secondaryButtonBindings.merging(
+                profile.mappings.secondaryButtonBindings
+            ) { presets, saved in presets.merging(saved) { _, customized in customized } }
+        }
+        profile.model = model
+        remoteDeviceProfiles[index] = profile
+        if resolvesUnknownModel, selectedRemoteProfileID == profileID {
+            withLoadingRemoteProfile {
+                buttonBindings = profile.mappings.parsedButtonBindings
+                secondaryButtonBindings = profile.mappings.parsedSecondaryButtonBindings
+            }
+        }
     }
 
     func setAction(_ action: ButtonAction, for button: RemoteButton, trigger: ButtonTrigger) {

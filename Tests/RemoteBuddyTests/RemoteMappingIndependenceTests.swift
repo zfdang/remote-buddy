@@ -5,6 +5,43 @@ import Testing
 @Suite("Independent remote defaults")
 @MainActor
 struct RemoteMappingIndependenceTests {
+    @Test(arguments: [true, false])
+    func identifyingAnUnknownGoogleRemoteFillsDefaultsAndPreservesEdits(selected: Bool) throws {
+        let suite = "identified-google-defaults-" + UUID().uuidString
+        let values = try #require(UserDefaults(suiteName: suite))
+        defer { values.removePersistentDomain(forName: suite) }
+        let settings = AppSettings(defaults: values)
+        let xiaomi = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
+        let google = settings.registerBluetoothRemote(identifier: UUID(), model: .unknown)
+        settings.selectRemoteProfile(google)
+        settings.setAction(.disabled, for: .input)
+        settings.setAction(.showDesktop, for: .home)
+        settings.setAction(.commandCopy, for: .ok, trigger: .longPress)
+        if !selected { settings.selectRemoteProfile(xiaomi) }
+
+        settings.updateRemoteProfileModel(google, model: .chromecastVoiceRemote)
+        #expect(settings.selectedRemoteProfileID == (selected ? google : xiaomi))
+        #expect(settings.action(for: .youtube, profileID: google) == .previousCommandLeft)
+        #expect(settings.action(for: .netflix, profileID: google) == .nextCommandRight)
+        #expect(settings.action(for: .mute, profileID: google) == .volumeMute)
+        #expect(settings.action(for: .input, profileID: google) == .disabled)
+        #expect(settings.action(for: .home, profileID: google) == .showDesktop)
+        #expect(settings.configuredAction(for: .ok, trigger: .longPress, profileID: google).action == .commandCopy)
+        #expect(settings.action(for: .home, profileID: xiaomi) == .appSwitcher)
+        if selected {
+            #expect(settings.buttonBindings[.youtube] == .previousCommandLeft)
+            #expect(settings.buttonBindings[.mute] == .volumeMute)
+        }
+        let restored = AppSettings(defaults: values)
+        #expect(restored.action(for: .youtube, profileID: google) == .previousCommandLeft)
+        #expect(restored.action(for: .netflix, profileID: google) == .nextCommandRight)
+        #expect(restored.action(for: .input, profileID: google) == .disabled)
+        restored.setBaseBinding(.init(action: .escape, shortcut: nil), for: .youtube,
+            trigger: .singleClick, profileID: google)
+        restored.updateRemoteProfileModel(google, model: .chromecastVoiceRemote)
+        #expect(restored.action(for: .youtube, profileID: google) == .escape)
+    }
+
     @Test func googleMediaDefaultsPersistCustomizeAndResetIndependently() throws {
         let suite = "google-media-defaults-" + UUID().uuidString
         let values = try #require(UserDefaults(suiteName: suite))

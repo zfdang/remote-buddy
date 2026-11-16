@@ -398,7 +398,6 @@ final class AppSettings: ObservableObject {
     }
 
     init(defaults: UserDefaults = .standard) {
-        let defaults = RuntimeEnvironment.isolatedDefaultsIfNeeded(defaults)
         enabledApplicationIntegrations = Set(defaults.stringArray(forKey: Keys.enabledApplicationIntegrations) ?? [])
             .intersection(ApplicationIntegration.allCases.map(\.rawValue))
         var corruptedKeys: [String] = []

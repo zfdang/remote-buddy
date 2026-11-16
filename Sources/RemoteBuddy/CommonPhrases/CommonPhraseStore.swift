@@ -70,7 +70,6 @@ final class CommonPhraseStore: ObservableObject {
     private var operation: UInt64 = 0
 
     init(defaults: UserDefaults = .standard, builtInData: Data? = nil) {
-        let defaults = RuntimeEnvironment.isolatedDefaultsIfNeeded(defaults)
         self.defaults = defaults
         do {
             let data: Data

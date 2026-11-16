@@ -20,11 +20,14 @@ struct BluetoothVoiceStopDiagnosticTests {
     @Test(arguments: [BluetoothVoiceStopReason.remoteNotification, .remoteMicrophoneRefused,
         .localStop, .bridgeStopped, .systemSuspended, .closeUnacknowledged, .closeRetryExhausted])
     func reportsTheObservedStopWithoutClaimingAPhysicalRelease(reason: BluetoothVoiceStopReason) async {
+        let suite = "voice-stop-diagnostics-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
         let clock = ControlledTestScheduler()
         let delegate = Delegate()
         let queue = DispatchQueue(label: "voice-stop-diagnostics")
         var logs: [String] = []
-        let bridge = BluetoothRemoteBridge(settings: AppSettings(), delegate: delegate,
+        let bridge = BluetoothRemoteBridge(settings: AppSettings(defaults: defaults), delegate: delegate,
             allowsT1Remote: true, audioPipeline: BluetoothAudioPipeline(queue: queue),
             voiceDiagnosticLogger: { logs.append($0) }, scheduleMicrophoneClose: clock.voiceSchedule)
         defer { bridge.stop() }

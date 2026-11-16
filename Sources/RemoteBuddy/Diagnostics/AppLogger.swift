@@ -243,7 +243,13 @@ final class AppLogger: PublicDiagnosticEventSink {
         arguments: [String] = ProcessInfo.processInfo.arguments,
         environment: [String: String] = ProcessInfo.processInfo.environment
     ) -> Bool {
-        !RuntimeEnvironment.detectsTests(arguments: arguments, environment: environment, processName: "")
+        let isXCTestProcess = arguments.contains { argument in
+            argument.contains(".xctest")
+        }
+        let hasTestEnvironment = environment["XCTestConfigurationFilePath"] != nil ||
+            environment["XCTestBundlePath"] != nil ||
+            environment["XCTestSessionIdentifier"] != nil
+        return !isXCTestProcess && !hasTestEnvironment
     }
 
     static func errorFields(_ error: Error) -> String {

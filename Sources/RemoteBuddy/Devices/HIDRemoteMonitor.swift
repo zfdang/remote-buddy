@@ -113,6 +113,7 @@ final class HIDRemoteMonitor {
     private var lastT1MouseHeader: Data?
     private var lastT1MouseLogTime: TimeInterval = 0
     private var currentReportDescriptor: Data?
+    private var googleIndexedReportsIncludeID = false
     var reportedModel: RemoteModel {
         if currentReportIsGoogle { return .chromecastVoiceRemote }
         if currentReportIsT1 { return .t1Remote }
@@ -800,8 +801,14 @@ final class HIDRemoteMonitor {
                 return nil
             }
         }
+        // Once framing is known, a shortened ID + zero release must not be
+        // mistaken for payload-only index 1 (Power).
+        let indexedGoogleReport = currentReportIsGoogle && reportID == 1 &&
+            G9N9NProtocol.usesIndexedConsumerLayout(currentReportDescriptor)
+        let googleData = indexedGoogleReport && googleIndexedReportsIncludeID && data == Data([1, 0])
+            ? Data([1, 0, 0]) : data
         let decoded = currentReportIsGoogle
-            ? G9N9NProtocol.usages(reportID: reportID, data: data, descriptor: currentReportDescriptor)
+            ? G9N9NProtocol.usages(reportID: reportID, data: googleData, descriptor: currentReportDescriptor)
             : RemoteHIDReportParser.usages(reportID: reportID, data: data)
         guard let usages = decoded else {
             diagnosticLogger(
@@ -846,6 +853,11 @@ final class HIDRemoteMonitor {
         source: String,
         parsed: ParsedHIDReport
     ) {
+        if currentReportIsGoogle, reportID == 1,
+           G9N9NProtocol.usesIndexedConsumerLayout(currentReportDescriptor),
+           data.count == 3, data.first == 1 {
+            googleIndexedReportsIncludeID = true
+        }
         let usages = parsed.mappedUsages
         suppressedUntilReleasedT1PassthroughUsages = suppressedUntilReleasedT1PassthroughUsages
             .intersection(parsed.observedPassthroughUsages)
@@ -2000,6 +2012,7 @@ final class HIDRemoteMonitor {
     }
 
     private func resetInputState() {
+        googleIndexedReportsIncludeID = false
         onInputReset?(profileID)
         if appSwitcherSession.isActive {
             _ = appSwitcherSession.cancel()

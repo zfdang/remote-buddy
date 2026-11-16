@@ -55,6 +55,8 @@ enum G9N9NProtocol {
     static func usages(reportID: UInt32, data: Data, descriptor: Data? = nil) -> Set<UInt16>? {
         if usesIndexedConsumerLayout(descriptor) {
             guard reportID == 1 else { return nil }
+            // A zero-only shortened snapshot can only release keys.
+            if data == Data([0]) { return [] }
             var bytes = Array(data)
             if bytes.count == 3, bytes.first == 1 { bytes.removeFirst() }
             guard bytes.count == 2,

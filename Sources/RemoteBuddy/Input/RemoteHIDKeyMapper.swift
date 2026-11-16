@@ -2,7 +2,7 @@ import Foundation
 import IOKit.hid
 import IOKit.hidsystem
 
-struct HIDUsageMapping: Codable, Equatable {
+struct HIDUsageMapping: Codable, Hashable {
     static let sourceKey = "HIDKeyboardModifierMappingSrc"
     static let destinationKey = "HIDKeyboardModifierMappingDst"
 
@@ -215,6 +215,7 @@ final class RemoteHIDKeyMapper {
     private let bootID: String?
     private let recoveryJournalURL: URL?
     private let serviceProvider: ServiceProvider?
+    private let logger: (String) -> Void
     var additionalIdentities = Set<RemoteHIDIdentity>() {
         willSet {
             // Restore while the old identity list can still find its services.
@@ -262,11 +263,17 @@ final class RemoteHIDKeyMapper {
         suppressPowerKey: Bool,
         neutralizeVoiceKey: Bool
     ) -> ServiceMappingEvaluation {
-        guard !services.isEmpty else { return .noServices }
-        guard let applied = appliedConfiguration,
-              applied.suppressPowerKey == suppressPowerKey,
-              applied.neutralizeVoiceKey == neutralizeVoiceKey
-        else { return .needsReapply }
+        guard !services.isEmpty else {
+            logger("HID MAPPING validation result=unavailable reason=no_services")
+            return .noServices
+        }
+        guard let applied = appliedConfiguration else {
+            return mappingMismatch(reason: "configuration_not_applied")
+        }
+        guard applied.suppressPowerKey == suppressPowerKey,
+              applied.neutralizeVoiceKey == neutralizeVoiceKey else {
+            return mappingMismatch(reason: "configuration_changed")
+        }
 
         let expectedVoiceMapping = neutralizeVoiceKey
             ? RemoteHIDKeyMappingPolicy.neutralRemoteVoiceKey
@@ -274,36 +281,42 @@ final class RemoteHIDKeyMapper {
 
         var liveRegistryIDs = Set<UInt64>()
         for service in services {
-            guard let registryID = service.registryID,
-                  applied.serviceRegistryIDs.contains(registryID)
-            else { return .needsReapply }
+            guard let registryID = service.registryID else {
+                return mappingMismatch(reason: "missing_registry_id", service: service)
+            }
+            guard applied.serviceRegistryIDs.contains(registryID) else {
+                return mappingMismatch(reason: "service_added_or_replaced", service: service)
+            }
             let mappings = service.readMappings()
             switch service.family {
             case .xiaomi:
-                guard mappings.contains(expectedVoiceMapping) else { return .needsReapply }
+                guard mappings.contains(expectedVoiceMapping) else {
+                    return mappingMismatch(reason: "voice_mapping_mismatch", service: service,
+                        expected: expectedVoiceMapping, mappings: mappings)
+                }
                 if suppressPowerKey,
                    !mappings.contains(RemoteHIDKeyMappingPolicy.suppressedRemotePowerKey) {
-                    return .needsReapply
+                    return mappingMismatch(reason: "power_mapping_mismatch", service: service)
                 }
             case .t1Remote:
                 let original = originalMappings[registryID]
                 if suppressPowerKey || neutralizeVoiceKey {
                     guard mappings.contains(RemoteHIDKeyMappingPolicy.neutralT1VoiceSearchKey),
                           mappings.contains(RemoteHIDKeyMappingPolicy.neutralT1VoiceHoldKey)
-                    else { return .needsReapply }
+                    else { return mappingMismatch(reason: "voice_mapping_mismatch", service: service) }
                 } else {
                     if original?.t1Search != RemoteHIDKeyMappingPolicy.neutralT1VoiceSearchKey,
                        mappings.contains(RemoteHIDKeyMappingPolicy.neutralT1VoiceSearchKey) {
-                        return .needsReapply
+                        return mappingMismatch(reason: "voice_mapping_mismatch", service: service)
                     }
                     if original?.t1Hold != RemoteHIDKeyMappingPolicy.neutralT1VoiceHoldKey,
                        mappings.contains(RemoteHIDKeyMappingPolicy.neutralT1VoiceHoldKey) {
-                        return .needsReapply
+                        return mappingMismatch(reason: "voice_mapping_mismatch", service: service)
                     }
                 }
                 if suppressPowerKey,
                    !mappings.contains(RemoteHIDKeyMappingPolicy.suppressedT1PowerKey) {
-                    return .needsReapply
+                    return mappingMismatch(reason: "power_mapping_mismatch", service: service)
                 }
             }
             liveRegistryIDs.insert(registryID)
@@ -312,6 +325,19 @@ final class RemoteHIDKeyMapper {
         // Prune vanished service IDs so a reconnecting device cannot reuse stale readiness.
         appliedConfiguration?.serviceRegistryIDs = liveRegistryIDs
         return .upToDate
+    }
+
+    private func mappingMismatch(
+        reason: String, service: RemoteHIDMappingService? = nil,
+        expected: HIDUsageMapping? = nil, mappings: [HIDUsageMapping] = []
+    ) -> ServiceMappingEvaluation {
+        let observed = expected.flatMap { expected in mappings.first { $0.source == expected.source } }
+        logger("HID MAPPING validation result=mismatch reason=\(reason) " +
+            "registry_id=\(service?.registryID.map(String.init) ?? "none") " +
+            "family=\(service?.family.rawValue ?? "none") " +
+            "expected_destination=\(expected.map { String($0.destination) } ?? "none") " +
+            "observed_destination=\(observed.map { String($0.destination) } ?? "none")")
+        return .needsReapply
     }
 
     /// Revalidates `isVoiceKeyNeutralized` and power-key suppression against currently attached
@@ -326,7 +352,8 @@ final class RemoteHIDKeyMapper {
         }
         let services = matchingServices()
         matchedServiceCount = services.count
-        if expectedVoiceKeyNeutralization, !isVoiceKeyNeutralized {
+        if expectedVoiceKeyNeutralization, !isVoiceKeyNeutralized, !services.isEmpty {
+            logger("HID MAPPING validation result=mismatch reason=neutralization_not_applied")
             resetAppliedState()
             return false
         }
@@ -382,10 +409,12 @@ final class RemoteHIDKeyMapper {
         serviceProvider: ServiceProvider? = nil,
         recoveryDefaults: UserDefaults = .standard,
         bootID: String? = RemoteHIDKeyMapper.currentBootID(),
-        recoveryJournalURL: URL? = nil
+        recoveryJournalURL: URL? = nil,
+        logger: @escaping (String) -> Void = { AppLogger.shared.write($0) }
     ) {
         let recoveryDefaults = RuntimeEnvironment.isolatedDefaultsIfNeeded(recoveryDefaults)
         self.serviceProvider = serviceProvider ?? (RuntimeEnvironment.isRunningTests ? { [] } : nil)
+        self.logger = logger
         self.recoveryDefaults = recoveryDefaults
         self.bootID = bootID
         self.recoveryJournalURL = recoveryJournalURL ?? (recoveryDefaults === UserDefaults.standard
@@ -572,6 +601,7 @@ final class RemoteHIDKeyMapper {
                 )
             }
             guard service.setMappings(desired) else {
+                logger("HID MAPPING apply result=failed reason=write_failed registry_id=\(registryID)")
                 if neutralizeVoiceKey {
                     rollback(
                         services: services,
@@ -585,6 +615,14 @@ final class RemoteHIDKeyMapper {
                 continue
             }
             appliedIndices.append(index)
+            // The OS accepting the write does not establish that the mapping took effect.
+            guard Self.ownedMappings(in: service.readMappings(), family: service.family) ==
+                Self.ownedMappings(in: desired, family: service.family) else {
+                logger("HID MAPPING apply result=failed reason=readback_mismatch registry_id=\(registryID)")
+                rollback(services: services, snapshots: snapshots, appliedIndices: appliedIndices,
+                    newlyStoredRegistryIDs: newlyStoredRegistryIDs, matchedCount: matchedCount)
+                return false
+            }
             if let locationID = service.locationID {
                 appliedCountsByLocation[locationID, default: 0] += 1
             }
@@ -625,6 +663,14 @@ final class RemoteHIDKeyMapper {
         return isApplied
     }
 
+    private static func ownedMappings(in mappings: [HIDUsageMapping], family: RemoteHIDMappingFamily) -> Set<HIDUsageMapping> {
+        let sources: Set<UInt64> = family == .xiaomi
+            ? [RemoteHIDKeyMappingPolicy.remoteVoiceKey.source, RemoteHIDKeyMappingPolicy.suppressedRemotePowerKey.source]
+            : [RemoteHIDKeyMappingPolicy.neutralT1VoiceSearchKey.source,
+               RemoteHIDKeyMappingPolicy.neutralT1VoiceHoldKey.source, RemoteHIDKeyMappingPolicy.suppressedT1PowerKey.source]
+        return Set(mappings.filter { sources.contains($0.source) })
+    }
+
     func restore() {
         guard !originalMappings.isEmpty else {
             resetAppliedState()
@@ -653,9 +699,13 @@ final class RemoteHIDKeyMapper {
                     in: service.readMappings()
                 )
             }
-            if service.setMappings(restored) {
+            if service.setMappings(restored),
+               Self.ownedMappings(in: service.readMappings(), family: service.family) ==
+                Self.ownedMappings(in: restored, family: service.family) {
                 restoredCount += 1
                 originalMappings.removeValue(forKey: registryID)
+            } else {
+                logger("HID MAPPING restore result=failed reason=write_or_readback_failed registry_id=\(registryID)")
             }
         }
 
@@ -676,7 +726,9 @@ final class RemoteHIDKeyMapper {
         var registryIDsNeedingRestore = Set<UInt64>()
         for index in appliedIndices {
             guard let snapshot = snapshots[index] else { continue }
-            if services[index].setMappings(snapshot) {
+            if services[index].setMappings(snapshot),
+               Self.ownedMappings(in: services[index].readMappings(), family: services[index].family) ==
+                Self.ownedMappings(in: snapshot, family: services[index].family) {
                 rollbackCount += 1
             } else if let registryID = services[index].registryID {
                 registryIDsNeedingRestore.insert(registryID)

@@ -117,23 +117,24 @@ extension OnboardingView {
             Divider()
 
             VStack(alignment: .leading, spacing: 6) {
-                Label(
-                    localization.text("onboarding.controls.chromecast.compat.limit_voice"),
-                    systemImage: "mic.fill"
-                )
-                .foregroundStyle(.green)
-                Label(
-                    localization.text("onboarding.controls.chromecast.compat.limit_enter"),
-                    systemImage: "return"
-                )
-                .foregroundStyle(.green)
-                Label(
-                    localization.text("onboarding.controls.chromecast.compat.limit_others"),
-                    systemImage: "xmark.circle"
-                )
-                .foregroundStyle(.secondary)
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                    Text(localization.text("onboarding.controls.chromecast.compat.limit_voice"))
+                }
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                    Text(localization.text("onboarding.controls.chromecast.compat.limit_enter"))
+                }
+                HStack(spacing: 8) {
+                    Image(systemName: "xmark.circle")
+                        .foregroundStyle(.secondary)
+                    Text(localization.text("onboarding.controls.chromecast.compat.limit_others"))
+                        .foregroundStyle(.secondary)
+                }
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Image(systemName: "arrow.triangle.2.circlepath")
+                    Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundStyle(.orange)
                     Text(localization.text("onboarding.chromecast.replace_hardware_advice"))
                         .foregroundStyle(.secondary)
@@ -336,13 +337,13 @@ extension OnboardingView {
             }
             if summary.isPartialSupportG9N9N {
                 VStack(alignment: .leading, spacing: 6) {
-                    Label(
-                        localization.text("onboarding.chromecast.replace_hardware_advice"),
-                        systemImage: "exclamationmark.triangle.fill"
-                    )
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.orange)
-                    .fixedSize(horizontal: false, vertical: true)
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                        Text(localization.text("onboarding.chromecast.replace_hardware_advice"))
+                            .font(.system(size: 12, weight: .medium))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                     Link(localization.text("onboarding.chromecast.replace_hardware_link"),
                          destination: AppLinks.devices(for: localization.locale))
                         .font(.system(size: 12))

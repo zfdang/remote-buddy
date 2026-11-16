@@ -367,27 +367,29 @@ extension SettingsView {
                 }
                 Divider()
                 VStack(alignment: .leading, spacing: 8) {
-                    Label(
-                        localization.text("button_mapping.google.partial.voice_rule"),
-                        systemImage: "mic.fill"
-                    )
-                    .foregroundStyle(.green)
-                    Label(
-                        localization.text("button_mapping.google.partial.enter_rule"),
-                        systemImage: "return"
-                    )
-                    .foregroundStyle(.green)
-                    Label(
-                        localization.text("button_mapping.google.partial.unsupported_rule"),
-                        systemImage: "xmark.circle"
-                    )
-                    .foregroundStyle(.secondary)
-                    Label(
-                        localization.text("onboarding.chromecast.replace_hardware_advice"),
-                        systemImage: "exclamationmark.triangle.fill"
-                    )
-                    .foregroundStyle(.orange)
-                    .fixedSize(horizontal: false, vertical: true)
+                    HStack(spacing: 8) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                        Text(localization.text("button_mapping.google.partial.voice_rule"))
+                    }
+                    HStack(spacing: 8) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                        Text(localization.text("button_mapping.google.partial.enter_rule"))
+                    }
+                    HStack(spacing: 8) {
+                        Image(systemName: "xmark.circle")
+                            .foregroundStyle(.secondary)
+                        Text(localization.text("button_mapping.google.partial.unsupported_rule"))
+                            .foregroundStyle(.secondary)
+                    }
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                        Text(localization.text("onboarding.chromecast.replace_hardware_advice"))
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
                 .font(.system(size: 12))
 

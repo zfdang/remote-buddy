@@ -116,7 +116,7 @@ extension OnboardingView {
                 compact: true
             )
 
-            if settings.onboardingControlSource == .chromecastRemote {
+            if shouldShowChromecastCompatibilityCard {
                 chromecastCompatibilityOptInCard
             }
 
@@ -222,6 +222,9 @@ extension OnboardingView {
             if chromecastSingleKeyObserved {
                 return localization.text("onboarding.remote.chromecast.full_ready_detail")
             }
+            if observedRemoteButtons.isEmpty && !remoteInputDiagnostic.shouldShowVoiceButtonCorrection {
+                return localization.text("onboarding.remote.chromecast.single_waiting_detail")
+            }
         }
         let instructionKey = remoteInputDiagnostic.shouldShowVoiceButtonCorrection
             ? "onboarding.remote.voice_button_mistake.detail"
@@ -231,52 +234,60 @@ extension OnboardingView {
         return localization.text(instructionKey)
     }
 
+    private var shouldShowChromecastCompatibilityCard: Bool {
+        chromecastCompatibilityPromptReady ||
+            ChromecastCompatibilityDetection.shouldShowCompatibilityOptInCard(
+                step: settings.onboardingStep,
+                source: settings.onboardingControlSource,
+                remoteConnected: selectedControlConnected,
+                singleKeyObserved: chromecastSingleKeyObserved,
+                twoKeyDetectedWithoutSingleKey: chromecastTwoKeyDetectedWithoutSingleKey,
+                compatibilityModeEnabled: isChromecastTwoKeyCompatible,
+                remoteButtonObserved: !observedRemoteButtons.isEmpty,
+                waitStartedAtUptime: secureInputWaitStartedAtUptime,
+                nowUptime: ProcessInfo.processInfo.systemUptime
+            )
+    }
+
     private var chromecastCompatibilityOptInCard: some View {
         let highlighted = chromecastTwoKeyDetectedWithoutSingleKey && !isChromecastTwoKeyCompatible
         let tint: Color = highlighted ? .orange : (isChromecastTwoKeyCompatible ? .blue : .secondary)
         return VStack(alignment: .leading, spacing: 10) {
-            if chromecastSingleKeyObserved && !isChromecastTwoKeyCompatible {
-                Label(
-                    localization.text("onboarding.remote.chromecast.full_badge"),
-                    systemImage: "checkmark.seal.fill"
-                )
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.green)
-            } else {
-                Text(localization.text(
-                    highlighted
-                        ? "onboarding.remote.chromecast.compat_prompt_highlighted"
-                        : "onboarding.remote.chromecast.compat_prompt"
-                ))
-                .font(.system(size: 12))
-                .foregroundStyle(highlighted ? .primary : .secondary)
-                .fixedSize(horizontal: false, vertical: true)
+            Text(localization.text(
+                highlighted
+                    ? "onboarding.remote.chromecast.compat_prompt_highlighted"
+                    : "onboarding.remote.chromecast.compat_prompt"
+            ))
+            .font(.system(size: 12))
+            .foregroundStyle(highlighted ? .primary : .secondary)
+            .fixedSize(horizontal: false, vertical: true)
 
-                Toggle(isOn: Binding(
-                    get: { isChromecastTwoKeyCompatible },
-                    set: { setChromecastPartialSupportMode($0) }
-                )) {
-                    Text(localization.text("onboarding.remote.chromecast.compat_checkbox"))
-                        .font(.system(size: 13, weight: .medium))
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .toggleStyle(.checkbox)
-                .accessibilityIdentifier("g9n9n-partial-support-toggle")
-
-                if isChromecastTwoKeyCompatible {
-                    Text(localization.text("onboarding.remote.chromecast.compat_scope_summary"))
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        Text(localization.text("onboarding.chromecast.replace_hardware_advice"))
-                            .foregroundStyle(.orange)
-                        Link(localization.text("onboarding.chromecast.replace_hardware_link"),
-                             destination: AppLinks.devices(for: localization.locale))
-                    }
-                    .font(.system(size: 12))
+            Toggle(isOn: Binding(
+                get: { isChromecastTwoKeyCompatible },
+                set: { setChromecastPartialSupportMode($0) }
+            )) {
+                Text(localization.text("onboarding.remote.chromecast.compat_checkbox"))
+                    .font(.system(size: 13, weight: .medium))
                     .fixedSize(horizontal: false, vertical: true)
+            }
+            .toggleStyle(.checkbox)
+            .accessibilityIdentifier("g9n9n-partial-support-toggle")
+
+            if isChromecastTwoKeyCompatible {
+                Text(localization.text("onboarding.remote.chromecast.compat_scope_summary"))
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                    Text(localization.text("onboarding.chromecast.replace_hardware_advice"))
+                        .foregroundStyle(.secondary)
+                    Link(localization.text("onboarding.chromecast.replace_hardware_link"),
+                         destination: AppLinks.devices(for: localization.locale))
                 }
+                .font(.system(size: 12))
+                .fixedSize(horizontal: false, vertical: true)
             }
         }
         .padding(12)

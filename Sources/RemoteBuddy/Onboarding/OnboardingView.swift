@@ -31,6 +31,7 @@ struct OnboardingView: View {
     @State var chromecastTwoKeyDetectedWithoutSingleKey = false
     @State var pendingChromecastComboButtons = Set<RemoteButton>()
     @State var compatibleChordConfirmed = false
+    @State var chromecastCompatibilityPromptReady = false
     @State var hidBindingProfile: RemoteDeviceProfile?
     @State var voiceSessionStarted = false
     @State var voiceSamplesReceived = false

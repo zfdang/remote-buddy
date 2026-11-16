@@ -91,6 +91,21 @@ extension OnboardingView {
         } else if secureInputWaitStartedAtUptime != nil {
             secureInputWaitStartedAtUptime = nil
         }
+
+        let compatPromptReady = ChromecastCompatibilityDetection.shouldShowCompatibilityOptInCard(
+            step: settings.onboardingStep,
+            source: settings.onboardingControlSource,
+            remoteConnected: selectedControlConnected,
+            singleKeyObserved: chromecastSingleKeyObserved,
+            twoKeyDetectedWithoutSingleKey: chromecastTwoKeyDetectedWithoutSingleKey,
+            compatibilityModeEnabled: isChromecastTwoKeyCompatible,
+            remoteButtonObserved: !observedRemoteButtons.isEmpty,
+            waitStartedAtUptime: secureInputWaitStartedAtUptime,
+            nowUptime: ProcessInfo.processInfo.systemUptime
+        )
+        if chromecastCompatibilityPromptReady != compatPromptReady {
+            chromecastCompatibilityPromptReady = compatPromptReady
+        }
     }
 
     func recheckSecureInput() {

@@ -81,6 +81,53 @@ struct G9N9NCompatibilityModeTests {
         )
     }
 
+    @Test func compatibilityOptInCardRemainsHiddenInitiallyAndAfterSingleKeyConfirmation() {
+        #expect(!ChromecastCompatibilityDetection.shouldShowCompatibilityOptInCard(
+            step: .remote,
+            source: .chromecastRemote,
+            remoteConnected: true,
+            singleKeyObserved: false,
+            twoKeyDetectedWithoutSingleKey: false,
+            compatibilityModeEnabled: false,
+            remoteButtonObserved: false,
+            waitStartedAtUptime: 100,
+            nowUptime: 101
+        ))
+        #expect(ChromecastCompatibilityDetection.shouldShowCompatibilityOptInCard(
+            step: .remote,
+            source: .chromecastRemote,
+            remoteConnected: true,
+            singleKeyObserved: false,
+            twoKeyDetectedWithoutSingleKey: false,
+            compatibilityModeEnabled: false,
+            remoteButtonObserved: false,
+            waitStartedAtUptime: 100,
+            nowUptime: 104.5
+        ))
+        #expect(ChromecastCompatibilityDetection.shouldShowCompatibilityOptInCard(
+            step: .remote,
+            source: .chromecastRemote,
+            remoteConnected: true,
+            singleKeyObserved: false,
+            twoKeyDetectedWithoutSingleKey: true,
+            compatibilityModeEnabled: false,
+            remoteButtonObserved: false,
+            waitStartedAtUptime: 100,
+            nowUptime: 100.5
+        ))
+        #expect(!ChromecastCompatibilityDetection.shouldShowCompatibilityOptInCard(
+            step: .remote,
+            source: .chromecastRemote,
+            remoteConnected: true,
+            singleKeyObserved: true,
+            twoKeyDetectedWithoutSingleKey: false,
+            compatibilityModeEnabled: false,
+            remoteButtonObserved: true,
+            waitStartedAtUptime: 100,
+            nowUptime: 120
+        ))
+    }
+
     @Test func compatibilityControlsGatePassesWithOneEnterChordWithoutBypassingPermissions() {
         var capabilities = OnboardingCapabilities(
             bluetoothGranted: true,

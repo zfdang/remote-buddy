@@ -1216,15 +1216,15 @@
 "connection.empty.detail" = "点击右上角“添加新设备”，连接你的遥控器。";
 "connection.action.device_comparison" = "设备对比与选购指南 ↗";
 
-"onboarding.remote.chromecast.combo_needs_opt_in.title" = "检测到双键组合，需确认兼容模式";
-"onboarding.remote.chromecast.combo_needs_opt_in.detail" = "仅收到了双键组合输入，尚未收到单独按键。如单独按任意键都无反应，请勾选下方「部分支持模式」继续。";
+"onboarding.remote.chromecast.combo_needs_opt_in.title" = "请先松开，单独短按一下 OK";
+"onboarding.remote.chromecast.combo_needs_opt_in.detail" = "刚才检测到你同时按下了多个按键。请松开后单独短按 OK 确认是否支持单键；若确认单按无反应，再勾选下方部分支持模式。";
 "onboarding.remote.chromecast.compat_waiting_detail" = "已开启部分支持模式。请同时按住「上 + OK」（或任意方向键 + OK）确认输入。";
 "onboarding.remote.chromecast.compat_ready_detail" = "已确认双键组合输入（部分支持模式：语音键可用，普通操作仅支持方向键 + OK 发送 Enter）。";
+"onboarding.remote.chromecast.single_waiting_detail" = "请单独短按一下圆盘中间的确定（OK）键或任意方向键，不要同时按多个键或语音键。";
 "onboarding.remote.chromecast.full_ready_detail" = "已收到单键输入：当前 G9N9N 支持全部 14 颗普通按键与语音键。";
-"onboarding.remote.chromecast.full_badge" = "已检测为完全支持版本（单键报告正常）";
-"onboarding.remote.chromecast.compat_prompt_highlighted" = "刚才检测到双键组合才触发识别。如果你的 G9N9N 单按任意键都无反应，属于仅部分支持批次，请主动勾选下方选项以兼容模式继续：";
-"onboarding.remote.chromecast.compat_prompt" = "如单独按 OK 无反应，可尝试同时按住「上 + OK」。若只有双键组合才识别，请勾选进入部分支持模式：";
-"onboarding.remote.chromecast.compat_checkbox" = "我的 G9N9N 需按双键组合（如「上 + OK」）才能识别（启用部分支持兼容模式）";
+"onboarding.remote.chromecast.compat_prompt_highlighted" = "刚才检测到双键同时按下，但尚未检测到单键。请先松开后单独短按一次 OK 验证；如果你已确认单独按任何键都无反应、只能双键识别，请勾选下方选项进入部分支持模式：";
+"onboarding.remote.chromecast.compat_prompt" = "仍未收到单键输入？如果你已确认单独按 OK 或方向键都没有反应，可尝试同时按住「上 + OK」，并勾选确认进入部分支持模式：";
+"onboarding.remote.chromecast.compat_checkbox" = "我已试过单按无反应，确认需双键组合（如「上 + OK」）才能识别（启用部分支持模式）";
 "onboarding.remote.chromecast.compat_scope_summary" = "部分支持说明：1. 语音键可正常按住使用；2. 仅支持同时按「方向键 + OK」发送 Enter 键，其余普通单键不可用。";
 
 "onboarding.controls.chromecast.compat.title" = "确认部分支持按键组合";

@@ -299,6 +299,32 @@ enum ChromecastCompatibilityDetection {
         }
         return .controlsNonChordObserved(buttons: buttons)
     }
+
+    static let compatibilityHintDelay: TimeInterval = 4.5
+
+    /// Keeps two-key compatibility prompts hidden while waiting initially so users test a single key first.
+    static func shouldShowCompatibilityOptInCard(
+        step: OnboardingStep,
+        source: OnboardingControlSource,
+        remoteConnected: Bool,
+        singleKeyObserved: Bool,
+        twoKeyDetectedWithoutSingleKey: Bool,
+        compatibilityModeEnabled: Bool,
+        remoteButtonObserved: Bool,
+        waitStartedAtUptime: TimeInterval?,
+        nowUptime: TimeInterval
+    ) -> Bool {
+        guard step == .remote, source == .chromecastRemote, !singleKeyObserved else {
+            return false
+        }
+        if compatibilityModeEnabled || twoKeyDetectedWithoutSingleKey {
+            return true
+        }
+        guard remoteConnected, !remoteButtonObserved, let waitStartedAtUptime else {
+            return false
+        }
+        return nowUptime - waitStartedAtUptime >= compatibilityHintDelay
+    }
 }
 
 struct OnboardingCapabilities: Equatable {

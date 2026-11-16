@@ -31,7 +31,12 @@ extension SettingsView {
                         runtimePermissionIssuePanel(runtimeIssue)
                     }
                     if profiles.isEmpty {
-                        GlassPanel { remoteDeviceSelector(vertical: true) }
+                        ContentUnavailableView(
+                            localization.text("connection.empty.title"),
+                            systemImage: "appletvremote.gen4",
+                            description: Text(localization.text("connection.empty.detail"))
+                        )
+                        .frame(maxWidth: .infinity, minHeight: 240)
                     }
                     ForEach(profiles) { profile in
                         connectionDeviceGroup(profile)

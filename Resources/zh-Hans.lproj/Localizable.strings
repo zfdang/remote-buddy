@@ -1201,3 +1201,6 @@
 
 "button_mapping.google.version_notice" = "G9N9N 兼容款众多，不同硬件版本的功能支持可能不同，购买时请注意挑选硬件版本，详见";
 "button_mapping.google.device_guide" = "设备指南 ↗";
+
+"connection.empty.title" = "尚未添加遥控器";
+"connection.empty.detail" = "点击右上角“添加新设备”，连接你的遥控器。";

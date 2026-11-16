@@ -1199,3 +1199,6 @@
 
 "button_mapping.google.version_notice" = "G9N9N replacements use different hardware versions with varying features. Choose carefully; see the";
 "button_mapping.google.device_guide" = "device guide ↗";
+
+"connection.empty.title" = "No remotes added";
+"connection.empty.detail" = "Click Add Device in the top-right corner to connect your remote.";

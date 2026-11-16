@@ -1240,7 +1240,7 @@
 "onboarding.side.compatible_chord" = "方向键 + OK 已验证";
 
 "onboarding.summary.g9n9n_mode" = "G9N9N 支持模式";
-"onboarding.summary.g9n9n_partial_mode" = "部分支持型号（双键兼容）";
+"onboarding.summary.g9n9n_partial_mode" = "部分支持硬件版本（双键兼容）";
 "onboarding.summary.partial_buttons_passed" = "语音可用；仅「方向键 + OK」可发 Enter";
 
 "button_mapping.google.partial_subtitle" = "当前 G9N9N 处于部分支持（双键兼容）模式：语音键可用，仅「方向键 + OK」可发送 Enter";
@@ -1250,10 +1250,10 @@
 "button_mapping.google.partial.enter_rule" = "2. 组合键「方向键 + OK」（如「上 + OK」）：同时按下发送一次 Enter（回车）键（需保持上方映射开关开启）";
 "button_mapping.google.partial.unsupported_rule" = "3. 其余 14 颗普通单键、双击/长按、单键常用语及任何键位修改在该模式下均禁止使用";
 "button_mapping.google.partial.setup_only_hint" = "支持模式已在首次/添加设备向导中锁定，此处仅作只读展示；若更换了遥控器硬件，请在「连接」页移除该设备后通过「添加新设备」重新识别。";
-"remote.device.full_support_badge" = "完全支持型号";
-"remote.device.partial_support_badge" = "部分支持型号";
+"remote.device.full_support_badge" = "完全支持硬件版本";
+"remote.device.partial_support_badge" = "部分支持硬件版本";
 "connection.g9n9n.full_support_notice" = "语音键与全部 14 颗普通按键均可正常使用与自定义。";
-"connection.g9n9n.partial_support_notice" = "仅语音键可用，普通操作仅「方向键 + OK」可发 Enter 键，不可修改映射。功能受限较大，建议更换为完全支持的遥控器型号；更换后请移除此设备并通过「添加新设备」重新识别。";
+"connection.g9n9n.partial_support_notice" = "仅语音键可用，普通操作仅「方向键 + OK」可发 Enter 键，不可修改映射。功能受限较大，建议更换为已验证完全支持的遥控器或硬件版本；更换后请移除此设备并通过「添加新设备」重新识别。";
 "connection.g9n9n.compatibility_doc_link" = "查看 G9N9N 兼容性文档 ↗";
 "button_mapping.voice.settings_button" = "前往输入法整合设置";
 "common_phrases.g9n9n_partial_notice" = "当前选中的 G9N9N 处于部分支持（双键兼容）模式，仅支持语音键和「方向键 + OK」发 Enter，无法通过单键触发常用语。";

@@ -1251,7 +1251,8 @@
 "remote.device.full_support_badge" = "Fully Supported Model";
 "remote.device.partial_support_badge" = "Partially Supported Model";
 "connection.g9n9n.full_support_notice" = "Voice button and all 14 standard buttons work and can be customized.";
-"connection.g9n9n.partial_support_notice" = "Voice works; only Arrow + OK emits Return/Enter and mappings cannot be modified. Remove and run Add Device if replaced.";
+"connection.g9n9n.partial_support_notice" = "Voice works; only Arrow + OK emits Return/Enter and mappings cannot be modified. Since functionality is heavily limited, replacing with a fully supported remote is recommended; after replacing, remove this device and run Add Device.";
+"connection.g9n9n.compatibility_doc_link" = "Read G9N9N Compatibility Docs ↗";
 "button_mapping.voice.settings_button" = "Open Voice Integration";
 "common_phrases.g9n9n_partial_notice" = "The selected G9N9N is in Partial Support (two-key compatibility) mode, which only supports Voice and Arrow + OK for Enter; single-key common phrases are unavailable.";
 "onboarding.chromecast.replace_hardware_advice" = "Partial Support mode omits most button features and is intended only as a fallback. Replace with a verified macOS-compatible remote unit for full support.";

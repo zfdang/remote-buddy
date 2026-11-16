@@ -443,6 +443,7 @@ extension BridgeAppModel {
         hidMonitors.removeAll()
         discoveryHIDMonitor = nil
         activeRemoteButtons = []
+        lastObservedRemoteButtonReport = nil
     }
 
     /// Releases HID monitors, event taps, input-source observers, and pending recovery work
@@ -614,6 +615,13 @@ extension BridgeAppModel {
         monitor.onActiveButtons = { [weak self] profileID, buttons in
             guard let self, profileID == self.settings.selectedRemoteProfileID else { return }
             self.activeRemoteButtons = buttons
+        }
+        monitor.onObservedButtonReport = { [weak self] profileID, buttons in
+            guard let self, !buttons.isEmpty else { return }
+            self.lastObservedRemoteButtonReport = RemoteButtonObservation(
+                profileID: profileID,
+                buttons: buttons
+            )
         }
         monitor.onButtonPressed = { [weak self, weak monitor] profileID, fingerprint, button in
             guard let self, let monitor else {

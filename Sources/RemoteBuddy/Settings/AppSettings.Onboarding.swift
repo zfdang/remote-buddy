@@ -16,6 +16,7 @@ private struct OnboardingReturnConfiguration: Codable {
     let customMappingEnabled: Bool
     let selectedRemoteProfileID: UUID?
     let initialRemoteProfileIDs: [UUID]
+    let initialG9N9NInputModes: [UUID: G9N9NInputMode]?
 }
 
 extension AppSettings {
@@ -48,7 +49,12 @@ extension AppSettings {
             fnTapModeEnabled: voiceFnTapModeEnabled,
             customMappingEnabled: customMappingEnabled,
             selectedRemoteProfileID: selectedRemoteProfileID,
-            initialRemoteProfileIDs: remoteDeviceProfiles.map(\.id)
+            initialRemoteProfileIDs: remoteDeviceProfiles.map(\.id),
+            initialG9N9NInputModes: Dictionary(
+                uniqueKeysWithValues: remoteDeviceProfiles
+                    .filter { $0.model.isChromecastRemote }
+                    .map { ($0.id, $0.effectiveG9N9NInputMode) }
+            )
         )
         if let data = try? JSONEncoder().encode(configuration) {
             defaults.set(data, forKey: Self.onboardingReturnConfigurationKey)
@@ -92,6 +98,12 @@ extension AppSettings {
         guard canDismissOnboarding, let configuration = onboardingReturnConfiguration else { return }
         for profileID in uncommittedOnboardingRemoteProfileIDs() {
             _ = removeRemoteProfile(profileID)
+        }
+        if let initialModes = configuration.initialG9N9NInputModes {
+            for index in remoteDeviceProfiles.indices where remoteDeviceProfiles[index].model.isChromecastRemote {
+                let savedMode = initialModes[remoteDeviceProfiles[index].id] ?? .full
+                remoteDeviceProfiles[index].g9n9nInputMode = savedMode == .full ? nil : savedMode
+            }
         }
         discardOnboardingVoiceTrial()
         onboardingVoiceTool = configuration.voiceTool

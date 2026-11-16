@@ -316,7 +316,8 @@ struct G9N9NCompatibilityModeTests {
         settings.selectRemoteProfile(profileID)
         settings.setG9N9NInputMode(.twoKeyCompatibility, for: profileID)
 
-        let suppressor = KeyboardEventSuppressor(uptime: { 0 })
+        var now: TimeInterval = 0
+        let suppressor = KeyboardEventSuppressor(uptime: { now })
         var actions: [ButtonAction] = []
         let monitor = HIDRemoteMonitor(
             settings: settings,
@@ -334,22 +335,110 @@ struct G9N9NCompatibilityModeTests {
         monitor.connectSimulatedDevice(fingerprint: "google", profileID: profileID, isSeized: false)
         defer { monitor.disconnectSimulatedDevice() }
 
-        func keyDown(_ keyCode: CGKeyCode) throws -> CGEvent {
-            try #require(CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: true))
+        func keyEvent(_ keyCode: CGKeyCode, keyDown: Bool) throws -> CGEvent {
+            try #require(CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: keyDown))
         }
 
         let descriptor = G9N9NProtocol.indexedConsumerDescriptor
         for step in [OnboardingStep.remote, .controls] {
             settings.onboardingStep = step
             monitor.handleSimulatedGoogleReport(reportID: 1, data: Data([1, 7, 3]), descriptor: descriptor)
-            #expect(suppressor.handle(type: .keyDown, event: try keyDown(126)))
-            #expect(suppressor.handle(type: .keyDown, event: try keyDown(36)))
+            #expect(suppressor.handle(type: .keyDown, event: try keyEvent(126, keyDown: true)))
+            #expect(suppressor.handle(type: .keyDown, event: try keyEvent(36, keyDown: true)))
+            #expect(suppressor.handle(type: .keyUp, event: try keyEvent(126, keyDown: false)))
+            #expect(suppressor.handle(type: .keyUp, event: try keyEvent(36, keyDown: false)))
+            #expect(!suppressor.handle(type: .keyUp, event: try keyEvent(126, keyDown: false)))
         }
         #expect(actions.isEmpty)
 
         settings.completeOnboarding()
         monitor.handleSimulatedGoogleReport(reportID: 1, data: Data([1, 7, 11]), descriptor: descriptor)
         #expect(actions.isEmpty)
-        #expect(suppressor.handle(type: .keyDown, event: try keyDown(36)))
+        #expect(suppressor.handle(type: .keyDown, event: try keyEvent(36, keyDown: true)))
+
+        // Stale pending/suppressed tokens expire after 30 seconds without waiting on wall clock time.
+        now = 31
+        #expect(!suppressor.handle(type: .keyUp, event: try keyEvent(36, keyDown: false)))
+        #expect(!suppressor.handle(type: .keyDown, event: try keyEvent(36, keyDown: true)))
+    }
+
+    @Test func backgroundGoogleTwoKeyComboPreservesFullComboAcrossSelectionSwitch() throws {
+        let suite = "g9n9n-background-switch-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let settings = AppSettings(defaults: defaults)
+        settings.customMappingEnabled = true
+        settings.onboardingPurpose = .initialSetup
+        settings.onboardingStep = .remote
+        settings.setOnboardingControlSource(.chromecastRemote)
+
+        let xiaomiID = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
+        let googleID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+        settings.selectRemoteProfile(xiaomiID)
+
+        let model = BridgeAppModel(settings: settings, initialAudioDevices: [])
+        let monitor = model.makeHIDMonitor(profileID: googleID, targetFingerprint: nil)
+        monitor.connectSimulatedDevice(fingerprint: "google", profileID: googleID)
+        defer { monitor.disconnectSimulatedDevice() }
+
+        // Background G9N9N sends Direction + OK while Xiaomi is still selected:
+        // onButtonPressed switches selectedRemoteProfileID to googleID and updates lastRemoteButtonPress
+        // with one representative button, while onObservedButtonReport still delivers the full 2-key combo.
+        monitor.handleSimulatedGoogleReport(
+            reportID: 1,
+            data: Data([1, 7, 3]),
+            descriptor: G9N9NProtocol.indexedConsumerDescriptor
+        )
+
+        #expect(settings.selectedRemoteProfileID == googleID)
+        let observation = try #require(model.lastObservedRemoteButtonReport)
+        #expect(observation == RemoteButtonObservation(profileID: googleID, buttons: [.up, .ok]))
+        #expect(model.activeRemoteButtons.isEmpty)
+
+        // When onboarding evaluates that full report, it detects a 2-key combo awaiting opt-in rather than 1-key proof.
+        #expect(
+            ChromecastCompatibilityDetection.evaluate(
+                step: .remote,
+                buttons: observation.buttons,
+                singleKeyObserved: false,
+                compatibilityModeEnabled: false
+            ) == .awaitCompatibilityOptIn(buttons: [.up, .ok])
+        )
+    }
+
+    @Test func dismissingAddDeviceOnboardingRestoresExistingChromecastCompatibilityMode() throws {
+        let suite = "g9n9n-dismiss-restore-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let settings = AppSettings(defaults: defaults)
+        settings.customMappingEnabled = true
+        settings.onboardingPurpose = .initialSetup
+        let googleID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+        settings.selectRemoteProfile(googleID)
+        settings.setG9N9NInputMode(.full, for: googleID)
+        settings.completeOnboarding()
+        #expect(settings.allowsMappingEdits(for: googleID))
+
+        SettingsPageBehavior.beginDeviceSetup(settings: settings)
+        settings.setG9N9NInputMode(.twoKeyCompatibility, for: googleID)
+        #expect(settings.g9n9nInputMode(for: googleID) == .twoKeyCompatibility)
+
+        // Simulate relaunch/reload before cancelling Add Device onboarding.
+        let reloaded = AppSettings(defaults: defaults)
+        #expect(reloaded.g9n9nInputMode(for: googleID) == .twoKeyCompatibility)
+        reloaded.dismissOnboarding()
+
+        #expect(reloaded.g9n9nInputMode(for: googleID) == .full)
+        #expect(reloaded.allowsMappingEdits(for: googleID))
+        #expect(AppSettings(defaults: defaults).g9n9nInputMode(for: googleID) == .full)
+    }
+
+    @Test func g9n9nCompatibilityGuideLinkTargetsRepositoryDocumentation() {
+        #expect(
+            AppLinks.g9n9nCompatibilityGuide.absoluteString
+                == "https://github.com/zfdang/remote-buddy/blob/main/docs/g9n9n-compatibility.md"
+        )
     }
 }

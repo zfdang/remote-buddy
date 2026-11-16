@@ -184,6 +184,9 @@ struct OnboardingView: View {
 
     private var remoteObservedContent: some View {
         lifecycleContent
+        .onReceive(model.$lastObservedRemoteButtonReport.compactMap { $0 }) { observation in
+            handleObservedRemoteReport(observation)
+        }
         .onReceive(model.$activeRemoteButtons) { buttons in
             handleObservedRemoteButtons(buttons)
         }

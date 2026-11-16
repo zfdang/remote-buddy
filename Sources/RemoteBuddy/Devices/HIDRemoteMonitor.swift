@@ -176,6 +176,7 @@ final class HIDRemoteMonitor {
     private(set) var status = LocalizedMessage("button_mapping.status.disabled")
     var onStatus: ((LocalizedMessage) -> Void)?
     var onActiveButtons: ((UUID?, Set<RemoteButton>) -> Void)?
+    var onObservedButtonReport: ((UUID?, Set<RemoteButton>) -> Void)?
     var onButtonPressed: ((UUID?, String, RemoteButton) -> (profileID: UUID, shouldPerformAction: Bool)?)?
     var onPassthroughButtonObserved: ((UUID?, String, RemoteButton) -> UUID?)?
     var onRuntimeButton: ((UUID?, RemoteButton, RemoteButtonPhase) -> Bool)?
@@ -917,12 +918,14 @@ final class HIDRemoteMonitor {
             reportingModel: .chromecastVoiceRemote,
             onboardingWindowIsActive: onboardingWindowIsActive()
         ) {
-            onActiveButtons?(targetProfileID, observedButtons)
             if let deviceFingerprint,
                let routing = onButtonPressed?(profileID, deviceFingerprint, representative),
                profileID == nil {
                 profileID = routing.profileID
             }
+            let resolvedID = profileID ?? targetProfileID
+            onActiveButtons?(resolvedID, observedButtons)
+            onObservedButtonReport?(resolvedID, observedButtons)
             clearTransientInputStateForCompatibility()
             return
         }
@@ -937,7 +940,9 @@ final class HIDRemoteMonitor {
             shouldPerformAction = routing.shouldPerformAction
         }
         guard shouldPerformAction else {
-            onActiveButtons?(profileID ?? targetProfileID, observedButtons)
+            let resolvedID = profileID ?? targetProfileID
+            onActiveButtons?(resolvedID, observedButtons)
+            onObservedButtonReport?(resolvedID, observedButtons)
             return
         }
         guard G9N9NProtocol.isEnterChord(usages) else {
@@ -1069,6 +1074,8 @@ final class HIDRemoteMonitor {
         }
         for usage in usages { refreshUsageExpiry(usage) }
         emitActiveButtons()
+        let reportButtons = RemoteButton.buttons(for: usages)
+        var emittedObservedReport = false
 
         for usage in pressed.sorted() {
             // A failed action may stop/reset the monitor. Do not dispatch further
@@ -1104,6 +1111,10 @@ final class HIDRemoteMonitor {
                     profileID = routing.profileID
                 }
                 shouldPerformAction = routing.shouldPerformAction
+            }
+            if !emittedObservedReport, !reportButtons.isEmpty {
+                emittedObservedReport = true
+                onObservedButtonReport?(profileID, reportButtons)
             }
             guard let profileID, shouldPerformAction else {
                 if !activeDeviceIsSeized, usesNativePassthrough {

@@ -219,17 +219,32 @@ extension SettingsView {
                     if profile.model.isChromecastRemote {
                         let mode = profile.effectiveG9N9NInputMode
                         Divider()
-                        HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            g9n9nSupportBadge(for: mode)
-                                .fixedSize()
-                            Text(localization.text(
-                                mode == .twoKeyCompatibility
-                                    ? "connection.g9n9n.partial_support_notice"
-                                    : "connection.g9n9n.full_support_notice"
-                            ))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                g9n9nSupportBadge(for: mode)
+                                    .fixedSize()
+                                Text(localization.text(
+                                    mode == .twoKeyCompatibility
+                                        ? "connection.g9n9n.partial_support_notice"
+                                        : "connection.g9n9n.full_support_notice"
+                                ))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                            }
+                            if mode == .twoKeyCompatibility {
+                                HStack(spacing: 12) {
+                                    Link(
+                                        localization.text("connection.g9n9n.compatibility_doc_link"),
+                                        destination: AppLinks.g9n9nCompatibilityGuide
+                                    )
+                                    Link(
+                                        localization.text("onboarding.chromecast.replace_hardware_link"),
+                                        destination: AppLinks.devices(for: localization.locale)
+                                    )
+                                }
+                                .font(.caption)
+                            }
                         }
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading).padding(.top, 10)

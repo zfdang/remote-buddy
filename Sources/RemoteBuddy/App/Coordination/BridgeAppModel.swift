@@ -5,6 +5,11 @@ import CoreAudio
 import CoreBluetooth
 import Foundation
 
+struct RemoteButtonObservation: Equatable {
+    let profileID: UUID?
+    let buttons: Set<RemoteButton>
+}
+
 @MainActor
 final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
     static let longRecordingOpenTimeout: TimeInterval = 5
@@ -40,6 +45,7 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
     @Published var isVoiceTriggerEnabled = false
     @Published var activeRemoteButtons = Set<RemoteButton>()
     @Published var lastRemoteButtonPress: RemoteButton?
+    @Published var lastObservedRemoteButtonReport: RemoteButtonObservation?
     @Published var connectedRemoteProfileIDs = Set<UUID>()
     @Published var remoteBatteryLevels: [UUID: Int] = [:]
     @Published var remotePowerStates: [UUID: RemotePowerState] = [:]

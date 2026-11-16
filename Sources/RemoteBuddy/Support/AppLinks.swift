@@ -4,6 +4,9 @@ enum AppLinks {
     static let githubRepository = URL(
         string: "https://github.com/zfdang/remote-buddy"
     )!
+    static let g9n9nCompatibilityGuide = githubRepository.appendingPathComponent(
+        "blob/main/docs/g9n9n-compatibility.md"
+    )
     static let githubReleases = URL(string: "https://github.com/zfdang/remote-buddy/releases")!
     static let githubReleasesLatest = URL(string: "https://github.com/zfdang/remote-buddy/releases/latest")!
     static let chineseDownloads = URL(string: "https://remote.zfdang.com/downloads/")!

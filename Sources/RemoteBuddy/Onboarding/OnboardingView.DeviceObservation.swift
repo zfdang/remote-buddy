@@ -76,6 +76,23 @@ extension OnboardingView {
         )
     }
 
+    func handleObservedRemoteReport(_ observation: RemoteButtonObservation) {
+        guard settings.onboardingControlMethod == .physicalRemote,
+              observation.profileID == settings.selectedRemoteProfileID,
+              selectedPhysicalRemoteProfileMatchesSource,
+              !observation.buttons.isEmpty else { return }
+        if settings.onboardingControlSource == .chromecastRemote {
+            handleChromecastObservedButtons(observation.buttons)
+            return
+        }
+        if settings.onboardingStep == .remote {
+            recordRemoteControlButtons(observation.buttons, source: "physical_remote")
+            recoverRemoteConnectionIfNeeded()
+        } else if settings.onboardingStep == .controls {
+            testedControlButtons.formUnion(observation.buttons)
+        }
+    }
+
     func handleObservedRemoteButtons(_ buttons: Set<RemoteButton>) {
         guard settings.onboardingControlMethod == .physicalRemote,
               selectedPhysicalRemoteProfileMatchesSource,
@@ -95,11 +112,9 @@ extension OnboardingView {
     func handleObservedRemoteButtonPress(_ button: RemoteButton) {
         guard settings.onboardingControlMethod == .physicalRemote,
               selectedPhysicalRemoteProfileMatchesSource else { return }
-        // Chromecast uses the simultaneous button-set callback to separate single-key
-        // support from two-key combos; ignore individual key fallbacks for multi-key reports.
+        // Chromecast relies strictly on complete multi-key reports (`$lastObservedRemoteButtonReport` /
+        // `$activeRemoteButtons`) so representative keys from background devices cannot mimic single presses.
         if settings.onboardingControlSource == .chromecastRemote {
-            guard model.activeRemoteButtons.count <= 1 else { return }
-            handleChromecastObservedButtons(Set([button]))
             return
         }
         if settings.onboardingStep == .remote {

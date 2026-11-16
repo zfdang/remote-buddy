@@ -94,21 +94,31 @@ extension OnboardingView {
             statusCard(
                 icon: remoteInputDiagnostic.shouldShowVoiceButtonCorrection
                     ? "exclamationmark.triangle.fill"
-                    : observedRemoteButtons.isEmpty
-                        ? "button.programmable"
-                        : "checkmark.circle.fill",
+                    : chromecastTwoKeyDetectedWithoutSingleKey && !isChromecastTwoKeyCompatible
+                        ? "exclamationmark.circle.fill"
+                        : observedRemoteButtons.isEmpty
+                            ? "button.programmable"
+                            : "checkmark.circle.fill",
                 title: localization.text(
                     remoteInputDiagnostic.shouldShowVoiceButtonCorrection
                         ? "onboarding.remote.voice_button_mistake.title"
-                        : observedRemoteButtons.isEmpty
-                            ? "onboarding.remote.button_waiting"
-                            : "onboarding.remote.button_received"
+                        : chromecastTwoKeyDetectedWithoutSingleKey && !isChromecastTwoKeyCompatible
+                            ? "onboarding.remote.chromecast.combo_needs_opt_in.title"
+                            : observedRemoteButtons.isEmpty
+                                ? "onboarding.remote.button_waiting"
+                                : "onboarding.remote.button_received"
                 ),
                 detail: physicalRemoteButtonStatusDetail,
                 isComplete: !observedRemoteButtons.isEmpty,
-                pendingColor: remoteInputDiagnostic.shouldShowVoiceButtonCorrection ? .orange : nil,
+                pendingColor: (remoteInputDiagnostic.shouldShowVoiceButtonCorrection ||
+                    (chromecastTwoKeyDetectedWithoutSingleKey && !isChromecastTwoKeyCompatible))
+                    ? .orange : nil,
                 compact: true
             )
+
+            if settings.onboardingControlSource == .chromecastRemote {
+                chromecastCompatibilityOptInCard
+            }
 
             if shouldShowSecureInputWarning {
                 secureInputWarningCard
@@ -198,12 +208,87 @@ extension OnboardingView {
     }
 
     private var physicalRemoteButtonStatusDetail: String {
+        if settings.onboardingControlSource == .chromecastRemote {
+            if chromecastTwoKeyDetectedWithoutSingleKey && !isChromecastTwoKeyCompatible {
+                return localization.text("onboarding.remote.chromecast.combo_needs_opt_in.detail")
+            }
+            if isChromecastTwoKeyCompatible {
+                return localization.text(
+                    observedRemoteButtons.isEmpty
+                        ? "onboarding.remote.chromecast.compat_waiting_detail"
+                        : "onboarding.remote.chromecast.compat_ready_detail"
+                )
+            }
+            if chromecastSingleKeyObserved {
+                return localization.text("onboarding.remote.chromecast.full_ready_detail")
+            }
+        }
         let instructionKey = remoteInputDiagnostic.shouldShowVoiceButtonCorrection
             ? "onboarding.remote.voice_button_mistake.detail"
             : observedRemoteButtons.isEmpty
                 ? "onboarding.remote.button_waiting_detail"
                 : "onboarding.remote.button_detail"
         return localization.text(instructionKey)
+    }
+
+    private var chromecastCompatibilityOptInCard: some View {
+        let highlighted = chromecastTwoKeyDetectedWithoutSingleKey && !isChromecastTwoKeyCompatible
+        let tint: Color = highlighted ? .orange : (isChromecastTwoKeyCompatible ? .blue : .secondary)
+        return VStack(alignment: .leading, spacing: 10) {
+            if chromecastSingleKeyObserved && !isChromecastTwoKeyCompatible {
+                Label(
+                    localization.text("onboarding.remote.chromecast.full_badge"),
+                    systemImage: "checkmark.seal.fill"
+                )
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.green)
+            } else {
+                Text(localization.text(
+                    highlighted
+                        ? "onboarding.remote.chromecast.compat_prompt_highlighted"
+                        : "onboarding.remote.chromecast.compat_prompt"
+                ))
+                .font(.system(size: 12))
+                .foregroundStyle(highlighted ? .primary : .secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+                Toggle(isOn: Binding(
+                    get: { isChromecastTwoKeyCompatible },
+                    set: { setChromecastPartialSupportMode($0) }
+                )) {
+                    Text(localization.text("onboarding.remote.chromecast.compat_checkbox"))
+                        .font(.system(size: 13, weight: .medium))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .toggleStyle(.checkbox)
+                .accessibilityIdentifier("g9n9n-partial-support-toggle")
+
+                if isChromecastTwoKeyCompatible {
+                    Text(localization.text("onboarding.remote.chromecast.compat_scope_summary"))
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text(localization.text("onboarding.chromecast.replace_hardware_advice"))
+                            .foregroundStyle(.orange)
+                        Link(localization.text("onboarding.chromecast.replace_hardware_link"),
+                             destination: AppLinks.devices(for: localization.locale))
+                    }
+                    .font(.system(size: 12))
+                    .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            highlighted ? Color.orange.opacity(0.08) : Color.primary.opacity(0.035),
+            in: RoundedRectangle(cornerRadius: 12)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(tint.opacity(highlighted ? 0.45 : 0.16), lineWidth: 1)
+        }
     }
 
     var shouldShowSecureInputWarning: Bool {

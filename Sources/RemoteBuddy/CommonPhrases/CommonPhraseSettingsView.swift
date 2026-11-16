@@ -6,6 +6,7 @@ struct CommonPhraseSettingsView: View {
     @ObservedObject private var clipboardPaste = CommonPhraseClipboardPaste.shared
     @ObservedObject var store: CommonPhraseStore
     var remoteModel: RemoteModel? = nil
+    var g9n9nInputMode: G9N9NInputMode = .full
     var onReturn: () -> Void = {}
     private var phraseButtons: [RemoteButton] { CommonPhraseStore.buttons(for: remoteModel) }
     private var extraRows: [[RemoteButton?]] { CommonPhraseStore.extraButtonRows(for: remoteModel) }
@@ -63,6 +64,18 @@ struct CommonPhraseSettingsView: View {
                     .font(.system(size: 12))
                 }
             }.padding(.horizontal, 22).padding(.vertical, 14)
+            if remoteModel?.isChromecastRemote == true && g9n9nInputMode == .twoKeyCompatibility {
+                HStack(spacing: 8) {
+                    Image(systemName: "info.circle.fill")
+                        .foregroundStyle(.orange)
+                    Text(localization.text("common_phrases.g9n9n_partial_notice"))
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, 22)
+                .padding(.bottom, 10)
+            }
             GeometryReader { geometry in
                 let available = geometry.size.width - 44 - 28
                 let padWidth = min(300, max(230, available * 0.34))

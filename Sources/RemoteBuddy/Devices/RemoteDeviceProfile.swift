@@ -100,6 +100,14 @@ struct RemoteDeviceMappings: Codable, Equatable {
     }
 }
 
+/// Operating mode for Chromecast G9N9N remotes: full single-key support vs.
+/// partial compatibility mode for hardware/firmware revisions whose 1-byte
+/// single-key reports are dropped by macOS before reaching public IOHID.
+enum G9N9NInputMode: String, Codable, Equatable, CaseIterable {
+    case full = "full"
+    case twoKeyCompatibility = "two_key_compatibility"
+}
+
 struct RemoteDeviceProfile: Codable, Equatable, Identifiable {
     let id: UUID
     var model: RemoteModel
@@ -108,9 +116,13 @@ struct RemoteDeviceProfile: Codable, Equatable, Identifiable {
     var hidFingerprint: String?
     var gainDB: Double?
     var compatibleHIDBinding: RemoteHIDBinding?
+    var g9n9nInputMode: G9N9NInputMode?
     var mappings: RemoteDeviceMappings
 
     var displayNameFallbackKey: String { model.localizationKey }
+    var effectiveG9N9NInputMode: G9N9NInputMode {
+        model.isChromecastRemote ? (g9n9nInputMode ?? .full) : .full
+    }
 
     init(
         id: UUID = UUID(),
@@ -120,6 +132,7 @@ struct RemoteDeviceProfile: Codable, Equatable, Identifiable {
         hidFingerprint: String? = nil,
         compatibleHIDBinding: RemoteHIDBinding? = nil,
         gainDB: Double? = nil,
+        g9n9nInputMode: G9N9NInputMode? = nil,
         mappings: RemoteDeviceMappings
     ) {
         self.id = id
@@ -129,6 +142,7 @@ struct RemoteDeviceProfile: Codable, Equatable, Identifiable {
         self.hidFingerprint = hidFingerprint
         self.gainDB = gainDB
         self.compatibleHIDBinding = compatibleHIDBinding
+        self.g9n9nInputMode = g9n9nInputMode
         self.mappings = mappings
     }
 }

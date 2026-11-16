@@ -11,7 +11,7 @@
 | 小米蓝牙遥控器 2 Pro · `RC003` | **需要**；按住说话，松手停止收音 | 按键已本地验证，音频由用户确认正常；单次按住约 60 秒上限 | 中国大陆，小米有品页面参考 **¥99** |
 | 小米蓝牙遥控器 2 · `RC001` | 按住说话；完整音频流程仍待单独验收 | 已有协议与按键适配，不能直接沿用 2 Pro 的全部验收结论 | 未核实 |
 | T1 飞鼠键盘语音遥控器 · `T1-Remote` | **不需要持续按住**；按一下并松开开始，再按一下结束 | 已支持；兼容批次需单独确认 | 中国大陆，项目样本记录约 **¥50**，非本次实时报价 |
-| Chromecast Voice Remote · `G9N9N` | **需要**；全程按住 Google Assistant 语音键 | 已验证版本支持语音、14 颗普通按键自定义与电量显示 | 实购约 ¥15，以购买页面为准 |
+| Chromecast Voice Remote · `G9N9N` | **需要**；全程按住 Google Assistant 语音键 | 区分两种硬件/固件：<br>1. **Fully Supported**：合规单键版支持语音与 14 颗普通按键自定义；<br>2. **Partially Supported**：单键不被 macOS 识别的批次需手动开启兼容模式，仅支持语音与「方向键 + OK」发 Enter | 实购约 ¥15，以购买页面为准 |
 | Google TV Streamer Voice Remote · `GY3LE` | Remote Buddy **尚未支持**；原生电视用法为按住语音键 | 计划支持，未完成适配与真机验证 | 未核实 |
 | Apple Siri Remote · 分代识别 | Remote Buddy **尚未支持** | 计划支持，未完成适配与真机验证 | 未按代际核实 |
 
@@ -54,7 +54,9 @@
 
 <p><img src="../pages/assets/devices/g9n9j-in-hand.jpg" width="180" alt="Google G9N9N 遥控器真实照片" /></p>
 
-- **已验证版本**：Google Inc.、VID/PID `18D1:9450`、DIS 型号 `A0`、HID VersionNumber `0x0110`。G9N9N 兼容款众多，不同硬件版本的功能支持可能不同，购买时请注意挑选硬件版本，购买前查看[设备页面](https://remote.zfdang.com/device.html)。
+- **两种硬件情况与支持模式**：G9N9N 兼容款众多，同为 `18D1:9450` 甚至同报 DIS `A0` 的设备存在两种固件表现：
+  - **Fully Supported（完全支持模式，已验证 `HID VersionNumber 0x0110`）**：单键与松开信号均能被 macOS 正常识别，语音与全部 14 颗普通按键（单击/双击/长按）均可用。
+  - **Partially Supported（部分支持模式，如 `DIS A0 / 固件 26.7`）**：单键报告被 macOS 丢弃、系统无法认识单键输入，向导中经用户确认开启兼容模式后，仅支持 **1. 语音键按住说话** 与 **2.「方向键 + OK」发送 Enter 键**；因其余单键、双击/长按及常用语均不可用、功能缺失较多，**建议更换为完全支持的遥控器硬件版本**。购买前查看[设备页面](https://remote.zfdang.com/device.html)。
 - **按键**：方向、OK、返回、主页、静音、音量加减、YouTube、Netflix、输入源、电源共 14 颗普通按键均收到按下和松开报告；可配置单击、双击和长按。
 - **语音**：全程按住 Google Assistant 键说话，松开停止。
 - **供电**：两节 AAA 电池；有电量读数时应用显示百分比。

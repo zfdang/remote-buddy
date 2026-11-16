@@ -115,7 +115,8 @@ extension SettingsView {
         case .commonPhrases:
             CommonPhraseSettingsView(
                 store: model.commonPhraseStore,
-                remoteModel: settings.selectedRemoteProfile?.model
+                remoteModel: settings.selectedRemoteProfile?.model,
+                g9n9nInputMode: settings.g9n9nInputMode(for: settings.selectedRemoteProfileID)
             ) {
                 selectSection(.mapping)
             }

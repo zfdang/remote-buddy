@@ -32,9 +32,16 @@ extension SettingsView {
         saveMappingBinding(configured, button: button, trigger: trigger)
     }
 
+    private var isSelectedChromecastPartialSupport: Bool {
+        settings.selectedRemoteProfile?.model.isChromecastRemote == true &&
+            settings.g9n9nInputMode(for: settings.selectedRemoteProfileID) == .twoKeyCompatibility
+    }
+
     private var mappingPageHeader: some View {
         let model = settings.selectedRemoteProfile?.model
-        let subtitleKey = if model?.isChromecastRemote == true {
+        let subtitleKey = if isSelectedChromecastPartialSupport {
+            "button_mapping.google.partial_subtitle"
+        } else if model?.isChromecastRemote == true {
             "button_mapping.google.subtitle"
         } else if model?.isT1Remote == true {
             "button_mapping.t1.subtitle"
@@ -63,36 +70,41 @@ extension SettingsView {
                          destination: AppLinks.devices(for: localization.locale))
                 }
                 .font(.caption)
+                g9n9nModeSelectorPanel
             } else if settings.selectedRemoteProfile?.model.isT1Remote == true {
                 Text(localization.text("t1.remote.keyboard_airmouse_note"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            RemoteMappingCanvas(
-                selectedButton: $selectedRemoteButton,
-                activeButtons: model.activeRemoteButtons,
-                voiceActive: model.isStreaming,
-                actionSummary: { button, trigger in mappingActionSummary(for: button, trigger: trigger) },
-                onEdit: { button, trigger in
-                    selectedRemoteButton = button
-                    let current = settings.configuredAction(for: button, trigger: trigger).action
-                    mappingActionFilter = (current == .disabled || current == .repeatSingleClick)
-                        ? .basicKeys
-                        : MappingActionFilter(category: current.category)
-                    mappingEditingTarget = ShortcutEditingTarget(
-                        button: button,
-                        trigger: trigger
-                    )
-                },
-                onVoiceSettings: { selectSection(.integration) },
-                remoteModel: settings.selectedRemoteProfile?.model ?? .unknown
-            )
-            .onReceive(model.$activeRemoteButtons) { buttons in
-                selectedRemoteButton = MappingSelectionPolicy.selection(
-                    current: selectedRemoteButton,
-                    activeButtons: buttons,
-                    isLocked: isMappingSelectionLocked
+            if isSelectedChromecastPartialSupport {
+                g9n9nPartialSupportPanel
+            } else {
+                RemoteMappingCanvas(
+                    selectedButton: $selectedRemoteButton,
+                    activeButtons: model.activeRemoteButtons,
+                    voiceActive: model.isStreaming,
+                    actionSummary: { button, trigger in mappingActionSummary(for: button, trigger: trigger) },
+                    onEdit: { button, trigger in
+                        selectedRemoteButton = button
+                        let current = settings.configuredAction(for: button, trigger: trigger).action
+                        mappingActionFilter = (current == .disabled || current == .repeatSingleClick)
+                            ? .basicKeys
+                            : MappingActionFilter(category: current.category)
+                        mappingEditingTarget = ShortcutEditingTarget(
+                            button: button,
+                            trigger: trigger
+                        )
+                    },
+                    onVoiceSettings: { selectSection(.integration) },
+                    remoteModel: settings.selectedRemoteProfile?.model ?? .unknown
                 )
+                .onReceive(model.$activeRemoteButtons) { buttons in
+                    selectedRemoteButton = MappingSelectionPolicy.selection(
+                        current: selectedRemoteButton,
+                        activeButtons: buttons,
+                        isLocked: isMappingSelectionLocked
+                    )
+                }
             }
         }
     }
@@ -126,13 +138,15 @@ extension SettingsView {
 
                             hardwareCanvas()
 
-                            if let target = mappingEditingTarget {
+                            if !isSelectedChromecastPartialSupport, let target = mappingEditingTarget {
                                 mappingEditorPanel(target)
                                     .id("mapping-action-editor")
                             }
 
                             mappingFooter()
-                            mappingResetAllDefaultsSection
+                            if !isSelectedChromecastPartialSupport {
+                                mappingResetAllDefaultsSection
+                            }
                             Color.clear.frame(height: 1).id("mapping-page-bottom")
                         }
                         .padding(22)
@@ -286,13 +300,106 @@ extension SettingsView {
                 HStack {
                     mappingSelectionLockControl
                     Spacer()
-                    Button {
-                        selectSection(.commonPhrases)
-                    } label: {
-                        Label(localization.text("common_phrases.adjust"), systemImage: "text.quote")
+                    if !isSelectedChromecastPartialSupport {
+                        Button {
+                            selectSection(.commonPhrases)
+                        } label: {
+                            Label(localization.text("common_phrases.adjust"), systemImage: "text.quote")
+                        }
+                        .compatibilityButtonStyle(.standard)
+                        .font(.system(size: 12))
+                    }
+                }
+            }
+        }
+    }
+
+    private var g9n9nModeSelectorPanel: some View {
+        GlassPanel {
+            HStack(alignment: .center, spacing: 14) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(localization.text("button_mapping.google.mode.title"))
+                        .font(.system(size: 13, weight: .semibold))
+                    Text(localization.text("button_mapping.google.mode.hint"))
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 12)
+                Picker(localization.text("button_mapping.google.mode.title"), selection: Binding(
+                    get: { settings.g9n9nInputMode(for: settings.selectedRemoteProfileID) },
+                    set: { newMode in
+                        model.setG9N9NInputMode(newMode, for: settings.selectedRemoteProfileID)
+                        if newMode == .twoKeyCompatibility {
+                            mappingEditingTarget = nil
+                            shortcutCaptureTarget = nil
+                            applicationShortcutCaptureProfileID = nil
+                        }
+                    }
+                )) {
+                    Text(localization.text("button_mapping.google.mode.full"))
+                        .tag(G9N9NInputMode.full)
+                    Text(localization.text("button_mapping.google.mode.partial"))
+                        .tag(G9N9NInputMode.twoKeyCompatibility)
+                }
+                .labelsHidden()
+                .pickerStyle(.segmented)
+                .frame(width: 240)
+            }
+        }
+    }
+
+    private var g9n9nPartialSupportPanel: some View {
+        GlassPanel {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(.orange)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(localization.text("button_mapping.google.partial.card_title"))
+                            .font(.system(size: 14, weight: .semibold))
+                        Text(localization.text("button_mapping.google.partial.card_detail"))
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                Divider()
+                VStack(alignment: .leading, spacing: 8) {
+                    Label(
+                        localization.text("button_mapping.google.partial.voice_rule"),
+                        systemImage: "mic.fill"
+                    )
+                    .foregroundStyle(.green)
+                    Label(
+                        localization.text("button_mapping.google.partial.enter_rule"),
+                        systemImage: "return"
+                    )
+                    .foregroundStyle(.green)
+                    Label(
+                        localization.text("button_mapping.google.partial.unsupported_rule"),
+                        systemImage: "xmark.circle"
+                    )
+                    .foregroundStyle(.secondary)
+                    Label(
+                        localization.text("onboarding.chromecast.replace_hardware_advice"),
+                        systemImage: "exclamationmark.triangle.fill"
+                    )
+                    .foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+                }
+                .font(.system(size: 12))
+
+                HStack {
+                    Link(localization.text("onboarding.chromecast.replace_hardware_link"),
+                         destination: AppLinks.devices(for: localization.locale))
+                        .font(.system(size: 12))
+                    Spacer()
+                    Button(localization.text("button_mapping.voice.settings_button")) {
+                        selectSection(.integration)
                     }
                     .compatibilityButtonStyle(.standard)
-                    .font(.system(size: 12))
                 }
             }
         }

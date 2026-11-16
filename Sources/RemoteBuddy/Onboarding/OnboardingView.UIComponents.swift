@@ -44,7 +44,14 @@ extension OnboardingView {
             }
         case .controls:
             sidePanel(titleKey: "onboarding.side.controls") {
-                sideCheck("onboarding.side.three_buttons", isComplete: testedControlButtons.count >= 3)
+                sideCheck(
+                    isChromecastTwoKeyCompatible
+                        ? "onboarding.side.compatible_chord"
+                        : "onboarding.side.three_buttons",
+                    isComplete: isChromecastTwoKeyCompatible
+                        ? compatibleChordConfirmed
+                        : testedControlButtons.count >= 3
+                )
                 sideCheck("onboarding.side.mapping_enabled",
                     isComplete: settings.customMappingEnabled)
             }

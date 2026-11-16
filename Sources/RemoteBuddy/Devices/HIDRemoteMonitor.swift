@@ -886,9 +886,73 @@ final class HIDRemoteMonitor {
         }
         if backOnlyMode {
             processBackOnly(usages: usages.intersection([RemoteButton.back.hidUsage]))
+        } else if currentReportIsGoogle,
+                  settings.g9n9nInputMode(for: profileID ?? settings.selectedRemoteProfileID) == .twoKeyCompatibility {
+            processGoogleTwoKeyCompatibility(usages: usages)
         } else {
             process(usages: usages)
         }
+    }
+
+    private func processGoogleTwoKeyCompatibility(usages: Set<UInt16>) {
+        let observedButtons = RemoteButton.buttons(for: usages)
+        guard !observedButtons.isEmpty else {
+            resetInputState()
+            return
+        }
+        let targetProfileID = profileID ?? settings.selectedRemoteProfileID
+        let representative = observedButtons.contains(.ok)
+            ? RemoteButton.ok
+            : observedButtons.sorted { $0.rawValue < $1.rawValue }.first!
+        if OnboardingControlValidationPolicy.suppressConfiguredActions(
+            at: settings.onboardingStep,
+            source: settings.onboardingControlSource,
+            reportingModel: .chromecastVoiceRemote,
+            onboardingWindowIsActive: onboardingWindowIsActive()
+        ) {
+            onActiveButtons?(targetProfileID, observedButtons)
+            if let deviceFingerprint,
+               let routing = onButtonPressed?(profileID, deviceFingerprint, representative),
+               profileID == nil {
+                profileID = routing.profileID
+            }
+            clearTransientInputStateForCompatibility()
+            return
+        }
+
+        // Release notifications are absent on short-report G9N9N firmware, so clear active
+        // state on every report and only emit instant Return/Enter for direction + OK chords.
+        resetInputState()
+        var shouldPerformAction = true
+        if let deviceFingerprint,
+           let routing = onButtonPressed?(profileID, deviceFingerprint, representative) {
+            if profileID == nil { profileID = routing.profileID }
+            shouldPerformAction = routing.shouldPerformAction
+        }
+        guard shouldPerformAction else {
+            onActiveButtons?(profileID ?? targetProfileID, observedButtons)
+            return
+        }
+        guard G9N9NProtocol.isEnterChord(usages) else {
+            diagnosticLogger("HID G9N9N compat ignored reason=unsupported_input")
+            return
+        }
+        guard profileID != nil else { return }
+        guard mappingDeliveryIsSafe else {
+            pauseForUnavailableNativeFilter()
+            return
+        }
+        if !activeDeviceIsSeized {
+            for button in observedButtons {
+                eventSuppressor.arm(button: button, edge: .down)
+            }
+        }
+        let action = ConfiguredButtonAction(action: .returnKey, shortcut: nil)
+        guard actionPerformer(.ok, .singleClick, action) else {
+            if !runtimePermissionsAreValid() { releaseForRevokedPermissions() }
+            return
+        }
+        diagnosticLogger("HID G9N9N compat_enter_chord action=return")
     }
 
     private static func handlesAppSwitcherControl(_ button: RemoteButton) -> Bool {
@@ -2012,6 +2076,14 @@ final class HIDRemoteMonitor {
     }
 
     private func resetInputState() {
+        clearTransientInputState(emitEmptyActiveButtons: true)
+    }
+
+    func clearTransientInputStateForCompatibility() {
+        clearTransientInputState(emitEmptyActiveButtons: false)
+    }
+
+    private func clearTransientInputState(emitEmptyActiveButtons: Bool) {
         googleIndexedReportsIncludeID = false
         onInputReset?(profileID)
         if appSwitcherSession.isActive {
@@ -2063,7 +2135,9 @@ final class HIDRemoteMonitor {
         lastT1MouseLogTime = 0
         resetGestureRecognition()
         activeUsages.removeAll()
-        emitActiveButtons()
+        if emitEmptyActiveButtons {
+            emitActiveButtons()
+        }
     }
 
     private func emitActiveButtons() {

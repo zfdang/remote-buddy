@@ -1213,3 +1213,45 @@
 "connection.empty.title" = "No remotes added";
 "connection.empty.detail" = "Click Add Device in the top-right corner to connect your remote.";
 "connection.action.device_comparison" = "Compare & Buy Remotes ↗";
+
+"onboarding.remote.chromecast.combo_needs_opt_in.title" = "Two-key combination detected — confirm partial support";
+"onboarding.remote.chromecast.combo_needs_opt_in.detail" = "Only a two-key combination arrived and no single key was detected. If single presses never respond, check Partial Support Mode below to continue.";
+"onboarding.remote.chromecast.compat_waiting_detail" = "Partial support mode enabled. Hold Up + OK (or any arrow + OK) together to confirm button input.";
+"onboarding.remote.chromecast.compat_ready_detail" = "Two-key input confirmed (Partial support: Voice key works; only Arrow + OK emits Enter).";
+"onboarding.remote.chromecast.full_ready_detail" = "Single-key report received: this G9N9N supports the Voice key and all 14 standard buttons.";
+"onboarding.remote.chromecast.full_badge" = "Detected full single-key support";
+"onboarding.remote.chromecast.compat_prompt_highlighted" = "A two-key combination triggered recognition without a single-key report. If pressing individual buttons does nothing on your G9N9N, check the box below to switch to Partial Support (two-key compatibility) mode:";
+"onboarding.remote.chromecast.compat_prompt" = "If pressing OK alone does nothing, try holding Up + OK together. If only two-key presses register, check below to enable Partial Support mode:";
+"onboarding.remote.chromecast.compat_checkbox" = "My G9N9N requires a two-key combo (e.g. Up + OK) to register (enable Partial Support mode)";
+"onboarding.remote.chromecast.compat_scope_summary" = "Partial support limits: 1. Hold-to-talk Voice works normally; 2. Only Arrow + OK emits Enter; individual single buttons are unsupported.";
+
+"onboarding.controls.chromecast.compat.title" = "Confirm Two-Key Enter Combination";
+"onboarding.controls.chromecast.compat.detail" = "This G9N9N is in Partial Support (two-key compatibility) mode. Single-key presses are dropped by macOS, so confirm the Enter chord works.";
+"onboarding.controls.chromecast.compat.waiting_title" = "Hold Up + OK (or any Arrow + OK) together";
+"onboarding.controls.chromecast.compat.waiting_detail" = "Once recognized, setup can continue without testing single buttons.";
+"onboarding.controls.chromecast.compat.confirmed_title" = "Confirmed Arrow + OK combination";
+"onboarding.controls.chromecast.compat.confirmed_detail" = "In daily use, pressing Up + OK (or any Arrow + OK) together sends Return/Enter.";
+"onboarding.controls.chromecast.compat.limit_voice" = "Voice button: press and hold to speak, release to stop";
+"onboarding.controls.chromecast.compat.limit_enter" = "Only supported key action: Arrow + OK -> Return/Enter";
+"onboarding.controls.chromecast.compat.limit_others" = "All 14 individual single buttons, double-click/long-press, and phrase hotkeys are unavailable";
+"onboarding.controls.chromecast.compat.switch_to_full" = "My remote works with single presses; re-check full mode";
+"onboarding.side.compatible_chord" = "Arrow + OK confirmed";
+
+"onboarding.summary.g9n9n_mode" = "G9N9N Support Mode";
+"onboarding.summary.g9n9n_partial_mode" = "Partial Support (Two-Key Compatibility)";
+"onboarding.summary.partial_buttons_passed" = "Voice works; Arrow + OK sends Enter";
+
+"button_mapping.google.partial_subtitle" = "Partial support (two-key compatibility): Voice works; only Arrow + OK emits Return/Enter";
+"button_mapping.google.mode.title" = "G9N9N Hardware Compatibility Mode";
+"button_mapping.google.mode.hint" = "Use Full Support if single presses work; switch to Partial Support if only two-key combos register";
+"button_mapping.google.mode.full" = "Full Support (14 Keys)";
+"button_mapping.google.mode.partial" = "Partial Support (2-Key)";
+"button_mapping.google.partial.card_title" = "Partial Support Mode (Two-Key Compatibility)";
+"button_mapping.google.partial.card_detail" = "This G9N9N hardware/firmware revision sends 1-byte single-key reports that macOS drops before IOHID. Limited support is active:";
+"button_mapping.google.partial.voice_rule" = "1. Voice button (Google Assistant): hold to speak and release to stop";
+"button_mapping.google.partial.enter_rule" = "2. Arrow + OK (e.g. Up + OK): sends Return/Enter once when pressed together (requires mapping enabled above)";
+"button_mapping.google.partial.unsupported_rule" = "3. Individual single buttons, double-click/long-press, and single-key common phrases are unavailable";
+"button_mapping.voice.settings_button" = "Open Voice Integration";
+"common_phrases.g9n9n_partial_notice" = "The selected G9N9N is in Partial Support (two-key compatibility) mode, which only supports Voice and Arrow + OK for Enter; single-key common phrases are unavailable.";
+"onboarding.chromecast.replace_hardware_advice" = "Partial Support mode omits most button features and is intended only as a fallback. Replace with a verified macOS-compatible remote unit for full support.";
+"onboarding.chromecast.replace_hardware_link" = "See verified devices & buying guide ↗";

@@ -28,6 +28,10 @@ extension OnboardingView {
             routeConnectedPhysicalRemoteIfNeeded()
         case .remote:
             observedRemoteButtons.removeAll()
+            chromecastSingleKeyObserved = false
+            chromecastTwoKeyDetectedWithoutSingleKey = false
+            pendingChromecastComboButtons.removeAll()
+            compatibleChordConfirmed = false
             remoteInputDiagnostic = remoteInputDiagnosticOverride ?? FirstUseRemoteInputDiagnostic()
             requestedRemoteConnectionRecovery = false
             secureInputWaitStartedAtUptime = nil
@@ -42,6 +46,7 @@ extension OnboardingView {
             resetVoiceTestForRetry()
         case .controls:
             testedControlButtons.removeAll()
+            compatibleChordConfirmed = false
             secureInputWaitStartedAtUptime = nil
         case .complete:
             if secureInputActive != nil { secureInputActive = nil }

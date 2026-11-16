@@ -370,6 +370,23 @@ extension AppSettings {
         remoteDeviceProfiles[index].gainDB = gainDB
     }
 
+    func g9n9nInputMode(for profileID: UUID?) -> G9N9NInputMode {
+        guard let profileID,
+              let profile = remoteDeviceProfiles.first(where: { $0.id == profileID }) else {
+            return .full
+        }
+        return profile.effectiveG9N9NInputMode
+    }
+
+    func setG9N9NInputMode(_ mode: G9N9NInputMode, for profileID: UUID?) {
+        guard let profileID,
+              let index = remoteDeviceProfiles.firstIndex(where: { $0.id == profileID }),
+              remoteDeviceProfiles[index].model.isChromecastRemote else { return }
+        let stored: G9N9NInputMode? = mode == .full ? nil : mode
+        guard remoteDeviceProfiles[index].g9n9nInputMode != stored else { return }
+        remoteDeviceProfiles[index].g9n9nInputMode = stored
+    }
+
     var compatibleHIDBindings: [RemoteHIDBinding] {
         remoteDeviceProfiles.compactMap { profile in
             guard !profile.model.usesPrivateAdapter,

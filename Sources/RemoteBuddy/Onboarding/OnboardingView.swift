@@ -27,6 +27,10 @@ struct OnboardingView: View {
     @State var remoteInputDiagnostic = FirstUseRemoteInputDiagnostic()
     @State var requestedRemoteConnectionRecovery = false
     @State var testedControlButtons = Set<RemoteButton>()
+    @State var chromecastSingleKeyObserved = false
+    @State var chromecastTwoKeyDetectedWithoutSingleKey = false
+    @State var pendingChromecastComboButtons = Set<RemoteButton>()
+    @State var compatibleChordConfirmed = false
     @State var hidBindingProfile: RemoteDeviceProfile?
     @State var voiceSessionStarted = false
     @State var voiceSamplesReceived = false
@@ -181,25 +185,10 @@ struct OnboardingView: View {
     private var remoteObservedContent: some View {
         lifecycleContent
         .onReceive(model.$activeRemoteButtons) { buttons in
-            guard settings.onboardingControlMethod == .physicalRemote,
-                  selectedPhysicalRemoteProfileMatchesSource,
-                  !buttons.isEmpty else { return }
-            if settings.onboardingStep == .remote {
-                recordRemoteControlButtons(buttons, source: "physical_remote")
-                recoverRemoteConnectionIfNeeded()
-            } else if settings.onboardingStep == .controls {
-                testedControlButtons.formUnion(buttons)
-            }
+            handleObservedRemoteButtons(buttons)
         }
         .onReceive(model.$lastRemoteButtonPress.compactMap { $0 }) { button in
-            guard settings.onboardingControlMethod == .physicalRemote,
-                  selectedPhysicalRemoteProfileMatchesSource else { return }
-            if settings.onboardingStep == .remote {
-                recordRemoteControlButtons(Set([button]), source: "physical_remote")
-                recoverRemoteConnectionIfNeeded()
-            } else if settings.onboardingStep == .controls {
-                testedControlButtons.insert(button)
-            }
+            handleObservedRemoteButtonPress(button)
         }
         .onReceive(model.$isStreaming) { isStreaming in
             guard selectedControlAcceptsVoice(model.activeVoiceSource) else { return }

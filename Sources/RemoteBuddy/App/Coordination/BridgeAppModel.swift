@@ -309,6 +309,18 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
 
     private(set) var isTerminating = false
 
+    func setG9N9NInputMode(_ mode: G9N9NInputMode, for profileID: UUID? = nil) {
+        guard let targetID = profileID ?? settings.selectedRemoteProfileID,
+              settings.remoteDeviceProfiles.contains(where: { $0.id == targetID && $0.model.isChromecastRemote })
+        else { return }
+        settings.setG9N9NInputMode(mode, for: targetID)
+        for monitor in Array(hidMonitors.values) + (discoveryHIDMonitor.map { [$0] } ?? [])
+        where monitor.profileID == nil || monitor.profileID == targetID {
+            monitor.clearTransientInputStateForCompatibility()
+        }
+        AppLogger.shared.write("REMOTE HID g9n9n_mode=\(mode.rawValue) profile=\(targetID.uuidString)")
+    }
+
     func prepareForTermination() {
         isTerminating = true
         commonPhrases.close(reason: "app_terminating")

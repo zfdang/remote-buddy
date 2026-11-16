@@ -1215,3 +1215,45 @@
 "connection.empty.title" = "尚未添加遥控器";
 "connection.empty.detail" = "点击右上角“添加新设备”，连接你的遥控器。";
 "connection.action.device_comparison" = "设备对比与选购指南 ↗";
+
+"onboarding.remote.chromecast.combo_needs_opt_in.title" = "检测到双键组合，需确认兼容模式";
+"onboarding.remote.chromecast.combo_needs_opt_in.detail" = "仅收到了双键组合输入，尚未收到单独按键。如单独按任意键都无反应，请勾选下方「部分支持模式」继续。";
+"onboarding.remote.chromecast.compat_waiting_detail" = "已开启部分支持模式。请同时按住「上 + OK」（或任意方向键 + OK）确认输入。";
+"onboarding.remote.chromecast.compat_ready_detail" = "已确认双键组合输入（部分支持模式：语音键可用，普通操作仅支持方向键 + OK 发送 Enter）。";
+"onboarding.remote.chromecast.full_ready_detail" = "已收到单键输入：当前 G9N9N 支持全部 14 颗普通按键与语音键。";
+"onboarding.remote.chromecast.full_badge" = "已检测为完全支持版本（单键报告正常）";
+"onboarding.remote.chromecast.compat_prompt_highlighted" = "刚才检测到双键组合才触发识别。如果你的 G9N9N 单按任意键都无反应，属于仅部分支持批次，请主动勾选下方选项以兼容模式继续：";
+"onboarding.remote.chromecast.compat_prompt" = "如单独按 OK 无反应，可尝试同时按住「上 + OK」。若只有双键组合才识别，请勾选进入部分支持模式：";
+"onboarding.remote.chromecast.compat_checkbox" = "我的 G9N9N 需按双键组合（如「上 + OK」）才能识别（启用部分支持兼容模式）";
+"onboarding.remote.chromecast.compat_scope_summary" = "部分支持说明：1. 语音键可正常按住使用；2. 仅支持同时按「方向键 + OK」发送 Enter 键，其余普通单键不可用。";
+
+"onboarding.controls.chromecast.compat.title" = "确认部分支持按键组合";
+"onboarding.controls.chromecast.compat.detail" = "当前 G9N9N 处于部分支持（双键兼容）模式：单按普通键不会被系统接收，请验证双键发送 Enter 组合是否可用。";
+"onboarding.controls.chromecast.compat.waiting_title" = "请同时按住「上 + OK」（或任意方向键 + OK）";
+"onboarding.controls.chromecast.compat.waiting_detail" = "同时按下后即可确认部分支持组合有效；无需逐一测试其他单键。";
+"onboarding.controls.chromecast.compat.confirmed_title" = "已确认「方向键 + OK」组合可用";
+"onboarding.controls.chromecast.compat.confirmed_detail" = "后续日常使用时，按「上 + OK」（或任意方向键 + OK）即可发送 Enter 键。";
+"onboarding.controls.chromecast.compat.limit_voice" = "语音键：可正常按住说话，松开停止收音";
+"onboarding.controls.chromecast.compat.limit_enter" = "唯一可用的按键组合：方向键 + OK → 发送 Enter（回车）";
+"onboarding.controls.chromecast.compat.limit_others" = "其余 14 颗普通单键、双击/长按及单键常用语在此硬件版本上不可用";
+"onboarding.controls.chromecast.compat.switch_to_full" = "我的遥控器支持单按，返回标准检测";
+"onboarding.side.compatible_chord" = "方向键 + OK 已验证";
+
+"onboarding.summary.g9n9n_mode" = "G9N9N 支持模式";
+"onboarding.summary.g9n9n_partial_mode" = "部分支持（双键兼容）";
+"onboarding.summary.partial_buttons_passed" = "语音可用；仅「方向键 + OK」可发 Enter";
+
+"button_mapping.google.partial_subtitle" = "当前 G9N9N 处于部分支持（双键兼容）模式：语音键可用，仅「方向键 + OK」可发送 Enter";
+"button_mapping.google.mode.title" = "G9N9N 硬件兼容模式";
+"button_mapping.google.mode.hint" = "标准单键版选“完全支持”；单键无反应、仅双键可识别的批次选“部分支持（双键兼容）”";
+"button_mapping.google.mode.full" = "完全支持（14 键）";
+"button_mapping.google.mode.partial" = "部分支持（双键）";
+"button_mapping.google.partial.card_title" = "部分支持模式（双键兼容）生效中";
+"button_mapping.google.partial.card_detail" = "该版本 G9N9N 的单键通知与松开报告会被 macOS 丢弃，无法独立配置 14 颗普通按键。本模式为您提供以下有限支持：";
+"button_mapping.google.partial.voice_rule" = "1. 语音键（Google Assistant）：正常可用，按住说话、松开结束";
+"button_mapping.google.partial.enter_rule" = "2. 组合键「方向键 + OK」（如「上 + OK」）：同时按下发送一次 Enter（回车）键（需保持上方映射开关开启）";
+"button_mapping.google.partial.unsupported_rule" = "3. 其余普通单键、双击/长按和单键常用语在该版本上不可用";
+"button_mapping.voice.settings_button" = "前往输入法整合设置";
+"common_phrases.g9n9n_partial_notice" = "当前选中的 G9N9N 处于部分支持（双键兼容）模式，仅支持语音键和「方向键 + OK」发 Enter，无法通过单键触发常用语。";
+"onboarding.chromecast.replace_hardware_advice" = "部分支持模式下功能缺失较多，仅作临时兼容；如需完整按键体验，建议更换为已验证支持 macOS 的遥控器硬件版本。";
+"onboarding.chromecast.replace_hardware_link" = "查看可完全支持的设备与选购指南 ↗";

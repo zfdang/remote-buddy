@@ -47,6 +47,13 @@ enum G9N9NProtocol {
         descriptor?.starts(with: indexedConsumerDescriptor) ?? false
     }
 
+    /// Two-key compatibility chord supported on short-report G9N9N units:
+    /// OK pressed simultaneously with any navigation arrow emits Return/Enter.
+    static func isEnterChord(_ usages: Set<UInt16>) -> Bool {
+        guard usages.count == 2, usages.contains(RemoteButton.ok.hidUsage) else { return false }
+        return [RemoteButton.up, .down, .left, .right].contains { usages.contains($0.hidUsage) }
+    }
+
 
 
     /// Known Consumer Control layouts, with or without their report-ID byte.

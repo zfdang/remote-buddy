@@ -40,6 +40,10 @@ extension OnboardingView {
             settings.setOnboardingPreferredGesture(nil)
         }
         observedRemoteButtons.removeAll()
+        chromecastSingleKeyObserved = false
+        chromecastTwoKeyDetectedWithoutSingleKey = false
+        pendingChromecastComboButtons.removeAll()
+        compatibleChordConfirmed = false
         remoteInputDiagnostic = FirstUseRemoteInputDiagnostic()
         testedControlButtons.removeAll()
         secureInputActive = nil

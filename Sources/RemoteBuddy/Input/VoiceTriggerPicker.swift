@@ -8,6 +8,10 @@ struct VoiceTriggerPicker: View {
     @State private var editing = false
 
     private var choices: [VoiceKeyMode] {
+        Self.menuChoices(for: selection)
+    }
+
+    static func menuChoices(for selection: VoiceKeyMode) -> [VoiceKeyMode] {
         VoiceKeyMode.allCases.contains(selection) ? VoiceKeyMode.allCases : VoiceKeyMode.allCases + [selection]
     }
 

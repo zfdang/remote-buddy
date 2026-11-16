@@ -536,3 +536,5 @@ WorkBuddy 输入框通过同一局部布局内的唯一编辑框、“更多操�
 Run `python3 scripts/generate-website-screenshots.py` to build the current Debug app and capture Chinese/English settings and onboarding views. The website examples select G9N9N and use its photo and model defaults. Device connection and battery states are screenshot fixtures, not hardware measurements. The renderer uses an isolated preferences suite and does not start hardware monitoring. After refreshing these assets, rerender `scripts/demo-video/render.py` so the video uses the same current UI.
 
 向导完成页只展示已完成设置的总结，不重新检查权限、蓝牙或音频，不发起 HID／音频重配置，也不因运行状态变化禁用完成按钮。权限与连接阻塞在对应前置步骤处理；三键测试只有在蓝牙语音连接就绪且收到三个不同按键时才允许进入完成页。
+
+语音热键菜单提供九个预置：Fn、右 Option、右 Command；Ctrl+Shift、Ctrl+Option、Ctrl+Command 分别与 V 或 R 组合。V 和 R 的主键码分别为 9、15。自定义热键入口保留；从菜单移除的左侧修饰键仍可通过自定义编辑器选择。

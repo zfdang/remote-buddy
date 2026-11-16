@@ -297,9 +297,24 @@ struct VoiceTriggerConfigurationTests {
 
     @Test func voiceShortcutPresetsMatchTheSupportedMenuChoices() {
         let expected: [NSEvent.ModifierFlags] = [[.control, .shift], [.control, .option], [.control, .command]]
-        #expect(VoiceKeyMode.shortcutPresets == expected.map {
-            .shortcut(CustomKeyboardShortcut(keyCode: 9, modifierFlags: $0, keyLabel: "V"))
-        })
+        let chords: [VoiceKeyMode] = [(UInt16(9), "V"), (UInt16(15), "R")].flatMap { keyCode, label in
+            expected.map { .shortcut(CustomKeyboardShortcut(keyCode: keyCode, modifierFlags: $0, keyLabel: label)) }
+        }
+        #expect(VoiceKeyMode.shortcutPresets == chords)
+        #expect(VoiceKeyMode.allCases == [.function, .rightOption, .rightCommand] + chords)
+        #expect(VoiceKeyMode.allCases.count == 9)
+        #expect(Set(VoiceKeyMode.allCases).count == 9)
+        #expect(!VoiceKeyMode.allCases.contains(.leftCommand))
+        #expect(!VoiceKeyMode.allCases.contains(.leftOption))
+        for preset in VoiceKeyMode.allCases {
+            #expect(VoiceTriggerPicker.menuChoices(for: preset) == VoiceKeyMode.allCases)
+        }
+        let custom = VoiceKeyMode.shortcut(CustomKeyboardShortcut(
+            keyCode: 40, modifierFlags: [.command, .option], keyLabel: "K"
+        ))
+        for nonPreset in [VoiceKeyMode.leftCommand, .leftOption, custom] {
+            #expect(VoiceTriggerPicker.menuChoices(for: nonPreset) == VoiceKeyMode.allCases + [nonPreset])
+        }
     }
 
     @Test func customTriggersRoundTripInSettingsAndBindings() throws {

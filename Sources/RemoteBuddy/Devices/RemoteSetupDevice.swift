@@ -10,13 +10,13 @@ enum RemoteSetupDevice: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var titleKey: String { "remote.catalog.\(rawValue).title" }
 
-    /// Selection can precede adapter readiness; connection validation remains mandatory.
+    /// Only devices with an available adapter can enter connection setup.
     var onboardingSource: OnboardingControlSource? {
         switch self {
         case .xiaomi: return .xiaomiRemote
         case .t1Remote: return .t1Remote
-        case .chromecastG9N9N, .googleStreamerGY3LE: return .chromecastRemote
-        case .siriRemote: return nil
+        case .chromecastG9N9N: return .chromecastRemote
+        case .googleStreamerGY3LE, .siriRemote: return nil
         }
     }
 

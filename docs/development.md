@@ -146,8 +146,8 @@ The product device list is limited to Xiaomi Bluetooth Remote 2 / 2 Pro, T1-Remo
 Air-Mouse & Keyboard (and compatible clones), Google Chromecast Voice Remote (G9N9N),
 Google TV Streamer Voice Remote (GY3LE), and Apple Siri Remote. `RemoteSetupDevice` defines
 this scope; it does not grant connection support. All five entries can be selected.
-Continue advances Xiaomi, T1, and both Google choices to connection setup; Siri remains on
-the device page with an unsupported notice.
+Continue advances Xiaomi, T1, and G9N9N to connection setup. GY3LE and Siri remain on
+the device page with an unsupported notice and a disabled Continue button.
 The GY3LE setup entry does not admit it through the G9N9N adapter. G9N9N connection
 validation remains mandatory. The validated G9N9N supports voice and fourteen configurable ordinary buttons. See the [standalone report](g9n9n-compatibility.md). The
 validated Xiaomi admission catalog remains separate, so a planned Google model

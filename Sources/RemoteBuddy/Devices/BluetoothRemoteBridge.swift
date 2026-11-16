@@ -222,7 +222,7 @@ final class BluetoothRemoteBridge: NSObject {
             self.microphoneClosePending = false
             self.microphoneCloseSessionID = nil
             self.microphoneOpened = false
-            self.stopStreaming()
+            self.stopStreaming(reason: .writeResponseFailure)
             AppLogger.shared.write("BLE WRITE failed reason=response_or_timeout")
             self.scheduleReconnect()
         }
@@ -245,11 +245,15 @@ final class BluetoothRemoteBridge: NSObject {
             self.microphoneClosePending = false
             self.microphoneCloseSessionID = nil
             self.microphoneOpened = false
-            self.stopStreaming()
+            self.stopStreaming(reason: .flowControlTimeout)
             AppLogger.shared.write("BLE WRITE failed reason=flow_control_timeout")
             self.scheduleReconnect()
         }
     )
+    private let voiceDiagnosticLogger: (String) -> Void
+    private(set) var lastVoiceStopReason: BluetoothVoiceStopReason?
+    private var streamStopRecorded = false
+    private var localMicrophoneCloseRequested = false
     // This is a requested-open flag; ATVV stream notifications establish actual streaming.
     private var microphoneOpened = false
     private var microphoneClosePending = false
@@ -292,11 +296,11 @@ final class BluetoothRemoteBridge: NSObject {
     }
 
     func simulateStreamStopForTesting() {
-        handleRemoteStreamStop()
+        handleRemoteStreamStop(reason: .remoteNotification)
     }
 
     func simulateLocalStopStreamingForTesting() {
-        stopStreaming()
+        stopStreaming(reason: .localStop)
     }
 
     func simulateReadyStateForTesting(deviceName: String = "Test remote") {
@@ -408,6 +412,7 @@ final class BluetoothRemoteBridge: NSObject {
         allowsT1Remote: Bool = false,
         adoptUnidentifiedATVVAsT1: @escaping () -> Bool = { false },
         audioPipeline: BluetoothAudioPipeline = BluetoothAudioPipeline(),
+        voiceDiagnosticLogger: @escaping (String) -> Void = { AppLogger.shared.write($0) },
         scheduleMicrophoneClose: @escaping OperationScheduler = ScheduledOperation.mainQueue,
         excludedIdentifiers: @escaping () -> Set<UUID> = { [] },
         scheduleReconnect: @escaping (TimeInterval, DispatchWorkItem) -> Void = { delay, work in
@@ -416,6 +421,7 @@ final class BluetoothRemoteBridge: NSObject {
     ) {
         self.settings = settings
         self.audioDecoder = audioPipeline
+        self.voiceDiagnosticLogger = voiceDiagnosticLogger
         self.scheduleMicrophoneClose = scheduleMicrophoneClose
         self.allowsG9N9N = allowsG9N9N
         self.allowsT1Remote = allowsT1Remote
@@ -470,7 +476,7 @@ final class BluetoothRemoteBridge: NSObject {
         reconnectPolicy.reset()
         stopScan()
         closeMicrophoneIfNeeded()
-        resetSession()
+        resetSession(reason: .bridgeStopped)
         if let central, let peripheral, peripheral.state != .disconnected {
             central.cancelPeripheralConnection(peripheral)
         }
@@ -716,6 +722,7 @@ final class BluetoothRemoteBridge: NSObject {
     @discardableResult
     func requestMicrophoneClose() -> Bool {
         guard microphoneOpened || streaming || microphoneClosePending else { return true }
+        localMicrophoneCloseRequested = true
         microphoneKeepalive?.cancel()
         microphoneKeepalive = nil
         let currentSession = sessionID
@@ -766,7 +773,7 @@ final class BluetoothRemoteBridge: NSObject {
                   self.sessionID == session
             else { return }
             AppLogger.shared.write("ATVV STREAM_STOP timeout reason=close_unacknowledged session=\(session)")
-            self.handleRemoteStreamStop()
+            self.handleRemoteStreamStop(reason: .closeUnacknowledged)
         }
     }
 
@@ -793,7 +800,7 @@ final class BluetoothRemoteBridge: NSObject {
             self.microphoneClosePending = false
             self.microphoneCloseSessionID = nil
             self.cancelMicrophoneCloseWatchdog()
-            self.stopStreaming()
+            self.stopStreaming(reason: .closeRetryExhausted)
             self.scheduleReconnect()
         }
     }
@@ -977,7 +984,7 @@ final class BluetoothRemoteBridge: NSObject {
         AppLogger.shared.write("BLE CONNECTING source=\(source) name=\(DiagnosticRedactor.redactedDeviceName(candidate.name))")
     }
 
-    private func resetPeripheral() {
+    private func resetPeripheral(reason: BluetoothVoiceStopReason = .peripheralReset) {
         acknowledgedWrites.reset()
         unacknowledgedWrites.reset()
         disconnectWatchdog.cancel()
@@ -1013,7 +1020,7 @@ final class BluetoothRemoteBridge: NSObject {
         reportedHIDIdentity = nil
         capabilities = Self.defaultCapabilities
         currentAttemptUsesCachedTarget = false
-        resetSession()
+        resetSession(reason: reason)
         audioDecoder.reset(peripheral: true)
     }
 
@@ -1079,6 +1086,7 @@ final class BluetoothRemoteBridge: NSObject {
     }
 
     func suspendVoiceTransferState() {
+        recordStreamStop(reason: .systemSuspended)
         let needsReconnect = microphoneClosePending ||
             microphoneOpened ||
             acknowledgedWrites.hasPendingWork ||
@@ -1110,7 +1118,8 @@ final class BluetoothRemoteBridge: NSObject {
         }
     }
 
-    private func resetSession() {
+    private func resetSession(reason: BluetoothVoiceStopReason) {
+        recordStreamStop(reason: reason)
         cancelMicrophoneCloseWatchdog()
         cancelStreamStopWatchdog()
         microphoneClosePending = false
@@ -1188,12 +1197,12 @@ final class BluetoothRemoteBridge: NSObject {
         )
     }
 
-    private func finishAttempt(reconnectAfter delay: TimeInterval?) {
+    private func finishAttempt(reconnectAfter delay: TimeInterval?, stopReason: BluetoothVoiceStopReason = .peripheralReset) {
         finishRemoteWakeRecovery(result: "interrupted")
         let finishedGeneration = lifecycle.generation ?? generationCounter
         stopScan()
         requestedReconnectDelay = nil
-        resetPeripheral()
+        resetPeripheral(reason: stopReason)
 
         guard shouldRun, let delay else {
             central?.delegate = nil
@@ -1430,7 +1439,7 @@ final class BluetoothRemoteBridge: NSObject {
         case 0x04:
             if googleCandidate && (bytes.count < 4 || bytes[2] != 0x02) {
                 _ = requestMicrophoneClose()
-                stopStreaming()
+                stopStreaming(reason: .unsupportedCodec)
                 return
             }
             guard ATVVSessionGate.canOpenMicrophone(
@@ -1479,17 +1488,17 @@ final class BluetoothRemoteBridge: NSObject {
                 activeSessionID: activeStreamSessionID,
                 incomingSessionID: explicitSessionID
             ) {
-                stopStreaming()
+                stopStreaming(reason: .sessionReplaced)
             }
             sessionID = receivedSessionID
             if let explicitSessionID { activeStreamSessionID = explicitSessionID }
             startStreaming()
         case 0x00:
             guard lifecycle.acceptsProtocolData(generation: generation) else { return }
-            handleRemoteStreamStop()
+            handleRemoteStreamStop(reason: .remoteNotification)
         case 0x0C:
             guard googleCandidate || t1Candidate, lifecycle.acceptsProtocolData(generation: generation) else { return }
-            handleRemoteStreamStop()
+            handleRemoteStreamStop(reason: .remoteMicrophoneRefused)
             state = .failed(
                 t1Candidate
                     ? LocalizedMessage("t1.remote.microphone_refused")
@@ -1559,6 +1568,9 @@ final class BluetoothRemoteBridge: NSObject {
             return
         }
         guard !streaming else { return }
+        lastVoiceStopReason = nil
+        streamStopRecorded = false
+        localMicrophoneCloseRequested = false
         cancelStreamStopWatchdog()
         microphoneKeepaliveCount = 0
         let partialFrameBytes = audioDecoder.pendingByteCount
@@ -1579,14 +1591,25 @@ final class BluetoothRemoteBridge: NSObject {
         AppLogger.shared.write("ATVV STREAM START session=\(sessionID)")
     }
 
-    private func stopStreaming() {
+    private func recordStreamStop(reason: BluetoothVoiceStopReason) {
+        guard streaming || voiceStartNotified, !streamStopRecorded else { return }
+        streamStopRecorded = true
+        lastVoiceStopReason = reason
+        voiceDiagnosticLogger(
+            "ATVV STREAM STOP session=\(sessionID) reason=\(reason.rawValue) " +
+                "close_requested=\(localMicrophoneCloseRequested) " +
+                "partial_frame_bytes=\(audioDecoder.pendingByteCount)"
+        )
+    }
+
+    private func stopStreaming(reason: BluetoothVoiceStopReason) {
+        recordStreamStop(reason: reason)
         activeStreamSessionID = nil
         microphoneKeepalive?.cancel()
         microphoneKeepalive = nil
         microphoneKeepaliveCount = 0
         cancelStreamStopWatchdog()
         guard streaming else { return }
-        let partialFrameBytes = audioDecoder.pendingByteCount
         let gain = settings.gainDB(forBluetoothIdentifier: deviceIdentifier)
         audioDecoder.endStream(
             frameSize: capabilities.frameSize,
@@ -1597,23 +1620,22 @@ final class BluetoothRemoteBridge: NSObject {
             },
             onStop: { [weak self] in
                 guard let self else { return }
+                self.lastVoiceStopReason = reason
                 self.voiceStartNotified = false
                 self.delegate?.bluetoothBridgeDidStopVoice(self)
             }
         )
         lastStopAt = nowUptime()
-        AppLogger.shared.write(
-            "ATVV STREAM STOP session=\(sessionID) partial_frame_bytes=\(partialFrameBytes)"
-        )
     }
 
-    private func handleRemoteStreamStop() {
+    private func handleRemoteStreamStop(reason: BluetoothVoiceStopReason) {
+        recordStreamStop(reason: reason)
         microphoneOpened = false
         microphoneClosePending = false
         microphoneCloseSessionID = nil
         cancelMicrophoneCloseWatchdog()
         cancelStreamStopWatchdog()
-        stopStreaming()
+        stopStreaming(reason: reason)
     }
 
     private func handleAudio(_ data: Data) {
@@ -1666,7 +1688,7 @@ final class BluetoothRemoteBridge: NSObject {
         if !accepted {
             AppLogger.shared.write("ATVV AUDIO rejected reason=decode_backlog")
             _ = requestMicrophoneClose()
-            stopStreaming()
+            stopStreaming(reason: .decodeBacklog)
         }
     }
 
@@ -1674,7 +1696,7 @@ final class BluetoothRemoteBridge: NSObject {
         state = .failed(message)
         closeMicrophoneIfNeeded()
         if streaming {
-            stopStreaming()
+            stopStreaming(reason: .unsupportedAudio)
         } else {
             audioDecoder.reset()
         }
@@ -1710,7 +1732,7 @@ extension BluetoothRemoteBridge: @preconcurrency CBCentralManagerDelegate {
                 central: central,
                 generation: generation
             )
-            resetPeripheral()
+            resetPeripheral(reason: .bluetoothPoweredOff)
             state = .bluetoothUnavailable(LocalizedMessage(BluetoothStatusKeys.off))
         case .unauthorized:
             applyCentralRecovery(
@@ -1732,7 +1754,7 @@ extension BluetoothRemoteBridge: @preconcurrency CBCentralManagerDelegate {
                 central: central,
                 generation: generation
             )
-            resetPeripheral()
+            resetPeripheral(reason: .bluetoothResetting)
             state = .bluetoothUnavailable(LocalizedMessage("bluetooth.status.resetting"))
         case .unknown:
             state = .bluetoothUnavailable(LocalizedMessage("bluetooth.status.initializing"))
@@ -1758,7 +1780,7 @@ extension BluetoothRemoteBridge: @preconcurrency CBCentralManagerDelegate {
         }
         lifecycle = transition.phase
         if transition.shouldReleaseCentral {
-            resetPeripheral()
+            resetPeripheral(reason: .centralReleased)
             stopScan()
             central.delegate = nil
             self.central = nil
@@ -1901,7 +1923,7 @@ extension BluetoothRemoteBridge: @preconcurrency CBCentralManagerDelegate {
         let delay = reconnectDelayAfterFailure(
             bypassCachedTarget: shouldBypassCachedTarget || currentAttemptUsesCachedTarget
         )
-        finishAttempt(reconnectAfter: delay)
+        finishAttempt(reconnectAfter: delay, stopReason: .disconnected)
         if !shouldRun { state = .stopped }
     }
 }

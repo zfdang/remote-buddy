@@ -322,6 +322,7 @@ extension BridgeAppModel {
         )
         AppLogger.shared.write(
             "ATVV STREAM summary trace=\(traceID) model=\(voiceSession.bluetoothVoiceTraceModel.rawValue) " +
+                "stop_reason=\(bridge.lastVoiceStopReason?.rawValue ?? "unknown") " +
                 "duration_ms=\(durationMilliseconds) batches=\(voiceSession.bluetoothVoiceDecodedBatchCount) " +
                 "samples=\(voiceSession.bluetoothVoiceDecodedSampleCount) " +
                 "enqueue_failures=\(voiceSession.bluetoothVoiceEnqueueFailureCount) " +

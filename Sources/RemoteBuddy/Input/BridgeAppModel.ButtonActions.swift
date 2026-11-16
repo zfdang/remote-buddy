@@ -60,11 +60,23 @@ extension BridgeAppModel {
         "hid:\(profileID?.uuidString ?? "unassigned")"
     }
 
-    /// The panel source a voice-key press may close: only a Chromecast remote's
+    static func commonPhraseProfileID(fromSource source: String) -> UUID? {
+        guard source.hasPrefix("hid:") else { return nil }
+        return UUID(uuidString: String(source.dropFirst(4)))
+    }
+
+    /// The panel source a voice-key press may close: any non-Siri remote's
     /// own panel, and never while long recording owns the microphone.
     static func commonPhraseVoiceKeySource(profile: RemoteDeviceProfile?, longRecordingRequested: Bool) -> String? {
-        guard !longRecordingRequested, let profile, profile.model.isChromecastRemote else { return nil }
+        guard !longRecordingRequested, let profile, !profile.model.isAppleSiriRemote else { return nil }
         return commonPhraseHIDSource(profile.id)
+    }
+
+    static func commonPhraseButtons(forSource source: String, settings: AppSettings) -> [RemoteButton] {
+        let model = commonPhraseProfileID(fromSource: source)
+            .flatMap { id in settings.remoteDeviceProfiles.first { $0.id == id }?.model }
+            ?? settings.selectedRemoteProfile?.model
+        return CommonPhraseStore.buttons(for: model)
     }
 
     func cancelPendingCommonPhraseButtonActions() {
@@ -81,8 +93,7 @@ extension BridgeAppModel {
             return MainActor.assumeIsolated {
                 commonPhrases.open(
                     source: source,
-                    buttons: CommonPhraseStore.buttons(
-                        chromecast: settings.selectedRemoteProfile?.model.isChromecastRemote == true),
+                    buttons: Self.commonPhraseButtons(forSource: source, settings: settings),
                     localization: LocalizationStore(settings: settings))
             }
         }

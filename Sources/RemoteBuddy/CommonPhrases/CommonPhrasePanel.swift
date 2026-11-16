@@ -120,7 +120,7 @@ final class CommonPhraseController: ObservableObject {
         switch routing.handle(button, phase: phase, source: source) {
         case .unhandled: return false
         case .consumed: return true
-        case .close: close(reason: "back")
+        case .close: close(reason: button.rawValue)
         case let .insert(button): insert(button)
         }
         return true
@@ -193,10 +193,18 @@ final class CommonPhraseController: ObservableObject {
 
 struct CommonPhrasePanelView: View {
     static func size(for buttons: [RemoteButton]) -> CGSize {
-        CGSize(width: 300, height: chromecastKeys(in: buttons).isEmpty ? 360 : 640)
+        let extraCount = extraKeys(in: buttons).count
+        guard extraCount > 0 else { return CGSize(width: 300, height: 360) }
+        let rows = (extraCount + 1) / 2
+        let height: CGFloat = switch rows {
+        case 1: 460
+        case 2: 550
+        default: 640
+        }
+        return CGSize(width: 300, height: height)
     }
-    static func chromecastKeys(in buttons: [RemoteButton]) -> [RemoteButton] {
-        buttons.filter { CommonPhraseStore.chromecastButtons.contains($0) }
+    static func extraKeys(in buttons: [RemoteButton]) -> [RemoteButton] {
+        buttons.filter { !CommonPhraseStore.baseButtons.contains($0) }
     }
     @ObservedObject var controller: CommonPhraseController
     @EnvironmentObject private var localization: LocalizationStore
@@ -210,7 +218,7 @@ struct CommonPhrasePanelView: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, minHeight: 48, alignment: .top)
             CommonPhrasePad(store: controller.store, diameter: 272, onSelect: controller.insert)
-            let extraKeys = Self.chromecastKeys(in: controller.phraseButtons)
+            let extraKeys = Self.extraKeys(in: controller.phraseButtons)
             if !extraKeys.isEmpty {
                 CommonPhraseKeyGrid(store: controller.store, buttons: extraKeys, keyDiameter: 44,
                                     onSelect: controller.insert)

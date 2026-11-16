@@ -115,8 +115,7 @@ extension SettingsView {
         case .commonPhrases:
             CommonPhraseSettingsView(
                 store: model.commonPhraseStore,
-                phraseButtons: CommonPhraseStore.buttons(
-                    chromecast: settings.selectedRemoteProfile?.model.isChromecastRemote == true)
+                phraseButtons: CommonPhraseStore.buttons(for: settings.selectedRemoteProfile?.model)
             ) {
                 selectSection(.mapping)
             }

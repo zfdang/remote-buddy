@@ -17,6 +17,10 @@ enum CommonPhraseKeyGlyph: Equatable {
         case .right: .symbol("chevron.right")
         case .home: .symbol("house")
         case .mute: .symbol("speaker.slash")
+        case .menu: .symbol("line.3.horizontal")
+        case .tv: .symbol("tv")
+        case .volumeUp: .symbol("speaker.plus")
+        case .volumeDown: .symbol("speaker.minus")
         case .power: .symbol("power")
         case .input: .input
         default: .symbol("circle")
@@ -43,9 +47,9 @@ struct CommonPhraseKeyGlyphView: View {
     }
 }
 
-/// The Chromecast-only keys below the directional pad, two per row as on the
-/// remote. Like `CommonPhrasePad`, callers decide whether a press inserts text
-/// or selects the assignment position.
+/// Device-specific extra phrase keys below the directional pad, laid out two per
+/// row. Like `CommonPhrasePad`, callers decide whether a press inserts text or
+/// selects the assignment position.
 struct CommonPhraseKeyGrid: View {
     @ObservedObject var store: CommonPhraseStore
     var buttons: [RemoteButton]
@@ -55,7 +59,7 @@ struct CommonPhraseKeyGrid: View {
     @EnvironmentObject private var localization: LocalizationStore
 
     var body: some View {
-        Grid(horizontalSpacing: 12, verticalSpacing: 12) {
+        Grid(alignment: .top, horizontalSpacing: 12, verticalSpacing: 12) {
             ForEach(Array(stride(from: 0, to: buttons.count, by: 2)), id: \.self) { index in
                 GridRow {
                     key(buttons[index])

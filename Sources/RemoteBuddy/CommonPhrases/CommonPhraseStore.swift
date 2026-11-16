@@ -58,12 +58,24 @@ final class CommonPhraseStore: ObservableObject {
     enum StoreError: Error { case invalidData, unavailable }
     nonisolated static let maximumImportBytes = 4_000_000
     nonisolated static let baseButtons: [RemoteButton] = [.ok, .left, .up, .right, .down]
-    /// Row order of the panel grid: Home | Mute, YouTube | Netflix, Power | Input,
-    /// matching the physical Chromecast remote.
-    nonisolated static let chromecastButtons: [RemoteButton] = [.home, .mute, .youtube, .netflix, .power, .input]
-    nonisolated static let buttons = baseButtons + chromecastButtons
-    nonisolated static func buttons(chromecast: Bool) -> [RemoteButton] {
-        chromecast ? buttons : baseButtons
+    /// Row order of the panel grid below the directional pad for each remote family.
+    nonisolated static let chromecastExtraButtons: [RemoteButton] = [.home, .mute, .youtube, .netflix, .input]
+    nonisolated static let xiaomiExtraButtons: [RemoteButton] = [.home, .menu, .volumeUp, .volumeDown, .tv]
+    nonisolated static let t1ExtraButtons: [RemoteButton] = [.mute, .home, .menu]
+    nonisolated static let allExtraButtons: [RemoteButton] = [
+        .home, .mute, .menu, .tv, .volumeUp, .volumeDown, .youtube, .netflix, .input,
+    ]
+    nonisolated static let buttons = baseButtons + allExtraButtons
+    nonisolated static func extraButtons(for model: RemoteModel?) -> [RemoteButton] {
+        switch model {
+        case .chromecastVoiceRemote: chromecastExtraButtons
+        case .rc001, .rc003, .unknown: xiaomiExtraButtons
+        case .t1Remote: t1ExtraButtons
+        case .appleSiriRemoteA2854, .appleSiriRemoteA2540, nil: []
+        }
+    }
+    nonisolated static func buttons(for model: RemoteModel?) -> [RemoteButton] {
+        baseButtons + extraButtons(for: model)
     }
     nonisolated static let exportWebsite = AppLinks.chineseWebsite.absoluteString
     nonisolated static let exportGitHub = AppLinks.githubRepository.absoluteString
@@ -229,8 +241,9 @@ final class CommonPhraseStore: ObservableObject {
 }
 
 /// Claims only panel controls from its owning input source. Held releases remain
-/// consumed after closing, so Back never leaks into the foreground application.
+/// consumed after closing, so exit keys never leak into the foreground application.
 struct CommonPhraseRouting {
+    private static let exitButtons: Set<RemoteButton> = [.back, .power]
     struct Input: Hashable { let source: String; let button: RemoteButton }
     enum Decision: Equatable { case unhandled, consumed, insert(RemoteButton), close }
     private(set) var owner: String?
@@ -247,16 +260,16 @@ struct CommonPhraseRouting {
     }
     func claims(_ button: RemoteButton, source: String) -> Bool {
         held.contains(Input(source: source, button: button)) ||
-            (owner == source && (phraseButtons.contains(button) || button == .back))
+            (owner == source && (phraseButtons.contains(button) || Self.exitButtons.contains(button)))
     }
     mutating func handle(_ button: RemoteButton, phase: RemoteButtonPhase, source: String) -> Decision {
         let input = Input(source: source, button: button)
         if phase == .release { return held.remove(input) != nil ? .consumed : .unhandled }
         if held.contains(input) { return .consumed }
-        guard owner == source, phraseButtons.contains(button) || button == .back
+        guard owner == source, phraseButtons.contains(button) || Self.exitButtons.contains(button)
         else { return .unhandled }
         held.insert(input)
         owner = nil
-        return button == .back ? .close : .insert(button)
+        return Self.exitButtons.contains(button) ? .close : .insert(button)
     }
 }

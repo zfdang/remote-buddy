@@ -117,7 +117,7 @@ struct CommonPhraseStorageTests {
             var invalid = phrase("user-invalid")
             invalid.text = "  "
             #expect(throws: CommonPhraseStore.StoreError.self) { try store.save(invalid, replacing: nil) }
-            #expect(throws: CommonPhraseStore.StoreError.self) { try store.assign(.tv, to: "builtin-one") }
+            #expect(throws: CommonPhraseStore.StoreError.self) { try store.assign(.power, to: "builtin-one") }
             #expect(throws: CommonPhraseStore.StoreError.self) { try store.assign(.ok, to: "missing") }
             #expect(throws: CommonPhraseStore.StoreError.self) { try store.save(phrase("builtin-one"), replacing: nil) }
             #expect(store.archive == original)
@@ -162,12 +162,48 @@ struct CommonPhraseStorageTests {
         }
     }
 
-    @Test func archiveValidatesChromecastKeysAndRejectsUnknownKeys() throws {
+    @Test func archiveValidatesDeviceKeysAndRejectsNonPhraseKeys() throws {
         var archive = bundled
-        archive.bindings["youtube"] = "builtin-one"
+        for key in ["home", "mute", "menu", "tv", "volume_up", "volume_down", "youtube", "netflix", "input"] {
+            archive.bindings[key] = "builtin-one"
+        }
         try archive.validate()
-        archive.bindings["tv"] = "builtin-one"
-        #expect(throws: CommonPhraseStore.StoreError.self) { try archive.validate() }
+        for invalidKey in ["power", "back", "play_pause"] {
+            var bad = archive
+            bad.bindings[invalidKey] = "builtin-one"
+            #expect(throws: CommonPhraseStore.StoreError.self) { try bad.validate() }
+        }
+    }
+
+    @Test func deviceButtonListsMatchEachRemoteLayout() {
+        #expect(CommonPhraseStore.buttons(for: .chromecastVoiceRemote)
+            == [.ok, .left, .up, .right, .down, .home, .mute, .youtube, .netflix, .input])
+        #expect(CommonPhraseStore.buttons(for: .rc001)
+            == [.ok, .left, .up, .right, .down, .home, .menu, .volumeUp, .volumeDown, .tv])
+        #expect(CommonPhraseStore.buttons(for: .rc003)
+            == [.ok, .left, .up, .right, .down, .home, .menu, .volumeUp, .volumeDown, .tv])
+        #expect(CommonPhraseStore.buttons(for: .t1Remote)
+            == [.ok, .left, .up, .right, .down, .mute, .home, .menu])
+        #expect(CommonPhraseStore.buttons(for: .appleSiriRemoteA2854) == CommonPhraseStore.baseButtons)
+        #expect(CommonPhraseStore.buttons(for: nil) == CommonPhraseStore.baseButtons)
+        #expect(CommonPhrasePanelView.size(for: CommonPhraseStore.buttons(for: nil)).height == 360)
+        #expect(CommonPhrasePanelView.size(for: CommonPhraseStore.buttons(for: .t1Remote)).height == 550)
+        #expect(CommonPhrasePanelView.size(for: CommonPhraseStore.buttons(for: .rc003)).height == 640)
+        #expect(CommonPhrasePanelView.size(for: CommonPhraseStore.buttons(for: .chromecastVoiceRemote)).height == 640)
+    }
+
+    @Test func allPhraseButtonLocalizationKeysResolveInBothLanguages() throws {
+        let name = "phrase-l10n-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let store = LocalizationStore(settings: AppSettings(defaults: defaults))
+        for button in CommonPhraseStore.buttons {
+            let key = "common_phrases.key.\(button.rawValue)"
+            store.select(.english)
+            #expect(store.text(key) != key)
+            store.select(.simplifiedChinese)
+            #expect(store.text(key) != key)
+        }
     }
 
     @Test func deletingBundledPhraseStaysDeletedOnReload() throws {
@@ -219,20 +255,40 @@ struct CommonPhraseVoiceKeyTests {
         return (profile, { defaults.removePersistentDomain(forName: name) })
     }
 
-    @Test func chromecastVoiceKeyTargetsItsOwnPanel() throws {
-        let (chromecast, cleanup) = try profile(.chromecastVoiceRemote)
+    @Test(arguments: [RemoteModel.chromecastVoiceRemote, .rc001, .rc003, .t1Remote])
+    func supportedRemoteVoiceKeyTargetsItsOwnPanel(model: RemoteModel) throws {
+        let (remote, cleanup) = try profile(model)
         defer { cleanup() }
-        #expect(BridgeAppModel.commonPhraseVoiceKeySource(profile: chromecast, longRecordingRequested: false)
-            == BridgeAppModel.commonPhraseHIDSource(chromecast.id))
-        #expect(BridgeAppModel.commonPhraseVoiceKeySource(profile: chromecast, longRecordingRequested: true) == nil)
+        #expect(BridgeAppModel.commonPhraseVoiceKeySource(profile: remote, longRecordingRequested: false)
+            == BridgeAppModel.commonPhraseHIDSource(remote.id))
+        #expect(BridgeAppModel.commonPhraseVoiceKeySource(profile: remote, longRecordingRequested: true) == nil)
     }
 
-    @Test(arguments: [RemoteModel.rc001, .rc003])
-    func otherRemotesKeepVoiceKeyBehavior(model: RemoteModel) throws {
+    @Test(arguments: [RemoteModel.appleSiriRemoteA2854, .appleSiriRemoteA2540])
+    func siriRemotesDoNotTargetVoiceKeyPanel(model: RemoteModel) throws {
         let (other, cleanup) = try profile(model)
         defer { cleanup() }
         #expect(BridgeAppModel.commonPhraseVoiceKeySource(profile: other, longRecordingRequested: false) == nil)
         #expect(BridgeAppModel.commonPhraseVoiceKeySource(profile: nil, longRecordingRequested: false) == nil)
+    }
+
+    @Test func sourceProfileResolvesModelButtonsEvenWhenAnotherRemoteIsSelected() throws {
+        let name = "phrase-source-buttons-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let settings = AppSettings(defaults: defaults)
+        let xiaomiID = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
+        let t1ID = settings.registerBluetoothRemote(identifier: UUID(), model: .t1Remote)
+        settings.selectRemoteProfile(xiaomiID)
+
+        #expect(BridgeAppModel.commonPhraseButtons(
+            forSource: BridgeAppModel.commonPhraseHIDSource(t1ID), settings: settings)
+            == CommonPhraseStore.buttons(for: .t1Remote))
+        #expect(BridgeAppModel.commonPhraseButtons(
+            forSource: BridgeAppModel.commonPhraseHIDSource(xiaomiID), settings: settings)
+            == CommonPhraseStore.buttons(for: .rc003))
+        #expect(BridgeAppModel.commonPhraseButtons(forSource: "host_action", settings: settings)
+            == CommonPhraseStore.buttons(for: .rc003))
     }
 
     @Test func hiddenPanelIgnoresVoiceKey() throws {
@@ -273,7 +329,7 @@ struct CommonPhraseOwnershipTests {
         routing.reset(source: "second")
         #expect(!routing.claims(.ok, source: "second"))
     }
-    @Test(arguments: [RemoteButton.power, .home, .tv, .volumeUp])
+    @Test(arguments: [RemoteButton.home, .tv, .volumeUp])
     func baseRemoteKeepsUnrelatedButtonsUnhandled(button: RemoteButton) {
         var routing = CommonPhraseRouting()
         routing.open(source: "first", buttons: CommonPhraseStore.baseButtons)
@@ -281,20 +337,49 @@ struct CommonPhraseOwnershipTests {
         #expect(routing.handle(button, phase: .press, source: "first") == .unhandled)
         #expect(routing.owner == "first")
     }
-    @Test(arguments: CommonPhraseStore.chromecastButtons)
+    @Test(arguments: [RemoteButton.back, .power])
+    func exitButtonsClosePanelAcrossAllDevices(button: RemoteButton) {
+        for model in [RemoteModel.chromecastVoiceRemote, .rc003, .t1Remote] {
+            var routing = CommonPhraseRouting()
+            routing.open(source: "first", buttons: CommonPhraseStore.buttons(for: model))
+            #expect(routing.claims(button, source: "first"))
+            #expect(routing.handle(button, phase: .press, source: "first") == .close)
+            #expect(routing.owner == nil)
+            #expect(routing.handle(button, phase: .release, source: "first") == .consumed)
+        }
+    }
+    @Test(arguments: CommonPhraseStore.chromecastExtraButtons)
     func chromecastKeysInsertWhenPanelIsOpen(button: RemoteButton) {
         var routing = CommonPhraseRouting()
-        routing.open(source: "first", buttons: CommonPhraseStore.buttons(chromecast: true))
+        routing.open(source: "first", buttons: CommonPhraseStore.buttons(for: .chromecastVoiceRemote))
+        #expect(routing.claims(button, source: "first"))
+        #expect(routing.handle(button, phase: .press, source: "first") == .insert(button))
+        #expect(routing.handle(button, phase: .release, source: "first") == .consumed)
+    }
+    @Test(arguments: CommonPhraseStore.xiaomiExtraButtons)
+    func xiaomiKeysInsertWhenPanelIsOpen(button: RemoteButton) {
+        var routing = CommonPhraseRouting()
+        routing.open(source: "first", buttons: CommonPhraseStore.buttons(for: .rc003))
+        #expect(routing.claims(button, source: "first"))
+        #expect(routing.handle(button, phase: .press, source: "first") == .insert(button))
+        #expect(routing.handle(button, phase: .release, source: "first") == .consumed)
+    }
+    @Test(arguments: CommonPhraseStore.t1ExtraButtons)
+    func t1KeysInsertWhenPanelIsOpen(button: RemoteButton) {
+        var routing = CommonPhraseRouting()
+        routing.open(source: "first", buttons: CommonPhraseStore.buttons(for: .t1Remote))
         #expect(routing.claims(button, source: "first"))
         #expect(routing.handle(button, phase: .press, source: "first") == .insert(button))
         #expect(routing.handle(button, phase: .release, source: "first") == .consumed)
     }
     @Test(arguments: [RemoteButton.volumeUp, .volumeDown])
-    func chromecastVolumeKeysStayUnhandled(button: RemoteButton) {
-        var routing = CommonPhraseRouting()
-        routing.open(source: "first", buttons: CommonPhraseStore.buttons(chromecast: true))
-        #expect(!routing.claims(button, source: "first"))
-        #expect(routing.handle(button, phase: .press, source: "first") == .unhandled)
-        #expect(routing.owner == "first")
+    func chromecastAndT1VolumeKeysStayUnhandled(button: RemoteButton) {
+        for model in [RemoteModel.chromecastVoiceRemote, .t1Remote] {
+            var routing = CommonPhraseRouting()
+            routing.open(source: "first", buttons: CommonPhraseStore.buttons(for: model))
+            #expect(!routing.claims(button, source: "first"))
+            #expect(routing.handle(button, phase: .press, source: "first") == .unhandled)
+            #expect(routing.owner == "first")
+        }
     }
 }

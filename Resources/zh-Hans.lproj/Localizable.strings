@@ -838,7 +838,7 @@
 "common_phrases.assign_only" = "这里只调整分配，不插入文字。";
 "common_phrases.import_hint" = "导入备份会替换当前常用语和按键分配。";
 "common_phrases.local_storage" = "保存在这台 Mac，重启后仍保留。切换界面语言不会改变常用语内容。";
-"common_phrases.panel_hint" = "按键插入对应常用语\n按返回键关闭面板";
+"common_phrases.panel_hint" = "按键插入对应常用语\n按返回、语音或电源键关闭";
 "common_phrases.close" = "关闭常用语";
 "common_phrases.settings_hint" = "在按键映射中绑定“打开常用语”。内容只保存在本机；部分编辑器会临时使用剪贴板粘贴，随后尝试恢复原内容。检测到期间复制的新内容时会保留。";
 "common_phrases.assign_hint" = "按键分配";
@@ -849,6 +849,10 @@
 "common_phrases.key.right" = "右";
 "common_phrases.key.home" = "主页";
 "common_phrases.key.mute" = "静音";
+"common_phrases.key.menu" = "菜单";
+"common_phrases.key.tv" = "TV";
+"common_phrases.key.volume_up" = "音量 +";
+"common_phrases.key.volume_down" = "音量 −";
 "common_phrases.key.youtube" = "YouTube";
 "common_phrases.key.netflix" = "Netflix";
 "common_phrases.key.power" = "电源";

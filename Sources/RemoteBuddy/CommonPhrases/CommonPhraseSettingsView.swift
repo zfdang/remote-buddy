@@ -94,7 +94,7 @@ struct CommonPhraseSettingsView: View {
                     .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 CommonPhrasePad(store: store, diameter: diameter, selectedButton: selectedButton, onSelect: selectPosition)
                     .padding(.vertical, 10)
-                let extraKeys = CommonPhrasePanelView.chromecastKeys(in: phraseButtons)
+                let extraKeys = CommonPhrasePanelView.extraKeys(in: phraseButtons)
                 if !extraKeys.isEmpty {
                     CommonPhraseKeyGrid(store: store, buttons: extraKeys, keyDiameter: 44,
                                         selectedButton: selectedButton, onSelect: selectPosition)

@@ -10,14 +10,26 @@ Remote Buddy（遥控搭子）把遥控器变成电脑上的语音输入按钮�
 
 ## 界面预览
 
-![遥控器连接界面](pages/assets/screenshots/connection-zh.png)
+### 遥控器连接
 
-![按键映射界面](pages/assets/screenshots/mapping-zh.png)
+<img src="pages/assets/screenshots/readme-connection.jpg" alt="遥控器连接" width="640">
+
+---
+
+### 输入法集成
+
+<img src="pages/assets/screenshots/readme-integration.jpg" alt="输入法集成" width="640">
+
+---
+
+### 按键映射
+
+<img src="pages/assets/screenshots/readme-mapping.jpg" alt="按键映射" width="640">
 
 ## 能做什么
 
 - 用遥控器麦克风进行语音输入，减少对电脑键盘和内置麦克风的依赖。
-- 把小米遥控器的普通按键映射成快捷键、应用操作或常用语。支持分类筛选动作、单击/双击/长按独立配置与单项恢复默认。常用语内容不随界面语言切换，可自由混写中英文。
+- 把支持型号的普通按键映射成快捷键、应用操作或常用语。支持分类筛选动作、单击/双击/长按独立配置与单项恢复默认。常用语内容不随界面语言切换，可自由混写中英文。
 - 选择语音输入工具，配置按住说话或点按开始／结束的触发方式。
 - 可选的应用集成：在微信、Antigravity、ChatGPT、Claude 和 WorkBuddy 中，优先使用你选中的输入框；没有选中时才定位当前对话输入框；支持分别开关或全部开关。
 - 在一个向导中完成系统权限、麦克风驱动、遥控器连接和输入工具设置。

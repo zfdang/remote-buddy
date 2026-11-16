@@ -89,7 +89,7 @@ def main():
                 optimize_png(source_file, target_file)
 
             # Include all G9N9N media buttons and both connection cards in full.
-            for section, height, cards in [("mapping", 980, "0"), ("connection", 1060, "1")]:
+            for section, height, cards in [("mapping", 980, "0"), ("connection", 860, "1")]:
                 render_settings(bin_path, lang_code, Path(tmp_settings_dir), {
                     "REMOTE_BUDDY_SETTINGS_SCREENSHOT_SECTION": section,
                     "REMOTE_BUDDY_SETTINGS_SCREENSHOT_REMOTE_CARDS": cards,

@@ -199,6 +199,14 @@ enum OnboardingScreenshotRenderer {
             settings: settings,
             initialAudioDevices: screenshotAudioDevices
         )
+        if settings.onboardingControlSource == .chromecastRemote {
+            let profileID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+            settings.selectRemoteProfile(profileID)
+            model.configureRemoteCardsForSettingsScreenshot(
+                profileIDs: [profileID], systemNames: [profileID: "Chromecast Remote"],
+                batteryLevels: [profileID: 64], powerStates: [profileID: .onBattery]
+            )
+        }
         if verifiedPreview { model.isAudioOutputVerified = true }
         let localization = LocalizationStore(
             settings: settings,

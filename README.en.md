@@ -10,14 +10,26 @@ Supports **macOS 14 and later**, on Apple Silicon and Intel Macs. Windows suppor
 
 ## Screenshots
 
-![Remote connection screen](pages/assets/screenshots/connection-en.png)
+### Remote connections
 
-![Button mapping screen](pages/assets/screenshots/mapping-en.png)
+<img src="pages/assets/screenshots/readme-connection.jpg" alt="Remote connections" width="640">
+
+---
+
+### Voice tool integration
+
+<img src="pages/assets/screenshots/readme-integration.jpg" alt="Voice tool integration" width="640">
+
+---
+
+### Button mapping
+
+<img src="pages/assets/screenshots/readme-mapping.jpg" alt="Button mapping" width="640">
 
 ## What can it do?
 
 - Use a remote's microphone for voice input, without reaching for the keyboard.
-- Map Xiaomi remote control buttons to keyboard shortcuts, application actions, or common phrases, with category filtering, independent single/double/long-press actions, and individual trigger reset. Phrase content can mix languages and stays the same when the interface language changes.
+- Map supported remote buttons to keyboard shortcuts, application actions, or common phrases, with category filtering, independent single/double/long-press actions, and individual trigger reset. Phrase content can mix languages and stays the same when the interface language changes.
 - Configure hold-to-talk or press-to-start/stop behavior for your input tool.
 - Optional app integrations preserve your selected editable input in WeChat, Antigravity, ChatGPT, Claude, and WorkBuddy, locating the conversation input only when needed, with individual and bulk switches.
 - Set up permissions, the microphone driver, device connection, and input integration in one guide.

@@ -34,6 +34,8 @@ Supports **macOS 14 and later**, on Apple Silicon and Intel Macs. Windows suppor
 - Optional app integrations preserve your selected editable input in WeChat, Antigravity, ChatGPT, Claude, and WorkBuddy, locating the conversation input only when needed, with individual and bulk switches.
 - Set up permissions, the microphone driver, device connection, and input integration in one guide.
 
+Each newly added remote starts with its model defaults. Saved custom mappings belong to that device; mappings from other devices or before pairing are not copied.
+
 Remote Buddy does not collect usage statistics, save recordings or transcript history, or upload logs. Recognition and text cleanup are handled by your selected input tool, with that tool's own network and privacy settings.
 
 Enabling any app integration makes Remote Buddy send the Fn hold trigger for all foreground apps, requiring Accessibility permission so focus can finish first. Only enabled foreground apps have their focus adjusted. Focusing is optional: if it fails, voice input continues and you can use Command+V to paste the result if needed. Disable all integrations to restore the original trigger behavior. Antigravity integration targets the Agent desktop app, not the separate Antigravity IDE.

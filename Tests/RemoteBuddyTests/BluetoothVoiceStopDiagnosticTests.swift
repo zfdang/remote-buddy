@@ -59,4 +59,42 @@ struct BluetoothVoiceStopDiagnosticTests {
         bridge.stop()
         #expect(logs.count == 1)
     }
+
+    @Test func drainingAnOldStreamDoesNotSetTheNewStreamsStopReason() async {
+        let suite = "voice-stop-overlap-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let delegate = Delegate()
+        let queue = DispatchQueue(label: "voice-stop-overlap")
+        var logs: [String] = []
+        let bridge = BluetoothRemoteBridge(settings: AppSettings(defaults: defaults), delegate: delegate,
+            allowsT1Remote: true, audioPipeline: BluetoothAudioPipeline(queue: queue),
+            voiceDiagnosticLogger: { logs.append($0) })
+        defer { bridge.stop() }
+        bridge.testingControlWriteHandler = { _ in true }
+        bridge.simulateT1ReadyStateForTesting()
+
+        // Hold the old stream's completion until a new stream has already begun.
+        queue.suspend()
+        bridge.simulateControlPacketForTesting(Data([0x04, 0x03, 0x02, 0x01]))
+        bridge.simulateLocalStopStreamingForTesting()
+        #expect(bridge.lastVoiceStopReason == .localStop)
+        bridge.simulateControlPacketForTesting(Data([0x04, 0x03, 0x02, 0x02]))
+        #expect(bridge.lastVoiceStopReason == nil)
+        queue.resume()
+        await withCheckedContinuation { continuation in
+            queue.async { DispatchQueue.main.async { continuation.resume() } }
+        }
+
+        #expect(bridge.lastVoiceStopReason == nil)
+        #expect(logs.count == 1)
+        bridge.simulateControlPacketForTesting(Data([0x00]))
+        await withCheckedContinuation { continuation in
+            queue.async { DispatchQueue.main.async { continuation.resume() } }
+        }
+        #expect(bridge.lastVoiceStopReason == .remoteNotification)
+        #expect(logs.count == 2)
+        #expect(logs[0].contains("session=1 reason=local_stop"))
+        #expect(logs[1].contains("session=2 reason=remote_notification"))
+    }
 }

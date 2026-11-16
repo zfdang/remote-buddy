@@ -1620,7 +1620,6 @@ final class BluetoothRemoteBridge: NSObject {
             },
             onStop: { [weak self] in
                 guard let self else { return }
-                self.lastVoiceStopReason = reason
                 self.voiceStartNotified = false
                 self.delegate?.bluetoothBridgeDidStopVoice(self)
             }

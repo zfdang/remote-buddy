@@ -242,7 +242,6 @@ enum OnboardingScreenshotRenderer {
                 } else {
                     OnboardingView(
                         model: model,
-                        completeRuntimeReadyOverride: true,
                         allowsInputSourceSwitching: false,
                         allowsHardwareMonitoring: false,
                         systemFunctionKeyAvailableOverride: systemFunctionKeyAvailable,

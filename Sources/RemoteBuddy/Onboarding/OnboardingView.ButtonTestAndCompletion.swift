@@ -202,13 +202,13 @@ extension OnboardingView {
     var completeContent: some View {
         let summary = completionSummary
         return VStack(alignment: .leading, spacing: 18) {
-            Image(systemName: canContinue ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+            Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 46))
-                .foregroundStyle(canContinue ? Color.green : Color.orange)
-            onboardingTitle(canContinue ? completionTitleKey : "onboarding.complete.runtime_changed")
-            Text(localization.text(canContinue ? "onboarding.summary.detail" : "onboarding.complete.runtime_changed_detail"))
+                .foregroundStyle(Color.green)
+            onboardingTitle(completionTitleKey)
+            Text(localization.text("onboarding.summary.detail"))
                 .font(.system(size: 14))
-                .foregroundStyle(canContinue ? Color.secondary : Color.orange)
+                .foregroundStyle(Color.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             VStack(alignment: .leading, spacing: 12) {
                 if let name = summary.remoteName {

@@ -31,10 +31,6 @@ extension OnboardingView {
     }
 
     var canContinue: Bool {
-        if settings.onboardingStep == .complete,
-           let completeRuntimeReadyOverride {
-            return completeRuntimeReadyOverride
-        }
         let policyAllowsContinue = OnboardingFlowPolicy.canContinue(
             from: settings.onboardingStep,
             voiceTool: settings.onboardingVoiceTool,
@@ -142,11 +138,6 @@ extension OnboardingView {
     }
 
     var failureReason: FirstUseFailureReason? {
-        if settings.onboardingStep == .complete,
-           let completeRuntimeReadyOverride,
-           completeRuntimeReadyOverride {
-            return nil
-        }
         return diagnosticContext.failureReason
     }
 

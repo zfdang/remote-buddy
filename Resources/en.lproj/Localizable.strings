@@ -695,8 +695,6 @@
 "onboarding.secure_input.recheck" = "Check again";
 "onboarding.secure_input.help" = "If it still does not work, lock your Mac, unlock it with your password, and check again.";
 "onboarding.complete.title" = "Remote Buddy is ready";
-"onboarding.complete.runtime_changed" = "Your current setup has changed";
-"onboarding.complete.runtime_changed_detail" = "Go back and check permissions, your connection, or the audio output device. Continue after resolving the issue.";
 "onboarding.illustration.tagline" = "Speak wirelessly. Control instantly.";
 "onboarding.complete.illustration" = "Start using Remote Buddy";
 
@@ -796,9 +794,6 @@
 "onboarding.recovery.controls.not_confirmed.title" = "Try three different control buttons";
 "onboarding.recovery.controls.not_confirmed.detail" = "Reconnect if needed, then press three different control buttons.";
 "onboarding.recovery.controls.not_confirmed.action" = "Retry Button Detection";
-"onboarding.recovery.complete.runtime_regressed.title" = "One setup item changed";
-"onboarding.recovery.complete.runtime_regressed.detail" = "Return directly to the affected setup page and restore it before opening Remote Buddy.";
-"onboarding.recovery.complete.runtime_regressed.action" = "Fix the Affected Item";
 "about.preferences.restart_onboarding" = "Run Setup Guide Again";
 "about.preferences.restart_onboarding_help" = "Recheck permissions, your remote, audio output device, and voice input without clearing existing connections, button mappings, or other settings.";
 "about.preferences.restart_onboarding_action" = "Run Again";

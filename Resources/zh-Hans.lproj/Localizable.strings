@@ -692,8 +692,6 @@
 "onboarding.secure_input.recheck" = "重新检测";
 "onboarding.secure_input.help" = "如果仍未恢复，请锁定 Mac 后使用密码重新解锁，再重新检测。";
 "onboarding.complete.title" = "遥控搭子已经准备好了";
-"onboarding.complete.runtime_changed" = "当前环境状态发生了变化";
-"onboarding.complete.runtime_changed_detail" = "请返回检查权限、遥控器连接或语音输出设备；恢复后即可继续。";
 "onboarding.illustration.tagline" = "无线说话，也能随手控制";
 "onboarding.complete.illustration" = "开始使用遥控搭子";
 
@@ -793,9 +791,6 @@
 "onboarding.recovery.controls.not_confirmed.title" = "请试三个不同的普通按键";
 "onboarding.recovery.controls.not_confirmed.detail" = "如有需要先重新连接，然后按三个不同的普通按键。";
 "onboarding.recovery.controls.not_confirmed.action" = "重新检测按键";
-"onboarding.recovery.complete.runtime_regressed.title" = "有一项设置发生了变化";
-"onboarding.recovery.complete.runtime_regressed.detail" = "直接返回受影响的设置页，恢复后再打开遥控搭子。";
-"onboarding.recovery.complete.runtime_regressed.action" = "修复受影响项目";
 "about.preferences.restart_onboarding" = "重新运行设置向导";
 "about.preferences.restart_onboarding_help" = "重新检查权限、遥控器、语音输出设备和语音输入；不会清除现有连接、按键映射或其他设置。";
 "about.preferences.restart_onboarding_action" = "重新运行";

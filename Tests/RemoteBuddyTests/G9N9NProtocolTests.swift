@@ -30,7 +30,14 @@ struct G9N9NProtocolTests {
         #expect(active.isEmpty)
         #expect(!actions.contains(.power))
 
-        // A different device may use payload-only reports. Framing is reset.
+        // First-frame shortened zero release from a real IOHID callback must never trigger Power.
+        monitor.disconnectSimulatedDevice()
+        monitor.connectSimulatedDevice(fingerprint: "first-frame-short-release-device", profileID: profileID)
+        monitor.handleSimulatedGoogleReport(reportID: 1, data: Data([1, 0]), descriptor: descriptor, source: "device")
+        #expect(active.isEmpty)
+        #expect(!actions.contains(.power))
+
+        // A different simulated payload-only device may omit report IDs. Framing is reset.
         monitor.disconnectSimulatedDevice()
         monitor.connectSimulatedDevice(fingerprint: "payload-only-google", profileID: profileID)
         monitor.handleSimulatedGoogleReport(reportID: 1, data: Data([1, 0]), descriptor: descriptor)

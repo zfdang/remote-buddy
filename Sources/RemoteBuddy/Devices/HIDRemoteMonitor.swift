@@ -718,7 +718,7 @@ final class HIDRemoteMonitor {
         onDeviceConnected?(profileID, fingerprint)
     }
 
-    func handleSimulatedGoogleReport(reportID: UInt32, data: Data, descriptor: Data? = nil) {
+    func handleSimulatedGoogleReport(reportID: UInt32, data: Data, descriptor: Data? = nil, source: String = "simulated") {
         let previous = currentReportIsGoogle
         let previousT1 = currentReportIsT1
         let previousDescriptor = currentReportDescriptor
@@ -730,7 +730,7 @@ final class HIDRemoteMonitor {
         currentReportIsGoogle = true
         currentReportIsT1 = false
         currentReportDescriptor = descriptor
-        handleSimulatedReport(reportID: reportID, data: data)
+        handleSimulatedReport(reportID: reportID, data: data, source: source)
     }
 
     func handleSimulatedT1Report(reportID: UInt32, data: Data) {
@@ -745,17 +745,17 @@ final class HIDRemoteMonitor {
         handleSimulatedReport(reportID: reportID, data: data)
     }
 
-    func handleSimulatedReport(reportID: UInt32, data: Data) {
+    func handleSimulatedReport(reportID: UInt32, data: Data, source: String = "simulated") {
         guard settings.customMappingEnabled || backOnlyMode else {
-            diagnosticLogger("HID REPORT rejected reason=mapping_disabled source=simulated")
+            diagnosticLogger("HID REPORT rejected reason=mapping_disabled source=\(source)")
             return
         }
         guard runtimePermissionsAreValid() else {
-            diagnosticLogger("HID REPORT rejected reason=runtime_permission_revoked source=simulated")
+            diagnosticLogger("HID REPORT rejected reason=runtime_permission_revoked source=\(source)")
             releaseForRevokedPermissions()
             return
         }
-        parseAndProcess(reportID: reportID, data: data, source: "simulated")
+        parseAndProcess(reportID: reportID, data: data, source: source)
     }
 
     func handleSimulatedBackOnlyReport(reportID: UInt32, data: Data) {
@@ -801,11 +801,11 @@ final class HIDRemoteMonitor {
                 return nil
             }
         }
-        // Once framing is known, a shortened ID + zero release must not be
-        // mistaken for payload-only index 1 (Power).
+        // On IOHID device callbacks ("device"), report-ID-prefixed descriptors always
+        // carry the ID byte, so a shortened [1, 0] release is never payload-only Power.
         let indexedGoogleReport = currentReportIsGoogle && reportID == 1 &&
             G9N9NProtocol.usesIndexedConsumerLayout(currentReportDescriptor)
-        let googleData = indexedGoogleReport && googleIndexedReportsIncludeID && data == Data([1, 0])
+        let googleData = indexedGoogleReport && (source == "device" || googleIndexedReportsIncludeID) && data == Data([1, 0])
             ? Data([1, 0, 0]) : data
         let decoded = currentReportIsGoogle
             ? G9N9NProtocol.usages(reportID: reportID, data: googleData, descriptor: currentReportDescriptor)

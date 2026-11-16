@@ -5,6 +5,29 @@ import Testing
 @Suite("Independent remote defaults")
 @MainActor
 struct RemoteMappingIndependenceTests {
+    @Test func googleMediaDefaultsPersistCustomizeAndResetIndependently() throws {
+        let suite = "google-media-defaults-" + UUID().uuidString
+        let values = try #require(UserDefaults(suiteName: suite))
+        defer { values.removePersistentDomain(forName: suite) }
+        let settings = AppSettings(defaults: values)
+        let google = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+        settings.selectRemoteProfile(google)
+        #expect(settings.action(for: .youtube) == .previousCommandLeft)
+        #expect(settings.action(for: .netflix) == .nextCommandRight)
+        #expect(settings.action(for: .input) == .playPause)
+        settings.setAction(.showDesktop, for: .youtube)
+        let restored = AppSettings(defaults: values)
+        restored.selectRemoteProfile(google)
+        #expect(restored.action(for: .youtube) == .showDesktop)
+        let second = restored.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+        #expect(restored.action(for: .youtube, profileID: second) == .previousCommandLeft)
+        restored.resetBindings()
+        #expect(restored.action(for: .youtube) == .previousCommandLeft)
+        #expect(restored.action(for: .netflix) == .nextCommandRight)
+        #expect(restored.action(for: .input) == .playPause)
+        #expect(AppSettings.defaultMappings(for: .rc003).parsedButtonBindings[.youtube] == nil)
+    }
+
     @Test func newDevicesUseModelDefaultsAndKeepCustomizationsSeparate() throws {
         let suite = "independent-remote-defaults-" + UUID().uuidString
         let values = try #require(UserDefaults(suiteName: suite))

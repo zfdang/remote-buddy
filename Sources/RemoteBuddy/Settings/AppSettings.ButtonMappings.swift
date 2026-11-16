@@ -612,8 +612,14 @@ extension AppSettings {
         case .appleSiriRemoteA2540, .appleSiriRemoteA2854:
             buttons = []
         }
+        var bindings = Dictionary(uniqueKeysWithValues: buttons.map { ($0, defaultBindings[$0] ?? .disabled) })
+        if model == .chromecastVoiceRemote {
+            bindings[.youtube] = .previousCommandLeft
+            bindings[.netflix] = .nextCommandRight
+            bindings[.input] = .playPause
+        }
         return RemoteDeviceMappings(
-            buttonBindings: Dictionary(uniqueKeysWithValues: buttons.map { ($0, defaultBindings[$0] ?? .disabled) }),
+            buttonBindings: bindings,
             buttonShortcuts: [:],
             secondaryButtonBindings: defaultSecondaryBindings.filter { buttons.contains($0.key) }
         )

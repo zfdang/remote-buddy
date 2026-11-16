@@ -133,15 +133,17 @@ extension OnboardingView {
                     Text(localization.text("onboarding.controls.chromecast.compat.limit_others"))
                         .foregroundStyle(.secondary)
                 }
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
-                    Text(localization.text("onboarding.chromecast.replace_hardware_advice"))
-                        .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                        Text(localization.text("onboarding.chromecast.replace_hardware_advice"))
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                     Link(localization.text("onboarding.chromecast.replace_hardware_link"),
                          destination: AppLinks.devices(for: localization.locale))
                 }
-                .fixedSize(horizontal: false, vertical: true)
             }
             .font(.system(size: 12))
 

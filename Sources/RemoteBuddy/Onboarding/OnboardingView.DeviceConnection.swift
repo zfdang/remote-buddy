@@ -245,7 +245,7 @@ extension OnboardingView {
     private var chromecastCompatibilityOptInCard: some View {
         let highlighted = chromecastTwoKeyDetectedWithoutSingleKey && !isChromecastTwoKeyCompatible
         let tint: Color = highlighted ? .orange : (isChromecastTwoKeyCompatible ? .blue : .secondary)
-        return VStack(alignment: .leading, spacing: 10) {
+        return VStack(alignment: .leading, spacing: 8) {
             Text(localization.text(
                 highlighted
                     ? "onboarding.remote.chromecast.compat_prompt_highlighted"
@@ -271,19 +271,21 @@ extension OnboardingView {
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
-                    Text(localization.text("onboarding.chromecast.replace_hardware_advice"))
-                        .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(alignment: .top, spacing: 6) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                        Text(localization.text("onboarding.chromecast.replace_hardware_advice"))
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                     Link(localization.text("onboarding.chromecast.replace_hardware_link"),
                          destination: AppLinks.devices(for: localization.locale))
                 }
                 .font(.system(size: 12))
-                .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(12)
+        .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             highlighted ? Color.orange.opacity(0.08) : Color.primary.opacity(0.035),
@@ -342,7 +344,7 @@ extension OnboardingView {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(12)
+        .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.orange.opacity(0.07), in: RoundedRectangle(cornerRadius: 12))
         .overlay {

@@ -51,6 +51,9 @@ extension SettingsView {
         return VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .center, spacing: 14) {
                 PageHeader(title: localization.text("button_mapping.page.title"))
+                if isSelectedChromecastPartialSupport {
+                    partialSupportBadge
+                }
                 mappingHeaderToggle
             }
             Text(localization.text(subtitleKey))

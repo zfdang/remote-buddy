@@ -1248,6 +1248,8 @@
 "button_mapping.google.partial.enter_rule" = "2. Arrow + OK (e.g. Up + OK): sends Return/Enter once when pressed together (requires mapping enabled above)";
 "button_mapping.google.partial.unsupported_rule" = "3. Modifying any button mapping, individual buttons, double-click/long-press, and phrase assignments are disabled in this mode";
 "button_mapping.google.partial.setup_only_hint" = "Compatibility mode is locked during initial or Add Device setup and is read-only here. If you replace the hardware unit, remove it in Connection and run Add Device again.";
+"remote.device.partial_support_badge" = "Partial Support";
+"connection.g9n9n.partial_support_notice" = "Partial Support (two-key compatibility): Voice works; only Arrow + OK emits Return/Enter and button mappings cannot be modified. Remove and run Add Device if replaced.";
 "button_mapping.voice.settings_button" = "Open Voice Integration";
 "common_phrases.g9n9n_partial_notice" = "The selected G9N9N is in Partial Support (two-key compatibility) mode, which only supports Voice and Arrow + OK for Enter; single-key common phrases are unavailable.";
 "onboarding.chromecast.replace_hardware_advice" = "Partial Support mode omits most button features and is intended only as a fallback. Replace with a verified macOS-compatible remote unit for full support.";

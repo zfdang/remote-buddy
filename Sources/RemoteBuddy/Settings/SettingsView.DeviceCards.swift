@@ -103,6 +103,9 @@ extension SettingsView {
                     }
                     .font(.system(size: 12))
                     .lineLimit(1)
+                    if profile.effectiveG9N9NInputMode == .twoKeyCompatibility {
+                        partialSupportBadge
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .center)
                 .contentShape(Rectangle())
@@ -130,6 +133,19 @@ extension SettingsView {
                 .stroke(selected ? Color.accentColor.opacity(0.65) : Color.secondary.opacity(0.18))
                 .allowsHitTesting(false)
         }
+    }
+
+    var partialSupportBadge: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "exclamationmark.circle.fill")
+                .foregroundStyle(.orange)
+            Text(localization.text("remote.device.partial_support_badge"))
+                .foregroundStyle(.secondary)
+        }
+        .font(.system(size: 11, weight: .medium))
+        .padding(.horizontal, 7)
+        .padding(.vertical, 2)
+        .background(Color.orange.opacity(0.12), in: Capsule())
     }
 
     private func remoteConnectionLabel(connected: Bool) -> some View {

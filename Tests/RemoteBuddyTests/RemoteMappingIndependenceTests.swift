@@ -5,6 +5,35 @@ import Testing
 @Suite("Independent remote defaults")
 @MainActor
 struct RemoteMappingIndependenceTests {
+    @Test func backgroundProfilesResolveMissingMediaDefaultsWithoutReplacingSavedActions() throws {
+        let suite = "background-google-defaults-" + UUID().uuidString
+        let values = try #require(UserDefaults(suiteName: suite))
+        defer { values.removePersistentDomain(forName: suite) }
+        let settings = AppSettings(defaults: values)
+        let xiaomi = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
+        let google = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+        settings.selectRemoteProfile(xiaomi)
+        let index = try #require(settings.remoteDeviceProfiles.firstIndex { $0.id == google })
+        for button in [RemoteButton.youtube, .netflix, .input] {
+            settings.remoteDeviceProfiles[index].mappings.buttonBindings.removeValue(forKey: button.rawValue)
+        }
+        let restored = AppSettings(defaults: values)
+        #expect(restored.selectedRemoteProfileID == xiaomi)
+        #expect(restored.action(for: .youtube, profileID: google) == .previousCommandLeft)
+        #expect(restored.action(for: .netflix, profileID: google) == .nextCommandRight)
+        #expect(restored.action(for: .input, profileID: google) == .playPause)
+        restored.setBaseBinding(.init(action: .escape, shortcut: nil), for: .youtube,
+            trigger: .singleClick, profileID: google)
+        restored.setBaseBinding(.disabled, for: .input, trigger: .singleClick, profileID: google)
+        let reloaded = AppSettings(defaults: values)
+        #expect(reloaded.action(for: .youtube, profileID: google) == .escape)
+        #expect(reloaded.action(for: .input, profileID: google) == .disabled)
+        reloaded.selectRemoteProfile(google)
+        #expect(reloaded.action(for: .netflix) == .nextCommandRight)
+        #expect(reloaded.action(for: .youtube) == .escape)
+        #expect(reloaded.action(for: .input) == .disabled)
+    }
+
     @Test(arguments: [true, false])
     func identifyingAnUnknownGoogleRemoteFillsDefaultsAndPreservesEdits(selected: Bool) throws {
         let suite = "identified-google-defaults-" + UUID().uuidString

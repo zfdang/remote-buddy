@@ -283,7 +283,9 @@ extension AppSettings {
         if let profileID,
            profileID != selectedRemoteProfileID,
            let profile = remoteDeviceProfiles.first(where: { $0.id == profileID }) {
-            let bindings = profile.mappings.parsedButtonBindings
+            let bindings = Self.defaultMappings(for: profile.model).parsedButtonBindings.merging(
+                profile.mappings.parsedButtonBindings
+            ) { _, saved in saved }
             let shortcuts = profile.mappings.parsedButtonShortcuts
             if trigger == .singleClick {
                 return ConfiguredButtonAction(

@@ -271,18 +271,6 @@ extension OnboardingView {
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(alignment: .top, spacing: 6) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.orange)
-                        Text(localization.text("onboarding.chromecast.replace_hardware_advice"))
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    Link(localization.text("onboarding.chromecast.replace_hardware_link"),
-                         destination: AppLinks.devices(for: localization.locale))
-                }
-                .font(.system(size: 12))
             }
         }
         .padding(10)

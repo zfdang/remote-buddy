@@ -154,6 +154,37 @@ struct CommonPhraseStorageTests {
         }
     }
 
+    @Test func reopeningSavedArchiveWithOnlyBaseBindingsBackfillsNewlyIntroducedKeys() throws {
+        let name = "phrase-upgrade-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let oldSaved = CommonPhraseArchive(
+            entries: [phrase("builtin-one"), phrase("builtin-two", text: "第二项")],
+            bindings: ["ok": "builtin-two"],
+            builtInIDs: ["builtin-one", "builtin-two"]
+        )
+        defaults.set(try JSONEncoder().encode(oldSaved), forKey: "commonPhrases.archive.v2")
+        let data = try JSONEncoder().encode(bundled)
+        let upgraded = CommonPhraseStore(defaults: defaults, builtInData: data)
+        // Existing user assignment on .ok stays intact, while newly added .home is backfilled.
+        #expect(upgraded.phrase(for: .ok)?.id == "builtin-two")
+        #expect(upgraded.phrase(for: .home)?.id == "builtin-two")
+
+        // Deleting a phrase after upgrade removes its binding and keeps it unassigned on reload.
+        try upgraded.delete("builtin-two")
+        let reloaded = CommonPhraseStore(defaults: defaults, builtInData: data)
+        #expect(reloaded.phrase(for: .home) == nil)
+        #expect(reloaded.phrase(for: .ok) == nil)
+    }
+
+    @Test func switchingRemoteModelClearsUnsupportedEditorSelection() {
+        #expect(CommonPhraseSettingsView.reconciledSelection(.youtube, for: .chromecastVoiceRemote) == .youtube)
+        #expect(CommonPhraseSettingsView.reconciledSelection(.youtube, for: .rc003) == nil)
+        #expect(CommonPhraseSettingsView.reconciledSelection(.home, for: .rc003) == .home)
+        #expect(CommonPhraseSettingsView.reconciledSelection(.volumeUp, for: .t1Remote) == nil)
+        #expect(CommonPhraseSettingsView.reconciledSelection(.ok, for: nil) == .ok)
+    }
+
     @Test func savedChromecastAssignmentIsNotOverwritten() throws {
         try run { store, defaults, data in
             try store.assign(.home, to: "builtin-one")
@@ -192,10 +223,10 @@ struct CommonPhraseStorageTests {
             == [.ok, .left, .up, .right, .down, .mute, .home, .menu])
         #expect(CommonPhraseStore.buttons(for: .appleSiriRemoteA2854) == CommonPhraseStore.baseButtons)
         #expect(CommonPhraseStore.buttons(for: nil) == CommonPhraseStore.baseButtons)
-        #expect(CommonPhrasePanelView.size(for: nil).height == 360)
-        #expect(CommonPhrasePanelView.size(for: .t1Remote).height == 550)
-        #expect(CommonPhrasePanelView.size(for: .rc003).height == 640)
-        #expect(CommonPhrasePanelView.size(for: .chromecastVoiceRemote).height == 640)
+        #expect(CommonPhrasePanelView.size(forRows: CommonPhraseStore.extraButtonRows(for: nil)).height == 360)
+        #expect(CommonPhrasePanelView.size(forRows: CommonPhraseStore.extraButtonRows(for: .t1Remote)).height == 550)
+        #expect(CommonPhrasePanelView.size(forRows: CommonPhraseStore.extraButtonRows(for: .rc003)).height == 640)
+        #expect(CommonPhrasePanelView.size(forRows: CommonPhraseStore.extraButtonRows(for: .chromecastVoiceRemote)).height == 640)
     }
 
     @Test func allPhraseButtonLocalizationKeysResolveInBothLanguages() throws {
@@ -302,6 +333,38 @@ struct CommonPhraseVoiceKeyTests {
             entries: [CommonPhrase(id: "builtin-one", text: "好的", label: "好的")], bindings: [:]))
         let controller = CommonPhraseController(store: CommonPhraseStore(defaults: defaults, builtInData: data))
         #expect(!controller.closeForVoiceKey(source: "hid:any"))
+    }
+
+    @Test(arguments: [RemoteModel.chromecastVoiceRemote, .rc003, .t1Remote])
+    func openPanelClosesOnMatchingBluetoothVoiceKeyAndRejectsForeignSource(model: RemoteModel) throws {
+        let name = "phrase-voice-open-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let settings = AppSettings(defaults: defaults)
+        let bluetoothID = UUID()
+        let profileID = settings.registerBluetoothRemote(identifier: bluetoothID, model: model)
+        let resolvedProfileID = try #require(settings.profileID(forBluetoothIdentifier: bluetoothID))
+        #expect(resolvedProfileID == profileID)
+        let profile = try #require(settings.remoteDeviceProfiles.first { $0.id == resolvedProfileID })
+
+        let data = try JSONEncoder().encode(CommonPhraseArchive(
+            entries: [CommonPhrase(id: "builtin-one", text: "好的", label: "好的")], bindings: [:]))
+        let controller = CommonPhraseController(
+            store: CommonPhraseStore(defaults: defaults, builtInData: data),
+            frontmostProcessID: { 12345 }
+        )
+        defer { controller.close(reason: "test_cleanup") }
+        let hidSource = BridgeAppModel.commonPhraseHIDSource(profileID)
+        #expect(controller.open(source: hidSource, model: model, localization: LocalizationStore(settings: settings)))
+        #expect(controller.isVisible)
+        #expect(!controller.closeForVoiceKey(source: "hid:\(UUID().uuidString)"))
+        #expect(controller.isVisible)
+
+        let voiceSource = try #require(BridgeAppModel.commonPhraseVoiceKeySource(
+            profile: profile, longRecordingRequested: false))
+        #expect(voiceSource == hidSource)
+        #expect(controller.closeForVoiceKey(source: voiceSource))
+        #expect(!controller.isVisible)
     }
 }
 

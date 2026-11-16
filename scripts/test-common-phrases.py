@@ -27,6 +27,26 @@ class PhraseTests(unittest.TestCase):
         self.assertEqual(result['bindings']['input'], 'builtin-010')
         self.assertNotIn('power', result['bindings'])
         self.assertNotIn('back', result['bindings'])
+    def test_swift_store_buttons_match_generator_bindings(self):
+        swift = (root / 'Sources/RemoteBuddy/CommonPhrases/CommonPhraseStore.swift').read_text()
+        case_to_raw = {'volumeUp': 'volume_up', 'volumeDown': 'volume_down'}
+        import re
+        def extract_buttons(name):
+            match = re.search(rf'static let {name}\b[^=]*=\s*(\[(?:[^\[\]]|\[[^\[\]]*\])*\])', swift, re.S)
+            self.assertIsNotNone(match, f'Missing {name}')
+            tokens = re.findall(r'\.([A-Za-z0-9_]+)', match.group(1))
+            return [case_to_raw.get(token, token) for token in tokens if token != 'nil']
+        base = set(extract_buttons('baseButtons'))
+        swift_groups = [
+            base | set(extract_buttons('chromecastExtraRows')),
+            base | set(extract_buttons('xiaomiExtraRows')),
+            base | set(extract_buttons('t1ExtraRows')),
+        ]
+        all_swift = set().union(*swift_groups)
+        result = module.generate(source)
+        self.assertEqual(all_swift, set(result['bindings']))
+        for group in swift_groups:
+            self.assertEqual(len({result['bindings'][k] for k in group}), len(group))
     def test_entries_keep_only_original_chinese_content_with_neutral_fields(self):
         result = module.generate(source)
         self.assertEqual(result['schemaVersion'], 2)

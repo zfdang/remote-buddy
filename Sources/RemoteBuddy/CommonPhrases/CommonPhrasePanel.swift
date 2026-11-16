@@ -194,9 +194,6 @@ final class CommonPhraseController: ObservableObject {
 }
 
 struct CommonPhrasePanelView: View {
-    static func size(for model: RemoteModel?) -> CGSize {
-        size(forRows: CommonPhraseStore.extraButtonRows(for: model))
-    }
     static func size(forRows rows: [[RemoteButton?]]) -> CGSize {
         guard !rows.isEmpty else { return CGSize(width: 300, height: 360) }
         let height: CGFloat = switch rows.count {

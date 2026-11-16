@@ -86,6 +86,9 @@ struct CommonPhraseSettingsView: View {
             importing = false
             AppLogger.shared.write("COMMON_PHRASES EDITOR phase=closed result=hidden")
         }
+        .onChange(of: remoteModel) { _, newModel in
+            selectedButton = Self.reconciledSelection(selectedButton, for: newModel)
+        }
     }
 
     private func assignmentColumn(diameter: CGFloat) -> some View {
@@ -301,18 +304,32 @@ struct CommonPhraseSettingsView: View {
             .controlSize(.large).fixedSize().disabled(!store.isAvailable)
     }
 
+    static func reconciledSelection(_ selectedButton: RemoteButton?, for model: RemoteModel?) -> RemoteButton? {
+        guard let selectedButton, CommonPhraseStore.buttons(for: model).contains(selectedButton) else {
+            return nil
+        }
+        return selectedButton
+    }
+
     private func selectPosition(_ button: RemoteButton) {
+        guard let validButton = Self.reconciledSelection(button, for: remoteModel) else {
+            selectedButton = nil
+            return
+        }
         selectionOperation &+= 1
-        AppLogger.shared.write("COMMON_PHRASES POSITION operation_id=\(selectionOperation) phase=requested button=\(button.rawValue)")
-        selectedButton = button
-        select(store.phrase(for: button))
-        AppLogger.shared.write("COMMON_PHRASES POSITION operation_id=\(selectionOperation) phase=completed result=selected button=\(button.rawValue)")
+        AppLogger.shared.write("COMMON_PHRASES POSITION operation_id=\(selectionOperation) phase=requested button=\(validButton.rawValue)")
+        selectedButton = validButton
+        select(store.phrase(for: validButton))
+        AppLogger.shared.write("COMMON_PHRASES POSITION operation_id=\(selectionOperation) phase=completed result=selected button=\(validButton.rawValue)")
     }
 
     private func choosePhrase(_ phrase: CommonPhrase) {
         select(phrase)
-        guard let selectedButton else { return }
-        perform { try store.assign(selectedButton, to: phrase.id) }
+        guard let validButton = Self.reconciledSelection(selectedButton, for: remoteModel) else {
+            selectedButton = nil
+            return
+        }
+        perform { try store.assign(validButton, to: phrase.id) }
     }
 
     private func select(_ phrase: CommonPhrase?) {

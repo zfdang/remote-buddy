@@ -200,13 +200,21 @@ struct CommonPhraseClipboardTests {
         #expect(!CommonPhraseClipboardPaste.permitsPasteShortcut(flags: effective))
     }
 
-    @Test func externalKeyboardFnWithoutNavigationDecorationIsNeverRemoved() {
-        let flags = KeyboardHardwareModifierPolicy.normalized(.maskSecondaryFn,
+    @Test func heldFnWithCombinedOrKeyStateEvidenceIsNeverRemoved() {
+        // On macOS, combinedSessionState is a superset of non-suppressed HID events.
+        // Real external-keyboard Fn acceptance remains hardware-pending.
+        let combinedOnly = KeyboardHardwareModifierPolicy.normalized(.maskSecondaryFn,
             fnKeyDown: false, combinedFlags: .maskSecondaryFn, combinedFnKeyDown: false)
+        let hidKeyState = KeyboardHardwareModifierPolicy.normalized(.maskSecondaryFn,
+            fnKeyDown: true, combinedFlags: [], combinedFnKeyDown: false)
+        let combinedKeyState = KeyboardHardwareModifierPolicy.normalized(.maskSecondaryFn,
+            fnKeyDown: false, combinedFlags: [], combinedFnKeyDown: true)
+        for flags in [combinedOnly, hidKeyState, combinedKeyState] {
+            #expect(flags.contains(.maskSecondaryFn))
+            #expect(!CommonPhraseClipboardPaste.permitsPasteShortcut(flags: flags))
+        }
         #expect(KeyboardHardwareModifierPolicy.normalized([], fnKeyDown: true,
             combinedFlags: [], combinedFnKeyDown: false).contains(.maskSecondaryFn))
-        #expect(flags.contains(.maskSecondaryFn))
-        #expect(!CommonPhraseClipboardPaste.permitsPasteShortcut(flags: flags))
     }
 
     @Test func staleHIDFnAfterSuppressedHomeKeyDoesNotBlockPaste() {

@@ -27,6 +27,7 @@ struct CommonPhraseArchive: Codable, Equatable {
     var entries: [CommonPhrase]
     var bindings: [String: String]
     var builtInIDs: [String]?
+    var builtInBindingKeys: [String]?
 
     init(
         schemaVersion: Int = 2,
@@ -34,7 +35,8 @@ struct CommonPhraseArchive: Codable, Equatable {
         github: String? = nil,
         entries: [CommonPhrase],
         bindings: [String: String],
-        builtInIDs: [String]? = nil
+        builtInIDs: [String]? = nil,
+        builtInBindingKeys: [String]? = nil
     ) {
         self.schemaVersion = schemaVersion
         self.website = website
@@ -42,6 +44,7 @@ struct CommonPhraseArchive: Codable, Equatable {
         self.entries = entries
         self.bindings = bindings
         self.builtInIDs = builtInIDs
+        self.builtInBindingKeys = builtInBindingKeys
     }
 
     func validate() throws {
@@ -100,6 +103,7 @@ final class CommonPhraseStore: ObservableObject {
     @Published private(set) var loadFailed = false
     private let defaults: UserDefaults
     private var builtInIDs: [String] = []
+    private var builtInBindingKeys: [String] = []
     private var builtInEntries: [CommonPhrase] = []
     private var operation: UInt64 = 0
 
@@ -115,19 +119,30 @@ final class CommonPhraseStore: ObservableObject {
             }
             var candidate = try JSONDecoder().decode(CommonPhraseArchive.self, from: data)
             try candidate.validate()
+            let builtInBindings = candidate.bindings
             let builtIns = candidate.entries
             builtInEntries = builtIns
             builtInIDs = builtIns.map(\.id)
+            builtInBindingKeys = Array(builtInBindings.keys).sorted()
             if let saved = defaults.data(forKey: Self.defaultsKey) {
                 do {
                     var savedCandidate = try JSONDecoder().decode(CommonPhraseArchive.self, from: saved)
                     try savedCandidate.validate()
                     let known = Set(savedCandidate.builtInIDs ?? savedCandidate.entries.filter { $0.id.hasPrefix("builtin-") }.map(\.id))
+                    let knownBindingKeys = Set(savedCandidate.builtInBindingKeys ?? Array(savedCandidate.bindings.keys))
                     savedCandidate.entries = savedCandidate.entries.compactMap { phrase in
                         phrase.id.hasPrefix("builtin-") ? builtIns.first { $0.id == phrase.id } : phrase
                     }
                     savedCandidate.entries += builtIns.filter { !known.contains($0.id) }
                     savedCandidate.bindings = savedCandidate.bindings.filter { _, id in savedCandidate.entries.contains { $0.id == id } }
+                    // Backfill default bindings only for keys newly added to the bundle
+                    // that were neither previously offered nor targeting a deleted phrase.
+                    for (key, defaultID) in builtInBindings
+                    where !knownBindingKeys.contains(key) && savedCandidate.bindings[key] == nil {
+                        if savedCandidate.entries.contains(where: { $0.id == defaultID }) {
+                            savedCandidate.bindings[key] = defaultID
+                        }
+                    }
                     try savedCandidate.validate()
                     candidate = savedCandidate
                 } catch {
@@ -137,6 +152,7 @@ final class CommonPhraseStore: ObservableObject {
                 }
             }
             candidate.builtInIDs = builtInIDs
+            candidate.builtInBindingKeys = builtInBindingKeys
             try candidate.validate()
             archive = candidate
             isAvailable = true
@@ -243,6 +259,7 @@ final class CommonPhraseStore: ObservableObject {
         do {
             var candidate = try candidate()
             candidate.builtInIDs = builtInIDs
+            candidate.builtInBindingKeys = builtInBindingKeys
             try candidate.validate()
             let data = try JSONEncoder().encode(candidate)
             defaults.set(data, forKey: Self.defaultsKey)

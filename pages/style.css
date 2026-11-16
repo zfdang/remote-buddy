@@ -20,3 +20,10 @@
 
 /* Device section links stay visible and wrap on smaller screens. */
 .device-nav{gap:24px}.device-nav nav{justify-content:flex-end;align-items:center;flex-wrap:wrap}.device-nav nav>a{white-space:nowrap}@media(max-width:1000px){.device-nav{flex-wrap:wrap}.device-nav nav{margin-left:auto}}@media(max-width:560px){.device-nav nav{width:100%;margin-left:0;justify-content:flex-start}}
+
+/* Appearance and buying guidance for the three supported remote options. */
+.comparison-subtitle{margin:32px 0 20px;font-size:22px}.buying-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}.buying-card{padding:24px;background:#fff;border:1px solid var(--line);border-radius:16px}.buying-card.is-recommended{border-color:#0d9488;background:#f6fcfa}.buying-card .eyebrow{margin-bottom:12px}.buying-card h3{font-size:19px;line-height:1.5}.buying-card p:not(.eyebrow){font-size:14px;color:var(--muted)}.buying-card p:last-child{margin-bottom:0}@media(max-width:900px){.buying-grid{grid-template-columns:1fr}}
+
+.buying-photos .compare-photo-card img{height:auto;max-height:none;aspect-ratio:3/4;object-fit:contain}
+
+#supported-devices .downloads-head .lead-sub{max-width:none}

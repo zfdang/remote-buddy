@@ -41,4 +41,4 @@ After changing the drawing, regenerate the PNG and check the mapping page:
 swift scripts/generate-remote-layout-reference.swift Resources/BuddyRemoteIllustration.png
 ```
 
-G9N9N uses the supplied real photograph in `Resources/ChromecastG9N9NPhoto.png` and `pages/assets/devices/g9n9n.png`, with its background removed. It has no SVG source. Button connector anchors follow the photograph.
+The app uses the supplied real photograph in `Resources/ChromecastG9N9NPhoto.png`, with its background removed. The website uses the supplied handheld and side-by-side photographs. It has no SVG source. Button connector anchors follow the photograph.

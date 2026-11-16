@@ -130,7 +130,7 @@ button.addEventListener('blur', stop);
         windowTitle: '按键测试 · 首次使用向导',
         src: 'assets/screenshots/wizard-controls-zh.png',
         alt: '首次使用向导：普通按键测试清单与实时检测状态',
-        desc: '按三个不同的普通按键，确认向导收到输入。G9N9N 请按向导提示使用双键组合。'
+        desc: '按三个不同的普通按键，确认向导收到输入。G9N9N 同样逐个测试普通按键。'
       },
       {
         title: '第 5 步 · 语音热键',
@@ -257,7 +257,7 @@ button.addEventListener('blur', stop);
         windowTitle: 'Button Test · Setup Wizard',
         src: 'assets/screenshots/wizard-controls-en.png',
         alt: 'Setup Wizard: ordinary button checklist with live detection status',
-        desc: 'Press three different ordinary buttons to check that input arrives. For G9N9N, use the two-button combinations shown in the guide.'
+        desc: 'Press three different ordinary buttons to check that input arrives. For G9N9N, test individual ordinary buttons in the same way.'
       },
       {
         title: 'Step 5 · Voice Trigger',

@@ -1,13 +1,13 @@
 # 遥控器型号、素材与兼容性
 
-设备范围为小米蓝牙遥控器 2／2 Pro、T1 飞鼠键盘语音遥控器（含同款兼容版）、Google G9N9N、Google GY3LE、Apple Siri Remote 五项，均可在向导中选择。小米、T1 和两款 Google 选项可进入连接页；Siri Remote 点击继续时仍留在设备选择页并提示尚未支持。GY3LE 的设置入口不代表已完成型号专用协议适配。**G9N9N 当前仅部分支持语音功能，普通按键映射不支持**；实测原因和适用范围见 [独立测试报告](g9n9n-compatibility.md)。**T1 飞鼠键盘遥控器支持正反双面（正面常用控制键映射＋按一下松开开始说话、说完再按一下结束；背面 QWERTY 全键盘与飞鼠原生直通输入）**，详见 [T1 真机调试记录](t1-remote-hardware-debugging.md)。与小米遥控器需“一直按住说话、松手即停”不同，T1 在第一次松开语音键后仍持续收音直至再次按下停止；期间 Remote Buddy 会替你在系统端全程按住语音快捷键，因此同样兼容只支持长按模式的语音输入工具。
+设备范围为小米蓝牙遥控器 2／2 Pro、T1 飞鼠键盘语音遥控器（含同款兼容版）、Google G9N9N、Google GY3LE、Apple Siri Remote 五项，均可在向导中选择。小米、T1 和两款 Google 选项可进入连接页；Siri Remote 点击继续时仍留在设备选择页并提示尚未支持。GY3LE 的设置入口不代表已完成型号专用协议适配。**G9N9N 已验证版本支持语音和 14 颗普通按键映射**；实测原因和适用范围见 [独立测试报告](g9n9n-compatibility.md)。**T1 飞鼠键盘遥控器支持正反双面（正面常用控制键映射＋按一下松开开始说话、说完再按一下结束；背面 QWERTY 全键盘与飞鼠原生直通输入）**，详见 [T1 真机调试记录](t1-remote-hardware-debugging.md)。与小米遥控器需“一直按住说话、松手即停”不同，T1 在第一次松开语音键后仍持续收音直至再次按下停止；期间 Remote Buddy 会替你在系统端全程按住语音快捷键，因此同样兼容只支持长按模式的语音输入工具。
 
 ## 官方外观资料与应用素材
 
 | 设备 | 官方图片／按键资料 | 应用内素材 |
 | --- | --- | --- |
 | T1 飞鼠键盘语音遥控器 | 原创双面与正面示意图（按实物布局重绘，无厂商商标） | `Resources/T1RemoteSetupIllustration.png`（双面）/ `Resources/T1RemoteIllustration.png`（正面） |
-| Chromecast Voice Remote（G9N9N） | [Google 外观与按键图](https://support.google.com/chromecast/answer/10116742?hl=en) | `Resources/ChromecastG9N9NIllustration.png` |
+| Chromecast Voice Remote（G9N9N） | 语音与 14 颗普通按键自定义均已验证，具体版本见设备页面 |
 | Google TV Streamer Voice Remote（GY3LE） | [Google 外观与按键图](https://support.google.com/googletv/answer/15323195?hl=en)、[商品页](https://store.google.com/product/google_tv_streamer_remote?hl=en-US) | `Resources/GoogleStreamerGY3LEIllustration.png` |
 | Apple Siri Remote | [Apple 第三代 USB-C 外观图](https://support.apple.com/en-us/111844)、[型号识别](https://support.apple.com/en-au/103233) | `Resources/SiriRemoteA2854Illustration.png` |
 
@@ -34,7 +34,7 @@ RC001／RC003 是设备型号，不是协议或商品版本号。两款使用同
 | 语音键位置 | 方向环下第一排右侧 | 正面左列第二颗 |
 | 底部右键 | 输入源 | 自定义键 |
 | 寻找遥控器 | 官方按键资料未列出该功能 | 支持响铃；背面有发声孔，不是麦克风接口 |
-| Mac HID 报文与按键边沿 | 实测单键及松开短报告无法交付，普通按键映射不支持 | 待本项目真机验证 |
+| Mac HID 报文与按键边沿 | 14 颗普通按键的按下、松开与自定义映射均已验证 | 待本项目真机验证 |
 | Mac ATVV 能力／编码／会话 | v1.0／16kHz 语音链路已实测可用；完整生命周期仍待验收 | 待本项目真机验证 |
 
 示意图短标签：H = 主页，M = 静音，MIC = 语音，YT／NF = 应用快捷键，IN = 输入源，星形 = 自定义键。Apple 的 TV 表示电视／控制中心键，右侧窄条表示 Siri 键。
@@ -49,9 +49,9 @@ Google 商品页把 Play/Pause 列入功能，但官方布局说明没有单独�
 
 ## G9N9N 适配
 
-仅接受 DIS PnP 身份 `18D1:9450` 且 ATVV v1.0／16kHz 协商通过的语音设备。G9N9N 语音键和麦克风正常可用；因普通按键报文长度不符合描述符规范，单键与松开事件会被 macOS 系统底层丢弃，因此**不支持普通单键映射**。
+仅接受 DIS PnP 身份 `18D1:9450` 且 ATVV v1.0／16kHz 协商通过的语音设备。G9N9N 已验证版本的语音及 14 颗普通按键均正常，按键支持单击、双击、长按自定义；版本识别见[设备页面](https://remote.zfdang.com/device.html)。
 
-代码中保留 Consumer Control report 2 与 report 1 解析逻辑，这不代表普通单键功能已支持。向导按键检测可使用双键（OK＋上，返回＋上）通过；设置完成后支持在独占且开启映射时短按 OK＋任意方向键发送 Enter。详见 [功能范围与独立测试报告](g9n9n-compatibility.md) 及 [调试记录](g9n9n-hardware-debugging.md)。未知 VID/PID 不会自动获得支持。GY3LE 公开资料见 [GY3LE 调研](gy3le-public-research.md)。
+Consumer Control report 1 和 report 2 接入同一普通按键映射引擎。向导单按 OK 检测连接，再依次测试三个不同按键。详见[使用指南](g9n9n-compatibility.md)和[真机验证记录](g9n9n-hardware-debugging.md)。GY3LE 公开资料见 [GY3LE 调研](gy3le-public-research.md)。
 
 
 ## 添加兼容遥控器
@@ -74,10 +74,10 @@ Google 商品页把 Play/Pause 列入功能，但官方布局说明没有单独�
 
 ## Mac 配对指引
 
-向导可分别选择 G9N9N 和 GY3LE，并显示各自的示意图。选择型号不会跳过连接和普通按键验证。
+向导可分别选择 G9N9N 和 GY3LE，G9N9N 使用真实照片。选择型号不会跳过连接和普通按键验证。
 
 1. 打开 Mac 的“系统设置 → 蓝牙”，将遥控器靠近电脑。
 2. 同时按住返回（Back）和主页（Home）约 3 秒，直到指示灯开始闪烁。
 3. 在 Mac 的蓝牙列表中选择遥控器并连接。重新配对时，可先忽略原设备。
 
-这些步骤用于连接 Mac；不要等待 Chromecast 或电视上的配对成功提示。G9N9N 配对成功不代表普通按键映射可用；可用上文双键方法完成设置检查，再继续验证语音功能。
+这些步骤用于连接 Mac；连接后单按 OK 确认输入，再依次测试三个不同普通按键，继续语音配置。

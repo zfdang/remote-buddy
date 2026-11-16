@@ -47,7 +47,7 @@ Download `Remote_Buddy_*.pkg` from [Releases](https://github.com/zfdang/remote-b
 
 On the Devices page, remove an unused remote and its saved app settings. Its macOS Bluetooth pairing remains; choosing Add Device may rediscover previously removed remotes.
 
-Configure control buttons for supported devices under **Buttons**. To check the setup again, use **Run Setup Guide Again** at the top of Settings. G9N9N **does not support single-button mapping** due to non-compliant key reports (voice input works normally). Use two-button pairs (OK + Up, Back + Up) to pass setup checks; after setup, OK + any direction sends Enter when mapping is enabled and the device is seized. See [G9N9N voice support and button-mapping limitations](docs/g9n9n-compatibility.md) (Chinese).
+Configure single, double, and long presses for Xiaomi, T1, and validated G9N9N versions under **Buttons**. Use **Run Setup Guide Again** to repeat validation. G9N9N hardware versions vary across compatible units; see the [device guide](docs/g9n9n-compatibility.md) (Chinese).
 
 Driver installation requires administrator authorization and briefly interrupts audio. Current installers are not Apple-notarized and may be blocked by macOS. See [installation and release notes](docs/releases.md).
 
@@ -56,12 +56,12 @@ Driver installation requires administrator authorization and briefly interrupts 
 | Device | Must the physical voice button stay held? | Status |
 | --- | --- | --- |
 | Xiaomi Bluetooth Remote 2 / 2 Pro | **Yes**; ~60s single-hold limit on 2 Pro | RC001 = 2; RC003 = 2 Pro. Protocol/button adapters present; 2 Pro buttons tested locally and audio confirmed by user. Full Remote 2 audio acceptance pending |
-| T1 Air-Mouse & Keyboard Voice Remote (and compatible clones) | **No** on the tested sample; press and release to start, press again to stop | Bluetooth sample verified: 7 remappable front buttons; OK/arrows, rear keyboard and air mouse pass through. Clones require individual verification. [Hardware notes](docs/t1-remote-hardware-debugging.md) (Chinese) |
-| Google Chromecast Voice Remote (G9N9N) | **Yes**; hold to talk, release to stop capture | **Partial support**: voice works; tested sample lacks single-button mapping. OK + direction sends Enter. [Test report](docs/g9n9n-compatibility.md) (Chinese) |
+| T1 Air-Mouse & Keyboard Voice Remote (and compatible clones) | **No** on the tested sample; press and release to start, press again to stop | Supported: 7 remappable front buttons; OK/arrows, rear keyboard and air mouse pass through. Clones require individual verification. [Hardware notes](docs/t1-remote-hardware-debugging.md) (Chinese) |
+| Google Chromecast Voice Remote (G9N9N) | **Yes**; hold to talk, release to stop capture | **Supported**: validated versions provide voice and 14 configurable ordinary buttons with single, double, and long presses. [Version and test details](docs/g9n9n-compatibility.md) (Chinese) |
 | Google TV Streamer Voice Remote (GY3LE) | Not supported yet; Mac voice interaction unverified | Planned; adapter implementation and hardware validation pending |
 | Apple Siri Remote | Not supported yet; Mac voice interaction unverified | Planned; adapter implementation and hardware validation pending |
 
-See the **[Remote device guide](devices/supported-devices.md)** (Chinese) for models, appearance, buttons, features, reference prices and purchase links, including the approximately CNY 15 G9N9N-compatible sample reported in issue #170. Changing the input tool to start/stop taps does not keep a push-to-talk remote recording after its physical button is released.
+See the **[Remote device guide](devices/supported-devices.md)** (Chinese) for models, appearance, buttons, features, reference prices and purchase links. Changing the input tool to start/stop taps does not keep a push-to-talk remote recording after its physical button is released.
 
 Choosing between **Xiaomi 2 Pro** and **T1**? See our comparison guide with real photos, pricing, dimensions, and voice-input differences: [Xiaomi 2 Pro vs T1 Remote Comparison](devices/xiaomi-2pro-vs-t1-remote.md) (Chinese).
 

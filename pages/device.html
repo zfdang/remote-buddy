@@ -11,7 +11,7 @@
   <link rel="alternate" hreflang="en" href="https://remote.zfdang.com/device_en.html">
   <link rel="alternate" hreflang="x-default" href="https://remote.zfdang.com/device.html">
   <link rel="icon" href="assets/app-icon.png">
-  <link rel="stylesheet" href="style.css?v=261116b">
+  <link rel="stylesheet" href="style.css?v=261116g9">
 </head>
 <body>
 <header class="nav wrap device-nav">
@@ -19,16 +19,17 @@
   <nav aria-label="页面导航">
     <a href="#supported-devices">支持设备</a>
     <a href="#compare-three-remotes">外观对比</a>
-    <a href="#compare-xiaomi-t1">小米与 T1</a>
+    <a href="#buying-guide">购买选择</a>
     <a class="nav-home" href="index.html">返回首页</a>
     <span class="language-switch" aria-label="语言"><b aria-current="page">中文</b><a href="device_en.html" lang="en">English</a></span>
   </nav>
 </header>
 
 <main class="wrap downloads-wrap">
-  <div class="downloads-head" id="supported-devices">
+  <section id="supported-devices" aria-labelledby="supported-devices-title">
+  <div class="downloads-head">
     <p class="eyebrow">硬件兼容性 · 购买与选购指南</p>
-    <h1 class="section-title">各型号遥控器支持情况</h1>
+    <h1 class="section-title" id="supported-devices-title">各型号遥控器支持情况</h1>
     <p class="lead-sub">汇总 Remote Buddy（macOS 版）当前适配与规划支持的 5 类遥控器设备、实拍外观、触发方式、参考价格与购买渠道。</p>
   </div>
 
@@ -45,6 +46,13 @@
       </thead>
       <tbody>
         <tr>
+          <td><strong>Google Chromecast Voice Remote</strong><br><span class="device-model-code">G9N9N</span></td>
+          <td><span class="device-status is-supported">已支持</span></td>
+          <td><strong>需要</strong>；全程按住 Google Assistant 键</td>
+          <td>实购并验证，约 ¥15<br><a class="text-link" href="https://mobile.yangkeduo.com/goods.html?ps=wI005ehWCi">拼多多商品页 ↗</a></td>
+          <td>已验证版本支持语音、14 颗普通按键自定义和电量显示；兼容款存在不同硬件版本，功能支持可能不同，购买时请注意挑选硬件版本。</td>
+        </tr>
+        <tr>
           <td><strong>小米蓝牙遥控器 2 / 2 Pro</strong><br><span class="device-model-code">RC001 / RC003</span></td>
           <td><span class="device-status is-supported">已支持</span></td>
           <td><strong>需要</strong>；按住说话，松手停（单次上限约 60 秒）</td>
@@ -53,17 +61,10 @@
         </tr>
         <tr>
           <td><strong>T1 飞鼠键盘语音遥控器</strong><br><span class="device-model-code">T1-Remote</span></td>
-          <td><span class="device-status is-supported">蓝牙样机已验证</span></td>
+          <td><span class="device-status is-supported">已支持</span></td>
           <td><strong>不需要持续按住</strong>；按一下开始，再按一下结束（无 60 秒上限，自动保活最长约 5 分钟）</td>
           <td>约 ¥50<br><a class="text-link" href="https://s.taobao.com/search?q=T1%20%E8%93%9D%E7%89%99%20%E9%A3%9E%E9%BC%A0%20%E8%AF%AD%E9%9F%B3">淘宝搜索 ↗</a></td>
           <td>须<strong>蓝牙直连</strong>（非 2.4G 接收器）；7 颗正面键可自定义，背面全键盘与飞鼠直通。</td>
-        </tr>
-        <tr>
-          <td><strong>Google Chromecast Voice Remote</strong><br><span class="device-model-code">G9N9N</span></td>
-          <td><span class="device-status is-partial">部分支持</span></td>
-          <td><strong>需要</strong>；全程按住 Google Assistant 键</td>
-          <td>兼容款约 ¥15（用户反馈）<br><a class="text-link" href="https://mobile.yangkeduo.com/goods.html?ps=wI005ehWCi">拼多多商品页 ↗</a></td>
-          <td>语音可用；已测样机不支持普通单键映射，支持 <code>OK＋方向键</code> 发送 Enter。</td>
         </tr>
         <tr>
           <td><strong>Google TV Streamer Voice Remote</strong><br><span class="device-model-code">GY3LE</span></td>
@@ -88,6 +89,31 @@
   </div>
 
   <div class="devices-grid">
+    <article class="device-card is-wide">
+      <div class="device-media">
+        <img src="assets/devices/g9n9j-in-hand.jpg" alt="项目实拍：单手握持 G9N9N 遥控器" width="1080" height="1440" loading="lazy">
+      </div>
+      <div class="device-card-body">
+        <div class="device-card-head">
+          <div>
+            <h2>Google Chromecast Voice Remote</h2>
+            <span class="device-model-code">型号：G9N9N · 两节 AAA 电池</span>
+          </div>
+          <span class="device-status is-supported">语音与按键已支持</span>
+        </div>
+        <ul class="device-specs">
+          <li><strong>已验证版本</strong>：Google Inc.，VID/PID <code>18D1:9450</code>，DIS 型号 <code>A0</code>，HID VersionNumber <code>0x0110</code>。G9N9N 兼容款众多，不同硬件版本的功能支持可能不同，购买时请注意挑选硬件版本；型号和 VID/PID 相同也需实际测试。</li>
+          <li><strong>按键映射</strong>：方向、OK、返回、主页、静音、音量加减、YouTube、Netflix、输入源和电源，共 14 颗普通按键支持单击、双击、长按自定义。</li>
+          <li><strong>语音与电量</strong>：按住语音键说话，松开停止；语音键保持固定语音用途。应用读到电量时显示百分比。</li>
+          <li><strong>首次设置</strong>：单按 OK 确认连接，再依次测试三个不同普通按键。YouTube、Netflix 和输入源默认未分配动作，可自行配置。</li>
+        </ul>
+        <div class="download-actions">
+          <a class="button secondary" href="https://mobile.yangkeduo.com/goods.html?ps=wI005ehWCi">本次实购验证链接（拼多多）↗</a>
+          <a class="button secondary" href="https://github.com/zfdang/remote-buddy/blob/main/docs/g9n9n-hardware-debugging.md">查看逐键测试记录 ↗</a>
+          <a class="button secondary" href="https://support.google.com/chromecast/answer/10116742?hl=en">Google 官方按键说明 ↗</a>
+        </div>
+      </div>
+    </article>
     <article class="device-card">
       <div class="device-card-head">
         <div>
@@ -118,7 +144,7 @@
           <h2>T1 飞鼠键盘语音遥控器</h2>
           <span class="device-model-code">型号：T1-Remote · 须蓝牙直连（非 2.4G USB 接收器）</span>
         </div>
-        <span class="device-status is-supported">蓝牙样机已验证</span>
+        <span class="device-status is-supported">已支持</span>
       </div>
       <div class="device-media">
         <img src="assets/devices/t1-in-hand.jpg" alt="项目实拍：单手握持 T1 飞鼠键盘语音遥控器" width="1080" height="1440" loading="lazy">
@@ -133,29 +159,6 @@
       </div>
     </article>
 
-    <article class="device-card is-wide">
-      <div class="device-media">
-        <img src="assets/devices/ChromecastG9N9NIllustration.svg" alt="项目原创示意图：Google Chromecast G9N9N 遥控器" width="140" height="420" loading="lazy">
-      </div>
-      <div class="device-card-body">
-        <div class="device-card-head">
-          <div>
-            <h2>Google Chromecast Voice Remote</h2>
-            <span class="device-model-code">型号：G9N9N · 两节 AAA 电池</span>
-          </div>
-          <span class="device-status is-partial">部分支持（语音 + 组合键）</span>
-        </div>
-        <ul class="device-specs">
-          <li><strong>语音方式</strong>：全程按住 Google Assistant 键说话，松手即停（必须在设置中选择“按住说话”）。</li>
-          <li><strong>按键限制</strong>：已测原装样机因 HID 报文长度问题不支持普通单键映射；开启自定义并独占后支持短按 <code>OK＋任意方向键</code> 发送 Enter。</li>
-          <li><strong>兼容款社区反馈</strong>：用户分享在拼多多购入约 ¥15 的兼容款（<a class="text-link" href="https://mobile.yangkeduo.com/goods.html?ps=wI005ehWCi">拼多多商品页 ↗</a>）语音及基础按键可用，但反馈两节 AAA 电池耗电较快，且不同批次固件表现不一，不保证免长按或单键自定义映射。</li>
-        </ul>
-        <div class="download-actions">
-          <a class="button secondary" href="https://mobile.yangkeduo.com/goods.html?ps=wI005ehWCi">用户反馈兼容款（拼多多 ~¥15）↗</a>
-          <a class="button secondary" href="https://support.google.com/chromecast/answer/10116742?hl=en">Google 官方按键说明 ↗</a>
-        </div>
-      </div>
-    </article>
 
     <article class="device-card">
       <div class="device-card-head">
@@ -196,6 +199,8 @@
     </article>
   </div>
 
+  </section>
+
   <section class="compare-section" id="compare-three-remotes" aria-labelledby="three-remotes-title">
     <p class="eyebrow">当前可用设备 · 外观对比</p>
     <h2 id="three-remotes-title">三款遥控器对比图</h2>
@@ -206,11 +211,42 @@
     </figure>
   </section>
 
-  <section class="compare-section" id="compare-xiaomi-t1">
-    <p class="eyebrow">热门型号实拍对比</p>
-    <h2>小米蓝牙遥控器 2 / 2 Pro 与 T1 飞鼠键盘遥控器：怎么选？</h2>
-    <p class="lead-sub">两款均使用 ATVV v1.0（16 kHz IMA-ADPCM）高清蓝牙语音，识别准确度接近，核心差别在体积手感、附加外设，以及“按住说话”还是“按一下开始 / 再按结束”。</p>
-
+  <section class="compare-section" id="buying-guide" aria-labelledby="buying-guide-title">
+    <p class="eyebrow">按使用体验选择</p>
+    <h2 id="buying-guide-title">购买选择</h2>
+    <p class="lead-sub">日常语音和快捷键操作，优先推荐已验证版本的 G9N9N；需要键盘和飞鼠选 T1；更看重金属做工再考虑小米。以下手感比较来自实际使用。</p>
+    <div class="buying-grid">
+      <article class="buying-card is-recommended">
+        <p class="eyebrow">优先推荐</p>
+        <h3>G9N9N：轻巧、顺手、性价比高</h3>
+        <p>比小米更短、更厚一些，背部圆润，握持更舒服；机身也更轻、价格更便宜。语音键位于方向环下方，大拇指容易按到；小米的语音键在机身右上角，握持时需要向上够，G9N9N 用起来更顺手。</p>
+        <p>已验证版本支持完整的普通按键映射与语音输入。主要取舍是使用两节 AAA 电池，需要更换电池；G9N9N 兼容款存在不同硬件版本，购买时请注意挑选硬件版本。</p>
+      </article>
+      <article class="buying-card">
+        <p class="eyebrow">功能丰富</p>
+        <h3>T1：键盘、飞鼠和语音一体</h3>
+        <p>价格亲民，带背面迷你键盘和空中飞鼠，适合离开电脑操作大屏、移动光标或随手补字。语音按一下开始、再按一下结束，不需要一直按住。</p>
+        <p>机身比另外两款更长、更宽；适合需要多种输入方式的人。内置电池通过 Type-C 充电。</p>
+      </article>
+      <article class="buying-card">
+        <p class="eyebrow">看重做工</p>
+        <h3>小米 2 Pro：金属质感与充电</h3>
+        <p>优势在金属机身和做工，Type-C 充电也方便。相较 G9N9N，机身更长，语音键在右上角，拇指按语音键时需要向上伸，价格和握持便利性不占优势。</p>
+        <p>更适合偏爱金属质感、希望使用内置充电电池的人；如果主要追求便宜和顺手，优先考虑 G9N9N。</p>
+      </article>
+    </div>
+    <h3 class="comparison-subtitle">G9N9N 与小米：语音键触达、握持与厚度</h3>
+    <div class="compare-photos buying-photos">
+      <div class="compare-photo-card">
+        <img src="assets/devices/mi-vs-g9n9n.jpg" alt="G9N9N 与小米 2 Pro 正面并排实拍，G9N9N 更短" width="1080" height="1440" loading="lazy">
+        <p><strong>长度与语音键触达：</strong>左为 G9N9N，右为小米 2 Pro。G9N9N 的语音键在方向环下方，握住机身时大拇指容易按到。小米机身较长，语音键位于右上角，需要向上够，按起来更费劲。</p>
+      </div>
+      <div class="compare-photo-card">
+        <img src="assets/devices/mi-vs-g9n9n-birdview.jpg" alt="G9N9N 叠放在小米 2 Pro 上的侧面实拍" width="1080" height="1440" loading="lazy">
+        <p><strong>厚度与握持：</strong>G9N9N 比小米更厚，背部圆润，握感更饱满；小米更薄，金属机身做工突出。G9N9N 使用 AAA 电池，小米 2 Pro 为 Type-C 充电。</p>
+      </div>
+    </div>
+    <h3 class="comparison-subtitle">小米与 T1 实拍</h3>
     <div class="compare-photos">
       <div class="compare-photo-card">
         <img src="assets/devices/mi-vs-t1-overview.jpg" alt="小米蓝牙遥控器 2 Pro 与 T1 正面并排实拍对比" width="760" height="994" loading="lazy">
@@ -238,39 +274,6 @@
       </div>
     </div>
 
-    <div class="devices-table-wrap">
-      <table class="devices-table">
-        <thead>
-          <tr>
-            <th scope="col">如果你更看重……</th>
-            <th scope="col">推荐型号</th>
-            <th scope="col">原因</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>预算 ~50 元追求一步到位、功能最全</td>
-            <td><strong>T1 飞鼠键盘遥控器</strong></td>
-            <td>一份价格兼得蓝牙语音手柄 + 6 轴空中飞鼠 + 背面 QWERTY 迷你键盘。</td>
-          </tr>
-          <tr>
-            <td>大段连续口述（超过 1 分钟、解放拇指）</td>
-            <td><strong>T1 飞鼠键盘遥控器</strong></td>
-            <td>按一下开始、再按结束；程序自动保活突破 60 秒限制，支持长按与点按双模式输入工具。</td>
-          </tr>
-          <tr>
-            <td>躺沙发/外接大屏隔空挪鼠标、随手补敲字母回车</td>
-            <td><strong>T1 飞鼠键盘遥控器</strong></td>
-            <td>无需起身找鼠标键盘，直接甩手腕飞鼠定位 + 拇指翻面小键盘修改。</td>
-          </tr>
-          <tr>
-            <td>坐电脑前高频短句对话、“按住说、松手停”最顺手</td>
-            <td><strong>小米蓝牙遥控器 2 / 2 Pro</strong></td>
-            <td>对讲机式交互零记忆负担（不用记着二次按停），金属拉丝做工与按键清脆度更好。</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
   </section>
 </main>
 

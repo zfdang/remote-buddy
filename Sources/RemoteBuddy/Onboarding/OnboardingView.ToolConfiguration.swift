@@ -44,7 +44,6 @@ extension OnboardingView {
         chromecastTwoKeyDetectedWithoutSingleKey = false
         pendingChromecastComboButtons.removeAll()
         compatibleChordConfirmed = false
-        chromecastCompatibilityPromptReady = false
         remoteInputDiagnostic = FirstUseRemoteInputDiagnostic()
         testedControlButtons.removeAll()
         secureInputActive = nil

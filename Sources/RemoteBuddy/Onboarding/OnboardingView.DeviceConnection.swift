@@ -235,18 +235,11 @@ extension OnboardingView {
     }
 
     private var shouldShowChromecastCompatibilityCard: Bool {
-        chromecastCompatibilityPromptReady ||
-            ChromecastCompatibilityDetection.shouldShowCompatibilityOptInCard(
-                step: settings.onboardingStep,
-                source: settings.onboardingControlSource,
-                remoteConnected: selectedControlConnected,
-                singleKeyObserved: chromecastSingleKeyObserved,
-                twoKeyDetectedWithoutSingleKey: chromecastTwoKeyDetectedWithoutSingleKey,
-                compatibilityModeEnabled: isChromecastTwoKeyCompatible,
-                remoteButtonObserved: !observedRemoteButtons.isEmpty,
-                waitStartedAtUptime: secureInputWaitStartedAtUptime,
-                nowUptime: ProcessInfo.processInfo.systemUptime
-            )
+        ChromecastCompatibilityDetection.shouldShowCompatibilityOptInCard(
+            step: settings.onboardingStep,
+            source: settings.onboardingControlSource,
+            singleKeyObserved: chromecastSingleKeyObserved
+        )
     }
 
     private var chromecastCompatibilityOptInCard: some View {

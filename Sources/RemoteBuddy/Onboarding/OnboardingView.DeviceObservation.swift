@@ -163,7 +163,6 @@ extension OnboardingView {
             observedRemoteButtons.removeAll()
             testedControlButtons.removeAll()
             compatibleChordConfirmed = false
-            chromecastCompatibilityPromptReady = false
             remoteInputDiagnostic = remoteInputDiagnosticOverride ?? FirstUseRemoteInputDiagnostic()
         }
         DispatchQueue.main.async {

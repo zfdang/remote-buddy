@@ -1214,15 +1214,15 @@
 "connection.empty.detail" = "Click Add Device in the top-right corner to connect your remote.";
 "connection.action.device_comparison" = "Compare & Buy Remotes ↗";
 
-"onboarding.remote.chromecast.combo_needs_opt_in.title" = "Release and press OK once on its own";
-"onboarding.remote.chromecast.combo_needs_opt_in.detail" = "Two keys were pressed together before any single key was observed. Release and press OK alone once to confirm; check Partial Support Mode below only if single presses never respond.";
-"onboarding.remote.chromecast.compat_waiting_detail" = "Partial support mode enabled. Hold Up + OK (or any arrow + OK) together to confirm button input.";
+"onboarding.remote.chromecast.combo_needs_opt_in.title" = "Two-key combo detected — confirm Partial Support mode";
+"onboarding.remote.chromecast.combo_needs_opt_in.detail" = "A two-key combination arrived without a single-key report. Check Partial Support below if single presses never register, or release and press OK alone for Full Support.";
+"onboarding.remote.chromecast.compat_waiting_detail" = "Partial support (compatibility) mode enabled. Hold Up + OK (or any arrow + OK) together to confirm input.";
 "onboarding.remote.chromecast.compat_ready_detail" = "Two-key input confirmed (Partial support: Voice key works; only Arrow + OK emits Enter).";
-"onboarding.remote.chromecast.single_waiting_detail" = "Press the center OK button or a single arrow key on its own. Do not press multiple keys or the voice button.";
-"onboarding.remote.chromecast.full_ready_detail" = "Single-key report received: this G9N9N supports the Voice key and all 14 standard buttons.";
-"onboarding.remote.chromecast.compat_prompt_highlighted" = "Two keys were detected together without a single-key report. First release and try pressing OK alone once; only if individual presses never respond, check the box below for Partial Support mode:";
-"onboarding.remote.chromecast.compat_prompt" = "Still no single-key response? If pressing OK or arrows on their own does nothing, try holding Up + OK together and check below to confirm Partial Support mode:";
-"onboarding.remote.chromecast.compat_checkbox" = "Single presses do not respond; confirm two-key combo (e.g. Up + OK) is required (Partial Support mode)";
+"onboarding.remote.chromecast.single_waiting_detail" = "Press OK on its own first for Full Support. If single presses never register, see the two-mode instructions below.";
+"onboarding.remote.chromecast.full_ready_detail" = "Single-key report received: Full Support active (Voice key and all 14 buttons work).";
+"onboarding.remote.chromecast.compat_prompt_highlighted" = "A two-key combo was detected. G9N9N remotes fall into two modes:\n1. Full Support: detected immediately by pressing OK alone;\n2. Partial Support (Compatibility): single keys never register and only two-key combos arrive. If yours requires two keys, check below:";
+"onboarding.remote.chromecast.compat_prompt" = "G9N9N supports two modes:\n1. Full Support: detected directly by pressing OK on its own;\n2. Partial Support (Compatibility): if single keys cannot be detected, hold Up + OK together and check below:";
+"onboarding.remote.chromecast.compat_checkbox" = "Single presses cannot be detected; only two-key combos (e.g. Up + OK) register (enable Partial Support mode)";
 "onboarding.remote.chromecast.compat_scope_summary" = "Partial support limits: 1. Hold-to-talk Voice works normally; 2. Only Arrow + OK emits Enter; individual single buttons are unsupported.";
 
 "onboarding.controls.chromecast.compat.title" = "Confirm Two-Key Enter Combination";

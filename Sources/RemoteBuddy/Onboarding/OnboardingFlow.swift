@@ -300,30 +300,14 @@ enum ChromecastCompatibilityDetection {
         return .controlsNonChordObserved(buttons: buttons)
     }
 
-    static let compatibilityHintDelay: TimeInterval = 4.5
-
-    /// Keeps two-key compatibility prompts hidden while waiting initially so users test a single key first.
+    /// Show the two-mode explanation & explicit opt-in checkbox upfront on `.remote`
+    /// until single-key input confirms a Fully Supported G9N9N unit.
     static func shouldShowCompatibilityOptInCard(
         step: OnboardingStep,
         source: OnboardingControlSource,
-        remoteConnected: Bool,
-        singleKeyObserved: Bool,
-        twoKeyDetectedWithoutSingleKey: Bool,
-        compatibilityModeEnabled: Bool,
-        remoteButtonObserved: Bool,
-        waitStartedAtUptime: TimeInterval?,
-        nowUptime: TimeInterval
+        singleKeyObserved: Bool
     ) -> Bool {
-        guard step == .remote, source == .chromecastRemote, !singleKeyObserved else {
-            return false
-        }
-        if compatibilityModeEnabled || twoKeyDetectedWithoutSingleKey {
-            return true
-        }
-        guard remoteConnected, !remoteButtonObserved, let waitStartedAtUptime else {
-            return false
-        }
-        return nowUptime - waitStartedAtUptime >= compatibilityHintDelay
+        step == .remote && source == .chromecastRemote && !singleKeyObserved
     }
 }
 

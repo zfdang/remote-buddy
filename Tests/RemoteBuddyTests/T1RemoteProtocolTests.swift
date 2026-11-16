@@ -816,7 +816,8 @@ struct T1RemoteProtocolTests {
         let model = BridgeAppModel(settings: settings, initialAudioDevices: [])
         let t1Monitor = model.makeHIDMonitor(
             profileID: t1Profile.id,
-            targetFingerprint: "t1-fp"
+            targetFingerprint: "t1-fp",
+            runtimePermissions: { true }
         )
         t1Monitor.connectSimulatedDevice(fingerprint: "t1-fp", profileID: t1Profile.id, isSeized: false)
 

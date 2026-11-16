@@ -568,3 +568,5 @@ Validation after the latency and trigger-observation changes (runtime `1cb1d94`)
 点按模式与按住模式都在发送热键前等待目标输入法激活；点按的应用聚焦、输入法切换和目标输入框检查共享准备时限。取消准备会撤销输入法会话并使迟到回调失效；成功发送触发键后结束会话时保留目标输入法。音频排空和结束点按仍由原状态机处理。
 
 WorkBuddy 输入框通过同一局部布局内的唯一编辑框、“更多操作”和“语音输入”控件联合识别。生成回复期间“发送”会替换为“停止”，两种状态都可识别；不读取输入框内容或对话文本，不自动发送消息或停止生成。
+
+单元测试由 `RuntimeEnvironment` 识别 Swift Testing / XCTest 运行器。测试中的默认 `RemoteHIDKeyMapper` 使用空服务列表，底层系统服务枚举也禁止在测试进程中执行；需要设备的用例必须显式注入模拟服务。设置、映射恢复、常用语和更新状态的默认 `UserDefaults.standard` 会替换为实例独立且释放后删除的测试域；默认 mapper 不读取或写入正式 `HIDMappingRecovery.json`。显式注入的测试设置域和临时恢复文件继续用于持久化回归测试。运行测试前后应核对真实设备的 `UserKeyMapping` 与正式恢复文件均未变化；本机如默认命令行工具缺少 Testing 模块，可为命令设置 `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`，不更改系统全局工具链。

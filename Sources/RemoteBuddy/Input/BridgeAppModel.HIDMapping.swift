@@ -556,7 +556,10 @@ extension BridgeAppModel {
     func makeHIDMonitor(
         profileID: UUID?,
         targetFingerprint: String?,
-        excludedFingerprints: @escaping () -> Set<String> = { [] }
+        excludedFingerprints: @escaping () -> Set<String> = { [] },
+        runtimePermissions: @escaping () -> Bool = {
+            HIDRemoteMonitor.isInputMonitoringGranted && KeyboardInjector.isAccessibilityTrusted
+        }
     ) -> HIDRemoteMonitor {
         let monitor = HIDRemoteMonitor(
             settings: settings,
@@ -568,6 +571,7 @@ extension BridgeAppModel {
             eventSuppressor: hidEventSuppressor,
             ownsEventSuppressor: false,
             permissionSnapshot: permissionSnapshotProvider,
+            runtimePermissions: runtimePermissions,
             actionPerformer: { [weak self] _, _, configured in
                 self?.performExternalConfiguredAction(configured) ?? false
             }

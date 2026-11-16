@@ -384,7 +384,8 @@ final class RemoteHIDKeyMapper {
         bootID: String? = RemoteHIDKeyMapper.currentBootID(),
         recoveryJournalURL: URL? = nil
     ) {
-        self.serviceProvider = serviceProvider
+        let recoveryDefaults = RuntimeEnvironment.isolatedDefaultsIfNeeded(recoveryDefaults)
+        self.serviceProvider = serviceProvider ?? (RuntimeEnvironment.isRunningTests ? { [] } : nil)
         self.recoveryDefaults = recoveryDefaults
         self.bootID = bootID
         self.recoveryJournalURL = recoveryJournalURL ?? (recoveryDefaults === UserDefaults.standard
@@ -704,6 +705,8 @@ final class RemoteHIDKeyMapper {
         additionalIdentities: Set<RemoteHIDIdentity>,
         t1Identities: Set<RemoteHIDIdentity>
     ) -> [RemoteHIDMappingService] {
+        // A missing injection in a new test must never reach the host HID system.
+        guard !RuntimeEnvironment.isRunningTests else { return [] }
         let client = IOHIDEventSystemClientCreateSimpleClient(kCFAllocatorDefault)
         let services = IOHIDEventSystemClientCopyServices(client) as? [IOHIDServiceClient] ?? []
         return services.compactMap { service in

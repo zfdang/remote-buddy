@@ -230,7 +230,7 @@ final class UpdateInformationStore: ObservableObject {
 
     init(userDefaults: UserDefaults = .standard, checkingTimeout: TimeInterval = 30,
          schedule: @escaping OperationScheduler = ScheduledOperation.mainQueue) {
-        self.userDefaults = userDefaults
+        self.userDefaults = RuntimeEnvironment.isolatedDefaultsIfNeeded(userDefaults)
         self.checkingTimeout = checkingTimeout
         self.schedule = schedule
     }

@@ -559,7 +559,7 @@ final class AppSettings: ObservableObject {
             if let selectedRemoteProfileID,
                let selected = decoded.first(where: { $0.id == selectedRemoteProfileID }) {
                 if let storedGain = selected.gainDB, storedGain.isFinite, (0...24).contains(storedGain) { gainDB = storedGain }
-                buttonBindings = Self.defaultBindings.merging(selected.mappings.parsedButtonBindings) {
+                buttonBindings = Self.defaultMappings(for: selected.model).parsedButtonBindings.merging(selected.mappings.parsedButtonBindings) {
                     _, saved in saved
                 }
                 buttonShortcuts = selected.mappings.parsedButtonShortcuts

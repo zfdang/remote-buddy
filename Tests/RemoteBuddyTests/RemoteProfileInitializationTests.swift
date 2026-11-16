@@ -17,7 +17,7 @@ struct RemoteProfileInitializationTests {
         let profile = settings.registerBluetoothRemote(identifier: device)
         settings.selectRemoteProfile(profile)
         #expect(settings.remoteDeviceProfiles.count == 1)
-        #expect(settings.action(for: .right) == .commandCopy)
+        #expect(settings.action(for: .right) == .arrowRight)
         let reloaded = AppSettings(defaults: defaults)
         #expect(reloaded.remoteDeviceProfiles.count == 1)
         #expect(reloaded.selectedRemoteProfileID == profile)

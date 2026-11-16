@@ -242,11 +242,11 @@ struct FirstUseDiagnosticContext: Equatable {
     }
 
     var failureReason: FirstUseFailureReason? {
-        if [.remote, .controls, .voiceTrigger, .voiceTest].contains(step),
+        if [.remote, .controls, .voiceTrigger, .voiceTest, .complete].contains(step),
            runtimePermissionIssue?.isPermissionDesynced == true {
             return .permissionDesynced
         }
-        if [.remote, .controls, .voiceTrigger, .voiceTest].contains(step),
+        if [.remote, .controls, .voiceTrigger, .voiceTest, .complete].contains(step),
            let permission = OnboardingFlowPolicy.missingRuntimePermission(
                controlMethod: controlMethod, capabilities: capabilities) {
             return permission
@@ -285,8 +285,16 @@ struct FirstUseDiagnosticContext: Equatable {
             if capabilities.manualTranscriptInputObserved { return .voiceManualInput }
             if !capabilities.transcriptionAppeared { return .voiceNoTranscript }
         case .controls:
+            if !capabilities.remoteConnected { return .remoteNotFound }
             if capabilities.testedRemoteButtonCount < 3 { return .controlsNotConfirmed }
         case .complete:
+            guard OnboardingFlowPolicy.isControlSelectionValid(
+                remoteAvailability: remoteAvailability, controlMethod: controlMethod
+            ) else { return .completeRuntimeRegressed }
+            if !capabilities.remoteConnected { return .remoteNotFound }
+            if !hasSelectedAudioUID { return .audioNoOutputDevice }
+            if !capabilities.audioOutputSelected { return .audioSelectedDeviceMissing }
+            if !capabilities.audioReady { return .audioOutputNotReady }
             guard OnboardingFlowPolicy.canContinue(
                 from: .complete,
                 voiceTool: .other,

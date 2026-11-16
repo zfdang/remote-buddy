@@ -402,7 +402,7 @@ enum OnboardingFlowPolicy {
                 capabilities.transcriptionAppeared &&
                 !capabilities.manualTranscriptInputObserved
         case .controls:
-            return capabilities.testedRemoteButtonCount >= 3
+            return capabilities.remoteConnected && capabilities.testedRemoteButtonCount >= 3
         case .complete:
             return isControlSelectionValid(
                 remoteAvailability: remoteAvailability,

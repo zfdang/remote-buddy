@@ -223,16 +223,19 @@ extension AppSettings {
     }
 
     func defaultAction(for button: RemoteButton, trigger: ButtonTrigger) -> ConfiguredButtonAction {
+        let modelDefaults = selectedRemoteProfile.map { Self.defaultMappings(for: $0.model) }
+        let bindings = modelDefaults?.parsedButtonBindings ?? Self.defaultBindings
+        let secondary = modelDefaults?.parsedSecondaryButtonBindings ?? Self.defaultSecondaryBindings
         switch trigger {
         case .singleClick:
             return ConfiguredButtonAction(
-                action: Self.defaultBindings[button] ?? .disabled,
+                action: bindings[button] ?? .disabled,
                 shortcut: nil
             )
         case .doubleClick:
-            return Self.defaultSecondaryBindings[button]?[.doubleClick] ?? .disabled
+            return secondary[button]?[.doubleClick] ?? .disabled
         case .longPress:
-            return Self.defaultSecondaryBindings[button]?[.longPress] ??
+            return secondary[button]?[.longPress] ??
                 defaultSecondaryAction(for: button, trigger: .longPress)
         }
     }

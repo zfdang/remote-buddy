@@ -101,7 +101,7 @@ extension AppSettings {
         }
         if let initialModes = configuration.initialG9N9NInputModes {
             for index in remoteDeviceProfiles.indices where remoteDeviceProfiles[index].model.isChromecastRemote {
-                let savedMode = initialModes[remoteDeviceProfiles[index].id] ?? .full
+                guard let savedMode = initialModes[remoteDeviceProfiles[index].id] else { continue }
                 remoteDeviceProfiles[index].g9n9nInputMode = savedMode == .full ? nil : savedMode
             }
         }

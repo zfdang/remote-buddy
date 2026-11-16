@@ -1240,7 +1240,7 @@
 "onboarding.side.compatible_chord" = "方向键 + OK 已验证";
 
 "onboarding.summary.g9n9n_mode" = "G9N9N 支持模式";
-"onboarding.summary.g9n9n_partial_mode" = "部分支持（双键兼容）";
+"onboarding.summary.g9n9n_partial_mode" = "部分支持型号（双键兼容）";
 "onboarding.summary.partial_buttons_passed" = "语音可用；仅「方向键 + OK」可发 Enter";
 
 "button_mapping.google.partial_subtitle" = "当前 G9N9N 处于部分支持（双键兼容）模式：语音键可用，仅「方向键 + OK」可发送 Enter";

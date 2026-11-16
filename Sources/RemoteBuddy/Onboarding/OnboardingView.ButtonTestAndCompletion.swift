@@ -303,11 +303,16 @@ extension OnboardingView {
                     completionSummaryLine("appletvremote.gen4", "onboarding.summary.remote", value: name)
                 }
                 if summary.isPartialSupportG9N9N {
-                    completionSummaryLine(
-                        "exclamationmark.circle",
-                        "onboarding.summary.g9n9n_mode",
-                        value: localization.text("onboarding.summary.g9n9n_partial_mode")
-                    )
+                    HStack(alignment: .center, spacing: 10) {
+                        Image(systemName: "exclamationmark.circle")
+                            .foregroundStyle(Color.accentColor)
+                            .frame(width: 22)
+                        Text(localization.text("onboarding.summary.g9n9n_mode"))
+                            .foregroundStyle(.secondary)
+                        Spacer(minLength: 12)
+                        G9N9NSupportBadge(mode: .twoKeyCompatibility)
+                    }
+                    .accessibilityElement(children: .combine)
                 }
                 if let verified = summary.buttonsVerified {
                     let valueKey = if summary.isPartialSupportG9N9N {
@@ -346,9 +351,13 @@ extension OnboardingView {
                             .font(.system(size: 12, weight: .medium))
                             .fixedSize(horizontal: false, vertical: true)
                     }
-                    Link(localization.text("onboarding.chromecast.replace_hardware_link"),
-                         destination: AppLinks.devices(for: localization.locale))
-                        .font(.system(size: 12))
+                    HStack(spacing: 12) {
+                        Link(localization.text("connection.g9n9n.compatibility_doc_link"),
+                             destination: AppLinks.g9n9nCompatibilityGuide)
+                        Link(localization.text("onboarding.chromecast.replace_hardware_link"),
+                             destination: AppLinks.devices(for: localization.locale))
+                    }
+                    .font(.system(size: 12))
                 }
                 .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)

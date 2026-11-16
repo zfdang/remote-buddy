@@ -76,7 +76,22 @@ extension OnboardingView {
         )
     }
 
+    func resetRemoteInputProofIfSelectedProfileChanged() {
+        let currentID = settings.selectedRemoteProfileID
+        guard currentID != observedRemoteProfileID else { return }
+        observedRemoteProfileID = currentID
+        observedRemoteButtons.removeAll()
+        testedControlButtons.removeAll()
+        chromecastSingleKeyObserved = false
+        chromecastTwoKeyDetectedWithoutSingleKey = false
+        pendingChromecastComboButtons.removeAll()
+        compatibleChordConfirmed = false
+        requestedRemoteConnectionRecovery = false
+        remoteInputDiagnostic = remoteInputDiagnosticOverride ?? FirstUseRemoteInputDiagnostic()
+    }
+
     func handleObservedRemoteReport(_ observation: RemoteButtonObservation) {
+        resetRemoteInputProofIfSelectedProfileChanged()
         guard settings.onboardingControlMethod == .physicalRemote,
               observation.profileID == settings.selectedRemoteProfileID,
               selectedPhysicalRemoteProfileMatchesSource,
@@ -94,6 +109,7 @@ extension OnboardingView {
     }
 
     func handleObservedRemoteButtons(_ buttons: Set<RemoteButton>) {
+        resetRemoteInputProofIfSelectedProfileChanged()
         guard settings.onboardingControlMethod == .physicalRemote,
               selectedPhysicalRemoteProfileMatchesSource,
               !buttons.isEmpty else { return }

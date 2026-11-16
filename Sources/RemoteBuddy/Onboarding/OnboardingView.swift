@@ -31,6 +31,7 @@ struct OnboardingView: View {
     @State var chromecastTwoKeyDetectedWithoutSingleKey = false
     @State var pendingChromecastComboButtons = Set<RemoteButton>()
     @State var compatibleChordConfirmed = false
+    @State var observedRemoteProfileID: UUID?
     @State var hidBindingProfile: RemoteDeviceProfile?
     @State var voiceSessionStarted = false
     @State var voiceSamplesReceived = false
@@ -96,6 +97,7 @@ struct OnboardingView: View {
         _bluetoothAuthorization = State(initialValue: permissionOverrides?.bluetooth ?? CBManager.authorization)
         _inputMonitoringGranted = State(initialValue: permissionOverrides?.inputMonitoring ?? HIDRemoteMonitor.isInputMonitoringGranted)
         _accessibilityGranted = State(initialValue: permissionOverrides?.accessibility ?? KeyboardInjector.isAccessibilityTrusted)
+        _observedRemoteProfileID = State(initialValue: model.settings.selectedRemoteProfileID)
     }
 
     private var lifecycleContent: some View {
@@ -186,6 +188,9 @@ struct OnboardingView: View {
         lifecycleContent
         .onReceive(model.$lastObservedRemoteButtonReport.compactMap { $0 }) { observation in
             handleObservedRemoteReport(observation)
+        }
+        .onChange(of: settings.selectedRemoteProfileID) { _, _ in
+            resetRemoteInputProofIfSelectedProfileChanged()
         }
         .onReceive(model.$activeRemoteButtons) { buttons in
             handleObservedRemoteButtons(buttons)

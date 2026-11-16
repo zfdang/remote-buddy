@@ -1238,7 +1238,7 @@
 "onboarding.side.compatible_chord" = "Arrow + OK confirmed";
 
 "onboarding.summary.g9n9n_mode" = "G9N9N Support Mode";
-"onboarding.summary.g9n9n_partial_mode" = "Partial Support (Two-Key Compatibility)";
+"onboarding.summary.g9n9n_partial_mode" = "Partially Supported Model (Two-Key Compatibility)";
 "onboarding.summary.partial_buttons_passed" = "Voice works; Arrow + OK sends Enter";
 
 "button_mapping.google.partial_subtitle" = "Partial support (two-key compatibility): Voice works; only Arrow + OK emits Return/Enter";

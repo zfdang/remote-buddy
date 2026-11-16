@@ -1,5 +1,7 @@
+import AppKit
 import CoreGraphics
 import Foundation
+import SwiftUI
 import Testing
 @testable import RemoteBuddy
 
@@ -440,5 +442,78 @@ struct G9N9NCompatibilityModeTests {
             AppLinks.g9n9nCompatibilityGuide.absoluteString
                 == "https://github.com/zfdang/remote-buddy/blob/main/docs/g9n9n-compatibility.md"
         )
+    }
+
+    @Test func cancellingAddDeviceDoesNotUpgradeNewlyAddedPartialSupportProfile() throws {
+        let suite = "g9n9n-dismiss-fresh-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let settings = AppSettings(defaults: defaults)
+        let xiaomiID = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
+        settings.selectRemoteProfile(xiaomiID)
+        settings.completeOnboarding()
+
+        SettingsPageBehavior.beginDeviceSetup(settings: settings)
+        let freshGoogleID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+        settings.selectRemoteProfile(freshGoogleID)
+        settings.setG9N9NInputMode(.twoKeyCompatibility, for: freshGoogleID)
+
+        settings.dismissOnboarding()
+        #expect(
+            !settings.remoteDeviceProfiles.contains { $0.id == freshGoogleID } ||
+                settings.g9n9nInputMode(for: freshGoogleID) == .twoKeyCompatibility
+        )
+    }
+
+    @Test func switchingChromecastProfilesClearsPriorSingleKeyProofInOnboarding() async throws {
+        let suite = "g9n9n-profile-proof-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let settings = AppSettings(defaults: defaults)
+        let first = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+        let second = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+        settings.selectRemoteProfile(first)
+        settings.setOnboardingControlSource(.chromecastRemote)
+        settings.onboardingStep = .remote
+        settings.onboardingPurpose = .addDevice
+
+        let mapper = RemoteHIDKeyMapper(serviceProvider: { [] }, recoveryDefaults: defaults)
+        let model = BridgeAppModel(settings: settings, initialAudioDevices: [], voiceFunctionMapper: mapper)
+        model.isConnected = true
+        model.connectedRemoteProfileIDs = [first, second]
+        let probe = OnboardingInteractionProbe(openURL: { _ in })
+        let view = OnboardingView(
+            model: model,
+            allowsInputSourceSwitching: false,
+            allowsHardwareMonitoring: false,
+            interactionProbe: probe,
+            permissionOverrides: .allGranted
+        )
+        .environmentObject(LocalizationStore(settings: settings))
+        let controller = NSHostingController(rootView: view)
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 1100, height: 850),
+            styleMask: [.titled],
+            backing: .buffered,
+            defer: false
+        )
+        window.isReleasedWhenClosed = false
+        window.contentViewController = controller
+        defer { window.close() }
+        window.contentView?.layoutSubtreeIfNeeded()
+        try await Task.sleep(for: .milliseconds(100))
+        _ = try #require(probe.actions["continue"])
+
+        // Confirm single-key proof on first unit, then switch to second unit and send a 2-key combo.
+        model.lastObservedRemoteButtonReport = RemoteButtonObservation(profileID: first, buttons: [.ok])
+        try await Task.sleep(for: .milliseconds(100))
+        settings.selectRemoteProfile(second)
+        model.lastObservedRemoteButtonReport = RemoteButtonObservation(profileID: second, buttons: [.ok, .up])
+        try await Task.sleep(for: .milliseconds(100))
+
+        probe.invoke("continue")
+        #expect(settings.onboardingStep == .remote)
     }
 }

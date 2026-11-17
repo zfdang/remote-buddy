@@ -55,6 +55,42 @@ class FeedDeploymentTests(unittest.TestCase):
             self.release['assets'].append({'name': package.name, 'size': package.stat().st_size})
             appcast.generate(package, self.tag, '43', base64.b64encode(bytes(64)).decode(), self.root / f'appcast-{arch}.xml')
 
+    def test_existing_release_restores_published_packages_with_their_feeds(self):
+        workflow = Path(__file__).resolve().parents[1] / '.github/workflows/release.yml'
+        block = workflow.read_text().split('      - name: Check immutable release state\n', 1)[1]
+        block = block.split('        run: |\n', 1)[1].split('      - name:', 1)[0]
+        script = '\n'.join(line[10:] for line in block.splitlines())
+        project = self.root / 'rerun'
+        staged = project / 'release'; staged.mkdir(parents=True)
+        scripts = project / 'scripts'; scripts.mkdir()
+        shutil.copy2(Path(__file__).with_name('verify-pages-update-feeds.py'), scripts)
+        for package in self.root.glob('*.pkg'):
+            (staged / package.name).write_bytes(b'rebuilt package with different bytes')
+        binaries = project / 'bin'; binaries.mkdir()
+        gh = binaries / 'gh'
+        gh.write_text("""#!/usr/bin/env python3
+import fnmatch, json, os, pathlib, shutil, sys
+args = sys.argv[1:]
+if args[:2] == ['release', 'view']:
+    if '--json' in args: print(os.environ['PUBLISHED_METADATA'])
+elif args[:2] == ['release', 'download']:
+    for source in pathlib.Path(os.environ['PUBLISHED_DIRECTORY']).iterdir():
+        if fnmatch.fnmatch(source.name, args[args.index('--pattern') + 1]):
+            shutil.copy2(source, pathlib.Path(args[args.index('--dir') + 1]) / source.name)
+else: sys.exit(1)
+""")
+        gh.chmod(0o755)
+        metadata = dict(self.release, assets=self.release['assets'] +
+                        [{'name': path.name} for path in self.root.glob('appcast-*.xml')])
+        env = dict(os.environ, PATH=str(binaries) + os.pathsep + os.environ['PATH'],
+                   RELEASE_TAG=self.tag, RUNNER_TEMP=str(project), GITHUB_OUTPUT=str(project / 'outputs'),
+                   PUBLISHED_DIRECTORY=str(self.root), PUBLISHED_METADATA=json.dumps(metadata))
+        result = subprocess.run(['bash', '-euo', 'pipefail', '-c', script], cwd=project,
+                                env=env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for published in [*self.root.glob('*.pkg'), *self.root.glob('appcast-*.xml')]:
+            self.assertEqual((staged / published.name).read_bytes(), published.read_bytes())
+
     def test_complete_pair_matches_published_packages(self):
         feeds.verify(self.root, self.release)
 

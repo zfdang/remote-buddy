@@ -2,7 +2,7 @@
 
 Download the PKG for your Mac architecture from this project's GitHub Releases. It installs both the app and microphone driver. Open `/Applications/Remote Buddy.app`.
 
-The initial guide follows Permissions and Microphone, Remote Model, Connect Remote, Button Test, Voice Trigger, Input Tool, Voice Test, and Complete. Grant Bluetooth, Input Monitoring, and Accessibility permissions as requested. Xiaomi RC001/RC003 and G9N9N have connection adapters; GY3LE and Siri Remote adapters remain incomplete.
+The initial guide follows Permissions and Microphone, Remote Model, Connect Remote, Button Test, Voice Trigger, Input Tool, Voice Test, and Complete. Grant Bluetooth, Input Monitoring, and Accessibility permissions as requested. Xiaomi RC001/RC003, T1 air-mouse keyboard voice remotes, and G9N9N have connection adapters; GY3LE and Siri Remote adapters remain incomplete.
 
 **G9N9N:** Validated versions support voice and configurable ordinary buttons. Press OK, then three different buttons during setup. See the [device guide](https://remote.zfdang.com/device_en.html) for supported versions.
 

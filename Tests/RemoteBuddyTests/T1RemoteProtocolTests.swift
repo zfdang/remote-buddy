@@ -381,6 +381,7 @@ struct T1RemoteProtocolTests {
             allowsT1Remote: true,
             runtimePermissions: { true },
             nativeSuppressionAvailable: { true },
+            actionPerformer: { _, _, _ in true },
             diagnosticLogger: { logs.append($0) }
         )
 
@@ -474,6 +475,7 @@ struct T1RemoteProtocolTests {
             allowsT1Remote: true,
             runtimePermissions: { true },
             nativeSuppressionAvailable: { true },
+            actionPerformer: { _, _, _ in true },
             diagnosticLogger: { _ in }
         )
         defer { monitor.cancelMappingInteractions() }
@@ -607,6 +609,7 @@ struct T1RemoteProtocolTests {
             allowsT1Remote: true,
             runtimePermissions: { true },
             nativeSuppressionAvailable: { true },
+            actionPerformer: { _, _, _ in true },
             diagnosticLogger: { _ in }
         )
         defer { monitor.cancelMappingInteractions() }
@@ -636,6 +639,7 @@ struct T1RemoteProtocolTests {
 
         let clock = ControlledTestScheduler()
         let profileID = UUID()
+        var performedActions: [ButtonAction] = []
         let monitor = HIDRemoteMonitor(
             settings: settings,
             allowsT1Remote: true,
@@ -643,6 +647,7 @@ struct T1RemoteProtocolTests {
             scheduler: clock,
             runtimePermissions: { true },
             nativeSuppressionAvailable: { true },
+            actionPerformer: { _, _, configured in performedActions.append(configured.action); return true },
             diagnosticLogger: { _ in }
         )
         defer { monitor.cancelMappingInteractions() }
@@ -658,6 +663,7 @@ struct T1RemoteProtocolTests {
             data: Data([0x01, 0x00, 0x00, 0x65, 0x00, 0x00, 0x00, 0x00, 0x00])
         )
         #expect(activeHistory.last == [.menu])
+        #expect(performedActions.contains(.contextMenu))
 
         // At t=5s, Air Mouse (Report 4, .ignore) arrives and must push out the 8s missing-release deadline.
         clock.advance(to: 5_000)
@@ -945,6 +951,7 @@ struct T1RemoteProtocolTests {
             ownsEventSuppressor: false,
             runtimePermissions: { true },
             nativeSuppressionAvailable: { true },
+            actionPerformer: { _, _, _ in true },
             diagnosticLogger: { _ in }
         )
 
@@ -1043,6 +1050,7 @@ struct T1RemoteProtocolTests {
             ownsEventSuppressor: false,
             runtimePermissions: { true },
             nativeSuppressionAvailable: { true },
+            actionPerformer: { _, _, _ in true },
             diagnosticLogger: { _ in },
             appSwitcherHardwareFlags: { [] },
             appSwitcherOwnedKeyStatePoster: { code, down, flags, excludingOwned in
@@ -1138,6 +1146,7 @@ struct T1RemoteProtocolTests {
             scheduler: clock,
             runtimePermissions: { true },
             nativeSuppressionAvailable: { true },
+            actionPerformer: { _, _, _ in true },
             diagnosticLogger: { _ in }
         )
         monitor.onActiveButtons = { _, buttons in activeButtons = buttons }

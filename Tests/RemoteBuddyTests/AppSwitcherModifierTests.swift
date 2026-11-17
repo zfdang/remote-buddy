@@ -30,7 +30,12 @@ struct AppSwitcherModifierTests {
         #expect(events.last?.flags.contains(.maskCommand) == false)
     }
 
-    @Test(arguments: [CGEventFlags.maskShift, .maskControl, .maskAlternate, .maskCommand])
+    @Test(arguments: [
+        CGEventFlags.maskShift,
+        .maskControl,
+        .maskAlternate,
+        [.maskCommand, CGEventFlags(rawValue: 0x0010)]
+    ])
     func physicalModifiersRemainHeldOnCommandRelease(modifier: CGEventFlags) throws {
         let event = try #require(KeyboardInjector.makeMappedKeyEvent(
             code: 55, isDown: false, flags: [],
@@ -38,6 +43,28 @@ struct AppSwitcherModifierTests {
         ))
         #expect(event.flags.contains(modifier))
         #expect(!event.flags.contains(.maskSecondaryFn))
+    }
+
+    @Test(arguments: [
+        UInt64(0x20100100), // Seized HID snapshot carrying bare synthetic Command
+        0x100008            // Left Command flag without opposite-side Command
+    ])
+    func syntheticCommandReleaseDropsOwnStaleHIDFlag(staleRawFlags: UInt64) throws {
+        var events: [CGEvent] = []
+        let session = KeyboardInjector.AppSwitcherSession(keyStatePoster: { code, down, flags in
+            guard let event = KeyboardInjector.makeMappedKeyEvent(
+                code: code, isDown: down, flags: flags,
+                hardwareFlags: { CGEventFlags(rawValue: staleRawFlags) }
+            ) else { return false }
+            events.append(event)
+            return true
+        })
+        #expect(session.trigger())
+        #expect(session.confirm())
+        let release = try #require(events.last)
+        #expect(release.getIntegerValueField(.keyboardEventKeycode) == 55)
+        #expect(release.type == .flagsChanged)
+        #expect(!release.flags.contains(.maskCommand))
     }
 
     @Test func voiceKeyPathStillPreservesFn() throws {

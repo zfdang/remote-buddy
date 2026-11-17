@@ -173,23 +173,6 @@ extension KeyboardInjector {
             .max { $0.width * $0.height < $1.width * $1.height }
     }
 
-    static func ordinaryWindowCount(
-        windowInfo: [[String: Any]],
-        processIdentifier: pid_t
-    ) -> Int {
-        windowInfo.reduce(into: 0) { count, entry in
-            guard let owner = entry[kCGWindowOwnerPID as String] as? NSNumber,
-                  owner.int32Value == processIdentifier,
-                  let layer = entry[kCGWindowLayer as String] as? NSNumber,
-                  layer.intValue == 0,
-                  let bounds = entry[kCGWindowBounds as String] as? NSDictionary,
-                  let frame = CGRect(dictionaryRepresentation: bounds as CFDictionary),
-                  frame.width > 0,
-                  frame.height > 0
-            else { return }
-            count += 1
-        }
-    }
 
 
     private static func frontmostWindowFrame() -> CGRect? {

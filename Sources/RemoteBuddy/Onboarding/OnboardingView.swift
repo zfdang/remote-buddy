@@ -188,6 +188,7 @@ struct OnboardingView: View {
         lifecycleContent
         .onReceive(model.$lastObservedRemoteButtonReport.compactMap { $0 }) { observation in
             handleObservedRemoteReport(observation)
+            interactionProbe?.lastHandledRemoteReport = observation
         }
         .onChange(of: settings.selectedRemoteProfileID) { _, _ in
             resetRemoteInputProofIfSelectedProfileChanged()

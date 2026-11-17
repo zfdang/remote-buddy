@@ -503,15 +503,19 @@ struct G9N9NCompatibilityModeTests {
         window.contentViewController = controller
         defer { window.close() }
         window.contentView?.layoutSubtreeIfNeeded()
-        try await Task.sleep(for: .milliseconds(100))
+        try await waitForTestCondition { probe.actions["continue"] != nil }
         _ = try #require(probe.actions["continue"])
 
         // Confirm single-key proof on first unit, then switch to second unit and send a 2-key combo.
         model.lastObservedRemoteButtonReport = RemoteButtonObservation(profileID: first, buttons: [.ok])
-        try await Task.sleep(for: .milliseconds(100))
+        try await waitForTestCondition {
+            probe.lastHandledRemoteReport == RemoteButtonObservation(profileID: first, buttons: [.ok])
+        }
         settings.selectRemoteProfile(second)
         model.lastObservedRemoteButtonReport = RemoteButtonObservation(profileID: second, buttons: [.ok, .up])
-        try await Task.sleep(for: .milliseconds(100))
+        try await waitForTestCondition {
+            probe.lastHandledRemoteReport == RemoteButtonObservation(profileID: second, buttons: [.ok, .up])
+        }
 
         probe.invoke("continue")
         #expect(settings.onboardingStep == .remote)

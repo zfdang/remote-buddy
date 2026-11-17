@@ -454,7 +454,7 @@ struct InputLifecycleRegressionTests {
             withExtendedLifetime(retained) {}
         }
         probe = nil
-        try await Task.sleep(for: .milliseconds(100))
+        try await waitForTestCondition { observed == nil }
         #expect(observed == nil)
         withExtendedLifetime(handle) {}
         var second: Probe? = Probe()
@@ -465,7 +465,7 @@ struct InputLifecycleRegressionTests {
         second = nil
         withExtendedLifetime(task) {}
         task = nil
-        try await Task.sleep(for: .milliseconds(100))
+        try await waitForTestCondition { secondObserved == nil }
         #expect(secondObserved == nil)
     }
 }

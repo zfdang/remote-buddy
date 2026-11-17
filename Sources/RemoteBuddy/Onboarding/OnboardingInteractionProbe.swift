@@ -15,6 +15,8 @@ final class OnboardingInteractionProbe {
     private(set) var launchedVoiceTools: [OnboardingVoiceTool] = []
     private(set) var invokedActions: [String] = []
 
+    var lastHandledRemoteReport: RemoteButtonObservation?
+
     var openURL: (URL) -> Void
 
     init(openURL: ((URL) -> Void)? = nil) {

@@ -4,7 +4,7 @@ import Foundation
 
 /// Foreground integrations are opt-in and independent of application-launch button mappings.
 enum ApplicationIntegration: String, CaseIterable, Identifiable {
-    case weChat, antigravity, chatGPT, claude, workBuddy
+    case weChat, antigravity, chatGPT, claude, deepSeek, workBuddy
 
     var id: String { rawValue }
     var bundleIdentifier: String {
@@ -13,6 +13,7 @@ enum ApplicationIntegration: String, CaseIterable, Identifiable {
         case .antigravity: return "com.google.antigravity"
         case .weChat: return "com.tencent.xinWeChat"
         case .claude: return "com.anthropic.claudefordesktop"
+        case .deepSeek: return "com.deepseek.dsh"
         case .workBuddy: return "com.tencent.workbuddy.mac"
         }
     }
@@ -22,6 +23,7 @@ enum ApplicationIntegration: String, CaseIterable, Identifiable {
         case .antigravity: return "Antigravity"
         case .weChat: return "WeChat"
         case .claude: return "Claude"
+        case .deepSeek: return "DeepSeek Harness"
         case .workBuddy: return "WorkBuddy"
         }
     }
@@ -31,8 +33,41 @@ enum ApplicationIntegration: String, CaseIterable, Identifiable {
         case .antigravity: return "application_integration.antigravity.detail"
         case .chatGPT: return "application_integration.chatGPT.detail"
         case .claude: return "application_integration.claude.detail"
+        case .deepSeek: return "application_integration.deepSeek.detail"
         case .workBuddy: return "application_integration.workBuddy.detail"
         }
+    }
+
+    func displayName(using localize: (String) -> String) -> String {
+        self == .weChat ? localize("application.wechat") : title
+    }
+
+    @MainActor
+    func displayName(using localization: LocalizationStore) -> String {
+        displayName { localization.text($0) }
+    }
+
+    /// Groups non-English display names separately before English names, then sorts alphabetically.
+    static func sortedForDisplay(using localize: (String) -> String) -> [Self] {
+        allCases.sorted { lhs, rhs in
+            let lhsName = lhs.displayName(using: localize)
+            let rhsName = rhs.displayName(using: localize)
+            let lhsEnglish = lhsName.allSatisfy(\.isASCII)
+            let rhsEnglish = rhsName.allSatisfy(\.isASCII)
+            if lhsEnglish != rhsEnglish {
+                return !lhsEnglish
+            }
+            let comparison = lhsName.localizedCaseInsensitiveCompare(rhsName)
+            if comparison != .orderedSame {
+                return comparison == .orderedAscending
+            }
+            return lhs.rawValue < rhs.rawValue
+        }
+    }
+
+    @MainActor
+    static func sortedForDisplay(using localization: LocalizationStore) -> [Self] {
+        sortedForDisplay { localization.text($0) }
     }
 
     static func matching(_ bundleIdentifier: String?) -> Self? {

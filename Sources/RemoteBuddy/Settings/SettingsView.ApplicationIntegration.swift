@@ -39,11 +39,11 @@ extension SettingsView {
                     }
                     .disabled(settings.enabledApplicationIntegrations.isEmpty)
                 }
-                ForEach(ApplicationIntegration.allCases) { application in
+                ForEach(ApplicationIntegration.sortedForDisplay(using: localization)) { application in
                     GlassPanel {
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
-                                let name = application == .weChat ? localization.text("application.wechat") : application.title
+                                let name = application.displayName(using: localization)
                                 Text(name).font(.headline)
                                 Spacer()
                                 Toggle(name, isOn: Binding(

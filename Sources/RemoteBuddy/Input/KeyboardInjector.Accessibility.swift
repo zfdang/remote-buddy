@@ -527,6 +527,10 @@ extension KeyboardInjector {
             let prompts = ["write your prompt to claude", "write your reply to claude", "write your draft", "write your message",
                            "向 claude 发送消息", "回复 claude", "给 claude 发消息", "输入消息", "输入提示词"]
             return identifiers.contains(candidate.identifier.lowercased()) || labels.contains(where: prompts.contains)
+        case .deepSeek:
+            return candidate.role == "AXTextArea" && labels.contains {
+                $0.hasPrefix("message or run a task")
+            }
         case .workBuddy:
             return candidate.role == "AXTextArea" && candidate.hasWorkBuddyComposerControls
         case .weChat, .chatGPT: return false
@@ -559,7 +563,7 @@ extension KeyboardInjector {
         case .chatGPT: specific = ["do anything", "work with chatgpt", "message chatgpt", "ask anything", "ask chatgpt", "询问任何问题", "询问 chatgpt"]
         case .antigravity: specific = ["ask anything", "ask agent", "message agent", "agent input", "向 agent 提问"]
         case .weChat: specific = ["message", "输入", "编辑消息"]
-        case .claude, .workBuddy: specific = []
+        case .claude, .deepSeek, .workBuddy: specific = []
         }
         // Verified in the live WeChat accessibility tree. Avoid its unlabeled
         // search field and message list even if they move or resize.
@@ -568,7 +572,7 @@ extension KeyboardInjector {
         }
         // Verified Antigravity's current conversation composer is labeled Message input.
         if isVerifiedIntegratedComposer(candidate, integration: integration) { return 400 }
-        if integration == .claude || integration == .workBuddy { return nil }
+        if integration == .claude || integration == .deepSeek || integration == .workBuddy { return nil }
         if (common + specific).contains(where: ownText.contains) {
             return 200 + (candidate.role == "AXTextArea" ? 20 : 0)
         }

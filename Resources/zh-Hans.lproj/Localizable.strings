@@ -1116,6 +1116,7 @@
 "application_integration.antigravity.detail" = "当前窗口的 Agent 对话输入框。";
 "application_integration.weChat.detail" = "当前会话的消息输入框。请先打开一个会话。";
 "application_integration.claude.detail" = "当前聊天或项目的输入框。请先打开对应页面。";
+"application_integration.deepSeek.detail" = "当前会话或任务的输入框。";
 "application_integration.workBuddy.detail" = "当前会话或新任务的输入框。";
 "application_integration.accessibility_help" = "如果未能定位输入框，语音输入仍可继续。文字没有自动填入时，可按 Command+V 粘贴。";
 

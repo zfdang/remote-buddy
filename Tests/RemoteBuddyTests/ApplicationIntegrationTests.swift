@@ -733,6 +733,7 @@ struct ApplicationIntegrationTests {
         let fields: [(ApplicationIntegration, KeyboardInjector.AccessibilityTextCandidate)] = [
             (.chatGPT, candidate("Ask anything")), (.antigravity, candidate("Message input")),
             (.claude, candidate("Write your prompt to Claude")),
+            (.deepSeek, candidate("Message or run a task, / commands, @ files or sessions")),
             (.weChat, candidate(identifier: "chat_input_field")),
         ]
         for (app, field) in fields {
@@ -795,22 +796,29 @@ struct ApplicationIntegrationTests {
         #expect(!KeyboardInjector.workBuddyComposerControlsMatch(["发送", "语音输入"]))
     }
 
-    @Test(arguments: [ApplicationIntegration.claude, .workBuddy])
+    @Test(arguments: [ApplicationIntegration.claude, .deepSeek, .workBuddy])
     func newDesktopIntegrationsSelectOnlyTheirVerifiedComposer(app: ApplicationIntegration) {
-        let label = "Write your prompt to Claude"
+        let label = app == .deepSeek
+            ? "Message or run a task, / commands, @ files or sessions"
+            : "Write your prompt to Claude"
         let field = app == .workBuddy ? candidate(workBuddyControls: true) : candidate(label)
         #expect(ApplicationIntegration.matching(app.bundleIdentifier) == app)
         #expect(KeyboardInjector.integratedComposerScore(field, integration: app, windowFrame: window) == 400)
-        #expect(KeyboardInjector.integratedComposerScore(field,
-            integration: app == .claude ? .workBuddy : .claude, windowFrame: window) == nil)
+        for other in [ApplicationIntegration.claude, .deepSeek, .workBuddy] where other != app {
+            #expect(KeyboardInjector.integratedComposerScore(field, integration: other, windowFrame: window) == nil)
+        }
         for invalid in [candidate(), candidate("composer"), candidate("Search " + label),
+                        candidate(label, role: "AXTextField"),
+                        candidate("Search session names", role: "AXTextField"),
                         candidate(label, protected: true), candidate(label, enabled: false),
                         candidate(label, context: "monaco code editor")] {
+            if invalid.role == "AXTextField", app == .claude, invalid.placeholder == label { continue }
             #expect(KeyboardInjector.integratedComposerScore(invalid, integration: app, windowFrame: window) == nil)
         }
         var focused: [String] = []
         #expect(KeyboardInjector.focusIntegratedCandidates(
-            [(element: "search", snapshot: candidate("Search")), (element: "composer", snapshot: field)],
+            [(element: "search", snapshot: candidate("Search session names", role: "AXTextField")),
+             (element: "composer", snapshot: field)],
             integration: app, windowFrame: window, canContinue: { true },
             focus: { focused.append($0); return true },
             click: { _, _ in Issue.record("Direct focus must not click"); return false }))
@@ -822,9 +830,13 @@ struct ApplicationIntegrationTests {
             click: { _, _ in Issue.record("Ambiguous composers must not click"); return true }))
     }
 
-    @Test(arguments: [ApplicationIntegration.claude, .workBuddy])
+    @Test(arguments: [ApplicationIntegration.claude, .deepSeek, .workBuddy])
     func newDesktopComposerClicksRequireHitTestAndConfirmedFocus(app: ApplicationIntegration) {
-        let field = app == .claude ? candidate("Write your prompt to Claude") : candidate(workBuddyControls: true)
+        let field: KeyboardInjector.AccessibilityTextCandidate = switch app {
+        case .claude: candidate("Write your prompt to Claude")
+        case .deepSeek: candidate("Message or run a task, / commands, @ files or sessions")
+        default: candidate(workBuddyControls: true)
+        }
         for hit in [false, true] {
             for focused in [false, true] {
                 var clicks = 0
@@ -875,6 +887,12 @@ struct ApplicationIntegrationTests {
                     #expect(localization.text(key) != key)
                 }
             }
+            localization.select(.simplifiedChinese)
+            #expect(ApplicationIntegration.sortedForDisplay(using: localization) ==
+                [.weChat, .antigravity, .chatGPT, .claude, .deepSeek, .workBuddy])
+            localization.select(.english)
+            #expect(ApplicationIntegration.sortedForDisplay(using: localization) ==
+                [.antigravity, .chatGPT, .claude, .deepSeek, .weChat, .workBuddy])
         }
     }
     @Test func screenshotHarnessInjectsPreparationAndPreservation() throws {

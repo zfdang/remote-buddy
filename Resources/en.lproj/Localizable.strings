@@ -1114,6 +1114,7 @@
 "application_integration.antigravity.detail" = "The Agent conversation input in the current window.";
 "application_integration.weChat.detail" = "The message box in the current conversation. Open a conversation first.";
 "application_integration.claude.detail" = "The input in the current chat or project. Open the relevant page first.";
+"application_integration.deepSeek.detail" = "The message box in the current session or task.";
 "application_integration.workBuddy.detail" = "The message box in the current conversation or new task.";
 "application_integration.accessibility_help" = "Voice input can continue if a text box cannot be found. If the text is not inserted automatically, press Command+V to paste it.";
 

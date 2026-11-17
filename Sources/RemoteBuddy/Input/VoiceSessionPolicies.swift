@@ -11,10 +11,6 @@ enum RemoteInputSource: String, Codable, CaseIterable, Hashable {
     case unknown
 }
 
-struct MobileRemoteButtonObservation: Equatable {
-    let source: RemoteInputSource
-    let button: RemoteButton
-}
 
 enum BluetoothVoiceStopPolicy {
     /// Remote stop ends capture but must not discard PCM already scheduled for playback.

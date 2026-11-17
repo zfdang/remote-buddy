@@ -23,28 +23,6 @@ enum KeyboardInjector {
     typealias ScrollPoster = (Int32) -> Void
     typealias SystemKeyPoster = (Int32) -> Void
 
-    struct ApplicationVisibilitySnapshot: Equatable {
-        let bundleIdentifier: String
-        let processActive: Bool?
-        let processHidden: Bool?
-        let processTerminated: Bool?
-        let activationPolicy: String
-        let ordinaryWindowCount: Int?
-        let onscreenWindowCount: Int?
-
-        var hasVisibleWindow: Bool? {
-            onscreenWindowCount.map { $0 > 0 }
-        }
-
-        var isUserVisible: Bool? {
-            guard let processActive,
-                  let processHidden,
-                  let processTerminated,
-                  let onscreenWindowCount
-            else { return nil }
-            return processActive && !processHidden && !processTerminated && onscreenWindowCount > 0
-        }
-    }
 
     private static let transientAppSwitcher = AppSwitcherSession()
 

@@ -191,60 +191,6 @@ extension KeyboardInjector {
         }
     }
 
-    static func applicationVisibilitySnapshot(
-        bundleIdentifier: String
-    ) -> ApplicationVisibilitySnapshot {
-        let applications = NSRunningApplication.runningApplications(
-            withBundleIdentifier: bundleIdentifier
-        )
-        guard let application = applications.first(where: { $0.isActive && !$0.isTerminated })
-            ?? applications.first(where: { !$0.isTerminated })
-        else {
-            return ApplicationVisibilitySnapshot(
-                bundleIdentifier: bundleIdentifier,
-                processActive: false,
-                processHidden: false,
-                processTerminated: true,
-                activationPolicy: "unknown",
-                ordinaryWindowCount: 0,
-                onscreenWindowCount: 0
-            )
-        }
-
-        let allWindows = CGWindowListCopyWindowInfo(
-            [.optionAll, .excludeDesktopElements],
-            kCGNullWindowID
-        ) as? [[String: Any]]
-        let onscreenWindows = CGWindowListCopyWindowInfo(
-            [.optionOnScreenOnly, .excludeDesktopElements],
-            kCGNullWindowID
-        ) as? [[String: Any]]
-        let activationPolicy: String = switch application.activationPolicy {
-        case .regular: "regular"
-        case .accessory: "accessory"
-        case .prohibited: "prohibited"
-        @unknown default: "unknown"
-        }
-        return ApplicationVisibilitySnapshot(
-            bundleIdentifier: bundleIdentifier,
-            processActive: application.isActive,
-            processHidden: application.isHidden,
-            processTerminated: application.isTerminated,
-            activationPolicy: activationPolicy,
-            ordinaryWindowCount: allWindows.map {
-                ordinaryWindowCount(
-                    windowInfo: $0,
-                    processIdentifier: application.processIdentifier
-                )
-            },
-            onscreenWindowCount: onscreenWindows.map {
-                ordinaryWindowCount(
-                    windowInfo: $0,
-                    processIdentifier: application.processIdentifier
-                )
-            }
-        )
-    }
 
     private static func frontmostWindowFrame() -> CGRect? {
         guard let processIdentifier = NSWorkspace.shared

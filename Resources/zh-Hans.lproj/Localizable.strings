@@ -11,15 +11,7 @@
 "app.status.stopped" = "应用已停止";
 "audio.compatibility.device_missing" = "未检测到 %1$@，请先安装兼容驱动";
 "audio.compatibility.device_selected" = "已选择 %1$@ 作为遥控器语音输出";
-"audio.test_tone.cancelled_device_changed" = "设备已更新，测试音已取消";
-"audio.test_tone.ready" = "可发送测试音";
 "audio.output.none_or_unavailable" = "未选择语音输出设备或设备不可用";
-"audio.test_tone.blocked_voice_active" = "遥控器正在传输语音，暂时无法播放测试音";
-"audio.test_tone.already_playing" = "测试音正在播放中";
-"audio.test_tone.device_not_ready" = "测试音发送失败：设备未就绪";
-"audio.test_tone.playing" = "正在播放约 1 秒测试音";
-"audio.test_tone.completed" = "测试音已完成";
-"audio.test_tone.cancelled" = "测试音已取消";
 "voice_button.status.fn_enabled" = "遥控器语音键已硬件映射为 Fn";
 "voice_button.status.left_command_enabled" = "遥控器语音键将按住左 Command";
 "voice_button.status.right_command_enabled" = "遥控器语音键将按住右 Command";
@@ -302,7 +294,6 @@
 "audio.gain.help" = "0 dB 保持原始音量；数值越大声音越响，也会放大环境噪声。建议先从 6–12 dB 开始。";
 "audio.status.title" = "音频状态";
 "audio.action.refresh_devices" = "刷新音频设备";
-"audio.action.send_test_tone" = "发送 1 秒测试音";
 "audio.output.privacy_help" = "应用只把遥控器语音写到所选设备。遥控器断开、应用停止、退出或重新配置时，都不会修改系统默认麦克风和扬声器。请在语音输入工具中选择同一个虚拟麦克风。";
 "audio.compatibility.title" = "兼容音频设备";
 "audio.compatibility.section_title" = "语音输入与兼容";

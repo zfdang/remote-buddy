@@ -94,10 +94,6 @@ extension BridgeAppModel {
     func beginVoiceSessionIfNeeded() {
         guard !isTerminating, !isStreaming else { return }
 
-        cancelTestToneIfNeeded(
-            statusMessage: LocalizedMessage("audio.test_tone.blocked_voice_active"),
-            logReason: "voice_start"
-        )
         let source = currentVoiceSource
         let sessionID = UUID()
         voiceSession.voiceAudioDeliveryGeneration &+= 1

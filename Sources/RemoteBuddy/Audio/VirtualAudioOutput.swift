@@ -380,7 +380,7 @@ final class VirtualAudioOutput {
             updateOutputState { $0.selectedDevice = device }
             logStage("verify_output")
             refreshOutputStateOnEngineQueue()
-            guard isReadyForTestTone else {
+            guard isReadyForVoicePlayback else {
                 // Capture before teardown clears the engine and selected/actual route.
                 let snapshot = diagnosticSnapshot()
                 logger(
@@ -417,48 +417,12 @@ final class VirtualAudioOutput {
         }
     }
 
-    var isReadyForTestTone: Bool {
+    var isReadyForVoicePlayback: Bool {
         cachedOutputState.ready
     }
 
     var actualDevice: AudioDeviceInfo? {
         cachedOutputState.actualDevice
-    }
-
-    /// Schedules the test tone and reports actual playback completion via `scheduleBuffer`'s
-    /// `.dataPlayedBack` callback rather than a fixed timer. `completion` receives `true` only
-    /// when the tone finished sounding; `false` if it was cut short (device torn down, real
-    /// voice preempted it, etc.). Returns `false` immediately if scheduling never happened.
-    @discardableResult
-    func playTestTone(completion: @escaping (Bool) -> Void) -> Bool {
-        guard isReadyForTestTone else { return false }
-        engineQueue.async { [weak self] in
-            guard let self,
-                  let player = self.player,
-                  let buffer = self.makeBuffer(samples: TestToneGenerator.samples(sampleRate: self.sourceFormat.sampleRate))
-            else {
-                DispatchQueue.main.async { completion(false) }
-                return
-            }
-            let scheduled = AudioPlayerNodeSafety.schedule(player, buffer: buffer,
-                completion: Self.testToneCompletion(completion))
-            if !scheduled {
-                self.stopOnEngineQueue()
-                self.onConfigurationChange?()
-                DispatchQueue.main.async { completion(false) }
-            }
-        }
-        return true
-    }
-
-    static func testToneCompletion(_ completion: @escaping (Bool) -> Void) -> (AVAudioPlayerNodeCompletionCallbackType) -> Void {
-        { callbackType in DispatchQueue.main.async { completion(callbackType == .dataPlayedBack) } }
-    }
-
-    /// Flushes any buffer currently queued on the player node (including an in-flight test
-    /// tone) so real RC003 voice audio scheduled right after this call is not delayed behind it.
-    func cancelTestTone() {
-        flushPlayer()
     }
 
     private func makeBuffer(samples: [Int16]) -> AVAudioPCMBuffer? {

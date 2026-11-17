@@ -217,19 +217,6 @@ struct RuntimeReviewBoundaryTests {
         #expect(roles == 1 && frames == 0)
     }
 
-    @Test func testToneCompletionAlwaysReturnsOnMainThread() async {
-        for callbackType in [AVAudioPlayerNodeCompletionCallbackType.dataPlayedBack, .dataConsumed] {
-            let played: Bool = await withCheckedContinuation { continuation in
-                let callback = VirtualAudioOutput.testToneCompletion {
-                    #expect(Thread.isMainThread)
-                    continuation.resume(returning: $0)
-                }
-                DispatchQueue.global().async { callback(callbackType) }
-            }
-            #expect(played == (callbackType == .dataPlayedBack))
-        }
-    }
-
     @Test func bankCardMetadataIsSensitiveAcrossInsertionAndVoiceDestinations() {
         for text in ["银行卡号码", "借记卡", "信用卡"] {
             #expect(!CommonPhraseInserter.permitsInsertion(role: "AXTextField", subrole: "",

@@ -11,15 +11,7 @@
 "app.status.stopped" = "The app has stopped";
 "audio.compatibility.device_missing" = "%1$@ was not found. Install the compatibility driver first.";
 "audio.compatibility.device_selected" = "Remote audio will be sent to %1$@";
-"audio.test_tone.cancelled_device_changed" = "The device changed; the test tone was canceled";
-"audio.test_tone.ready" = "Ready to send a test tone";
 "audio.output.none_or_unavailable" = "No audio output device is selected, or the device is unavailable";
-"audio.test_tone.blocked_voice_active" = "The remote microphone is in use. Finish speaking before playing a test tone.";
-"audio.test_tone.already_playing" = "A test tone is already playing";
-"audio.test_tone.device_not_ready" = "Failed to send the test tone: device is not ready";
-"audio.test_tone.playing" = "Playing a one-second test tone";
-"audio.test_tone.completed" = "Test tone complete";
-"audio.test_tone.cancelled" = "Test tone canceled";
 "voice_button.status.fn_enabled" = "The remote voice button acts as Fn";
 "voice_button.status.left_command_enabled" = "The remote voice button will hold Left Command";
 "voice_button.status.right_command_enabled" = "The remote voice button will hold Right Command";
@@ -302,7 +294,6 @@
 "audio.gain.help" = "0 dB keeps the original volume. Higher values make the voice louder and also amplify background noise. Start with 6–12 dB.";
 "audio.status.title" = "Audio status";
 "audio.action.refresh_devices" = "Refresh Devices";
-"audio.action.send_test_tone" = "Play Test Sound";
 "audio.output.privacy_help" = "Remote audio is sent only to the selected device. Disconnecting, stopping, quitting or reconfiguring Remote Buddy does not change the system default microphone or speakers. Select the same virtual microphone in your voice input tool.";
 "audio.compatibility.title" = "Compatible Audio Device";
 "audio.compatibility.section_title" = "Voice Input & Compatibility";

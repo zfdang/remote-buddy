@@ -55,8 +55,6 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
     @Published var remoteSystemDeviceNames: [UUID: String] = [:]
     @Published var remoteDeviceInformation: [UUID: RemoteDeviceInformation] = [:]
     @Published var audioDevices: [AudioDeviceInfo] = []
-    @Published var testToneStatus = LocalizedMessage("audio.output.none_selected")
-    @Published var isPlayingTestTone = false
     @Published var isAudioOutputReady = false {
         didSet { if isAudioOutputReady { isAudioOutputVerified = true } }
     }
@@ -177,7 +175,6 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
     private var applicationIntegrationCancellable: AnyCancellable?
     private var remoteDiscoverySettingsCancellable: AnyCancellable?
     var remoteDiscoveryRequests = Set<UUID>()
-    var testToneGeneration = 0
     var voiceKeyLatch = VoiceKeyLatch()
     var voiceKeyReleaseRetry: ScheduledOperation?
     var voiceKeyReleaseRetryGeneration: UInt64 = 0
@@ -401,10 +398,6 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
         cancelHIDFilterRetry()
         audio.invalidatePendingWork()
         stopObservingAudioHardware()
-        cancelTestToneIfNeeded(
-            statusMessage: LocalizedMessage("app.status.stopped"),
-            logReason: "app_stop"
-        )
         stopLongRecording(reason: "app_stop")
         finishRC003VoiceExtensionTest(reason: "app_stop")
         voiceInputDestinationCoordinator.shutdown()

@@ -26,7 +26,7 @@ extension BridgeAppModel {
         let generation = longRecordingGeneration
         longRecordingBridge = bridge
         longRecordingRequested = true
-        if !audio.output.isReadyForTestTone {
+        if !audio.output.isReadyForVoicePlayback {
             ensureVirtualAudioOutputReady(reason: "long_recording_start") { [weak self] ready in
                 guard let self, self.longRecordingRequested,
                       self.longRecordingGeneration == generation else { return }

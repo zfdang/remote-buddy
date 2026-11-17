@@ -199,7 +199,7 @@ struct RuntimeBoundaryTests {
             }
         }
         #expect(!configured)
-        #expect(!output.isReadyForTestTone)
+        #expect(!output.isReadyForVoicePlayback)
         #expect(output.diagnosticSnapshot(deliveryGeneration: 0).pendingBuffers == 0)
     }
 

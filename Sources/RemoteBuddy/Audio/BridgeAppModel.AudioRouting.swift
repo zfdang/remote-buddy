@@ -83,11 +83,8 @@ extension BridgeAppModel {
         guard started, audio.startupGeneration == generation else { return }
         if audio.configurationGeneration == configurationGeneration {
             audioStatus = audio.output.status
-            isAudioOutputReady = audio.output.isReadyForTestTone
+            isAudioOutputReady = audio.output.isReadyForVoicePlayback
             isAudioOutputVerified = configured
-            testToneStatus = isAudioOutputReady
-                ? LocalizedMessage("audio.test_tone.ready")
-                : LocalizedMessage("audio.output.none_or_unavailable")
         }
         audio.startupPending = false
         publishAudioDevices(devices)
@@ -152,7 +149,7 @@ extension BridgeAppModel {
                 "configured_bridges=\(connections.bridges.count) " +
                 "discovery_bridge=\(connections.discoveryBridge != nil) " +
                 "bluetooth_voice=\(voiceSession.isActive) " +
-                "test_tone=\(isPlayingTestTone) audio_ready=\(isAudioOutputReady)"
+                "long_recording=\(longRecordingRequested) audio_ready=\(isAudioOutputReady)"
         )
         if !started {
             audio.suspensionState.clearPendingSystemWakeRecovery()
@@ -192,7 +189,7 @@ extension BridgeAppModel {
                 AppLogger.shared.write(
                     "SYSTEM AUDIO suspend_deferred event=\(event.rawValue) " +
                         "bluetooth_voice=\(voiceSession.isActive) " +
-                        "test_tone=\(isPlayingTestTone)"
+                        "long_recording=\(longRecordingRequested)"
                 )
                 return
             }
@@ -262,8 +259,6 @@ extension BridgeAppModel {
         cancelVirtualAudioReleaseIfPending(trigger: "system_sleep")
         stopLongRecording(reason: "system_sleep")
         finishRC003VoiceExtensionTest(reason: "system_sleep")
-        cancelTestToneIfNeeded(statusMessage: LocalizedMessage("audio.test_tone.cancelled_device_changed"),
-            logReason: "system_sleep")
         voiceSession.pendingStart.cancel()
         voiceSession.stopRequested = false
         voiceSession.isActive = false
@@ -274,7 +269,6 @@ extension BridgeAppModel {
         endVoiceSessionIfNeeded()
         audio.output.stop()
         isAudioOutputReady = false
-        testToneStatus = LocalizedMessage("audio.output.none_or_unavailable")
         AppLogger.shared.write("SYSTEM AUDIO suspended event=\(reason) active_sessions_ended=true")
     }
 
@@ -308,12 +302,6 @@ extension BridgeAppModel {
         audio.addConfigurationWaiter(generation: generation, completion)
         audio.output.invalidateAudibilityCache()
         AppLogger.shared.write("AUDIO REBIND begin reason=\(reason) state={\(audio.output.diagnosticState())}")
-        if reason != "test_tone" {
-            cancelTestToneIfNeeded(
-                statusMessage: LocalizedMessage("audio.test_tone.cancelled_device_changed"),
-                logReason: "device_reconfigure"
-            )
-        }
         configureAudioOutputWithRetry(
             deviceUID: deviceUID,
             generation: generation,
@@ -330,11 +318,8 @@ extension BridgeAppModel {
                     return
                 }
                 self.audioStatus = self.audio.output.status
-                self.isAudioOutputReady = self.audio.output.isReadyForTestTone
+                self.isAudioOutputReady = self.audio.output.isReadyForVoicePlayback
                 self.isAudioOutputVerified = configured
-                self.testToneStatus = self.isAudioOutputReady
-                    ? LocalizedMessage("audio.test_tone.ready")
-                    : LocalizedMessage("audio.output.none_or_unavailable")
                 AppLogger.shared.write(
                     "AUDIO REBIND finished reason=\(reason) success=\(configured) status=\(self.audioStatus.key) " +
                         "ready=\(self.isAudioOutputReady) selected_available=\(self.selectedAudioDeviceIsAvailable) " +
@@ -390,7 +375,7 @@ extension BridgeAppModel {
 
     @discardableResult
     func ensureVirtualAudioOutputReady(reason: String) -> Bool {
-        if audio.output.isReadyForTestTone {
+        if audio.output.isReadyForVoicePlayback {
             if let device = audio.output.actualDevice ?? audio.output.selectedDevice ?? audioDevices.first(where: { $0.uid == settings.selectedAudioDeviceUID }) {
                 let snapshot = CoreAudioDeviceCatalog.virtualAudioAudibilitySnapshot(for: device)
                 if !snapshot.requiresAudibilityRepair {
@@ -428,7 +413,7 @@ extension BridgeAppModel {
         reason: String,
         completion: @escaping (Bool) -> Void
     ) {
-        if audio.output.isReadyForTestTone {
+        if audio.output.isReadyForVoicePlayback {
             if let device = audio.output.actualDevice ?? audio.output.selectedDevice ?? audioDevices.first(where: { $0.uid == settings.selectedAudioDeviceUID }) {
                 let snapshot = CoreAudioDeviceCatalog.virtualAudioAudibilitySnapshot(for: device)
                 if !snapshot.requiresAudibilityRepair {
@@ -876,94 +861,4 @@ extension BridgeAppModel {
         }
     }
 
-    var canSendTestTone: Bool {
-        TestToneGate.canPlay(
-            hasSelectedDevice: selectedAudioDeviceIsAvailable,
-            isStreaming: isStreaming,
-            isPlaying: isPlayingTestTone || audio.testToneStartupPending
-        )
-    }
-
-    func sendTestTone() {
-        guard TestToneGate.canPlay(
-            hasSelectedDevice: selectedAudioDeviceIsAvailable,
-            isStreaming: isStreaming,
-            isPlaying: isPlayingTestTone || audio.testToneStartupPending
-        ) else {
-            if isStreaming {
-                testToneStatus = LocalizedMessage("audio.test_tone.blocked_voice_active")
-                AppLogger.shared.write("AUDIO TEST_TONE rejected_streaming")
-            } else if isPlayingTestTone || audio.testToneStartupPending {
-                testToneStatus = LocalizedMessage("audio.test_tone.already_playing")
-            } else {
-                testToneStatus = LocalizedMessage("audio.output.none_or_unavailable")
-            }
-            return
-        }
-
-        cancelVirtualAudioReleaseIfPending(trigger: "test_tone_start")
-        if !audio.output.isReadyForTestTone {
-            audio.testToneStartupPending = true
-            let generation = testToneGeneration
-            ensureVirtualAudioOutputReady(reason: "test_tone") { [weak self] ready in
-                guard let self, self.testToneGeneration == generation else { return }
-                self.audio.testToneStartupPending = false
-                self.startTestToneAfterAudioReady(ready)
-                self.releaseVirtualAudioOutputIfUnused(reason: "test_tone_prepared")
-            }
-            return
-        }
-        startTestToneAfterAudioReady(true)
-    }
-
-    func startTestToneAfterAudioReady(_ ready: Bool) {
-        // A voice start or another tone may win while configuration is in flight.
-        guard !isPlayingTestTone else { return }
-        guard !isStreaming, !hasActiveVirtualAudioSource else {
-            testToneStatus = LocalizedMessage("audio.test_tone.blocked_voice_active")
-            return
-        }
-        guard canSendTestTone else {
-            testToneStatus = LocalizedMessage("audio.output.none_or_unavailable")
-            return
-        }
-        guard ready else {
-            testToneStatus = LocalizedMessage("audio.test_tone.device_not_ready")
-            releaseVirtualAudioOutputIfUnused(reason: "test_tone_configure_failed")
-            return
-        }
-        testToneGeneration &+= 1
-        let generation = testToneGeneration
-        let started = audio.output.playTestTone { [weak self] finished in
-            DispatchQueue.main.async {
-                self?.handleTestToneCompletion(generation: generation, finished: finished)
-            }
-        }
-        guard started else {
-            testToneStatus = LocalizedMessage("audio.test_tone.device_not_ready")
-            releaseVirtualAudioOutputIfUnused(reason: "test_tone_start_failed")
-            return
-        }
-        isPlayingTestTone = true
-        testToneStatus = LocalizedMessage("audio.test_tone.playing")
-        AppLogger.shared.write("AUDIO TEST_TONE played")
-    }
-
-    private func handleTestToneCompletion(generation: Int, finished: Bool) {
-        guard generation == testToneGeneration, isPlayingTestTone else { return }
-        isPlayingTestTone = false
-        testToneStatus = LocalizedMessage(finished ? "audio.test_tone.completed" : "audio.test_tone.cancelled")
-        AppLogger.shared.write("AUDIO TEST_TONE \(finished ? "finished" : "cut_short")")
-        releaseVirtualAudioOutputIfUnused(reason: "test_tone_finished")
-    }
-
-    func cancelTestToneIfNeeded(statusMessage: LocalizedMessage, logReason: String) {
-        guard isPlayingTestTone || audio.testToneStartupPending else { return }
-        audio.testToneStartupPending = false
-        testToneGeneration &+= 1
-        isPlayingTestTone = false
-        audio.output.cancelTestTone()
-        testToneStatus = statusMessage
-        AppLogger.shared.write("AUDIO TEST_TONE cancelled reason=\(logReason)")
-    }
 }

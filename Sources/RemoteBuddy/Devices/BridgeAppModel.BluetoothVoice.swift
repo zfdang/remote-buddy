@@ -43,7 +43,7 @@ extension BridgeAppModel {
             AppLogger.shared.write("ATVV STREAM rejected_busy reason=pending_start")
             return
         }
-        let outputReadyAtStart = audio.output.isReadyForTestTone
+        let outputReadyAtStart = audio.output.isReadyForVoicePlayback
         if !outputReadyAtStart {
             let shouldStartConfiguration = voiceSession.pendingStart.identifier == nil
             if shouldStartConfiguration {
@@ -335,7 +335,7 @@ extension BridgeAppModel {
                 "samples=\(voiceSession.bluetoothVoiceDecodedSampleCount) " +
                 "enqueue_failures=\(voiceSession.bluetoothVoiceEnqueueFailureCount) " +
                 "route=\(voiceSession.bluetoothVoiceTraceRoute) pending_buffers=\(pendingBuffers) " +
-                "flush=\(shouldFlushAudio) audio_ready=\(audio.output.isReadyForTestTone) " +
+                "flush=\(shouldFlushAudio) audio_ready=\(audio.output.isReadyForVoicePlayback) " +
                 "audio_state={\(audio.output.diagnosticState())}"
         )
         AppLogger.shared.write(

@@ -37,10 +37,6 @@ struct IdleAudioLifecycleTests {
             model.voiceSession.pendingStart.begin(for: UUID())
             #expect(model.shouldKeepVirtualAudioActive)
             model.voiceSession.pendingStart.cancel()
-            model.audio.testToneStartupPending = true
-            #expect(model.shouldKeepVirtualAudioActive)
-            model.cancelTestToneIfNeeded(statusMessage: LocalizedMessage("audio.test_tone.cancelled_device_changed"),
-                logReason: "test")
             #expect(!model.shouldKeepVirtualAudioActive)
         }
     }

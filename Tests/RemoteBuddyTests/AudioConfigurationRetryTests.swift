@@ -19,12 +19,11 @@ struct AudioConfigurationRetryTests {
         }
     }
 
-    @Test(arguments: [false, true], ["startup", "test_tone", "long_recording"])
+    @Test(arguments: [false, true], ["startup", "long_recording"])
     func transientFailureRetriesOnceAndReportsFinalOutcome(recovered: Bool, demand: String) async throws {
         try await withModel { model in
             model.started = true
             switch demand {
-            case "test_tone": model.audio.testToneStartupPending = true
             case "long_recording": model.longRecordingRequested = true
             default: model.audio.startupPending = true
             }

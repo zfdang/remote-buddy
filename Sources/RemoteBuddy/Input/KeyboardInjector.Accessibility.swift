@@ -280,7 +280,7 @@ extension KeyboardInjector {
             integration: integration,
             windowFrame: frame,
             canContinue: targetIsCurrent,
-            preserveFocus: preserveCurrentFocus,
+            preserveFocus: { preserveInput(excluding: $0) },
             isElementAlreadyFocused: { element in
                 accessibilityElementIsFocused(
                     element,
@@ -362,7 +362,7 @@ extension KeyboardInjector {
         integration: ApplicationIntegration,
         windowFrame: CGRect?,
         canContinue: () -> Bool,
-        preserveFocus: () -> Bool,
+        preserveFocus: (Element?) -> Bool,
         isElementAlreadyFocused: (Element) -> Bool,
         focus: (Element) -> Bool,
         click: (Element, AccessibilityTextCandidate) -> Bool
@@ -392,29 +392,69 @@ extension KeyboardInjector {
         return (resolved, newlyFocusedElement)
     }
 
+    static func focusIntegratedComposerCandidates<Element>(
+        _ candidates: [(element: Element, snapshot: AccessibilityTextCandidate)],
+        integration: ApplicationIntegration,
+        windowFrame: CGRect?,
+        canContinue: () -> Bool,
+        preserveFocus: @escaping () -> Bool,
+        isElementAlreadyFocused: @escaping (Element) -> Bool,
+        focus: (Element) -> Bool,
+        click: (Element, AccessibilityTextCandidate) -> Bool
+    ) -> (resolved: Bool, newlyFocusedElement: Element?) {
+        var didAttemptFocus = false
+        return focusIntegratedComposerCandidates(
+            candidates,
+            integration: integration,
+            windowFrame: windowFrame,
+            canContinue: canContinue,
+            preserveFocus: { target in
+                if let target, didAttemptFocus, isElementAlreadyFocused(target) {
+                    return false
+                }
+                return preserveFocus()
+            },
+            isElementAlreadyFocused: isElementAlreadyFocused,
+            focus: { element in
+                didAttemptFocus = !isElementAlreadyFocused(element)
+                return focus(element)
+            },
+            click: click
+        )
+    }
+
     /// The same candidate-to-action pipeline runs against native AX elements and
     /// injected test elements. Its only actions are focus and a verified click.
     static func focusIntegratedCandidates<Element>(_ candidates: [(element: Element, snapshot: AccessibilityTextCandidate)],
                                                    integration: ApplicationIntegration, windowFrame: CGRect?,
-                                                   canContinue: () -> Bool, preserveFocus: () -> Bool = { false },
+                                                   canContinue: () -> Bool, preserveFocus: (Element?) -> Bool,
                                                    focus: (Element) -> Bool,
                                                    click: (Element, AccessibilityTextCandidate) -> Bool) -> Bool {
         guard canContinue() else { return false }
-        if preserveFocus() { return true }
+        if preserveFocus(nil) { return true }
         let ranked = candidates.indices.compactMap { index -> (Int, Int)? in
             integratedComposerScore(candidates[index].snapshot, integration: integration,
                                     windowFrame: windowFrame).map { (index, $0) }
         }.sorted { $0.1 > $1.1 }
         guard let best = ranked.first, ranked.count == 1 || best.1 > ranked[1].1, canContinue() else { return false }
         let candidate = candidates[best.0]
-        if preserveFocus() { return true }
+        if preserveFocus(nil) { return true }
         if focus(candidate.element) { return true }
         guard canContinue() else { return false }
-        if preserveFocus() { return true }
+        if preserveFocus(candidate.element) { return true }
         guard canContinue(),
               integratedComposerClickPoint(candidate.snapshot, integration: integration, windowFrame: windowFrame) != nil
         else { return false }
         return click(candidate.element, candidate.snapshot)
+    }
+
+    static func focusIntegratedCandidates<Element>(_ candidates: [(element: Element, snapshot: AccessibilityTextCandidate)],
+                                                   integration: ApplicationIntegration, windowFrame: CGRect?,
+                                                   canContinue: () -> Bool, preserveFocus: @escaping () -> Bool = { false },
+                                                   focus: (Element) -> Bool,
+                                                   click: (Element, AccessibilityTextCandidate) -> Bool) -> Bool {
+        focusIntegratedCandidates(candidates, integration: integration, windowFrame: windowFrame,
+            canContinue: canContinue, preserveFocus: { _ in preserveFocus() }, focus: focus, click: click)
     }
 
     static func integratedComposerClickPoint(_ candidate: AccessibilityTextCandidate,

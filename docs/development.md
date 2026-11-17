@@ -304,10 +304,9 @@ Hold-to-repeat is represented by the `repeatSingleClick` action in the long-pres
 ## App integration accessibility and preparation boundaries
 
 Claude (`com.anthropic.claudefordesktop`) recognizes prompt/reply/draft/message
-label variants, normalized ellipses, and explicit composer identifiers. WorkBuddy (`com.tencent.workbuddy.mac`) matches its
+label variants, normalized ellipses, and explicit composer identifiers. DeepSeek Harness (`com.deepseek.dsh`) matches its `AXTextArea` composer by its `"message or run a task"` accessibility label prefix. WorkBuddy (`com.tencent.workbuddy.mac`) matches its
 composer by its surrounding More actions, Voice input, and Send controls when
-the placeholder is not exposed as stable field metadata. Both are opt-in and use control metadata,
-not editable values. Automatic composer discovery excludes search, code editors, modal dialogs,
+the placeholder is not exposed as stable field metadata. App integrations default to enabled (including newly added integrations) and can be disabled individually, while reading only control metadata rather than editable values. Automatic composer discovery excludes search, code editors, modal dialogs,
 ambiguous targets, and sensitive fields. Preservation is a separate user-intent
 path: an already selected writable search, code, question, or approval field
 (including a non-sensitive modal input) is deliberately retained. UI inspection identified both controls and

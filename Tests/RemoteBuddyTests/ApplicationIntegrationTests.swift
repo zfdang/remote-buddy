@@ -1119,22 +1119,65 @@ struct ApplicationIntegrationTests {
         #expect(newlyFocusedOutcome.resolved)
         #expect(newlyFocusedOutcome.newlyFocusedElement == "composer")
 
-        // Asynchronous AX focus side effects between focus() returning false and click()
-        // must not make click() treat the element as already-focused and skip moving the caret.
+        // Asynchronous AX focus side effects between focus() returning false and preserveFocus()/click()
+        // must be treated as newly focused (without redundant clicks when already confirmed) while
+        // switching to a different editable field is still preserved.
         let deepSeekNodes = [(element: "composer", snapshot: candidate("Message or run a task, / commands, @ files or sessions"))]
-        var asyncFocusedAfterWrite = false
-        let asyncClickFallbackOutcome = KeyboardInjector.focusIntegratedComposerCandidates(
+        var focusedControl: String?
+        var syntheticClicks = 0
+        let asyncFocusedOutcome = KeyboardInjector.focusIntegratedComposerCandidates(
             deepSeekNodes,
             integration: .deepSeek,
             windowFrame: window,
             canContinue: { true },
-            preserveFocus: { false },
-            isElementAlreadyFocused: { _ in asyncFocusedAfterWrite },
-            focus: { _ in asyncFocusedAfterWrite = true; return false },
+            preserveFocus: { excluded in
+                guard let current = focusedControl else { return false }
+                return excluded.map { current != $0 } ?? true
+            },
+            isElementAlreadyFocused: { focusedControl == $0 },
+            focus: { element in focusedControl = element; return false },
+            click: { element, _ in
+                if focusedControl == element { return true }
+                syntheticClicks += 1
+                return true
+            }
+        )
+        #expect(asyncFocusedOutcome.resolved)
+        #expect(asyncFocusedOutcome.newlyFocusedElement == "composer")
+        #expect(syntheticClicks == 0)
+
+        // Same race when the caller's preserveFocus does not exclude the target directly.
+        focusedControl = nil
+        let dynamicPreserveOutcome = KeyboardInjector.focusIntegratedComposerCandidates(
+            deepSeekNodes,
+            integration: .deepSeek,
+            windowFrame: window,
+            canContinue: { true },
+            preserveFocus: { focusedControl != nil },
+            isElementAlreadyFocused: { focusedControl == $0 },
+            focus: { element in focusedControl = element; return false },
             click: { _, _ in true }
         )
-        #expect(asyncClickFallbackOutcome.resolved)
-        #expect(asyncClickFallbackOutcome.newlyFocusedElement == "composer")
+        #expect(dynamicPreserveOutcome.resolved)
+        #expect(dynamicPreserveOutcome.newlyFocusedElement == "composer")
+
+        // User switching to another editable field during focus() must preserve that field without clicking.
+        focusedControl = nil
+        let switchedInputOutcome = KeyboardInjector.focusIntegratedComposerCandidates(
+            deepSeekNodes,
+            integration: .deepSeek,
+            windowFrame: window,
+            canContinue: { true },
+            preserveFocus: { excluded in
+                guard let current = focusedControl else { return false }
+                return excluded.map { current != $0 } ?? true
+            },
+            isElementAlreadyFocused: { focusedControl == $0 },
+            focus: { _ in focusedControl = "search_field"; return false },
+            click: { _, _ in Issue.record("Switched user input must not be replaced by a click"); return false }
+        )
+        #expect(switchedInputOutcome.resolved)
+        #expect(switchedInputOutcome.newlyFocusedElement == nil)
 
         // Call site 3: WeChat fallback skips click and caret movement when already focused,
         // rejects wrong controls such as search fields, and moves caret when newly focused.

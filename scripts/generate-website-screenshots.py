@@ -88,13 +88,20 @@ def main():
                 print(f"Optimizing {target_file.name}...")
                 optimize_png(source_file, target_file)
 
-            # Include all G9N9N media buttons and both connection cards in full.
-            for section, height, cards in [("mapping", 980, "0"), ("connection", 860, "1")]:
-                render_settings(bin_path, lang_code, Path(tmp_settings_dir), {
+            # Include all G9N9N media buttons and both connection cards in full, plus an active voice tool on integration.
+            for section, height, cards, voice_tool in [
+                ("mapping", 980, "0", ""),
+                ("connection", 860, "1", ""),
+                ("integration", 772, "1", "weixin"),
+            ]:
+                overrides = {
                     "REMOTE_BUDDY_SETTINGS_SCREENSHOT_SECTION": section,
                     "REMOTE_BUDDY_SETTINGS_SCREENSHOT_REMOTE_CARDS": cards,
                     "REMOTE_BUDDY_SETTINGS_SCREENSHOT_SIZE": f"1020x{height}",
-                })
+                }
+                if voice_tool:
+                    overrides["REMOTE_BUDDY_SETTINGS_SCREENSHOT_VOICE_TOOL"] = voice_tool
+                render_settings(bin_path, lang_code, Path(tmp_settings_dir), overrides)
                 optimize_png(Path(tmp_settings_dir) / f"{section}-1020x{height}.png",
                              OUTPUT_DIR / f"{section}-{lang_suffix}.png")
 

@@ -22,11 +22,6 @@ enum CoreAudioDeviceCatalog {
         }
     }
 
-    static func inputDevices() -> [AudioDeviceInfo] {
-        withPropertyLock {
-            devicesLocked(scope: kAudioDevicePropertyScopeInput)
-        }
-    }
 
     private static func devicesLocked(scope: AudioObjectPropertyScope) -> [AudioDeviceInfo] {
         var address = AudioObjectPropertyAddress(

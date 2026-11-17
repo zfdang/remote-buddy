@@ -503,17 +503,17 @@ struct G9N9NCompatibilityModeTests {
         window.contentViewController = controller
         defer { window.close() }
         window.contentView?.layoutSubtreeIfNeeded()
-        try await waitForTestCondition { probe.actions["continue"] != nil }
+        try await waitForTestCondition("onboarding registers Continue action") { probe.actions["continue"] != nil }
         _ = try #require(probe.actions["continue"])
 
         // Confirm single-key proof on first unit, then switch to second unit and send a 2-key combo.
         model.lastObservedRemoteButtonReport = RemoteButtonObservation(profileID: first, buttons: [.ok])
-        try await waitForTestCondition {
+        try await waitForTestCondition("onboarding handles first device single-key proof") {
             probe.lastHandledRemoteReport == RemoteButtonObservation(profileID: first, buttons: [.ok])
         }
         settings.selectRemoteProfile(second)
         model.lastObservedRemoteButtonReport = RemoteButtonObservation(profileID: second, buttons: [.ok, .up])
-        try await waitForTestCondition {
+        try await waitForTestCondition("onboarding handles second device chord") {
             probe.lastHandledRemoteReport == RemoteButtonObservation(profileID: second, buttons: [.ok, .up])
         }
 

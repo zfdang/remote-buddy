@@ -454,7 +454,7 @@ struct InputLifecycleRegressionTests {
             withExtendedLifetime(retained) {}
         }
         probe = nil
-        try await waitForTestCondition { observed == nil }
+        try await waitForTestCondition("one-shot timer releases captured probe") { observed == nil }
         #expect(observed == nil)
         withExtendedLifetime(handle) {}
         var second: Probe? = Probe()
@@ -465,7 +465,7 @@ struct InputLifecycleRegressionTests {
         second = nil
         withExtendedLifetime(task) {}
         task = nil
-        try await waitForTestCondition { secondObserved == nil }
+        try await waitForTestCondition("cancelled timer releases captured probe") { secondObserved == nil }
         #expect(secondObserved == nil)
     }
 }

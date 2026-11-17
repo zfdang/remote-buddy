@@ -133,16 +133,21 @@ extension KeyboardInjector {
                 windowFrame: axFrame(window)
             ) else { continue }
             let targetElement = candidates[candidateIndex].element
-            let wasAlreadyFocused = accessibilityElementIsFocused(
-                targetElement,
-                applicationElement: applicationElement,
-                requiresApplicationFocusedElement: false
-            )
-            if focusAccessibilityElement(
-                targetElement,
-                applicationElement: applicationElement
-            ) {
-                if !wasAlreadyFocused {
+            if focusElementPreservingExistingCaret(
+                isAlreadyFocused: {
+                    accessibilityElementIsFocused(
+                        targetElement,
+                        applicationElement: applicationElement,
+                        requiresApplicationFocusedElement: false
+                    )
+                },
+                focusElement: {
+                    focusAccessibilityElement(
+                        targetElement,
+                        applicationElement: applicationElement
+                    )
+                },
+                moveCaretToEnd: {
                     _ = moveAccessibilityCaretToEnd(
                         of: targetElement,
                         canContinue: {
@@ -157,6 +162,7 @@ extension KeyboardInjector {
                         }
                     )
                 }
+            ) {
                 return true
             }
         }
@@ -269,47 +275,49 @@ extension KeyboardInjector {
                   CFEqual(window, current), axElements(window, attribute: "AXSheets").isEmpty else { return false }
             return true
         }
-        var focusedCandidateElement: AXUIElement?
-        let resolved = focusIntegratedCandidates(candidates, integration: integration, windowFrame: frame,
+        let focusOutcome = focusIntegratedComposerCandidates(
+            candidates,
+            integration: integration,
+            windowFrame: frame,
             canContinue: targetIsCurrent,
             preserveFocus: preserveCurrentFocus,
+            isElementAlreadyFocused: { element in
+                accessibilityElementIsFocused(
+                    element,
+                    applicationElement: app,
+                    requiresApplicationFocusedElement: false
+                )
+            },
             focus: { element in
-                guard focusAccessibilityElement(element, applicationElement: app,
+                focusAccessibilityElement(element, applicationElement: app,
                     requiresApplicationFocusedElement: true, allowPress: integration == .antigravity,
-                    canWriteFocus: { targetIsCurrent() && !preserveInput(excluding: element) }) else {
-                    return false
-                }
-                focusedCandidateElement = element
-                return true
+                    canWriteFocus: { targetIsCurrent() && !preserveInput(excluding: element) })
             },
             click: { element, snapshot in
                 guard !clickAttempted else { return false }
                 clickAttempted = true
-                guard clickIntegratedComposer(snapshot, integration: integration, windowFrame: frame,
+                return clickIntegratedComposer(snapshot, integration: integration, windowFrame: frame,
                     canContinue: targetIsCurrent,
                     preserveFocus: { preserveInput(excluding: element) },
                     hitTest: { accessibilityHitTestMatchesTarget(element, processIdentifier: processIdentifier, point: $0) },
                     isFocused: { accessibilityElementIsFocused(element, applicationElement: app,
-                        requiresApplicationFocusedElement: true) }) else {
-                    return false
-                }
-                focusedCandidateElement = element
-                return true
-            })
-        guard resolved, canContinue() else { return .unavailable }
+                        requiresApplicationFocusedElement: true) })
+            }
+        )
+        guard focusOutcome.resolved, canContinue() else { return .unavailable }
         if let preservedElement {
             guard let current = axElement(app, attribute: kAXFocusedUIElementAttribute),
                   CFEqual(current, preservedElement) else { return .unavailable }
             return .preserved
         }
-        if let focusedCandidateElement {
+        if let newlyFocusedElement = focusOutcome.newlyFocusedElement {
             _ = moveAccessibilityCaretToEnd(
-                of: focusedCandidateElement,
+                of: newlyFocusedElement,
                 canContinue: {
                     targetIsCurrent() &&
-                        !preserveInput(excluding: focusedCandidateElement) &&
+                        !preserveInput(excluding: newlyFocusedElement) &&
                         accessibilityElementIsFocused(
-                            focusedCandidateElement,
+                            newlyFocusedElement,
                             applicationElement: app,
                             requiresApplicationFocusedElement: true
                         )
@@ -317,6 +325,52 @@ extension KeyboardInjector {
             )
         }
         return .focused
+    }
+
+    static func focusElementPreservingExistingCaret(
+        isAlreadyFocused: () -> Bool,
+        focusElement: () -> Bool,
+        moveCaretToEnd: () -> Void
+    ) -> Bool {
+        let wasAlreadyFocused = isAlreadyFocused()
+        guard focusElement() else { return false }
+        if !wasAlreadyFocused {
+            moveCaretToEnd()
+        }
+        return true
+    }
+
+    static func focusIntegratedComposerCandidates<Element>(
+        _ candidates: [(element: Element, snapshot: AccessibilityTextCandidate)],
+        integration: ApplicationIntegration,
+        windowFrame: CGRect?,
+        canContinue: () -> Bool,
+        preserveFocus: () -> Bool,
+        isElementAlreadyFocused: (Element) -> Bool,
+        focus: (Element) -> Bool,
+        click: (Element, AccessibilityTextCandidate) -> Bool
+    ) -> (resolved: Bool, newlyFocusedElement: Element?) {
+        var newlyFocusedElement: Element?
+        let resolved = focusIntegratedCandidates(
+            candidates,
+            integration: integration,
+            windowFrame: windowFrame,
+            canContinue: canContinue,
+            preserveFocus: preserveFocus,
+            focus: { element in
+                let wasAlreadyFocused = isElementAlreadyFocused(element)
+                guard focus(element) else { return false }
+                newlyFocusedElement = wasAlreadyFocused ? nil : element
+                return true
+            },
+            click: { element, snapshot in
+                let wasAlreadyFocused = isElementAlreadyFocused(element)
+                guard click(element, snapshot) else { return false }
+                newlyFocusedElement = wasAlreadyFocused ? nil : element
+                return true
+            }
+        )
+        return (resolved, newlyFocusedElement)
     }
 
     /// The same candidate-to-action pipeline runs against native AX elements and
@@ -547,58 +601,86 @@ extension KeyboardInjector {
 
     static func focusWeChatComposer(processIdentifier: pid_t) -> Bool {
         let applicationElement = AXUIElementCreateApplication(processIdentifier)
-        guard let frame = weChatComposerWindowFrame(
-            applicationWindows(applicationElement).compactMap { window in
-                guard let frame = axFrame(window) else { return nil }
-                return (
-                    title: axString(window, attribute: kAXTitleAttribute),
-                    frame: frame
-                )
-            }
-        ),
-              let point = weChatComposerFocusPoint(windowFrame: frame),
-              let source = CGEventSource(stateID: .hidSystemState),
-              let down = CGEvent(
-                  mouseEventSource: source,
-                  mouseType: .leftMouseDown,
-                  mouseCursorPosition: point,
-                  mouseButton: .left
-              ),
-              let up = CGEvent(
-                  mouseEventSource: source,
-                  mouseType: .leftMouseUp,
-                  mouseCursorPosition: point,
-                  mouseButton: .left
-              )
-        else { return false }
-        let previousPointerLocation = CGEvent(source: nil)?.location
-        down.setIntegerValueField(.eventSourceUserData, value: syntheticEventMarker)
-        up.setIntegerValueField(.eventSourceUserData, value: syntheticEventMarker)
-        down.post(tap: .cghidEventTap)
-        up.post(tap: .cghidEventTap)
-        if let previousPointerLocation,
-           let restore = CGEvent(
-               mouseEventSource: source,
-               mouseType: .mouseMoved,
-               mouseCursorPosition: previousPointerLocation,
-               mouseButton: .left
-           ) {
-            restore.setIntegerValueField(.eventSourceUserData, value: syntheticEventMarker)
-            restore.post(tap: .cghidEventTap)
-        }
-        usleep(30_000)
-        guard isWeChatComposerFocused(applicationElement: applicationElement) else { return false }
-        if let focusedElement = axElement(applicationElement, attribute: kAXFocusedUIElementAttribute) {
-            _ = moveAccessibilityCaretToEnd(
-                of: focusedElement,
-                canContinue: {
-                    applicationIsFrontmost(processIdentifier) &&
-                        isAccessibilityTrusted &&
-                        !SecureInputMonitor.isEnabled() &&
-                        isWeChatComposerFocused(applicationElement: applicationElement)
+        return focusWeChatComposerFlow(
+            isAlreadyFocused: {
+                isWeChatComposerFocused(applicationElement: applicationElement)
+            },
+            performWindowClick: {
+                guard let frame = weChatComposerWindowFrame(
+                    applicationWindows(applicationElement).compactMap { window in
+                        guard let frame = axFrame(window) else { return nil }
+                        return (
+                            title: axString(window, attribute: kAXTitleAttribute),
+                            frame: frame
+                        )
+                    }
+                ),
+                      let point = weChatComposerFocusPoint(windowFrame: frame),
+                      let source = CGEventSource(stateID: .hidSystemState),
+                      let down = CGEvent(
+                          mouseEventSource: source,
+                          mouseType: .leftMouseDown,
+                          mouseCursorPosition: point,
+                          mouseButton: .left
+                      ),
+                      let up = CGEvent(
+                          mouseEventSource: source,
+                          mouseType: .leftMouseUp,
+                          mouseCursorPosition: point,
+                          mouseButton: .left
+                      )
+                else { return false }
+                let previousPointerLocation = CGEvent(source: nil)?.location
+                down.setIntegerValueField(.eventSourceUserData, value: syntheticEventMarker)
+                up.setIntegerValueField(.eventSourceUserData, value: syntheticEventMarker)
+                down.post(tap: .cghidEventTap)
+                up.post(tap: .cghidEventTap)
+                if let previousPointerLocation,
+                   let restore = CGEvent(
+                       mouseEventSource: source,
+                       mouseType: .mouseMoved,
+                       mouseCursorPosition: previousPointerLocation,
+                       mouseButton: .left
+                   ) {
+                    restore.setIntegerValueField(.eventSourceUserData, value: syntheticEventMarker)
+                    restore.post(tap: .cghidEventTap)
                 }
-            )
+                return true
+            },
+            pauseAfterClick: { usleep(30_000) },
+            confirmFocused: {
+                isWeChatComposerFocused(applicationElement: applicationElement)
+            },
+            moveCaretToEnd: {
+                if let focusedElement = axElement(applicationElement, attribute: kAXFocusedUIElementAttribute) {
+                    _ = moveAccessibilityCaretToEnd(
+                        of: focusedElement,
+                        canContinue: {
+                            applicationIsFrontmost(processIdentifier) &&
+                                isAccessibilityTrusted &&
+                                !SecureInputMonitor.isEnabled() &&
+                                isWeChatComposerFocused(applicationElement: applicationElement)
+                        }
+                    )
+                }
+            }
+        )
+    }
+
+    static func focusWeChatComposerFlow(
+        isAlreadyFocused: () -> Bool,
+        performWindowClick: () -> Bool,
+        pauseAfterClick: () -> Void = { usleep(30_000) },
+        confirmFocused: () -> Bool,
+        moveCaretToEnd: () -> Void
+    ) -> Bool {
+        if isAlreadyFocused() {
+            return true
         }
+        guard performWindowClick() else { return false }
+        pauseAfterClick()
+        guard confirmFocused() else { return false }
+        moveCaretToEnd()
         return true
     }
 
@@ -606,11 +688,60 @@ extension KeyboardInjector {
         guard let focusedElement = axElement(applicationElement, attribute: kAXFocusedUIElementAttribute) else {
             return false
         }
-        let role = axString(focusedElement, attribute: kAXRoleAttribute)
+        let attributes = AccessibilityMessaging.attributes(
+            focusedElement,
+            keys: [
+                kAXRoleAttribute,
+                kAXSubroleAttribute,
+                kAXIdentifierAttribute,
+                kAXTitleAttribute,
+                kAXDescriptionAttribute,
+                kAXHelpAttribute,
+                kAXPlaceholderValueAttribute,
+                kAXFocusedAttribute
+            ]
+        )
+        let semanticText = [
+            attributes[kAXIdentifierAttribute] as? String,
+            attributes[kAXTitleAttribute] as? String,
+            attributes[kAXDescriptionAttribute] as? String,
+            attributes[kAXHelpAttribute] as? String,
+            attributes[kAXPlaceholderValueAttribute] as? String
+        ]
+        .compactMap { $0 }
+        .joined(separator: " ")
+        return isWeChatComposerElementFocused(
+            role: attributes[kAXRoleAttribute] as? String,
+            subrole: attributes[kAXSubroleAttribute] as? String,
+            identifier: attributes[kAXIdentifierAttribute] as? String,
+            semanticText: semanticText,
+            isFocused: attributes[kAXFocusedAttribute] as? Bool
+        )
+    }
+
+    static func isWeChatComposerElementFocused(
+        role: String?,
+        subrole: String?,
+        identifier: String?,
+        semanticText: String,
+        isFocused: Bool?
+    ) -> Bool {
         guard role == "AXTextArea" || role == "AXTextField" else {
             return false
         }
-        return axBool(focusedElement, attribute: kAXFocusedAttribute) ?? true
+        if subrole == "AXSearchField" || subrole == kAXSecureTextFieldSubrole {
+            return false
+        }
+        let normalizedIdentifier = (identifier ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if !normalizedIdentifier.isEmpty && normalizedIdentifier != "chat_input_field" {
+            return false
+        }
+        let normalizedSemantic = semanticText.lowercased()
+        if containsSensitiveAccessibilityTerms(normalizedSemantic) ||
+            ["search", "find", "filter", "搜索", "查找", "筛选"].contains(where: normalizedSemantic.contains) {
+            return false
+        }
+        return isFocused ?? true
     }
 
     static func captureFocusedAccessibilityTargetAsync(
@@ -1521,8 +1652,11 @@ extension KeyboardInjector {
                 guard canContinue() else { return false }
                 if let updated = readSelectedRange() {
                     guard canContinue() else { return false }
-                    if updated.location == characterCount, updated.length == 0 {
-                        return true
+                    if let verifiedCount = readNumberOfCharacters() {
+                        guard canContinue() else { return false }
+                        if updated.location == verifiedCount, updated.length == 0 {
+                            return true
+                        }
                     }
                 }
             }

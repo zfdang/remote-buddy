@@ -968,28 +968,32 @@ struct ApplicationIntegrationTests {
             case duringSettableCheck
             case duringWrite
             case afterWriteVerification
+            case duringCountVerification
         }
 
         for point in InvalidationPoint.allCases {
             var valid = true
             var writes = 0
-            var readCount = 0
+            var countReads = 0
+            var rangeReads = 0
             var keys = 0
             let moved = KeyboardInjector.moveIntegratedComposerCaretToEnd(
                 readNumberOfCharacters: {
-                    if point == .afterCount { valid = false }
+                    countReads += 1
+                    if countReads == 1 && point == .afterCount { valid = false }
+                    if countReads == 2 && point == .duringCountVerification { valid = false }
                     return 10
                 },
                 readSelectedRange: {
-                    readCount += 1
-                    if readCount == 1 && point == .afterInitialRange {
+                    rangeReads += 1
+                    if rangeReads == 1 && point == .afterInitialRange {
                         valid = false
                         return CFRange(location: 10, length: 0)
                     }
-                    if readCount == 2 && point == .afterWriteVerification {
+                    if rangeReads == 2 && point == .afterWriteVerification {
                         valid = false
                     }
-                    return readCount == 1 ? CFRange(location: 1, length: 0) : CFRange(location: 10, length: 0)
+                    return rangeReads == 1 ? CFRange(location: 1, length: 0) : CFRange(location: 10, length: 0)
                 },
                 isSelectedRangeSettable: {
                     if point == .duringSettableCheck { valid = false }
@@ -1006,9 +1010,147 @@ struct ApplicationIntegrationTests {
             )
             #expect(!moved)
             #expect(keys == 0)
-            let expectedWrites = (point == .duringWrite || point == .afterWriteVerification) ? 1 : 0
+            let expectedWrites = (point == .duringWrite ||
+                point == .afterWriteVerification ||
+                point == .duringCountVerification) ? 1 : 0
             #expect(writes == expectedWrites)
         }
+    }
+
+    @Test func composerCaretMoveFallsBackWhenTextGrowsBeforeVerification() {
+        var countReads = 0
+        var writes = 0
+        var keys = 0
+        var pauses = 0
+        var writtenLocation: Int?
+        let moved = KeyboardInjector.moveIntegratedComposerCaretToEnd(
+            readNumberOfCharacters: {
+                countReads += 1
+                // Streaming output or IME commit appends characters before verification read.
+                return countReads == 1 ? 10 : 14
+            },
+            readSelectedRange: {
+                CFRange(location: writtenLocation ?? 1, length: 0)
+            },
+            isSelectedRangeSettable: { true },
+            writeSelectedRange: { range in
+                writes += 1
+                writtenLocation = range.location
+                return true
+            },
+            canContinue: { true },
+            postMoveToEndKey: { keys += 1; return true },
+            pause: { pauses += 1 }
+        )
+        #expect(moved)
+        #expect(writes == 1 && writtenLocation == 10)
+        #expect(keys == 1 && pauses == 1)
+    }
+
+    @Test func allComposerFocusPathsPreserveAlreadyFocusedCaretAndMoveOnlyNewlyFocused() {
+        // Call site 1: focusElementPreservingExistingCaret (generic accessibility composer path).
+        var genericCaretMoves = 0
+        #expect(KeyboardInjector.focusElementPreservingExistingCaret(
+            isAlreadyFocused: { true },
+            focusElement: { true },
+            moveCaretToEnd: { genericCaretMoves += 1 }
+        ))
+        #expect(genericCaretMoves == 0)
+        #expect(KeyboardInjector.focusElementPreservingExistingCaret(
+            isAlreadyFocused: { false },
+            focusElement: { true },
+            moveCaretToEnd: { genericCaretMoves += 1 }
+        ))
+        #expect(genericCaretMoves == 1)
+
+        // Call site 2: integrated composer candidate pipeline when preserveFocus returns false
+        // (e.g. host omits AXEditable / settable AXValue) yet the candidate is already focused.
+        let nodes = [(element: "composer", snapshot: candidate("Message input"))]
+        let alreadyFocusedOutcome = KeyboardInjector.focusIntegratedComposerCandidates(
+            nodes,
+            integration: .antigravity,
+            windowFrame: window,
+            canContinue: { true },
+            preserveFocus: { false },
+            isElementAlreadyFocused: { _ in true },
+            focus: { _ in true },
+            click: { _, _ in Issue.record("Already-focused focus path must not click"); return false }
+        )
+        #expect(alreadyFocusedOutcome.resolved)
+        #expect(alreadyFocusedOutcome.newlyFocusedElement == nil)
+
+        let newlyFocusedOutcome = KeyboardInjector.focusIntegratedComposerCandidates(
+            nodes,
+            integration: .antigravity,
+            windowFrame: window,
+            canContinue: { true },
+            preserveFocus: { false },
+            isElementAlreadyFocused: { _ in false },
+            focus: { _ in true },
+            click: { _, _ in Issue.record("Direct focus must not click"); return false }
+        )
+        #expect(newlyFocusedOutcome.resolved)
+        #expect(newlyFocusedOutcome.newlyFocusedElement == "composer")
+
+        // Call site 3: WeChat fallback skips click and caret movement when already focused,
+        // rejects wrong controls such as search fields, and moves caret when newly focused.
+        var weChatClicks = 0
+        var weChatCaretMoves = 0
+        #expect(KeyboardInjector.focusWeChatComposerFlow(
+            isAlreadyFocused: { true },
+            performWindowClick: { weChatClicks += 1; return true },
+            pauseAfterClick: {},
+            confirmFocused: { true },
+            moveCaretToEnd: { weChatCaretMoves += 1 }
+        ))
+        #expect(weChatClicks == 0 && weChatCaretMoves == 0)
+
+        #expect(KeyboardInjector.focusWeChatComposerFlow(
+            isAlreadyFocused: { false },
+            performWindowClick: { weChatClicks += 1; return true },
+            pauseAfterClick: {},
+            confirmFocused: { true },
+            moveCaretToEnd: { weChatCaretMoves += 1 }
+        ))
+        #expect(weChatClicks == 1 && weChatCaretMoves == 1)
+
+        #expect(!KeyboardInjector.focusWeChatComposerFlow(
+            isAlreadyFocused: { false },
+            performWindowClick: { weChatClicks += 1; return true },
+            pauseAfterClick: {},
+            confirmFocused: { false },
+            moveCaretToEnd: { weChatCaretMoves += 1 }
+        ))
+        #expect(weChatClicks == 2 && weChatCaretMoves == 1)
+
+        #expect(KeyboardInjector.isWeChatComposerElementFocused(
+            role: "AXTextArea",
+            subrole: "",
+            identifier: "chat_input_field",
+            semanticText: "chat_input_field",
+            isFocused: true
+        ))
+        #expect(KeyboardInjector.isWeChatComposerElementFocused(
+            role: "AXTextArea",
+            subrole: "",
+            identifier: "",
+            semanticText: "",
+            isFocused: true
+        ))
+        #expect(!KeyboardInjector.isWeChatComposerElementFocused(
+            role: "AXTextField",
+            subrole: "AXSearchField",
+            identifier: "",
+            semanticText: "搜索",
+            isFocused: true
+        ))
+        #expect(!KeyboardInjector.isWeChatComposerElementFocused(
+            role: "AXTextField",
+            subrole: "",
+            identifier: "search_bar",
+            semanticText: "search_bar",
+            isFocused: true
+        ))
     }
 
     @Test func composerCaretMoveShortcutRespectsPhysicalModifiers() {

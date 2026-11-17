@@ -568,12 +568,50 @@ struct VoiceInputActivationTests {
             keySetter: { _, down in posted.append(down); return true }))
         #expect(posted.isEmpty)
         #expect(failures.count == 1 && failures[0].0 == .doubao && failures[0].1 == .unavailable)
-        #expect(model.unavailableVoiceToolPrompt == .doubao)
+        #expect(model.unavailableVoiceToolPrompt == BridgeAppModel.VoiceToolUnavailablePrompt(
+            tool: .doubao, reason: .unavailable))
 
         model.unavailableVoiceToolPrompt = nil
-        model.presentUnavailableVoiceToolPromptIfNeeded(for: .doubao, now: 105)
+        model.presentUnavailableVoiceToolPromptIfNeeded(for: .doubao, reason: .unavailable, now: 105)
         #expect(model.unavailableVoiceToolPrompt == nil)
-        model.presentUnavailableVoiceToolPromptIfNeeded(for: .doubao, now: 111)
-        #expect(model.unavailableVoiceToolPrompt == .doubao)
+        model.presentUnavailableVoiceToolPromptIfNeeded(for: .doubao, reason: .switchFailed, now: 111)
+        #expect(model.unavailableVoiceToolPrompt == BridgeAppModel.VoiceToolUnavailablePrompt(
+            tool: .doubao, reason: .switchFailed))
+    }
+
+    @Test func asyncActivationTimeoutNotifiesFailureAndCancellationStaysSilent() throws {
+        let target = try #require(OnboardingVoiceTool.doubao.preferredInputSourceID)
+        var source = "previous"
+        var restored: [String] = []
+        var finishWait: ((Bool) -> Void)?
+        var failures: [(OnboardingVoiceTool, OnboardingInputSourceSwitchResult)] = []
+        let monitor = PreferredInputSourceMonitor(
+            voiceTool: { .doubao },
+            prepareInputSource: { _ in source = target; return .selected },
+            currentInputSourceID: { source },
+            restoreInputSource: { id in restored.append(id); source = id; return .selected },
+            waitForInputSourceActivation: { _, _, _, done in finishWait = done },
+            installMonitor: { _ in nil },
+            logger: { _ in },
+            onSourcePreparationFailure: { tool, result in failures.append((tool, result)) }
+        )
+
+        var readyResults: [Bool] = []
+        monitor.beginVoiceSession { readyResults.append($0) }
+        finishWait?(false)
+        #expect(readyResults == [false])
+        #expect(failures.count == 1 && failures[0].0 == .doubao && failures[0].1 == .failed)
+        #expect(restored == ["previous"] && source == "previous")
+
+        failures.removeAll()
+        restored.removeAll()
+        readyResults.removeAll()
+        finishWait = nil
+        monitor.beginVoiceSession { readyResults.append($0) }
+        monitor.endVoiceSession()
+        finishWait?(false)
+        #expect(readyResults == [false])
+        #expect(failures.isEmpty)
+        #expect(restored == ["previous"])
     }
 }

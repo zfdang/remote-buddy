@@ -67,7 +67,17 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
     @Published var activeVoiceSource: RemoteInputSource?
     @Published var voiceShortcutStatus = LocalizedMessage("voice_button.status.preparing")
     @Published var voiceKeyCompatibilityWarning: VoiceKeyCompatibilityWarning?
-    @Published var unavailableVoiceToolPrompt: OnboardingVoiceTool?
+    struct VoiceToolUnavailablePrompt: Equatable {
+        enum Reason: Equatable {
+            case unavailable
+            case switchFailed
+        }
+
+        let tool: OnboardingVoiceTool
+        let reason: Reason
+    }
+
+    @Published var unavailableVoiceToolPrompt: VoiceToolUnavailablePrompt?
     @Published var requestedSettingsSection: SettingsSection?
 
     func isOnboardingControlSourceConnected(_ source: OnboardingControlSource) -> Bool {
@@ -119,8 +129,16 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
             self?.settings.onboardingVoiceTool ?? .unselected
         },
         onSourcePreparationFailure: { [weak self] tool, result in
-            guard result == .unavailable || result == .failed else { return }
-            self?.presentUnavailableVoiceToolPromptIfNeeded(for: tool)
+            let reason: VoiceToolUnavailablePrompt.Reason
+            switch result {
+            case .unavailable:
+                reason = .unavailable
+            case .failed:
+                reason = .switchFailed
+            case .selected, .notSelected, .notApplicable:
+                return
+            }
+            self?.presentUnavailableVoiceToolPromptIfNeeded(for: tool, reason: reason)
         }
     )
 
@@ -128,6 +146,7 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
 
     func presentUnavailableVoiceToolPromptIfNeeded(
         for tool: OnboardingVoiceTool,
+        reason: VoiceToolUnavailablePrompt.Reason = .unavailable,
         now: TimeInterval = ProcessInfo.processInfo.systemUptime
     ) {
         if let last = lastUnavailableVoiceToolPrompt,
@@ -136,7 +155,7 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
             return
         }
         lastUnavailableVoiceToolPrompt = (tool, now)
-        unavailableVoiceToolPrompt = tool
+        unavailableVoiceToolPrompt = VoiceToolUnavailablePrompt(tool: tool, reason: reason)
     }
     lazy var voiceInputDestinationCoordinator = VoiceInputDestinationCoordinator(
         onStateChange: { [weak self] state in

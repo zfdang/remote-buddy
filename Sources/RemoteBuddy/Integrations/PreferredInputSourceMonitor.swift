@@ -353,6 +353,7 @@ final class PreferredInputSourceMonitor {
                 reason: activationResult,
                 owner: .explicitVoice
             )
+            onSourcePreparationFailure?(selectedVoiceTool, .failed)
             return false
         }
         guard var session = managedInputSourceSession,

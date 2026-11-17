@@ -739,13 +739,13 @@ private final class RemoteBuddyAppDelegate: NSObject, NSApplicationDelegate, NSM
         model.$unavailableVoiceToolPrompt
             .compactMap { $0 }
             .receive(on: RunLoop.main)
-            .sink { [weak self] tool in
-                self?.presentUnavailableVoiceToolAlert(for: tool)
+            .sink { [weak self] prompt in
+                self?.presentUnavailableVoiceToolAlert(for: prompt)
             }
             .store(in: &subscriptions)
     }
 
-    private func presentUnavailableVoiceToolAlert(for tool: OnboardingVoiceTool) {
+    private func presentUnavailableVoiceToolAlert(for prompt: BridgeAppModel.VoiceToolUnavailablePrompt) {
         model.unavailableVoiceToolPrompt = nil
         guard !isPresentingUnavailableVoiceToolAlert else { return }
         isPresentingUnavailableVoiceToolAlert = true
@@ -755,10 +755,20 @@ private final class RemoteBuddyAppDelegate: NSObject, NSApplicationDelegate, NSM
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
         alert.alertStyle = .warning
-        let toolName = localization.text(tool.titleKey)
-        alert.messageText = LocalizedMessage("voice_tool.unavailable.alert.title", arguments: [toolName])
+        let toolName = localization.text(prompt.tool.titleKey)
+        let titleKey: String
+        let messageKey: String
+        switch prompt.reason {
+        case .unavailable:
+            titleKey = "voice_tool.unavailable.alert.title"
+            messageKey = "voice_tool.unavailable.alert.message"
+        case .switchFailed:
+            titleKey = "voice_tool.switch_failed.alert.title"
+            messageKey = "voice_tool.switch_failed.alert.message"
+        }
+        alert.messageText = LocalizedMessage(titleKey, arguments: [toolName])
             .text(using: localization)
-        alert.informativeText = LocalizedMessage("voice_tool.unavailable.alert.message", arguments: [toolName])
+        alert.informativeText = LocalizedMessage(messageKey, arguments: [toolName])
             .text(using: localization)
         alert.addButton(withTitle: localization.text("voice_tool.unavailable.alert.open_settings"))
         alert.addButton(withTitle: localization.text("common.action.cancel"))

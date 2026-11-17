@@ -289,11 +289,28 @@ extension KeyboardInjector {
                 )
             },
             focus: { element in
-                focusAccessibilityElement(element, applicationElement: app,
+                if focusAccessibilityElement(element, applicationElement: app,
                     requiresApplicationFocusedElement: true, allowPress: integration == .antigravity,
-                    canWriteFocus: { targetIsCurrent() && !preserveInput(excluding: element) })
+                    canWriteFocus: { targetIsCurrent() && !preserveInput(excluding: element) }) {
+                    return true
+                }
+                // Electron and Chromium renderers update AXFocusedUIElement asynchronously a few ms after AXFocused writes.
+                for _ in 0..<4 {
+                    guard targetIsCurrent(), !preserveInput(excluding: element) else { return false }
+                    usleep(5_000)
+                    guard targetIsCurrent(), !preserveInput(excluding: element) else { return false }
+                    if accessibilityElementIsFocused(element, applicationElement: app,
+                                                     requiresApplicationFocusedElement: true) {
+                        return true
+                    }
+                }
+                return false
             },
             click: { element, snapshot in
+                if accessibilityElementIsFocused(element, applicationElement: app,
+                                                 requiresApplicationFocusedElement: true) {
+                    return true
+                }
                 guard !clickAttempted else { return false }
                 clickAttempted = true
                 return clickIntegratedComposer(snapshot, integration: integration, windowFrame: frame,
@@ -351,6 +368,7 @@ extension KeyboardInjector {
         click: (Element, AccessibilityTextCandidate) -> Bool
     ) -> (resolved: Bool, newlyFocusedElement: Element?) {
         var newlyFocusedElement: Element?
+        var alreadyFocusedBeforeAttempt: Bool?
         let resolved = focusIntegratedCandidates(
             candidates,
             integration: integration,
@@ -359,12 +377,13 @@ extension KeyboardInjector {
             preserveFocus: preserveFocus,
             focus: { element in
                 let wasAlreadyFocused = isElementAlreadyFocused(element)
+                alreadyFocusedBeforeAttempt = wasAlreadyFocused
                 guard focus(element) else { return false }
                 newlyFocusedElement = wasAlreadyFocused ? nil : element
                 return true
             },
             click: { element, snapshot in
-                let wasAlreadyFocused = isElementAlreadyFocused(element)
+                let wasAlreadyFocused = alreadyFocusedBeforeAttempt ?? isElementAlreadyFocused(element)
                 guard click(element, snapshot) else { return false }
                 newlyFocusedElement = wasAlreadyFocused ? nil : element
                 return true

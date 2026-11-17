@@ -1110,6 +1110,23 @@ struct ApplicationIntegrationTests {
         #expect(newlyFocusedOutcome.resolved)
         #expect(newlyFocusedOutcome.newlyFocusedElement == "composer")
 
+        // Asynchronous AX focus side effects between focus() returning false and click()
+        // must not make click() treat the element as already-focused and skip moving the caret.
+        let deepSeekNodes = [(element: "composer", snapshot: candidate("Message or run a task, / commands, @ files or sessions"))]
+        var asyncFocusedAfterWrite = false
+        let asyncClickFallbackOutcome = KeyboardInjector.focusIntegratedComposerCandidates(
+            deepSeekNodes,
+            integration: .deepSeek,
+            windowFrame: window,
+            canContinue: { true },
+            preserveFocus: { false },
+            isElementAlreadyFocused: { _ in asyncFocusedAfterWrite },
+            focus: { _ in asyncFocusedAfterWrite = true; return false },
+            click: { _, _ in true }
+        )
+        #expect(asyncClickFallbackOutcome.resolved)
+        #expect(asyncClickFallbackOutcome.newlyFocusedElement == "composer")
+
         // Call site 3: WeChat fallback skips click and caret movement when already focused,
         // rejects wrong controls such as search fields, and moves caret when newly focused.
         var weChatClicks = 0

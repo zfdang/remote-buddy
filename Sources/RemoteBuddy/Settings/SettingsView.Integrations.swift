@@ -28,9 +28,9 @@ extension SettingsView {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                HStack(spacing: 14) {
+                HStack(spacing: 20) {
                     Rectangle()
-                        .fill(Color(nsColor: .separatorColor))
+                        .fill(Color.primary.opacity(0.18))
                         .frame(maxWidth: .infinity, minHeight: 1, maxHeight: 1)
                     Button(localization.text("settings.integration.configure")) {
                         SettingsPageBehavior.beginIntegrationSetup(
@@ -42,17 +42,12 @@ extension SettingsView {
                     .controlSize(.large)
                     .fixedSize()
                     Rectangle()
-                        .fill(Color(nsColor: .separatorColor))
+                        .fill(Color.primary.opacity(0.18))
                         .frame(maxWidth: .infinity, minHeight: 1, maxHeight: 1)
                 }
-                .padding(.vertical, 6)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(localization.text("settings.integration.supported_tools"))
-                        .font(.headline)
-                    Text(localization.text("settings.integration.tools_readonly"))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                .padding(.vertical, 8)
+                Text(localization.text("settings.integration.supported_tools"))
+                    .font(.headline)
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 14) {
                     ForEach(OnboardingVoiceToolVisibilityPolicy.tools) { tool in
                         integrationToolCard(tool)

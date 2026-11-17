@@ -911,9 +911,8 @@
 "settings.integration.introduction" = "查看当前生效的语音触发方式与输入工具；如需更换或测试，请通过向导完成。";
 "settings.integration.current" = "当前集成工具";
 "settings.integration.other_title" = "其他工具";
-"settings.integration.configure" = "通过向导配置并测试";
+"settings.integration.configure" = "通过向导修改语音键与输入工具";
 "settings.integration.supported_tools" = "支持的语音工具";
-"settings.integration.tools_readonly" = "仅展示当前生效的输入工具；切换工具请在集成向导中完成并通过语音测试。";
 "settings.integration.active_badge" = "当前使用";
 "settings.integration.shortcut_title" = "语音触发方式";
 
@@ -1153,7 +1152,6 @@
 "onboarding.voice_trigger.title" = "选择语音热键";
 "settings.integration.tap_enabled" = "点按模式：已开启";
 "settings.integration.tap_disabled" = "点按模式：已关闭";
-"settings.integration.trigger_readonly" = "热键和点按模式只能在输入法集成向导中修改，通过语音测试后才生效。";
 "onboarding.audio.not_detected" = "未检测到 Remote Buddy Mic，请安装或检查虚拟麦克风。";
 "onboarding.side.microphone" = "Remote Buddy Mic";
 "onboarding.button_help.title" = "按键没反应？";

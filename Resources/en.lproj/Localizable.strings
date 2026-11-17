@@ -914,9 +914,8 @@
 "settings.integration.introduction" = "View your active voice trigger and input tool. Use the guide to switch tools or test voice input.";
 "settings.integration.current" = "Current Input Tool";
 "settings.integration.other_title" = "Other Tools";
-"settings.integration.configure" = "Configure & Test with Guide";
+"settings.integration.configure" = "Change Voice Key & Input Tool in Guide";
 "settings.integration.supported_tools" = "Supported Voice Tools";
-"settings.integration.tools_readonly" = "Read-only status display. Use the integration guide to switch tools and verify with a voice test.";
 "settings.integration.active_badge" = "Current";
 "settings.integration.shortcut_title" = "Voice trigger";
 
@@ -1151,7 +1150,6 @@
 "onboarding.voice_trigger.title" = "Choose a Voice Shortcut";
 "settings.integration.tap_enabled" = "Tap mode: On";
 "settings.integration.tap_disabled" = "Tap mode: Off";
-"settings.integration.trigger_readonly" = "Change the trigger and tap mode only in the input-tool integration wizard. Changes take effect after the voice test passes.";
 "onboarding.audio.not_detected" = "Remote Buddy Mic was not detected. Install or check the virtual microphone.";
 "onboarding.side.microphone" = "Remote Buddy Mic";
 "onboarding.button_help.title" = "Buttons not responding?";

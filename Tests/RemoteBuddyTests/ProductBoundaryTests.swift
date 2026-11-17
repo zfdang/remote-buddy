@@ -266,7 +266,6 @@ struct ProductBoundaryTests {
             "settings.integration.current",
             "settings.integration.configure",
             "settings.integration.supported_tools",
-            "settings.integration.tools_readonly",
             "settings.integration.active_badge",
             "settings.integration.shortcut_title",
         ]

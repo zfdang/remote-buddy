@@ -410,9 +410,6 @@ extension SettingsView {
             Label(localization.text(settings.voiceFnTapModeEnabled
                 ? "settings.integration.tap_enabled" : "settings.integration.tap_disabled"),
                 systemImage: "hand.tap")
-            Text(localization.text("settings.integration.trigger_readonly"))
-                .font(.caption).foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
         }
     }
 

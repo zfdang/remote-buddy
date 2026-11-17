@@ -1466,19 +1466,6 @@ extension KeyboardInjector {
         }
     }
 
-    static func cmuxTerminalIsApplicationFocused(processIdentifier: pid_t) -> Bool {
-        let applicationElement = AXUIElementCreateApplication(processIdentifier)
-        guard let focusedElement = axElement(
-            applicationElement,
-            attribute: kAXFocusedUIElementAttribute
-        ) else { return false }
-        return applicationWindows(applicationElement).contains { window in
-            accessibilityTextCandidates(in: window).contains { candidate in
-                cmuxTerminalCandidateScore(candidate.snapshot, windowFrame: axFrame(window)) != nil &&
-                    CFEqual(candidate.element, focusedElement)
-            }
-        }
-    }
 
     static func bestCmuxTerminalCandidateIndex(
         _ candidates: [AccessibilityTextCandidate],

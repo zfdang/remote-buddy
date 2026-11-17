@@ -38,41 +38,21 @@ struct LaunchTrackingTests {
         #expect(completed)
     }
 
-    @Test func unifiedBindingPriorityResolvesDeviceSpecificOverGlobalOverDefault() throws {
-        let name = "unified-priority-" + UUID().uuidString
+    @Test func deviceMappingsRemainIndependentOfUnboundDefaults() throws {
+        let name = "device-mapping-priority-" + UUID().uuidString
         let defaults = try #require(UserDefaults(suiteName: name))
         defer { defaults.removePersistentDomain(forName: name) }
         let settings = AppSettings(defaults: defaults)
-
-        let deviceID = UUID()
-        // 1. Initially returns default action
-        let initial = settings.configuredBaseAction(for: .volumeUp, trigger: .singleClick, profileID: deviceID)
-        #expect(initial.action == AppSettings.defaultBindings[.volumeUp])
-
-        // 2. Set global binding (profileID: nil)
-        settings.setBaseBinding(
-            ConfiguredButtonAction(action: .playPause, shortcut: nil),
-            for: .volumeUp,
-            trigger: .singleClick,
-            profileID: nil
-        )
-        let withGlobal = settings.configuredBaseAction(for: .volumeUp, trigger: .singleClick, profileID: deviceID)
-        #expect(withGlobal.action == .playPause)
-
-        // 3. Set device-specific binding
-        settings.setBaseBinding(
-            ConfiguredButtonAction(action: .showDesktop, shortcut: nil),
-            for: .volumeUp,
-            trigger: .singleClick,
-            profileID: deviceID
-        )
-        let withDeviceSpecific = settings.configuredBaseAction(for: .volumeUp, trigger: .singleClick, profileID: deviceID)
-        #expect(withDeviceSpecific.action == .showDesktop)
-
-        // Other device still gets global binding
-        let otherDevice = UUID()
-        let otherResolved = settings.configuredBaseAction(for: .volumeUp, trigger: .singleClick, profileID: otherDevice)
-        #expect(otherResolved.action == .playPause)
+        settings.setBaseBinding(.init(action: .playPause, shortcut: nil),
+            for: .volumeUp, trigger: .singleClick, profileID: nil)
+        let first = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
+        let second = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
+        settings.selectRemoteProfile(first)
+        settings.setBaseBinding(.init(action: .showDesktop, shortcut: nil),
+            for: .volumeUp, trigger: .singleClick, profileID: first)
+        let restored = AppSettings(defaults: defaults)
+        #expect(restored.action(for: .volumeUp, profileID: first) == .showDesktop)
+        #expect(restored.action(for: .volumeUp, profileID: second) == .volumeUp)
     }
 
     @Test func ignoresNonNumericBuildWithoutOverwritingLastLaunchedBuild() throws {

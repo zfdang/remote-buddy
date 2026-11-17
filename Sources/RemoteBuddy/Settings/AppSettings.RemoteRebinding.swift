@@ -23,7 +23,6 @@ extension AppSettings {
             if profile.id == replacementProfileID { return nil }
             return profile.id == profileID ? rebound : profile
         }
-        unifiedBaseBindings.removeAll { $0.remoteProfileID == replacementProfileID }
         if selectedRemoteProfileID == replacementProfileID { selectRemoteProfile(profileID) }
         return true
     }

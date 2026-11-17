@@ -171,7 +171,6 @@ extension AppSettings {
                 }
             }
         }
-        unifiedBaseBindings.removeAll { $0.remoteProfileID == profileID }
         remoteDeviceProfiles.removeAll { $0.id == profileID }
         if isOnboardingComplete {
             synchronizeOnboardingRemoteWithSelectedProfile()
@@ -279,9 +278,6 @@ extension AppSettings {
         trigger: ButtonTrigger,
         profileID: UUID?
     ) -> ConfiguredButtonAction {
-        if let binding = unifiedBaseBindings.first(where: {
-            $0.remoteProfileID == profileID && $0.button == button && $0.trigger == trigger
-        }) { return binding.configured }
         if let profileID,
            profileID != selectedRemoteProfileID,
            let profile = remoteDeviceProfiles.first(where: { $0.id == profileID }) {
@@ -640,12 +636,10 @@ extension AppSettings {
             let mappings = Self.defaultMappings(for: selectedRemoteProfile?.model ?? .unknown)
             buttonBindings = mappings.parsedButtonBindings
             buttonShortcuts = [:]
-            unifiedBaseBindings.removeAll { $0.remoteProfileID == selectedRemoteProfileID }
             buttonApplicationProfileIDs = [:]
             secondaryButtonBindings = mappings.parsedSecondaryButtonBindings
         }
         saveSelectedRemoteProfileMappings()
-        encodeAndSave(unifiedBaseBindings, forKey: "unifiedBaseBindings")
         AppLogger.shared.write("SETTINGS MAPPING reset profile_scoped=\(selectedRemoteProfileID != nil)")
     }
 }

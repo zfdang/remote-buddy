@@ -30,7 +30,6 @@ struct RemoteRemovalTests {
         #expect(restored.configuredAction(for: .ok, trigger: .singleClick, profileID: second).action == .commandCopy)
         #expect(restored.forgottenBluetoothIdentifiers == [firstIdentifier])
         #expect(restored.forgottenHIDFingerprints == ["first-hid"])
-        #expect(!restored.unifiedBaseBindings.contains { $0.remoteProfileID == first })
         SettingsPageBehavior.beginDeviceSetup(settings: restored)
         #expect(restored.forgottenBluetoothIdentifiers == [firstIdentifier])
         #expect(restored.forgottenHIDFingerprints == ["first-hid"])

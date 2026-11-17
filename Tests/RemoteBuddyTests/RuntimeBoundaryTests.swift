@@ -157,19 +157,6 @@ struct RuntimeBoundaryTests {
         #expect(result == .cancelled(.actionFailed))
     }
 
-    @Test func unifiedMappingCorruptionIsPreservedAfterSavingNewMappings() {
-        let (defaults, name) = values()
-        defer { defaults.removePersistentDomain(forName: name) }
-        let bad = Data("corrupt mappings".utf8)
-        defaults.set(bad, forKey: "unifiedBaseBindings")
-        let settings = AppSettings(defaults: defaults)
-        #expect(settings.corruptedSettingKeys.contains("unifiedBaseBindings"))
-        #expect(defaults.data(forKey: "unifiedBaseBindings.corrupt") == bad)
-        settings.setBaseBinding(.init(action: .commandCopy, shortcut: nil), for: .right, trigger: .singleClick, profileID: nil)
-        #expect(AppSettings(defaults: defaults).configuredBaseAction(for: .right, trigger: .singleClick, profileID: nil).action == .commandCopy)
-        #expect(defaults.data(forKey: "unifiedBaseBindings.corrupt") == bad)
-    }
-
     @Test func mergedHALChangesIgnoreOnlyPureDefaultInputChanges() {
         #expect(AudioHardwareChangeProperties(details: "properties=default_input,default_input").affectsOnlyDefaultInput)
         #expect(!AudioHardwareChangeProperties(details: "properties=devices,default_input").affectsOnlyDefaultInput)

@@ -120,10 +120,8 @@ struct ButtonMappingDefaultActionTests {
 
     @Test func unmappedButtonFallsBackToDisabledRatherThanFactoryDefault() throws {
         try withSettings { settings in
-            // Remove power from buttonBindings and unifiedBaseBindings
-            settings.unifiedBaseBindings.removeAll { $0.button == .power }
             settings.buttonBindings.removeValue(forKey: .power)
-            // When not mapped in either unified or active bindings, it must return .disabled
+            // A missing active binding must return .disabled
             #expect(settings.configuredBaseAction(for: .power, trigger: .singleClick).action == .disabled)
         }
     }

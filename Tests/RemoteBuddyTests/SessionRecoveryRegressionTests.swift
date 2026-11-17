@@ -845,7 +845,8 @@ struct SessionRecoveryRegressionTests {
         defer { prefs.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: prefs)
         settings.customMappingEnabled = true
-        let profile = UUID()
+        let profile = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
+        settings.selectRemoteProfile(profile)
         settings.setBaseBinding(.init(action: .arrowLeft, shortcut: nil), for: .ok, trigger: .singleClick, profileID: profile)
         settings.setBaseBinding(.init(action: .arrowRight, shortcut: nil), for: .ok, trigger: .doubleClick, profileID: profile)
         settings.setBaseBinding(.init(action: .commandReturn, shortcut: nil), for: .ok, trigger: .longPress, profileID: profile)
@@ -904,7 +905,8 @@ struct SessionRecoveryRegressionTests {
         defer { prefs.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: prefs)
         settings.customMappingEnabled = true
-        let profile = UUID()
+        let profile = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
+        settings.selectRemoteProfile(profile)
         settings.setBaseBinding(.init(action: .returnKey, shortcut: nil), for: .ok, trigger: .singleClick, profileID: profile)
         settings.setBaseBinding(.disabled, for: .ok, trigger: .doubleClick, profileID: profile)
         settings.setBaseBinding(.disabled, for: .ok, trigger: .longPress, profileID: profile)

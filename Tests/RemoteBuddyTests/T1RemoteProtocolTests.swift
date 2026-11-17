@@ -313,6 +313,25 @@ struct T1RemoteProtocolTests {
             accessibilityGranted: true, nativeVoiceMappingIsValid: true))
     }
 
+    @Test func defaultT1WriteFailureRollsBackEarlierServices() {
+        let suite = "t1-default-rollback-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let original = [HIDUsageMapping(source: 42, destination: 43)]
+        var mappings = original
+        let mapper = RemoteHIDKeyMapper(serviceProvider: {
+            [RemoteHIDMappingService(registryID: 1, family: .t1Remote,
+                readMappings: { mappings }, setMappings: { mappings = $0; return true }),
+             RemoteHIDMappingService(registryID: 2, family: .t1Remote,
+                readMappings: { [] }, setMappings: { _ in false })]
+        }, recoveryDefaults: defaults, bootID: "t1-default-rollback")
+        #expect(!mapper.apply())
+        #expect(mappings == original)
+        #expect(!mapper.isApplied)
+        #expect(!mapper.refreshAppliedMappingsValidity(expectedPowerKeySuppression: false,
+            expectedVoiceKeyNeutralization: false))
+    }
+
     @Test func keyMapperRollsBackMixedXiaomiAndT1ServicesWhenT1WriteFails() {
         let suite = "t1-mixed-rollback-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: suite)!

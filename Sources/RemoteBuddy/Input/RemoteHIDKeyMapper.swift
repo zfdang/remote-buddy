@@ -463,6 +463,7 @@ final class RemoteHIDKeyMapper {
             return false
         }
 
+        let requiresCompleteMapping = neutralizeVoiceKey || services.contains { $0.family == .t1Remote }
         var snapshots: [Int: [HIDUsageMapping]] = [:]
         var appliedIndices: [Int] = []
         var newlyStoredRegistryIDs = Set<UInt64>()
@@ -527,7 +528,7 @@ final class RemoteHIDKeyMapper {
 
         for (index, service) in services.enumerated() {
             guard let registryID = service.registryID else {
-                if neutralizeVoiceKey {
+                if requiresCompleteMapping {
                     rollback(
                         services: services,
                         snapshots: snapshots,
@@ -565,7 +566,7 @@ final class RemoteHIDKeyMapper {
                 )
             }
             guard service.setMappings(desired) else {
-                if neutralizeVoiceKey {
+                if requiresCompleteMapping {
                     rollback(
                         services: services,
                         snapshots: snapshots,

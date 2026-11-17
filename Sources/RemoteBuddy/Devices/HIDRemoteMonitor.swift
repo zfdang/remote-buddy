@@ -2141,6 +2141,15 @@ final class HIDRemoteMonitor {
         repeatTimers.values.forEach { $0.cancel() }
         repeatTimers.removeAll()
         repeatTokens.removeAll()
+        // No physical key-up is guaranteed after a disconnect or mapping reset.
+        for usage in nativePassthroughUsages {
+            guard let button = RemoteButton.usageMap[usage] else { continue }
+            for event in button.nativeEvents {
+                if case .keyboard(let code) = event {
+                    _ = nativeKeyStatePoster(code, false, [])
+                }
+            }
+        }
         nativePassthroughUsages.removeAll()
         usageExpiryTokens.removeAll()
         usageExpiryTimers.values.forEach { $0.cancel() }

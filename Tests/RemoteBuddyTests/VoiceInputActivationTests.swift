@@ -458,6 +458,7 @@ struct VoiceInputActivationTests {
     @Test func toolChangesRemainPendingUntilBothRecordingAndKeyCleanupEnd() throws {
         let (model, defaults, suite) = try makeModel()
         defer { defaults.removePersistentDomain(forName: suite) }
+        model.settings.setAllApplicationIntegrations(enabled: false)
         model.started = true
         model.isStreaming = true
         model.pendingVoiceToolMappingRefresh = true

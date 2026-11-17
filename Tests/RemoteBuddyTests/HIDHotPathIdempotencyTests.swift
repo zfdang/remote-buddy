@@ -121,6 +121,7 @@ struct HIDHotPathIdempotencyTests {
         let suite = "hid-idempotency-" + UUID().uuidString
         let defaults = try #require(UserDefaults(suiteName: suite))
         let settings = AppSettings(defaults: defaults)
+        settings.setAllApplicationIntegrations(enabled: false)
         settings.customMappingEnabled = customMappingEnabled
         settings.voiceKeyMode = voiceKeyMode
         settings.setOnboardingVoiceTool(voiceTool)

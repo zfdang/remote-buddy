@@ -2,7 +2,7 @@ import AppKit
 import Combine
 import Foundation
 
-/// Foreground integrations are opt-in and independent of application-launch button mappings.
+/// Foreground integrations default to enabled (opt-out) and are independent of application-launch button mappings.
 enum ApplicationIntegration: String, CaseIterable, Identifiable {
     case weChat, antigravity, chatGPT, claude, deepSeek, workBuddy
 

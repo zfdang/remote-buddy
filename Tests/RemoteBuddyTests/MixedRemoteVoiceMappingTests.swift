@@ -11,6 +11,7 @@ struct MixedRemoteVoiceMappingTests {
         let defaults = try #require(UserDefaults(suiteName: name))
         defer { defaults.removePersistentDomain(forName: name) }
         let settings = AppSettings(defaults: defaults)
+        settings.setAllApplicationIntegrations(enabled: false)
         let xiaomi = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         let google = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         settings.setOnboardingVoiceTool(.other)
@@ -39,6 +40,7 @@ struct MixedRemoteVoiceMappingTests {
         let defaults = try #require(UserDefaults(suiteName: name))
         defer { defaults.removePersistentDomain(forName: name) }
         let settings = AppSettings(defaults: defaults)
+        settings.setAllApplicationIntegrations(enabled: false)
         let xiaomi = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         let google = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         settings.setOnboardingVoiceTool(.weixin)

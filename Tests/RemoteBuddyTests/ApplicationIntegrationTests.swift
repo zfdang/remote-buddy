@@ -16,17 +16,26 @@ struct ApplicationIntegrationTests {
 
     @Test func switchesPersistIndependentlyAndSupportBulkChanges() throws {
         try withSettings { settings, defaults in
-            #expect(settings.enabledApplicationIntegrations.isEmpty)
-            settings.setApplicationIntegration(.chatGPT, enabled: true)
-            #expect(AppSettings(defaults: defaults).isApplicationIntegrationEnabled(.chatGPT))
-            #expect(!settings.isApplicationIntegrationEnabled(.weChat))
-            settings.setAllApplicationIntegrations(enabled: true)
+            let allIdentifiers = Set(ApplicationIntegration.allCases.map(\.rawValue))
+            #expect(settings.enabledApplicationIntegrations == allIdentifiers)
             settings.setApplicationIntegration(.weChat, enabled: false)
-            let restored = AppSettings(defaults: defaults)
-            #expect(restored.enabledApplicationIntegrations.count == ApplicationIntegration.allCases.count - 1)
-            #expect(!restored.isApplicationIntegrationEnabled(.weChat))
+            let afterSingleDisable = AppSettings(defaults: defaults)
+            #expect(afterSingleDisable.enabledApplicationIntegrations.count == ApplicationIntegration.allCases.count - 1)
+            #expect(!afterSingleDisable.isApplicationIntegrationEnabled(.weChat))
+            #expect(afterSingleDisable.isApplicationIntegrationEnabled(.chatGPT))
+            #expect(afterSingleDisable.isApplicationIntegrationEnabled(.deepSeek))
+
             settings.setAllApplicationIntegrations(enabled: false)
             #expect(AppSettings(defaults: defaults).enabledApplicationIntegrations.isEmpty)
+
+            // Newly added integrations not present in the stored disabled list stay enabled by default.
+            let priorIntegrations = allIdentifiers.subtracting([ApplicationIntegration.deepSeek.rawValue])
+            defaults.set(priorIntegrations.sorted(), forKey: AppSettings.Keys.disabledApplicationIntegrations)
+            let upgraded = AppSettings(defaults: defaults)
+            #expect(upgraded.enabledApplicationIntegrations == [ApplicationIntegration.deepSeek.rawValue])
+
+            settings.setAllApplicationIntegrations(enabled: true)
+            #expect(AppSettings(defaults: defaults).enabledApplicationIntegrations == allIdentifiers)
         }
     }
 

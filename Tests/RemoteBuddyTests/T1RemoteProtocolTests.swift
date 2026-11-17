@@ -228,17 +228,23 @@ struct T1RemoteProtocolTests {
             bootID: "boot-t1"
         )
 
+        // A fresh connection with default Fn and custom mapping disabled must also suppress Search.
+        #expect(mapper.apply())
+        #expect(t1Mappings.contains(RemoteHIDKeyMappingPolicy.neutralT1VoiceSearchKey))
+        #expect(t1Mappings.contains(RemoteHIDKeyMappingPolicy.neutralT1VoiceHoldKey))
+        #expect(!mapper.needsReapply(suppressPowerKey: false, neutralizeVoiceKey: false))
+
         #expect(mapper.apply(suppressPowerKey: true, neutralizeVoiceKey: false))
         #expect(t1Mappings.contains(RemoteHIDKeyMappingPolicy.neutralT1VoiceSearchKey))
         #expect(t1Mappings.contains(RemoteHIDKeyMappingPolicy.neutralT1VoiceHoldKey))
         #expect(t1Mappings.contains(RemoteHIDKeyMappingPolicy.suppressedT1PowerKey))
         #expect(!mapper.needsReapply(suppressPowerKey: true, neutralizeVoiceKey: false))
 
-        // Disabling custom mapping (when native voice key neutralization is inactive) removes all
-        // synthetic T1 UserKeyMapping entries instead of leaving 0x0221/0xAA behind.
+        // T1 has no native Fn: Search and voice-hold remain suppressed even when
+        // custom mapping is disabled. Only the power mapping follows that toggle.
         #expect(mapper.apply(suppressPowerKey: false, neutralizeVoiceKey: false))
-        #expect(!t1Mappings.contains(RemoteHIDKeyMappingPolicy.neutralT1VoiceSearchKey))
-        #expect(!t1Mappings.contains(RemoteHIDKeyMappingPolicy.neutralT1VoiceHoldKey))
+        #expect(t1Mappings.contains(RemoteHIDKeyMappingPolicy.neutralT1VoiceSearchKey))
+        #expect(t1Mappings.contains(RemoteHIDKeyMappingPolicy.neutralT1VoiceHoldKey))
         #expect(!t1Mappings.contains(RemoteHIDKeyMappingPolicy.suppressedT1PowerKey))
         #expect(!mapper.needsReapply(suppressPowerKey: false, neutralizeVoiceKey: false))
 

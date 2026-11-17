@@ -286,21 +286,9 @@ final class RemoteHIDKeyMapper {
                     return .needsReapply
                 }
             case .t1Remote:
-                let original = originalMappings[registryID]
-                if suppressPowerKey || neutralizeVoiceKey {
-                    guard mappings.contains(RemoteHIDKeyMappingPolicy.neutralT1VoiceSearchKey),
-                          mappings.contains(RemoteHIDKeyMappingPolicy.neutralT1VoiceHoldKey)
-                    else { return .needsReapply }
-                } else {
-                    if original?.t1Search != RemoteHIDKeyMappingPolicy.neutralT1VoiceSearchKey,
-                       mappings.contains(RemoteHIDKeyMappingPolicy.neutralT1VoiceSearchKey) {
-                        return .needsReapply
-                    }
-                    if original?.t1Hold != RemoteHIDKeyMappingPolicy.neutralT1VoiceHoldKey,
-                       mappings.contains(RemoteHIDKeyMappingPolicy.neutralT1VoiceHoldKey) {
-                        return .needsReapply
-                    }
-                }
+                guard mappings.contains(RemoteHIDKeyMappingPolicy.neutralT1VoiceSearchKey),
+                      mappings.contains(RemoteHIDKeyMappingPolicy.neutralT1VoiceHoldKey)
+                else { return .needsReapply }
                 if suppressPowerKey,
                    !mappings.contains(RemoteHIDKeyMappingPolicy.suppressedT1PowerKey) {
                     return .needsReapply
@@ -562,7 +550,7 @@ final class RemoteHIDKeyMapper {
                 let original = originalMappings[registryID]
                 desired = RemoteHIDKeyMappingPolicy.applyingT1(
                     to: current,
-                    neutralizeVoiceKeys: suppressPowerKey || neutralizeVoiceKey,
+                    neutralizeVoiceKeys: true,
                     originalSearchMapping: original?.t1Search,
                     originalHoldMapping: original?.t1Hold,
                     powerMapping: suppressPowerKey

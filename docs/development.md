@@ -392,9 +392,9 @@ that symlink had setup failures and is not counted as product validation.
 English/Chinese screenshots now include default, missing-permission, preparing,
 and preserved-input states. The harness injects feedback after startup and asserts
 that it remains present at capture. Example delivered assets:
-[missing permission](../pages/assets/screenshots/application-integration-permission-missing-zh.png),
-[preparing](../pages/assets/screenshots/application-integration-preparing-zh.png), and
-[preserved input](../pages/assets/screenshots/application-integration-preserved-en.png).
+[missing permission](../pages/assets/screenshots/application-integration-permission-missing-zh.jpg),
+[preparing](../pages/assets/screenshots/application-integration-preparing-zh.jpg), and
+[preserved input](../pages/assets/screenshots/application-integration-preserved-en.jpg).
 These verify settings feedback, not physical menu-bar or remote behavior.
 
 These fixes have not been accepted on physical hardware. Previously reported

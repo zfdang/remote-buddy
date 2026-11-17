@@ -182,7 +182,7 @@ def frame(index, progress, total, duration, subtitle=""):
     elif kind in ("permissions", "tools", "mapping"):
         filename = scene["screenshot"]
         if kind == "mapping" and progress > 0.55:
-            filename = "phrases-zh.png"
+            filename = "phrases-zh.jpg"
         screenshot(im, d, filename, {"permissions": "权限与麦克风", "tools": "输入法集成", "mapping": "按键映射 / 常用语"}[kind])
     elif kind == "privacy":
         card(d, 325, "遥控搭子", "不保存录音或转写历史，不采集使用统计", GREEN)

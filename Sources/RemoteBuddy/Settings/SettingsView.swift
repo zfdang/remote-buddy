@@ -38,6 +38,7 @@ struct SettingsView: View {
     @State var bluetoothAuthorization: CBManagerAuthorization
     @State var inputMonitoringGranted: Bool
     @State var accessibilityGranted: Bool
+    @State var integrationToolAvailability: OnboardingVoiceToolAvailability
     @State var isRepositoryLinkCopied = false
     @State var isMappingPermissionAlertPresented = false
     @State var isWaitingForMappingPermissions = false
@@ -82,6 +83,9 @@ struct SettingsView: View {
         _bluetoothAuthorization = State(initialValue: permissionOverrides?.bluetooth ?? CBManager.authorization)
         _inputMonitoringGranted = State(initialValue: permissionOverrides?.inputMonitoring ?? HIDRemoteMonitor.isInputMonitoringGranted)
         _accessibilityGranted = State(initialValue: permissionOverrides?.accessibility ?? KeyboardInjector.isAccessibilityTrusted)
+        _integrationToolAvailability = State(initialValue: permissionOverrides == nil
+            ? OnboardingInputSourceSwitcher.integrationAvailability(for: model.settings.onboardingVoiceTool)
+            : .available)
     }
 
     var body: some View {
@@ -109,6 +113,10 @@ struct SettingsView: View {
             model.refreshRemoteDeviceNames(reason: .page)
             refreshPermissionStates()
             loginItemService.refresh()
+            if let requestedSection = model.requestedSettingsSection {
+                selectSection(requestedSection)
+                model.requestedSettingsSection = nil
+            }
 
         }
         .onChange(of: selectedSection) { _, section in
@@ -118,6 +126,13 @@ struct SettingsView: View {
             if section == .connection || section == .mapping {
                 model.refreshRemoteDeviceNames(reason: .page)
             }
+        }
+        .onChange(of: settings.onboardingVoiceTool) { _, _ in
+            refreshPermissionStates()
+        }
+        .onReceive(model.$requestedSettingsSection.compactMap { $0 }) { section in
+            selectSection(section)
+            model.requestedSettingsSection = nil
         }
         .task(id: selectedSection) { @MainActor in
             guard selectedSection == .general ||

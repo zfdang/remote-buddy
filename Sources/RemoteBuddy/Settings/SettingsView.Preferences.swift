@@ -16,7 +16,7 @@ extension SettingsView {
                 HStack(spacing: 10) {
                     overviewCard(number: 1, titleKey: "settings.section.permissions", status: overview.permissionsSummary(using: localization), ready: overview.permissionsReady, section: .permissions)
                     overviewCard(number: 2, titleKey: "settings.overview.remote", status: remoteSummary, ready: overview.remoteReady, section: .connection)
-                    overviewCard(number: 3, titleKey: "settings.overview.integration", status: localization.text(overview.integrationReady ? overview.integrationTool.titleKey : "settings.overview.not_configured"), ready: overview.integrationReady, optional: true, section: .integration)
+                    overviewCard(number: 3, titleKey: "settings.overview.integration", status: overview.integrationSummary(using: localization), ready: overview.integrationReady, optional: !overview.integrationMissing, section: .integration)
                 }
             }
             .padding(.bottom, 16)
@@ -155,6 +155,7 @@ extension SettingsView {
             audioDevices: model.audioDevices, profiles: settings.remoteDeviceProfiles,
             connectedIDs: model.connectedRemoteProfileIDs,
             integrationTool: settings.onboardingVoiceTool,
+            integrationAvailability: integrationToolAvailability,
             remoteName: remoteModelName
         )
     }

@@ -20,6 +20,7 @@ final class PreferredInputSourceMonitor {
     typealias MonitorInstaller = (@escaping (FunctionKeyEvent) -> Void) -> Any?
     typealias MonitorRemover = (Any) -> Void
     typealias Logger = (String) -> Void
+    typealias SourcePreparationFailureHandler = (OnboardingVoiceTool, OnboardingInputSourceSwitchResult) -> Void
 
     private let voiceTool: VoiceToolProvider
     private let prepareInputSource: InputSourcePreparer
@@ -29,6 +30,7 @@ final class PreferredInputSourceMonitor {
     private let installMonitor: MonitorInstaller
     private let removeMonitor: MonitorRemover
     private let logger: Logger
+    private let onSourcePreparationFailure: SourcePreparationFailureHandler?
 
     private var monitor: Any?
     private var functionKeyIsPressed = false
@@ -76,7 +78,8 @@ final class PreferredInputSourceMonitor {
             }
         },
         removeMonitor: @escaping MonitorRemover = NSEvent.removeMonitor,
-        logger: @escaping Logger = AppLogger.shared.write
+        logger: @escaping Logger = AppLogger.shared.write,
+        onSourcePreparationFailure: SourcePreparationFailureHandler? = nil
     ) {
         self.voiceTool = voiceTool
         self.prepareInputSource = prepareInputSource
@@ -86,6 +89,7 @@ final class PreferredInputSourceMonitor {
         self.installMonitor = installMonitor
         self.removeMonitor = removeMonitor
         self.logger = logger
+        self.onSourcePreparationFailure = onSourcePreparationFailure
     }
 
     static func waitForActivation(
@@ -311,7 +315,10 @@ final class PreferredInputSourceMonitor {
             "VOICE INPUT source_prepare tool=\(selectedVoiceTool.rawValue) result=\(result.rawValue) " +
                 "managed=\(result == .selected && previousInputSourceID != nil)"
         )
-        guard result == .selected else { return false }
+        guard result == .selected else {
+            onSourcePreparationFailure?(selectedVoiceTool, result)
+            return false
+        }
         managedInputSourceSession = ManagedInputSourceSession(
             previousInputSourceID: previousInputSourceID,
             targetInputSourceID: targetInputSourceID,

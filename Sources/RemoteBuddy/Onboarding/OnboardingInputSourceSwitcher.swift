@@ -105,6 +105,19 @@ enum OnboardingInputSourceSwitcher {
         return profile.installationProbe == .none ? .unknown : .available
     }
 
+    /// Checks whether the configured voice tool is ready for live voice sessions (including
+    /// being enabled in Keyboard Input Sources for input-method tools such as Doubao or WeType).
+    static func integrationAvailability(
+        for voiceTool: OnboardingVoiceTool
+    ) -> OnboardingVoiceToolAvailability {
+        if let targetID = voiceTool.preferredInputSourceID {
+            return inputSource(withID: targetID, includeAllInstalled: false) == nil
+                ? .notInstalled
+                : .available
+        }
+        return availability(for: voiceTool)
+    }
+
     static func selectIfNeeded(
         _ voiceTool: OnboardingVoiceTool
     ) -> OnboardingInputSourceSwitchResult {

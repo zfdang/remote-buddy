@@ -429,6 +429,10 @@
 "settings.overview.integration" = "Input integration";
 "settings.overview.disconnected" = "Disconnected";
 "settings.overview.not_configured" = "Not configured";
+"settings.overview.integration_unavailable" = "%@ unavailable";
+"voice_tool.unavailable.alert.title" = "%@ Is Unavailable";
+"voice_tool.unavailable.alert.message" = "Remote Buddy could not switch to “%@” because this input method is not installed or enabled. Open Integration settings to select or reconfigure your voice tool.";
+"voice_tool.unavailable.alert.open_settings" = "Open Integration";
 "settings.general.display_group" = "App display";
 "settings.general.language_group" = "Language";
 "settings.overview.ready" = "Permissions and microphone ready";

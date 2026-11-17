@@ -544,4 +544,36 @@ struct VoiceInputActivationTests {
         #expect(model.updateVoiceKeyState(streaming: false, forceSoftware: true, owner: .bluetooth, keySetter: setter))
         #expect(posted == [true, false])
     }
+
+    @Test func unavailableInputSourceTriggersThrottledPromptWithoutPostingVoiceKey() throws {
+        let (model, defaults, suite) = try makeModel()
+        defer { defaults.removePersistentDomain(forName: suite) }
+        model.settings.setOnboardingVoiceTool(.doubao)
+        var failures: [(OnboardingVoiceTool, OnboardingInputSourceSwitchResult)] = []
+        model.preferredInputSourceMonitor = PreferredInputSourceMonitor(
+            voiceTool: { .doubao },
+            prepareInputSource: { _ in .unavailable },
+            currentInputSourceID: { "com.apple.keylayout.ABC" },
+            restoreInputSource: { _ in .selected },
+            waitForInputSourceActivation: { _, _, _, done in done(false) },
+            installMonitor: { _ in nil },
+            logger: { _ in },
+            onSourcePreparationFailure: { [weak model] tool, result in
+                failures.append((tool, result))
+                model?.presentUnavailableVoiceToolPromptIfNeeded(for: tool, now: 100)
+            }
+        )
+        var posted: [Bool] = []
+        #expect(!model.updateVoiceKeyState(streaming: true, forceSoftware: true, owner: .bluetooth,
+            keySetter: { _, down in posted.append(down); return true }))
+        #expect(posted.isEmpty)
+        #expect(failures.count == 1 && failures[0].0 == .doubao && failures[0].1 == .unavailable)
+        #expect(model.unavailableVoiceToolPrompt == .doubao)
+
+        model.unavailableVoiceToolPrompt = nil
+        model.presentUnavailableVoiceToolPromptIfNeeded(for: .doubao, now: 105)
+        #expect(model.unavailableVoiceToolPrompt == nil)
+        model.presentUnavailableVoiceToolPromptIfNeeded(for: .doubao, now: 111)
+        #expect(model.unavailableVoiceToolPrompt == .doubao)
+    }
 }

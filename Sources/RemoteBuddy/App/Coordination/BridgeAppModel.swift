@@ -67,6 +67,8 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
     @Published var activeVoiceSource: RemoteInputSource?
     @Published var voiceShortcutStatus = LocalizedMessage("voice_button.status.preparing")
     @Published var voiceKeyCompatibilityWarning: VoiceKeyCompatibilityWarning?
+    @Published var unavailableVoiceToolPrompt: OnboardingVoiceTool?
+    @Published var requestedSettingsSection: SettingsSection?
 
     func isOnboardingControlSourceConnected(_ source: OnboardingControlSource) -> Bool {
         switch source {
@@ -115,8 +117,27 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
     lazy var preferredInputSourceMonitor = PreferredInputSourceMonitor(
         voiceTool: { [weak self] in
             self?.settings.onboardingVoiceTool ?? .unselected
+        },
+        onSourcePreparationFailure: { [weak self] tool, result in
+            guard result == .unavailable || result == .failed else { return }
+            self?.presentUnavailableVoiceToolPromptIfNeeded(for: tool)
         }
     )
+
+    private var lastUnavailableVoiceToolPrompt: (tool: OnboardingVoiceTool, uptime: TimeInterval)?
+
+    func presentUnavailableVoiceToolPromptIfNeeded(
+        for tool: OnboardingVoiceTool,
+        now: TimeInterval = ProcessInfo.processInfo.systemUptime
+    ) {
+        if let last = lastUnavailableVoiceToolPrompt,
+           last.tool == tool,
+           now - last.uptime < 10 {
+            return
+        }
+        lastUnavailableVoiceToolPrompt = (tool, now)
+        unavailableVoiceToolPrompt = tool
+    }
     lazy var voiceInputDestinationCoordinator = VoiceInputDestinationCoordinator(
         onStateChange: { [weak self] state in
             self?.handleVoiceInputDestinationState(state)

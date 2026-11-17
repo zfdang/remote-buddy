@@ -39,7 +39,7 @@ struct RemoteBuddyRootView: View {
                     refreshUpdateInformation: refreshUpdateInformation,
                     setDockIconVisible: setDockIconVisible,
                     setStatusBarIconVisible: setStatusBarIconVisible,
-                    initialSection: settings.completedOnboardingDestination
+                    initialSection: model.requestedSettingsSection ?? settings.completedOnboardingDestination
                 )
             } else {
                 OnboardingView(model: model)

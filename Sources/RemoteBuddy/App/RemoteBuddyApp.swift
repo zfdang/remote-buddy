@@ -262,6 +262,7 @@ private final class RemoteBuddyAppDelegate: NSObject, NSApplicationDelegate, NSM
     private var statusMenu: NSMenu?
     private var settingsWindowController: NSWindowController?
     private var isSettingsWindowOpen = false
+    private var isPresentingUnavailableVoiceToolAlert = false
     private var subscriptions = Set<AnyCancellable>()
     private var terminationSignalSources: [DispatchSourceSignal] = []
     private var applicationShortcutMonitor: Any?
@@ -734,6 +735,37 @@ private final class RemoteBuddyAppDelegate: NSObject, NSApplicationDelegate, NSM
             self?.refreshMenuStatus()
         }
         .store(in: &subscriptions)
+
+        model.$unavailableVoiceToolPrompt
+            .compactMap { $0 }
+            .receive(on: RunLoop.main)
+            .sink { [weak self] tool in
+                self?.presentUnavailableVoiceToolAlert(for: tool)
+            }
+            .store(in: &subscriptions)
+    }
+
+    private func presentUnavailableVoiceToolAlert(for tool: OnboardingVoiceTool) {
+        model.unavailableVoiceToolPrompt = nil
+        guard !isPresentingUnavailableVoiceToolAlert else { return }
+        isPresentingUnavailableVoiceToolAlert = true
+        defer { isPresentingUnavailableVoiceToolAlert = false }
+
+        NSSound.beep()
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        let toolName = localization.text(tool.titleKey)
+        alert.messageText = LocalizedMessage("voice_tool.unavailable.alert.title", arguments: [toolName])
+            .text(using: localization)
+        alert.informativeText = LocalizedMessage("voice_tool.unavailable.alert.message", arguments: [toolName])
+            .text(using: localization)
+        alert.addButton(withTitle: localization.text("voice_tool.unavailable.alert.open_settings"))
+        alert.addButton(withTitle: localization.text("common.action.cancel"))
+        if alert.runModal() == .alertFirstButtonReturn {
+            model.requestedSettingsSection = .integration
+            showSettings()
+        }
     }
 
     private func observeLocalization() {

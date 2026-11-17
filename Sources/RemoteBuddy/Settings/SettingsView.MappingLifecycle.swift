@@ -14,6 +14,9 @@ extension SettingsView {
         inputMonitoringGranted = permissionOverrides?.inputMonitoring ?? HIDRemoteMonitor.isInputMonitoringGranted
         accessibilityGranted = permissionOverrides?.accessibility ?? KeyboardInjector.isAccessibilityTrusted
         if permissionOverrides == nil {
+            integrationToolAvailability = OnboardingInputSourceSwitcher.integrationAvailability(
+                for: settings.onboardingVoiceTool
+            )
             model.refreshRuntimePermissionDiagnosis(
                 trigger: "settings_permission_refresh",
                 bluetoothGranted: bluetoothAuthorization == .allowedAlways

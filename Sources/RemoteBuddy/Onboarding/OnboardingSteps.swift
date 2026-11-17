@@ -161,23 +161,3 @@ enum OnboardingControlSource: String, CaseIterable, Codable, Identifiable {
         }
     }
 }
-
-/// During the ordinary-button check, Onboarding observes fresh input events but must
-/// never execute mappings that the user configured before starting (or rerunning) the flow.
-
-enum OnboardingAppleRemoteGeneration: String, Codable, CaseIterable, Identifiable {
-    case generation6 = "generation_6"
-    case generation7 = "generation_7"
-
-    var id: String { rawValue }
-
-    var titleKey: String { "onboarding.control_source.apple_remote.\(rawValue).title" }
-
-    var model: RemoteModel {
-        switch self {
-        case .generation6: return .appleSiriRemoteA2540
-        case .generation7: return .appleSiriRemoteA2854
-        }
-    }
-}
-

@@ -608,8 +608,6 @@
 "onboarding.control_source.t1_remote.detail" = "Physical voice button: press and release to start speaking, then press again to stop. Back QWERTY keyboard types directly.";
 "onboarding.control_source.siri_remote.title" = "Apple Remote (6th / 7th Generation)";
 "onboarding.control_source.siri_remote.detail" = "Use the physical voice button: hold to speak and release to stop.";
-"onboarding.control_source.apple_remote.generation_6.title" = "Apple Remote (6th Generation)";
-"onboarding.control_source.apple_remote.generation_7.title" = "Apple Remote (7th Generation)";
 "onboarding.control_source.chromecast_remote.title" = "Chromecast Voice Remote";
 "onboarding.control_source.chromecast_remote.detail" = "Choose hold-to-talk or tap once to start and again to stop.";
 "onboarding.gesture.hold" = "Hold to Talk";

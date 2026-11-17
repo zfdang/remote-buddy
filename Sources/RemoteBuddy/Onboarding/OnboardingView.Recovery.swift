@@ -17,14 +17,6 @@ extension OnboardingView {
             refreshSelectedInputMethodStatus()
             refreshSystemFunctionKeyUsage()
         case .remoteAvailability:
-            if settings.onboardingControlSource == .siriRemote,
-               settings.onboardingAppleRemoteGeneration == nil {
-                let generation: OnboardingAppleRemoteGeneration =
-                    settings.selectedRemoteProfile?.model == .appleSiriRemoteA2540
-                    ? .generation6
-                    : .generation7
-                settings.setOnboardingAppleRemoteGeneration(generation)
-            }
             routeConnectedPhysicalRemoteIfNeeded()
         case .remote:
             observedRemoteButtons.removeAll()

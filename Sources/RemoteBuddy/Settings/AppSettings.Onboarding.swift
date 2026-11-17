@@ -8,7 +8,6 @@ private struct OnboardingReturnConfiguration: Codable {
     let controlSource: OnboardingControlSource
     let device: String?
     let remoteAvailability: OnboardingRemoteAvailability
-    let appleRemoteGeneration: OnboardingAppleRemoteGeneration?
     let preferredGesture: VoiceGestureMode?
     let verifiedBinding: VoiceToolUserBinding?
     let voiceKeyMode: VoiceKeyMode
@@ -42,7 +41,6 @@ extension AppSettings {
             controlSource: onboardingControlSource,
             device: onboardingDevice?.rawValue,
             remoteAvailability: onboardingRemoteAvailability,
-            appleRemoteGeneration: onboardingAppleRemoteGeneration,
             preferredGesture: onboardingPreferredGesture,
             verifiedBinding: verifiedVoiceToolBinding,
             voiceKeyMode: voiceKeyMode,
@@ -110,7 +108,6 @@ extension AppSettings {
         onboardingControlSource = configuration.controlSource
         onboardingDevice = configuration.device.flatMap(RemoteSetupDevice.init(rawValue:))
         onboardingRemoteAvailability = configuration.remoteAvailability
-        onboardingAppleRemoteGeneration = configuration.appleRemoteGeneration
         onboardingPreferredGesture = configuration.preferredGesture
         verifiedVoiceToolBinding = configuration.verifiedBinding
         voiceKeyMode = configuration.voiceKeyMode
@@ -239,12 +236,6 @@ extension AppSettings {
         discardOnboardingVoiceTrial()
     }
 
-    func setOnboardingAppleRemoteGeneration(_ generation: OnboardingAppleRemoteGeneration?) {
-        onboardingAppleRemoteGeneration = generation
-        if generation != nil, onboardingControlSource != .siriRemote {
-            setOnboardingControlSource(.siriRemote)
-        }
-    }
 
     func beginOnboardingVoiceTrial(_ plan: OnboardingVoicePairingPlan) {
         onboardingVoiceTrigger = VoiceTriggerConfiguration(voiceKeyMode: plan.binding.shortcut,
@@ -329,7 +320,6 @@ extension AppSettings {
         onboardingRemoteAvailability = .unselected
         onboardingControlSource = .unselected
         onboardingDevice = nil
-        onboardingAppleRemoteGeneration = nil
         onboardingPreferredGesture = nil
         onboardingStep = .permissions
         onboardingCompletedVersion = 0

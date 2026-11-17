@@ -120,9 +120,6 @@ enum OnboardingScreenshotRenderer {
         let requestedControlSource = ProcessInfo.processInfo.environment[
             "REMOTE_BUDDY_ONBOARDING_SCREENSHOT_CONTROL_SOURCE"
         ].flatMap(OnboardingControlSource.init(rawValue:))
-        let requestedAppleRemoteGeneration = ProcessInfo.processInfo.environment[
-            "REMOTE_BUDDY_ONBOARDING_SCREENSHOT_APPLE_REMOTE_GENERATION"
-        ].flatMap(OnboardingAppleRemoteGeneration.init(rawValue:))
         let verifiedPreview = ProcessInfo.processInfo.environment["REMOTE_BUDDY_ONBOARDING_SCREENSHOT_VERIFIED"] == "1"
         let requestedTapMode = ProcessInfo.processInfo.environment["REMOTE_BUDDY_ONBOARDING_SCREENSHOT_TAP_MODE"] == "1"
         let systemFunctionKeyAvailable = ProcessInfo.processInfo.environment[
@@ -161,11 +158,6 @@ enum OnboardingScreenshotRenderer {
         settings.voiceFnTapModeEnabled = requestedTapMode
         settings.setOnboardingVoiceTool(requestedVoiceTool ?? .doubao)
         settings.setOnboardingControlSource(controlSource)
-        if controlSource == .siriRemote {
-            settings.setOnboardingAppleRemoteGeneration(
-                requestedAppleRemoteGeneration ?? .generation7
-            )
-        }
         if let requestedDevice = ProcessInfo.processInfo.environment[
             "REMOTE_BUDDY_ONBOARDING_SCREENSHOT_DEVICE"
         ].flatMap(RemoteSetupDevice.init(rawValue:)) {

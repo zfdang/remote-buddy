@@ -256,9 +256,7 @@ extension OnboardingView {
         case .t1Remote:
             return model.isT1Remote
         case .siriRemote:
-            guard model.isAppleSiriRemote else { return false }
-            guard let generation = settings.onboardingAppleRemoteGeneration else { return true }
-            return model == generation.model
+            return model.isAppleSiriRemote
         case .chromecastRemote:
             return model.isChromecastRemote
         case .unselected:

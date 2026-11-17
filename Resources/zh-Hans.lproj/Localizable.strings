@@ -607,8 +607,6 @@
 "onboarding.control_source.t1_remote.detail" = "实体语音键（按一下松开开始说话，说完再按一下结束）；背面全键盘可直接打字。";
 "onboarding.control_source.siri_remote.title" = "苹果遥控器第 6 代 / 第 7 代";
 "onboarding.control_source.siri_remote.detail" = "使用实体语音键，按住说话、松开结束。";
-"onboarding.control_source.apple_remote.generation_6.title" = "苹果遥控器第 6 代";
-"onboarding.control_source.apple_remote.generation_7.title" = "苹果遥控器第 7 代";
 "onboarding.control_source.chromecast_remote.title" = "Chromecast 语音遥控器";
 "onboarding.control_source.chromecast_remote.detail" = "支持按住说话或按一次说话。";
 "onboarding.gesture.hold" = "按住说话";

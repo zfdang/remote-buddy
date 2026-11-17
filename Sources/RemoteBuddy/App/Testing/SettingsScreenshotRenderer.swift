@@ -166,6 +166,11 @@ enum SettingsScreenshotRenderer {
             ]
         }
         _ = usesSiriRemote
+        if let voiceTool = ProcessInfo.processInfo.environment[
+            "REMOTE_BUDDY_SETTINGS_SCREENSHOT_VOICE_TOOL"
+        ].flatMap(OnboardingVoiceTool.init(rawValue:)) {
+            settings.setOnboardingVoiceTool(voiceTool)
+        }
         if usesChromecast {
             let identifier = chromecastScreenshotProfileID
                 ?? settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)

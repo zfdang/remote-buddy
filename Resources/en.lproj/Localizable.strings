@@ -911,11 +911,13 @@
 "settings.driver.missing" = "Compatible microphone not detected";
 "settings.driver.reload_help" = "If Remote Buddy Mic is still missing after installation, restart your Mac or follow the installation guide.";
 "settings.integration.title" = "Input Method & Voice Tool Integration";
-"settings.integration.introduction" = "Choose an input tool, then follow the wizard to set it up and test voice input.";
+"settings.integration.introduction" = "View your active voice trigger and input tool. Use the guide to switch tools or test voice input.";
 "settings.integration.current" = "Current Input Tool";
 "settings.integration.other_title" = "Other Tools";
 "settings.integration.configure" = "Configure & Test with Guide";
-"settings.integration.select_tool" = "Choose an input tool";
+"settings.integration.supported_tools" = "Supported Voice Tools";
+"settings.integration.tools_readonly" = "Read-only status display. Use the integration guide to switch tools and verify with a voice test.";
+"settings.integration.active_badge" = "Current";
 "settings.integration.shortcut_title" = "Voice trigger";
 
 "remote.device.illustration" = "Remote control illustration";

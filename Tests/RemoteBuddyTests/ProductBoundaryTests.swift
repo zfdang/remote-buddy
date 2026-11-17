@@ -255,6 +255,30 @@ struct ProductBoundaryTests {
         ])
     }
 
+    @Test @MainActor func integrationPageReadOnlyCopyExistsInBothLanguages() throws {
+        let suite = "remote-buddy.tests.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let localization = LocalizationStore(settings: AppSettings(defaults: defaults))
+        let keys = [
+            "settings.integration.title",
+            "settings.integration.introduction",
+            "settings.integration.current",
+            "settings.integration.configure",
+            "settings.integration.supported_tools",
+            "settings.integration.tools_readonly",
+            "settings.integration.active_badge",
+            "settings.integration.shortcut_title",
+        ]
+        for language in [AppLanguage.english, .simplifiedChinese] {
+            localization.select(language)
+            for key in keys {
+                let text = localization.text(key)
+                #expect(!text.isEmpty && text != key)
+            }
+        }
+    }
+
     @Test @MainActor func firstRunLanguageFollowsSystemAndExplicitChoicePersists() throws {
         let suite = "remote-buddy.tests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))

@@ -28,25 +28,37 @@ extension SettingsView {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                HStack(alignment: .center, spacing: 12) {
-                    Text(localization.text("settings.integration.select_tool"))
-                        .font(.headline)
-                    Spacer()
+                HStack(spacing: 14) {
+                    Rectangle()
+                        .fill(Color(nsColor: .separatorColor))
+                        .frame(maxWidth: .infinity, minHeight: 1, maxHeight: 1)
                     Button(localization.text("settings.integration.configure")) {
-                        if let tool = integrationToolSelection {
-                            SettingsPageBehavior.beginIntegrationSetup(tool: tool, settings: settings)
-                        }
+                        SettingsPageBehavior.beginIntegrationSetup(
+                            tool: settings.onboardingVoiceTool,
+                            settings: settings
+                        )
                     }
                     .compatibilityButtonStyle(.prominent)
                     .controlSize(.large)
-                    .disabled(integrationToolSelection == nil)
+                    .fixedSize()
+                    Rectangle()
+                        .fill(Color(nsColor: .separatorColor))
+                        .frame(maxWidth: .infinity, minHeight: 1, maxHeight: 1)
+                }
+                .padding(.vertical, 6)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(localization.text("settings.integration.supported_tools"))
+                        .font(.headline)
+                    Text(localization.text("settings.integration.tools_readonly"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 14) {
                     ForEach(OnboardingVoiceToolVisibilityPolicy.tools) { tool in
                         integrationToolCard(tool)
                     }
                 }
-                if integrationToolSelection == .voiceBuddy {
+                if settings.onboardingVoiceTool == .voiceBuddy {
                     GlassPanel {
                         HStack(alignment: .top, spacing: 10) {
                             Image(systemName: "waveform.circle.fill")
@@ -72,40 +84,45 @@ extension SettingsView {
             }
         }
         .onAppear {
-            integrationToolSelection = OnboardingVoiceToolVisibilityPolicy.tools.contains(settings.onboardingVoiceTool)
-                ? settings.onboardingVoiceTool : nil
             model.refreshVoiceKeyCompatibilityWarning()
             model.refreshAudioDevices()
         }
     }
 
     private func integrationToolCard(_ tool: OnboardingVoiceTool) -> some View {
-        let selected = integrationToolSelection == tool
-        return Button {
-            integrationToolSelection = tool
-        } label: {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text(localization.text(tool.titleKey))
-                        .font(.headline)
-                    Spacer()
-                    Image(systemName: selected ? "largecircle.fill.circle" : "circle")
-                        .foregroundStyle(selected ? Color.accentColor : Color.secondary)
+        let isSelected = settings.onboardingVoiceTool == tool
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(localization.text(tool.titleKey))
+                    .font(.headline)
+                Spacer(minLength: 0)
+                if isSelected {
+                    Text(localization.text("settings.integration.active_badge"))
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.green)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Color.green.opacity(0.12), in: Capsule())
                 }
-                Text(localization.text(tool.detailKey))
-                    .font(.caption).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(16)
-            .background(selected ? Color.accentColor.opacity(0.09) : Color.primary.opacity(0.04),
-                        in: RoundedRectangle(cornerRadius: 16))
-            .overlay {
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(selected ? Color.accentColor : Color.primary.opacity(0.2), lineWidth: 1)
-            }
+            Text(localization.text(tool.detailKey))
+                .font(.caption).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(selected ? .isSelected : [])
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(16)
+        .background(
+            isSelected ? Color.green.opacity(0.07) : Color.primary.opacity(0.03),
+            in: RoundedRectangle(cornerRadius: 16)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(
+                    isSelected ? Color.green.opacity(0.8) : Color.primary.opacity(0.14),
+                    lineWidth: isSelected ? 1.5 : 1
+                )
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

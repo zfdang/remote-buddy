@@ -1225,13 +1225,13 @@ struct HIDHotPathIdempotencyTests {
         #expect(secondaryWrite.mappings.contains(RemoteHIDKeyMappingPolicy.suppressedRemotePowerKey))
         #expect(model.hidAllowedLocationIDs == Set([9, 10]))
 
-        // Turning off customMappingEnabled skips live service probing during voice start altogether.
+        // Default Fn still probes for T1 services, but does not rewrite healthy Xiaomi mappings.
         harness.settings.customMappingEnabled = false
         model.applyHIDSettings()
         let probesBeforeDisabledVoice = counters.serviceProviderCallCount
         let writesBeforeDisabledVoice = counters.setMappingsCount
         harness.startAndVerifyVoice()
-        #expect(counters.serviceProviderCallCount == probesBeforeDisabledVoice)
+        #expect(counters.serviceProviderCallCount == probesBeforeDisabledVoice + 1)
         #expect(counters.setMappingsCount == writesBeforeDisabledVoice)
     }
 

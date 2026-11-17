@@ -307,13 +307,19 @@ final class RemoteHIDKeyMapper {
     @discardableResult
     func refreshAppliedMappingsValidity(
         expectedPowerKeySuppression: Bool,
-        expectedVoiceKeyNeutralization: Bool
+        expectedVoiceKeyNeutralization: Bool,
+        requiresT1VoiceKeySuppression: Bool = false
     ) -> Bool {
-        guard expectedPowerKeySuppression || expectedVoiceKeyNeutralization else {
+        let services = matchingServices()
+        guard expectedPowerKeySuppression || expectedVoiceKeyNeutralization ||
+                requiresT1VoiceKeySuppression || services.contains(where: { $0.family == .t1Remote }) else {
             return true
         }
-        let services = matchingServices()
         matchedServiceCount = services.count
+        if requiresT1VoiceKeySuppression, !services.contains(where: { $0.family == .t1Remote }) {
+            resetAppliedState()
+            return false
+        }
         if expectedVoiceKeyNeutralization, !isVoiceKeyNeutralized {
             resetAppliedState()
             return false

@@ -71,10 +71,12 @@ extension BridgeAppModel {
         let profileID = activateRemoteProfile(for: bridge)
         let currentPermissionSnapshot = permissionSnapshotProvider()
         let neutralizeVoiceKey = shouldNeutralizeNativeVoiceKey
+        let requiresT1VoiceKeySuppression = bridge.identifiedModel?.isT1Remote == true
         let currentServicesMatchDesiredMapping = voiceFunctionMapper
             .refreshAppliedMappingsValidity(
                 expectedPowerKeySuppression: settings.customMappingEnabled,
-                expectedVoiceKeyNeutralization: neutralizeVoiceKey
+                expectedVoiceKeyNeutralization: neutralizeVoiceKey,
+                requiresT1VoiceKeySuppression: requiresT1VoiceKeySuppression
             )
         let reapplyMappings = Self.shouldReapplyHIDSettingsBeforeVoiceStart(
             customMappingEnabled: settings.customMappingEnabled,
@@ -89,7 +91,8 @@ extension BridgeAppModel {
             monitoringInterrupted: hidMonitoringInterrupted,
             monitoringConfigurationApplied: appliedHIDMonitoringConfiguration != nil,
             appliedPermissionSnapshot: appliedHIDPermissionSnapshot,
-            currentPermissionSnapshot: currentPermissionSnapshot
+            currentPermissionSnapshot: currentPermissionSnapshot,
+            requiresT1VoiceKeySuppression: requiresT1VoiceKeySuppression
         )
         AppLogger.shared.write("VOICE START mapping_check current_matches=\(currentServicesMatchDesiredMapping) " +
             "matching_services_present=\(voiceFunctionMapper.hasMatchingServices) neutralized=\(voiceFunctionMapper.isVoiceKeyNeutralized) " +
@@ -97,7 +100,7 @@ extension BridgeAppModel {
         if reapplyMappings {
             applyHIDSettings(allowVoiceKeyModeFallback: false)
         } else if !voiceFunctionMapper.hasMatchingServices,
-                  settings.customMappingEnabled || neutralizeVoiceKey {
+                  settings.customMappingEnabled || neutralizeVoiceKey || requiresT1VoiceKeySuppression {
             scheduleHIDMappingRecoveryIfNeeded()
         }
         guard Self.canStartBluetoothVoice(
@@ -106,7 +109,12 @@ extension BridgeAppModel {
             isVoiceKeyNeutralized: voiceFunctionMapper.isVoiceKeyNeutralized,
             hasHardwareVoiceKey: !(bridge.identifiedModel?.isATVVRemote == true),
             accessibilityGranted: currentPermissionSnapshot.accessibilityGranted,
-            requiresOrderedFn: requiresOrderedVoiceFn
+            requiresOrderedFn: requiresOrderedVoiceFn,
+            nativeVoiceMappingIsValid: !requiresT1VoiceKeySuppression || voiceFunctionMapper.refreshAppliedMappingsValidity(
+                expectedPowerKeySuppression: settings.customMappingEnabled,
+                expectedVoiceKeyNeutralization: neutralizeVoiceKey,
+                requiresT1VoiceKeySuppression: true
+            )
         ) else {
             _ = bridge.requestMicrophoneClose()
             cancelPendingBluetoothVoiceStart(for: identifier)

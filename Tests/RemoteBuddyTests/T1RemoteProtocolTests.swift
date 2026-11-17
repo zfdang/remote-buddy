@@ -254,6 +254,65 @@ struct T1RemoteProtocolTests {
         #expect(t1Mappings.isEmpty)
     }
 
+    @Test func defaultFnValidityDetectsMissingT1KeysAndFailedRepairs() {
+        let suite = "t1-default-repair-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        var mappings: [HIDUsageMapping] = []
+        var allowWrites = true
+        var connected = true
+        let mapper = RemoteHIDKeyMapper(serviceProvider: {
+            connected ? [RemoteHIDMappingService(registryID: 9001, family: .t1Remote,
+                readMappings: { mappings }, setMappings: {
+                    guard allowWrites else { return false }
+                    mappings = $0; return true
+                })] : []
+        }, recoveryDefaults: defaults, bootID: "t1-default-repair")
+        let valid = {
+            mapper.refreshAppliedMappingsValidity(expectedPowerKeySuppression: false,
+                expectedVoiceKeyNeutralization: false, requiresT1VoiceKeySuppression: true)
+        }
+        #expect(!valid())
+        #expect(mapper.apply())
+        #expect(valid())
+        mappings.removeAll { $0 == RemoteHIDKeyMappingPolicy.neutralT1VoiceSearchKey }
+        // Detect live T1 services even without an explicit T1 caller requirement.
+        #expect(!mapper.refreshAppliedMappingsValidity(expectedPowerKeySuppression: false,
+            expectedVoiceKeyNeutralization: false))
+        allowWrites = false
+        #expect(!mapper.apply())
+        #expect(!valid())
+        allowWrites = true
+        #expect(mapper.apply())
+        #expect(valid())
+        mapper.restore()
+        #expect(!valid())
+        #expect(mapper.apply())
+        #expect(valid())
+        connected = false
+        #expect(!valid())
+    }
+
+    @Test @MainActor func defaultT1FnRequiresRepairAndValidMappingsBeforeVoice() {
+        let granted = HIDPermissionSnapshot(inputMonitoringGranted: true, accessibilityGranted: true)
+        for servicesPresent in [false, true] {
+            #expect(BridgeAppModel.shouldReapplyHIDSettingsBeforeVoiceStart(
+                customMappingEnabled: false, mode: .function, fnTapModeEnabled: false,
+                requiresOrderedFn: false, hasHardwareVoiceKey: false,
+                hasMatchingHIDServices: servicesPresent, isVoiceKeyNeutralized: false,
+                currentServicesMatchDesiredMapping: false, fnTapSessionEnabled: false,
+                monitoringInterrupted: false, monitoringConfigurationApplied: true,
+                appliedPermissionSnapshot: granted, currentPermissionSnapshot: granted,
+                requiresT1VoiceKeySuppression: true))
+        }
+        #expect(!BridgeAppModel.canStartBluetoothVoice(mode: .function,
+            isVoiceKeyNeutralized: false, hasHardwareVoiceKey: false,
+            accessibilityGranted: true, nativeVoiceMappingIsValid: false))
+        #expect(BridgeAppModel.canStartBluetoothVoice(mode: .function,
+            isVoiceKeyNeutralized: false, hasHardwareVoiceKey: false,
+            accessibilityGranted: true, nativeVoiceMappingIsValid: true))
+    }
+
     @Test func keyMapperRollsBackMixedXiaomiAndT1ServicesWhenT1WriteFails() {
         let suite = "t1-mixed-rollback-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: suite)!

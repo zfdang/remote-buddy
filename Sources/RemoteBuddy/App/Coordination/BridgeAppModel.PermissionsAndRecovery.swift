@@ -38,14 +38,16 @@ extension BridgeAppModel {
         monitoringInterrupted: Bool,
         monitoringConfigurationApplied: Bool,
         appliedPermissionSnapshot: HIDPermissionSnapshot?,
-        currentPermissionSnapshot: HIDPermissionSnapshot
+        currentPermissionSnapshot: HIDPermissionSnapshot,
+        requiresT1VoiceKeySuppression: Bool = false
     ) -> Bool {
         let needsNeutralization = mode != .function || fnTapModeEnabled || requiresOrderedFn
-        guard customMappingEnabled || needsNeutralization else { return false }
+        if !currentServicesMatchDesiredMapping, hasMatchingHIDServices { return true }
+        guard customMappingEnabled || needsNeutralization || requiresT1VoiceKeySuppression else { return false }
         if monitoringInterrupted || !monitoringConfigurationApplied { return true }
         if appliedPermissionSnapshot != currentPermissionSnapshot { return true }
         if !currentServicesMatchDesiredMapping,
-           hasMatchingHIDServices || (hasHardwareVoiceKey && needsNeutralization) {
+           hasMatchingHIDServices || (hasHardwareVoiceKey && needsNeutralization) || requiresT1VoiceKeySuppression {
             return true
         }
         if hasHardwareVoiceKey, needsNeutralization, !isVoiceKeyNeutralized { return true }
@@ -62,8 +64,10 @@ extension BridgeAppModel {
         isVoiceKeyNeutralized: Bool,
         hasHardwareVoiceKey: Bool = true,
         accessibilityGranted: Bool = false,
-        requiresOrderedFn: Bool = false
+        requiresOrderedFn: Bool = false,
+        nativeVoiceMappingIsValid: Bool = true
     ) -> Bool {
+        guard nativeVoiceMappingIsValid else { return false }
         if !hasHardwareVoiceKey { return accessibilityGranted }
         if requiresOrderedFn { return accessibilityGranted && isVoiceKeyNeutralized }
         return (mode == .function && !voiceFnTapModeEnabled) || isVoiceKeyNeutralized

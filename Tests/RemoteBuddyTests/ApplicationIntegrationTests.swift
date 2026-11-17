@@ -961,4 +961,94 @@ struct ApplicationIntegrationTests {
         #expect(writes == 2 && keys == 2)
     }
 
+    @Test func composerCaretMoveAbortsWhenTargetInvalidatesDuringAXQueries() {
+        enum InvalidationPoint: CaseIterable {
+            case afterCount
+            case afterInitialRange
+            case duringSettableCheck
+            case duringWrite
+            case afterWriteVerification
+        }
+
+        for point in InvalidationPoint.allCases {
+            var valid = true
+            var writes = 0
+            var readCount = 0
+            var keys = 0
+            let moved = KeyboardInjector.moveIntegratedComposerCaretToEnd(
+                readNumberOfCharacters: {
+                    if point == .afterCount { valid = false }
+                    return 10
+                },
+                readSelectedRange: {
+                    readCount += 1
+                    if readCount == 1 && point == .afterInitialRange {
+                        valid = false
+                        return CFRange(location: 10, length: 0)
+                    }
+                    if readCount == 2 && point == .afterWriteVerification {
+                        valid = false
+                    }
+                    return readCount == 1 ? CFRange(location: 1, length: 0) : CFRange(location: 10, length: 0)
+                },
+                isSelectedRangeSettable: {
+                    if point == .duringSettableCheck { valid = false }
+                    return true
+                },
+                writeSelectedRange: { _ in
+                    writes += 1
+                    if point == .duringWrite { valid = false }
+                    return true
+                },
+                canContinue: { valid },
+                postMoveToEndKey: { keys += 1; return true },
+                pause: {}
+            )
+            #expect(!moved)
+            #expect(keys == 0)
+            let expectedWrites = (point == .duringWrite || point == .afterWriteVerification) ? 1 : 0
+            #expect(writes == expectedWrites)
+        }
+    }
+
+    @Test func composerCaretMoveShortcutRespectsPhysicalModifiers() {
+        // 1. No held modifiers: synthesizes Command down/up around Down arrow.
+        var noModifierEvents: [CGEvent] = []
+        #expect(KeyboardInjector.sendMoveCaretToEndShortcut(
+            hardwareFlags: { [] },
+            eventPoster: { noModifierEvents.append($0); return true },
+            logger: { _ in }
+        ))
+        #expect(noModifierEvents.map { $0.getIntegerValueField(.keyboardEventKeycode) } == [55, 125, 125, 55])
+        #expect(noModifierEvents.last?.flags.contains(.maskCommand) == false)
+
+        // 2. Physical Command already held: emits only Down arrow events and preserves Command.
+        var heldCommandEvents: [CGEvent] = []
+        #expect(KeyboardInjector.sendMoveCaretToEndShortcut(
+            hardwareFlags: { .maskCommand },
+            eventPoster: { heldCommandEvents.append($0); return true },
+            logger: { _ in }
+        ))
+        #expect(heldCommandEvents.map { $0.getIntegerValueField(.keyboardEventKeycode) } == [125, 125])
+        #expect(heldCommandEvents.allSatisfy { $0.flags.contains(.maskCommand) })
+
+        // 3. Conflicting modifiers that alter Command+Down meaning skip shortcut injection.
+        let conflicting: [CGEventFlags] = [
+            .maskShift,
+            [.maskCommand, .maskShift],
+            .maskControl,
+            .maskAlternate,
+            .maskSecondaryFn
+        ]
+        for held in conflicting {
+            var posted = 0
+            #expect(!KeyboardInjector.sendMoveCaretToEndShortcut(
+                hardwareFlags: { held },
+                eventPoster: { _ in posted += 1; return true },
+                logger: { _ in }
+            ))
+            #expect(posted == 0)
+        }
+    }
+
 }

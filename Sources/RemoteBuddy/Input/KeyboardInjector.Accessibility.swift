@@ -1431,6 +1431,30 @@ extension KeyboardInjector {
         return range
     }
 
+    static func permitsCaretMoveToEndShortcut(flags: CGEventFlags) -> Bool {
+        flags.intersection([.maskControl, .maskAlternate, .maskShift, .maskSecondaryFn]).isEmpty
+    }
+
+    @discardableResult
+    static func sendMoveCaretToEndShortcut(
+        hardwareFlags: @escaping () -> CGEventFlags = KeyboardHardwareModifierPolicy.current,
+        eventPoster: @escaping (CGEvent) -> Bool = ShortcutEventSequence.post,
+        logger: @escaping (String) -> Void = { AppLogger.shared.write($0) }
+    ) -> Bool {
+        let physical = hardwareFlags()
+        guard permitsCaretMoveToEndShortcut(flags: physical) else {
+            logger("COMPOSER CARET_MOVE skipped reason=modifiers_held flags=\(physical.rawValue)")
+            return false
+        }
+        return ShortcutEventSequence.send(
+            keyCode: 125,
+            modifiers: .maskCommand,
+            hardwareFlags: hardwareFlags,
+            eventPoster: eventPoster,
+            logger: logger
+        )
+    }
+
     /// Moves the caret to the end of a newly auto-focused composer without reading
     /// any text contents: prefers writing `kAXSelectedTextRangeAttribute` to the
     /// character count, falling back to Command+Down when the host editor ignores AX writes.
@@ -1438,14 +1462,7 @@ extension KeyboardInjector {
     static func moveAccessibilityCaretToEnd(
         of element: AXUIElement,
         canContinue: () -> Bool,
-        postMoveToEndKey: () -> Bool = {
-            ShortcutEventSequence.send(
-                keyCode: 125,
-                modifiers: .maskCommand,
-                hardwareFlags: { [] },
-                eventPoster: ShortcutEventSequence.post
-            )
-        },
+        postMoveToEndKey: () -> Bool = { sendMoveCaretToEndShortcut() },
         pause: () -> Void = { usleep(20_000) }
     ) -> Bool {
         moveIntegratedComposerCaretToEnd(
@@ -1486,20 +1503,28 @@ extension KeyboardInjector {
     ) -> Bool {
         guard canContinue() else { return false }
         if let characterCount = readNumberOfCharacters() {
+            guard canContinue() else { return false }
             if characterCount <= 0 {
                 return true
             }
-            if let current = readSelectedRange(),
+            let current = readSelectedRange()
+            guard canContinue() else { return false }
+            if let current,
                current.location == characterCount,
                current.length == 0 {
                 return true
             }
-            if isSelectedRangeSettable(),
-               writeSelectedRange(CFRange(location: characterCount, length: 0)),
-               let updated = readSelectedRange(),
-               updated.location == characterCount,
-               updated.length == 0 {
-                return true
+            let settable = isSelectedRangeSettable()
+            guard canContinue() else { return false }
+            if settable,
+               writeSelectedRange(CFRange(location: characterCount, length: 0)) {
+                guard canContinue() else { return false }
+                if let updated = readSelectedRange() {
+                    guard canContinue() else { return false }
+                    if updated.location == characterCount, updated.length == 0 {
+                        return true
+                    }
+                }
             }
         }
         guard canContinue() else { return false }

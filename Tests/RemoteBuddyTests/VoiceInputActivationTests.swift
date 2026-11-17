@@ -1,3 +1,4 @@
+import AppKit
 import CoreGraphics
 import Foundation
 import Testing
@@ -560,7 +561,7 @@ struct VoiceInputActivationTests {
             logger: { _ in },
             onSourcePreparationFailure: { [weak model] tool, result in
                 failures.append((tool, result))
-                model?.presentUnavailableVoiceToolPromptIfNeeded(for: tool, now: 100)
+                model?.handleInputSourcePreparationFailure(for: tool, result: result, now: 100)
             }
         )
         var posted: [Bool] = []
@@ -571,10 +572,19 @@ struct VoiceInputActivationTests {
         #expect(model.unavailableVoiceToolPrompt == BridgeAppModel.VoiceToolUnavailablePrompt(
             tool: .doubao, reason: .unavailable))
 
-        model.unavailableVoiceToolPrompt = nil
-        model.presentUnavailableVoiceToolPromptIfNeeded(for: .doubao, reason: .unavailable, now: 105)
+        // Production mapping ignores non-failure switch results and enforces 10s per-tool throttling across reasons.
+        for ignored in [OnboardingInputSourceSwitchResult.selected, .notSelected, .notApplicable] {
+            model.unavailableVoiceToolPrompt = nil
+            model.handleInputSourcePreparationFailure(for: .doubao, result: ignored, now: 120)
+            #expect(model.unavailableVoiceToolPrompt == nil)
+        }
+        model.handleInputSourcePreparationFailure(for: .doubao, result: .failed, now: 105)
         #expect(model.unavailableVoiceToolPrompt == nil)
-        model.presentUnavailableVoiceToolPromptIfNeeded(for: .doubao, reason: .switchFailed, now: 111)
+        model.handleInputSourcePreparationFailure(for: .weixin, result: .failed, now: 106)
+        #expect(model.unavailableVoiceToolPrompt == BridgeAppModel.VoiceToolUnavailablePrompt(
+            tool: .weixin, reason: .switchFailed))
+        model.unavailableVoiceToolPrompt = nil
+        model.handleInputSourcePreparationFailure(for: .doubao, result: .failed, now: 111)
         #expect(model.unavailableVoiceToolPrompt == BridgeAppModel.VoiceToolUnavailablePrompt(
             tool: .doubao, reason: .switchFailed))
     }
@@ -613,5 +623,73 @@ struct VoiceInputActivationTests {
         #expect(readyResults == [false])
         #expect(failures.isEmpty)
         #expect(restored == ["previous"])
+    }
+
+    @Test func unavailableVoiceToolAlertCopyNavigationAndReentrancy() throws {
+        let (model, defaults, suite) = try makeModel()
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let localization = LocalizationStore(settings: model.settings)
+
+        for language in [AppLanguage.english, .simplifiedChinese] {
+            localization.select(language)
+            let toolTitle = localization.text(OnboardingVoiceTool.doubao.titleKey)
+            let unavailable = UnavailableVoiceToolAlertContent(
+                prompt: .init(tool: .doubao, reason: .unavailable),
+                using: localization
+            )
+            let switchFailed = UnavailableVoiceToolAlertContent(
+                prompt: .init(tool: .doubao, reason: .switchFailed),
+                using: localization
+            )
+            for content in [unavailable, switchFailed] {
+                #expect(!content.title.isEmpty && !content.title.contains("%@") && content.title.contains(toolTitle))
+                #expect(!content.message.isEmpty && !content.message.contains("%@") && content.message.contains(toolTitle))
+                #expect(!content.openSettingsTitle.isEmpty && content.openSettingsTitle != "voice_tool.unavailable.alert.open_settings")
+                #expect(!content.cancelTitle.isEmpty && content.cancelTitle != "common.action.cancel")
+            }
+            #expect(unavailable.title != "voice_tool.unavailable.alert.title")
+            #expect(unavailable.message != "voice_tool.unavailable.alert.message")
+            #expect(switchFailed.title != "voice_tool.switch_failed.alert.title")
+            #expect(switchFailed.message != "voice_tool.switch_failed.alert.message")
+            #expect(unavailable.title != switchFailed.title)
+            #expect(unavailable.message != switchFailed.message)
+        }
+
+        let coordinator = UnavailableVoiceToolAlertCoordinator()
+        var shownTitles: [String] = []
+        var openedSettings = 0
+        var injectedReentrant = false
+        model.unavailableVoiceToolPrompt = .init(tool: .doubao, reason: .unavailable)
+        coordinator.presentIfIdle(
+            model: model,
+            localization: localization,
+            runModal: { content in
+                shownTitles.append(content.title)
+                if !injectedReentrant {
+                    injectedReentrant = true
+                    // A prompt arriving while a modal is active must neither open a nested modal nor be dropped.
+                    model.unavailableVoiceToolPrompt = .init(tool: .weixin, reason: .switchFailed)
+                    coordinator.presentIfIdle(
+                        model: model,
+                        localization: localization,
+                        runModal: { nested in
+                            shownTitles.append("nested:\(nested.title)")
+                            return .alertSecondButtonReturn
+                        },
+                        openSettings: { openedSettings += 1 }
+                    )
+                    return .alertSecondButtonReturn
+                }
+                return .alertFirstButtonReturn
+            },
+            openSettings: { openedSettings += 1 }
+        )
+
+        #expect(shownTitles.count == 2)
+        #expect(shownTitles[0] != shownTitles[1])
+        #expect(!shownTitles.contains { $0.hasPrefix("nested:") })
+        #expect(model.requestedSettingsSection == .integration)
+        #expect(openedSettings == 1)
+        #expect(model.unavailableVoiceToolPrompt == nil)
     }
 }

@@ -108,12 +108,19 @@ enum OnboardingInputSourceSwitcher {
     /// Checks whether the configured voice tool is ready for live voice sessions (including
     /// being enabled in Keyboard Input Sources for input-method tools such as Doubao or WeType).
     static func integrationAvailability(
-        for voiceTool: OnboardingVoiceTool
+        for voiceTool: OnboardingVoiceTool,
+        hasInputSource: (_ id: String, _ includeAllInstalled: Bool) -> Bool = { id, includeAllInstalled in
+            inputSource(withID: id, includeAllInstalled: includeAllInstalled) != nil
+        },
+        hasApplication: (_ bundleIdentifier: String) -> Bool = { bundleIdentifier in
+            NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) != nil
+        }
     ) -> OnboardingVoiceToolAvailability {
         if let targetID = voiceTool.preferredInputSourceID {
-            return inputSource(withID: targetID, includeAllInstalled: false) == nil
-                ? .notInstalled
-                : .available
+            return hasInputSource(targetID, false) ? .available : .notInstalled
+        }
+        if let bundleIdentifier = voiceTool.applicationBundleIdentifier {
+            return hasApplication(bundleIdentifier) ? .available : .notInstalled
         }
         return availability(for: voiceTool)
     }

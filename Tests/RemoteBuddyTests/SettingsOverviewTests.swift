@@ -1,3 +1,4 @@
+import Carbon
 import Foundation
 import Testing
 @testable import RemoteBuddy
@@ -92,5 +93,40 @@ struct SettingsOverviewTests {
         #expect(!unselected.integrationMissing)
         #expect(!unselected.integrationReady)
         #expect(unselected.integrationSummary(using: localization) == localization.text("settings.overview.not_configured"))
+    }
+
+    @Test @MainActor func integrationAvailabilityChecksEnabledInputSourcesAndFlowsIntoOverview() {
+        var probed: [(String, Bool)] = []
+        let installedButDisabled = OnboardingInputSourceSwitcher.integrationAvailability(
+            for: .doubao,
+            hasInputSource: { id, includeAllInstalled in
+                probed.append((id, includeAllInstalled))
+                return includeAllInstalled
+            }
+        )
+        #expect(probed.count == 1 && probed[0].0 == OnboardingVoiceTool.doubao.preferredInputSourceID && !probed[0].1)
+        #expect(installedButDisabled == .notInstalled)
+        #expect(state(tool: .doubao, availability: installedButDisabled).integrationMissing)
+
+        let enabledAvailability = OnboardingInputSourceSwitcher.integrationAvailability(
+            for: .doubao,
+            hasInputSource: { id, includeAllInstalled in
+                !includeAllInstalled && id == OnboardingVoiceTool.doubao.preferredInputSourceID
+            }
+        )
+        #expect(enabledAvailability == .available)
+        #expect(state(tool: .doubao, availability: enabledAvailability).integrationReady)
+
+        // Exercise real TIS list scanning on the host input sources.
+        #expect(OnboardingInputSourceSwitcher.inputSource(
+            withID: "com.example.nonexistent.inputmethod",
+            createList: { TISCreateInputSourceList(nil, false) }
+        ) == nil)
+        if let activeID = OnboardingInputSourceSwitcher.currentInputSourceID() {
+            #expect(OnboardingInputSourceSwitcher.inputSource(
+                withID: activeID,
+                createList: { TISCreateInputSourceList(nil, false) }
+            ) != nil)
+        }
     }
 }

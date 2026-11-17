@@ -5,6 +5,62 @@ import Sparkle
 import SwiftUI
 import ServiceManagement
 
+struct UnavailableVoiceToolAlertContent: Equatable {
+    let title: String
+    let message: String
+    let openSettingsTitle: String
+    let cancelTitle: String
+
+    @MainActor
+    init(
+        prompt: BridgeAppModel.VoiceToolUnavailablePrompt,
+        using localization: LocalizationStore
+    ) {
+        let toolName = localization.text(prompt.tool.titleKey)
+        let titleKey: String
+        let messageKey: String
+        switch prompt.reason {
+        case .unavailable:
+            titleKey = "voice_tool.unavailable.alert.title"
+            messageKey = "voice_tool.unavailable.alert.message"
+        case .switchFailed:
+            titleKey = "voice_tool.switch_failed.alert.title"
+            messageKey = "voice_tool.switch_failed.alert.message"
+        }
+        self.title = LocalizedMessage(titleKey, arguments: [toolName]).text(using: localization)
+        self.message = LocalizedMessage(messageKey, arguments: [toolName]).text(using: localization)
+        self.openSettingsTitle = localization.text("voice_tool.unavailable.alert.open_settings")
+        self.cancelTitle = localization.text("common.action.cancel")
+    }
+}
+
+final class UnavailableVoiceToolAlertCoordinator {
+    private var isPresenting = false
+
+    @MainActor
+    func presentIfIdle(
+        model: BridgeAppModel,
+        localization: LocalizationStore,
+        runModal: (UnavailableVoiceToolAlertContent) -> NSApplication.ModalResponse,
+        openSettings: () -> Void
+    ) {
+        guard !isPresenting else { return }
+        isPresenting = true
+        defer { isPresenting = false }
+
+        while let prompt = model.unavailableVoiceToolPrompt {
+            model.unavailableVoiceToolPrompt = nil
+            let content = UnavailableVoiceToolAlertContent(prompt: prompt, using: localization)
+            if runModal(content) == .alertFirstButtonReturn {
+                model.requestedSettingsSection = .integration
+                openSettings()
+                model.unavailableVoiceToolPrompt = nil
+                break
+            }
+        }
+    }
+}
+
 struct UpdateFeedSelection {
     let stableFeedURLString: String?
 
@@ -262,7 +318,7 @@ private final class RemoteBuddyAppDelegate: NSObject, NSApplicationDelegate, NSM
     private var statusMenu: NSMenu?
     private var settingsWindowController: NSWindowController?
     private var isSettingsWindowOpen = false
-    private var isPresentingUnavailableVoiceToolAlert = false
+    private let unavailableVoiceToolAlertCoordinator = UnavailableVoiceToolAlertCoordinator()
     private var subscriptions = Set<AnyCancellable>()
     private var terminationSignalSources: [DispatchSourceSignal] = []
     private var applicationShortcutMonitor: Any?
@@ -739,43 +795,31 @@ private final class RemoteBuddyAppDelegate: NSObject, NSApplicationDelegate, NSM
         model.$unavailableVoiceToolPrompt
             .compactMap { $0 }
             .receive(on: RunLoop.main)
-            .sink { [weak self] prompt in
-                self?.presentUnavailableVoiceToolAlert(for: prompt)
+            .sink { [weak self] _ in
+                self?.presentUnavailableVoiceToolAlertIfNeeded()
             }
             .store(in: &subscriptions)
     }
 
-    private func presentUnavailableVoiceToolAlert(for prompt: BridgeAppModel.VoiceToolUnavailablePrompt) {
-        model.unavailableVoiceToolPrompt = nil
-        guard !isPresentingUnavailableVoiceToolAlert else { return }
-        isPresentingUnavailableVoiceToolAlert = true
-        defer { isPresentingUnavailableVoiceToolAlert = false }
-
-        NSSound.beep()
-        NSApp.activate(ignoringOtherApps: true)
-        let alert = NSAlert()
-        alert.alertStyle = .warning
-        let toolName = localization.text(prompt.tool.titleKey)
-        let titleKey: String
-        let messageKey: String
-        switch prompt.reason {
-        case .unavailable:
-            titleKey = "voice_tool.unavailable.alert.title"
-            messageKey = "voice_tool.unavailable.alert.message"
-        case .switchFailed:
-            titleKey = "voice_tool.switch_failed.alert.title"
-            messageKey = "voice_tool.switch_failed.alert.message"
-        }
-        alert.messageText = LocalizedMessage(titleKey, arguments: [toolName])
-            .text(using: localization)
-        alert.informativeText = LocalizedMessage(messageKey, arguments: [toolName])
-            .text(using: localization)
-        alert.addButton(withTitle: localization.text("voice_tool.unavailable.alert.open_settings"))
-        alert.addButton(withTitle: localization.text("common.action.cancel"))
-        if alert.runModal() == .alertFirstButtonReturn {
-            model.requestedSettingsSection = .integration
-            showSettings()
-        }
+    private func presentUnavailableVoiceToolAlertIfNeeded() {
+        unavailableVoiceToolAlertCoordinator.presentIfIdle(
+            model: model,
+            localization: localization,
+            runModal: { content in
+                NSSound.beep()
+                NSApp.activate(ignoringOtherApps: true)
+                let alert = NSAlert()
+                alert.alertStyle = .warning
+                alert.messageText = content.title
+                alert.informativeText = content.message
+                alert.addButton(withTitle: content.openSettingsTitle)
+                alert.addButton(withTitle: content.cancelTitle)
+                return alert.runModal()
+            },
+            openSettings: { [weak self] in
+                self?.showSettings()
+            }
+        )
     }
 
     private func observeLocalization() {

@@ -129,26 +129,35 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
             self?.settings.onboardingVoiceTool ?? .unselected
         },
         onSourcePreparationFailure: { [weak self] tool, result in
-            let reason: VoiceToolUnavailablePrompt.Reason
-            switch result {
-            case .unavailable:
-                reason = .unavailable
-            case .failed:
-                reason = .switchFailed
-            case .selected, .notSelected, .notApplicable:
-                return
-            }
-            self?.presentUnavailableVoiceToolPromptIfNeeded(for: tool, reason: reason)
+            self?.handleInputSourcePreparationFailure(for: tool, result: result)
         }
     )
 
     private var lastUnavailableVoiceToolPrompt: (tool: OnboardingVoiceTool, uptime: TimeInterval)?
+
+    func handleInputSourcePreparationFailure(
+        for tool: OnboardingVoiceTool,
+        result: OnboardingInputSourceSwitchResult,
+        now: TimeInterval = ProcessInfo.processInfo.systemUptime
+    ) {
+        let reason: VoiceToolUnavailablePrompt.Reason
+        switch result {
+        case .unavailable:
+            reason = .unavailable
+        case .failed:
+            reason = .switchFailed
+        case .selected, .notSelected, .notApplicable:
+            return
+        }
+        presentUnavailableVoiceToolPromptIfNeeded(for: tool, reason: reason, now: now)
+    }
 
     func presentUnavailableVoiceToolPromptIfNeeded(
         for tool: OnboardingVoiceTool,
         reason: VoiceToolUnavailablePrompt.Reason = .unavailable,
         now: TimeInterval = ProcessInfo.processInfo.systemUptime
     ) {
+        // Throttle repeats per tool (even across reason changes) so key presses stay quiet.
         if let last = lastUnavailableVoiceToolPrompt,
            last.tool == tool,
            now - last.uptime < 10 {

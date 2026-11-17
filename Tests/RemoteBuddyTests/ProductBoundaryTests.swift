@@ -10,12 +10,14 @@ struct ProductBoundaryTests {
             .deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("Resources")
         let bundle = try #require(Bundle(path: resources.path))
         let paired = [
-            "doubao-menu", "doubao-settings",
-            "weixin-input-menu", "weixin-input-settings",
             "bageshuo-menu", "bageshuo-settings", "bageshuo-input-microphone",
         ]
-        let microphone = ["doubao-input-microphone", "weixin-input-microphone", "voicebuddy-setting-fn", "voicebuddy-setting-mic"]
-        for name in paired + microphone {
+        let lightOnly = [
+            "doubao-menu", "doubao-settings", "doubao-input-microphone",
+            "weixin-input-menu", "weixin-input-settings", "weixin-input-microphone",
+            "voicebuddy-setting-fn", "voicebuddy-setting-mic",
+        ]
+        for name in paired + lightOnly {
             let url = try #require(RemoteBuddyResourceBundle.onboardingImageURL(named: name, isDark: false, in: bundle))
             #expect(url.lastPathComponent == "\(name)-light.jpg")
             let image = try #require(NSImage(contentsOf: url))

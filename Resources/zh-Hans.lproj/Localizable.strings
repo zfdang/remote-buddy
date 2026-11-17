@@ -886,7 +886,7 @@
 "onboarding.voice_tool.guide.screenshot.doubao_menu" = "在输入法菜单中选择豆包输入法，再打开设置。";
 "onboarding.voice_tool.guide.screenshot.doubao_settings" = "在语音输入中，将对应模式的快捷键设为“%@”。开启全局唤起语音，并选择遥控搭子的虚拟麦克风。";
 "onboarding.voice_tool.guide.screenshot.weixin_input_menu" = "在输入法菜单中选择微信输入法，再打开设置。";
-"onboarding.voice_tool.guide.screenshot.weixin_input_settings" = "在语音输入中将快捷键设为“%@”，并让录音触发模式与当前方案一致。";
+"onboarding.voice_tool.guide.screenshot.weixin_input_settings" = "在语音输入中将快捷键设为“%@”，让录音触发模式与当前方案一致，并开启“快捷键全局生效”。";
 "onboarding.voice_tool.guide.screenshot.weixin_app_shortcuts" = "微信 App 的全局语音快捷键可能与其他语音工具冲突。请检查是否占用了“%@”；如有冲突，仅清除对应快捷键。";
 "onboarding.voice_tool.guide.screenshot.bageshuo_menu" = "在菜单栏点击网易叭哥说图标，选择设置。";
 "onboarding.voice_tool.guide.screenshot.bageshuo_settings" = "在设置 → 快捷键中，将“语音润色快捷键”设为“%@”，使用按一下开始、再按一下结束模式。";

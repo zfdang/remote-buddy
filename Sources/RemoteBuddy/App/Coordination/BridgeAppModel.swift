@@ -355,6 +355,9 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
     }
 
     isolated deinit {
+        if let terminationObserver {
+            NotificationCenter.default.removeObserver(terminationObserver)
+        }
         applicationIntegrationStatusExpiry?.cancel()
         voiceKeyReleaseRetry?.cancel()
     }

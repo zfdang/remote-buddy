@@ -312,7 +312,7 @@ struct RemoteMappingCanvas: View {
                     }
                     .buttonStyle(.plain)
                     .help(
-                        "\(button.displayName(using: localization)) · \(trigger.displayName(using: localization))"
+                        "\(button.displayName(using: localization)) · \(trigger.displayName(using: localization))\n\(actionSummary(button, trigger))"
                     )
                 }
             }

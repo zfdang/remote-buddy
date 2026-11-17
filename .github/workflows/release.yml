@@ -64,7 +64,7 @@ jobs:
           cat "$RUNNER_TEMP/release-version" >> "$GITHUB_ENV"
           cat "$RUNNER_TEMP/release-version" >> "$GITHUB_OUTPUT"
       - name: Cache Sparkle artifact and BlackHole driver source
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             ~/Library/Caches/org.swift.swiftpm/artifacts
@@ -76,12 +76,12 @@ jobs:
         run: |
           target_dir="$HOME/Library/Caches/org.swift.swiftpm/artifacts"
           mkdir -p "$target_dir"
-          cached_file="$target_dir/https___github_com_sparkle_project_Sparkle_releases_download_2_9_4_Sparkle_for_Swift_Package_Manager_zip"
-          expected_sha="cb6fdbdc8884f15d62a616e79face92b08322410fd2d425edc6596ccbf4ba3b0"
+          cached_file="$target_dir/https___github_com_sparkle_project_Sparkle_releases_download_2_10_1_Sparkle_for_Swift_Package_Manager_zip"
+          expected_sha="4c2e48a3e50ebcc2c88a58a4c7264a1a99c3c31857ce754357afb9cdb323022a"
           if [[ ! -f "$cached_file" ]] || ! shasum -a 256 "$cached_file" | grep -q "$expected_sha"; then
             echo "Pre-fetching Sparkle binary package via GitHub API..."
             rm -f "$cached_file"
-            gh api repos/sparkle-project/Sparkle/releases/assets/463901481 -H "Accept: application/octet-stream" > "$cached_file"
+            gh api repos/sparkle-project/Sparkle/releases/assets/673946482 -H "Accept: application/octet-stream" > "$cached_file"
             if ! shasum -a 256 "$cached_file" | grep -q "$expected_sha"; then
               echo "Warning: Sparkle cache pre-fetch failed verification; removing corrupted cache file." >&2
               rm -f "$cached_file"
@@ -89,7 +89,7 @@ jobs:
           fi
       - name: Restore incremental SwiftPM build cache
         id: build-cache
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             .build/${{ matrix.arch }}-apple-macosx
@@ -218,7 +218,7 @@ jobs:
         run: python3 scripts/restore-git-mtimes.py --write-marker --marker-file .build/.cached-git-sha
       - name: Save incremental SwiftPM build cache
         if: success() && steps.build-cache.outputs.cache-hit != 'true' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || steps.build-cache.outputs.cache-matched-key == '')
-        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             .build/${{ matrix.arch }}-apple-macosx

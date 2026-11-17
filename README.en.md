@@ -126,9 +126,9 @@ To uninstall, download `Remote_Buddy_Uninstaller_*_macOS_universal.pkg` (works o
 | [mi-ao](https://github.com/fanxeon/mi-ao) | macOS ATVV decoding and capability validation reference; Google remotes require hardware validation |
 | [mi_remote_control](https://github.com/godarrenw/mi_remote_control) | Reference for button actions, application profiles, and troubleshooting |
 | [open-voice-bridge](https://github.com/nijez/open-voice-bridge) | Reference for device capability modeling and audio-path diagnostics |
-| [BlackHole](https://github.com/ExistentialAudio/BlackHole) v0.7.1 | Virtual microphone driver |
+| [BlackHole](https://github.com/ExistentialAudio/BlackHole) v0.7.2 | Virtual microphone driver |
 | [MiRemoteVoice](https://github.com/VincentKingHsu/MiRemoteVoice) | USB-transport loopback compatibility design reference |
-| [Sparkle](https://github.com/sparkle-project/Sparkle) 2.9.4 | macOS in-app updates with signed combined installers |
+| [Sparkle](https://github.com/sparkle-project/Sparkle) 2.10.1 | macOS in-app updates with signed combined installers |
 | [codex-siri-remote](https://github.com/luobosibing2/codex-siri-remote) | Historical reference for Apple remote HID and touch behavior |
 | [SiriRemoteForge](https://github.com/HOLODATA-COM/SiriRemoteForge) | Historical reference for Apple remote audio and PacketLogger formats |
 | [iRemote A2854](https://github.com/DaviBaum/iRemote-A2854) | Historical reference for Apple remote diagnostics and authorization |

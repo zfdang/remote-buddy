@@ -10,7 +10,7 @@ let package = Package(
             targets: ["RemoteBuddy"]
         ),
     ],
-    dependencies: [.package(url: "https://github.com/sparkle-project/Sparkle", exact: "2.9.4")],
+    dependencies: [.package(url: "https://github.com/sparkle-project/Sparkle", exact: "2.10.1")],
     targets: [
         .executableTarget(
             name: "RemoteBuddy",

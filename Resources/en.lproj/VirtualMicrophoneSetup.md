@@ -1,7 +1,7 @@
 # Virtual Microphone Setup
 
 ## 1. How It Works & Device Details
-Remote Buddy uses an independent two-channel virtual microphone driver built from BlackHole v0.7.1, named **Remote Buddy Mic** with UID `BuddyMic2ch_UID`.
+Remote Buddy uses an independent two-channel virtual microphone driver built from BlackHole v0.7.2, named **Remote Buddy Mic** with UID `BuddyMic2ch_UID`.
 - Remote Buddy always outputs Bluetooth remote voice audio to **Remote Buddy Mic**, with no other output choices or BlackHole fallback.
 - This driver is completely standalone and does not replace or interfere with any existing BlackHole or third-party audio drivers on your Mac.
 

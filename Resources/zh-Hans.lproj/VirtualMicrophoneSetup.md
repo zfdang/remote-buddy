@@ -1,7 +1,7 @@
 # 虚拟麦克风设置说明
 
 ## 1. 工作原理与设备信息
-遥控搭子（Remote Buddy）使用基于 BlackHole v0.7.1 构建的独立双声道虚拟麦克风驱动，设备名称为 **Remote Buddy Mic**，UID 为 `BuddyMic2ch_UID`。
+遥控搭子（Remote Buddy）使用基于 BlackHole v0.7.2 构建的独立双声道虚拟麦克风驱动，设备名称为 **Remote Buddy Mic**，UID 为 `BuddyMic2ch_UID`。
 - 遥控搭子会将蓝牙遥控器传来的语音固定输出到 **Remote Buddy Mic**，不提供其他音频输出或 BlackHole 回退。
 - 该驱动完全独立，不会替换或影响你电脑上已安装的 BlackHole 或其他音频驱动。
 

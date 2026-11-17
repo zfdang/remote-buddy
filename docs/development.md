@@ -6,7 +6,7 @@ SwiftPM 主执行目标为 RemoteBuddy。采用公开源码的默认构建，不
 
 开发 App：运行 scripts/build-app.sh，输出 dist/Remote Buddy.app。首次设置会请求需要的权限，蓝牙权限描述位于 Resources/Info.plist。应用身份为 com.zfdang.remote-buddy，设置和系统权限与原产品独立。
 
-虚拟麦克风：scripts/build-driver.sh 固定 BlackHole v0.7.1 的 e2b22aaaba4e507a097131704bf96dabc004d9cf，应用 USB transport 补丁，使用独立工厂 UUID、Bundle ID 和 BuddyMic UID，避免替换 BlackHole 或原 MiRemoteV 驱动。输出 RemoteBuddyMic.driver。scripts/build-driver-package.sh 创建系统 HAL 目录安装包，安装需用户明确授权；安装器在安装前的说明页明确提示：新安装或内容变化的驱动需要重启 Core Audio，短暂中断系统全部播放和录音；驱动未变则不重启。安装后刷新失败时提示重启系统。驱动编译禁用 BlackHole 的通道名称格式，确保实际 UID 为 BuddyMic2ch_UID。
+虚拟麦克风：scripts/build-driver.sh 固定 BlackHole v0.7.2 的 561d934c77a1fa64987e01ccabe890fed30e181f，应用 USB transport 补丁，使用独立工厂 UUID、Bundle ID 和 BuddyMic UID，避免替换 BlackHole 或原 MiRemoteV 驱动。输出 RemoteBuddyMic.driver。scripts/build-driver-package.sh 创建系统 HAL 目录安装包，安装需用户明确授权；安装器在安装前的说明页明确提示：新安装或内容变化的驱动需要重启 Core Audio，短暂中断系统全部播放和录音；驱动未变则不重启。安装后刷新失败时提示重启系统。驱动编译禁用 BlackHole 的通道名称格式，确保实际 UID 为 BuddyMic2ch_UID。
 
 应用不会自动修改系统默认音频设备。遥控器连接空闲时不保持音频引擎活动，避免 Core Audio 长期阻止系统自动休眠；语音开始时按需启动，启动期间缓冲语音，语音结束后等待尾音和 Fn 轻点会话处理完成再释放。启动验证及测试音完成后也释放空闲音频。遥控器断开、应用停止、退出、音频配置失败及重连时，只释放或重新绑定应用自身的音频输出；系统默认输入、输出及系统提示音设备保持由用户或系统管理。App 固定使用 Remote Buddy Mic（`BuddyMic2ch_UID`），第三方工具的麦克风需选择该设备；没有输出选择或 BlackHole 回退。目标语音快捷键通过向导按工具实际设置配置并验证。
 
@@ -50,7 +50,7 @@ SwiftPM 主执行目标为 RemoteBuddy。采用公开源码的默认构建，不
 
 ## 本地开发
 
-需要完整 Xcode 和 Swift 6.2 或更新版本。首次构建会下载 Sparkle 2.9.4。若当前选择 Command Line Tools，可使用 `export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`。
+需要完整 Xcode 和 Swift 6.2 或更新版本。首次构建会下载 Sparkle 2.10.1。若当前选择 Command Line Tools，可使用 `export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`。
 
 ```bash
 swift build --disable-keychain

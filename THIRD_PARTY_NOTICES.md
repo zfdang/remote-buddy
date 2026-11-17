@@ -2,15 +2,15 @@
 
 ## Current distribution
 
-Remote Buddy bundles its app and the independently named RemoteBuddyMic driver in one PKG. Driver sources are BlackHole v0.7.1 with `third_party/blackhole/device-usb.patch`. Matching project source and the `_sources.tar.gz` archive (including pinned `BlackHole` and `Sparkle` sources) are published alongside each release on GitHub (<https://github.com/zfdang/remote-buddy/releases>) and documented in <https://github.com/zfdang/remote-buddy/blob/main/docs/source-code.md>. RC003 product photos, upstream proprietary artwork, libopus binaries and private extensions are not distributed. The historical descriptions below do not imply they are bundled or supported.
+Remote Buddy bundles its app and the independently named RemoteBuddyMic driver in one PKG. Driver sources are BlackHole v0.7.2 with `third_party/blackhole/device-usb.patch`. Matching project source and the `_sources.tar.gz` archive (including pinned `BlackHole` and `Sparkle` sources) are published alongside each release on GitHub (<https://github.com/zfdang/remote-buddy/releases>) and documented in <https://github.com/zfdang/remote-buddy/blob/main/docs/source-code.md>. RC003 product photos, upstream proprietary artwork, libopus binaries and private extensions are not distributed. The historical descriptions below do not imply they are bundled or supported.
 
 ## Sparkle
 
 - Source: <https://github.com/sparkle-project/Sparkle>
-- Version: 2.9.4 / `b6496a74a087257ef5e6da1c5b29a447a60f5bd7`
+- Version: 2.10.1 / `ab7d71291238df6e0492143b120c9b696a35f603`
 - License: MIT, with the external license notices reproduced below
 
-The bundled framework's complete license and external notices follow, copied from the pinned Sparkle 2.9.4 distribution. This notice file is included in the app's Resources directory. Matching source is published in each release's `_sources.tar.gz` archive and linked in <https://github.com/zfdang/remote-buddy/blob/main/docs/source-code.md>. No upstream feed or signing key is reused.
+The bundled framework's complete license and external notices follow, copied from the pinned Sparkle 2.10.1 distribution. This notice file is included in the app's Resources directory. Matching source is published in each release's `_sources.tar.gz` archive and linked in <https://github.com/zfdang/remote-buddy/blob/main/docs/source-code.md>. No upstream feed or signing key is reused.
 
 ```text
 Copyright (c) 2006-2013 Andy Matuschak.
@@ -240,7 +240,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 - Project: `ExistentialAudio/BlackHole`
 - Source: <https://github.com/ExistentialAudio/BlackHole>
-- Pinned source revision: `v0.7.1` / `e2b22aaaba4e507a097131704bf96dabc004d9cf`
+- Pinned source revision: `v0.7.2` / `561d934c77a1fa64987e01ccabe890fed30e181f`
 - Copyright: Copyright (C) 2019 Existential Audio Inc.
 - License: GNU General Public License v3.0 (`GPL-3.0`)
 - Bundled driver license: `Contents/Resources/BlackHole-LICENSE` inside `RemoteBuddyMic.driver`

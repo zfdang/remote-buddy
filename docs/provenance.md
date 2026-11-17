@@ -10,7 +10,7 @@
 
 源码按 GPL-3.0-only 发布。第三方清单保留原始来源信息，应结合实际发行内容阅读。未构建的 Apple 扩展与私有适配器不代表本产品已经支持相关设备。
 
-每个发行版必须同时提供对应 App 源码、构建和安装脚本，以及实际分发驱动的 BlackHole v0.7.1 源码、device-usb.patch 和必要许可文本，不能只发布此仓库的链接而遗漏驱动源码。Sparkle 采用 MIT；其打包组件还包括单独许可，需随完整框架保留许可。BlackHole 与其他 GPL 来源按相应要求处理。
+每个发行版必须同时提供对应 App 源码、构建和安装脚本，以及实际分发驱动的 BlackHole v0.7.2 源码、device-usb.patch 和必要许可文本，不能只发布此仓库的链接而遗漏驱动源码。Sparkle 采用 MIT；其打包组件还包括单独许可，需随完整框架保留许可。BlackHole 与其他 GPL 来源按相应要求处理。
 
 程序图标和菜单栏图标基于项目原创素材（与上游同名的 `Resources/AppIcon.png` / `Resources/AppIcon.icns` 为本项目重新创作并随源码按 `GPL-3.0-only` 授权的全新资产），由 `scripts/generate-icons.py` 生成，未使用原品牌图形。
 

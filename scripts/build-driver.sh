@@ -4,9 +4,9 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 source "$root/scripts/architecture.sh"
 work="$root/.build/buddy-driver"
 source="$work/BlackHole"
-revision=e2b22aaaba4e507a097131704bf96dabc004d9cf
+revision=561d934c77a1fa64987e01ccabe890fed30e181f
 mkdir -p "$work" "$root/dist"
-if [[ ! -d "$source/.git" ]] || ! git -C "$source" rev-parse --verify -q "$revision" >/dev/null 2>&1; then
+if [[ ! -d "$source/.git" ]] || [[ "$(git -C "$source" rev-parse HEAD 2>/dev/null || true)" != "$revision" ]]; then
     rm -rf "$source"
     mkdir -p "$source"
     git init --initial-branch=driver-source "$source"
@@ -61,8 +61,8 @@ Copyright (C) 2019 Existential Audio Inc.
 Modified for Remote Buddy by Remote Buddy contributors (2026).
 
 Modification Notice (GNU General Public License v3.0, Section 5(a)):
-This HAL audio driver is a modified version of Existential Audio BlackHole v0.7.1
-(upstream revision e2b22aaaba4e507a097131704bf96dabc004d9cf), patched with
+This HAL audio driver is a modified version of Existential Audio BlackHole v0.7.2
+(upstream revision 561d934c77a1fa64987e01ccabe890fed30e181f), patched with
 third_party/blackhole/device-usb.patch and compiled with Remote Buddy's bundle
 identifier (com.zfdang.remote-buddy.mic), fixed UID (BuddyMic2ch_UID), and product
 branding.

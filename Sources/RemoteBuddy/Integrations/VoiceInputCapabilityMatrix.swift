@@ -64,14 +64,3 @@ struct RemoteVoiceCapabilities: Equatable {
         )
     }
 }
-
-/// 触摸面类设置（滑动箭头、光标反馈）的适用性。
-enum TouchSurfaceControlApplicability {
-    /// 页面请求了触摸类控件、且该遥控器确实有触摸面时才显示。
-    static func isApplicable(
-        capabilities: RemoteVoiceCapabilities,
-        pageRequestsControl: Bool
-    ) -> Bool {
-        pageRequestsControl && capabilities.supportsTouchSurface
-    }
-}

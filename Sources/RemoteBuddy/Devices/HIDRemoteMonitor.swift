@@ -220,7 +220,7 @@ final class HIDRemoteMonitor {
         karabinerElementsInstalled: @escaping () -> Bool = {
             HIDRemoteMonitor.isKarabinerElementsInstalled()
         },
-        appSwitcherKeyStatePoster: @escaping KeyboardInjector.KeyStatePoster = KeyboardInjector.postKeyState
+        appSwitcherKeyStatePoster: KeyboardInjector.KeyStatePoster? = nil
     ) {
         self.settings = settings
         self.allowsG9N9N = allowsG9N9N
@@ -235,10 +235,10 @@ final class HIDRemoteMonitor {
         self.permissionSnapshot = permissionSnapshot
         self.runtimePermissions = runtimePermissions
         self.nativeSuppressionAvailable = nativeSuppressionAvailable ?? { eventSuppressor.isRunning }
-        self.nativeKeyStatePoster = appSwitcherKeyStatePoster
-        self.appSwitcherSession = KeyboardInjector.AppSwitcherSession(
-            keyStatePoster: appSwitcherKeyStatePoster
-        )
+        self.nativeKeyStatePoster = appSwitcherKeyStatePoster ?? KeyboardInjector.postKeyState
+        self.appSwitcherSession = appSwitcherKeyStatePoster.map {
+            KeyboardInjector.AppSwitcherSession(keyStatePoster: $0)
+        } ?? KeyboardInjector.AppSwitcherSession()
         self.actionPerformer = actionPerformer ?? { _, _, configured in
             KeyboardInjector.send(
                 configured.action,

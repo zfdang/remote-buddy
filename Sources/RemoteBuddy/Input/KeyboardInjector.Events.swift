@@ -24,8 +24,21 @@ extension KeyboardInjector {
         isDown: Bool,
         flags: CGEventFlags
     ) -> Bool {
-        guard let event = makeMappedKeyEvent(code: code, isDown: isDown, flags: flags)
-        else { return false }
+        postOwnedKeyState(code: code, isDown: isDown, flags: flags, excludingOwnedModifiers: [])
+    }
+
+    static func postOwnedKeyState(
+        code: CGKeyCode,
+        isDown: Bool,
+        flags: CGEventFlags,
+        excludingOwnedModifiers: CGEventFlags
+    ) -> Bool {
+        guard let event = makeMappedKeyEvent(
+            code: code,
+            isDown: isDown,
+            flags: flags,
+            excludingOwnedModifiers: excludingOwnedModifiers
+        ) else { return false }
         AppLogger.shared.write(
             "MAPPED KEY EVENT key_code=\(code) edge=\(isDown ? "down" : "up") " +
                 "modifier_flags=\(event.flags.rawValue) result=submitted target_response=unknown"
@@ -63,12 +76,14 @@ extension KeyboardInjector {
 
     static func makeMappedKeyEvent(
         code: CGKeyCode, isDown: Bool, flags: CGEventFlags,
+        excludingOwnedModifiers: CGEventFlags = [],
         hardwareFlags: () -> CGEventFlags = KeyboardHardwareModifierPolicy.current
     ) -> CGEvent? {
         // The remote's native Home carries Fn even without numeric-pad flags.
         // Only the configured shortcut may add Fn to a mapped event.
         makeMarkedKeyEvent(code: code, isDown: isDown, flags: flags,
             marker: syntheticEventMarker,
+            excludingOwnedModifiers: excludingOwnedModifiers,
             hardwareFlags: { KeyboardHardwareModifierPolicy.mappedActionFlags(hardwareFlags()) })
     }
 
@@ -82,17 +97,26 @@ extension KeyboardInjector {
     private static let markedKeySource = CGEventSource(stateID: .privateState)
 
     static func makeMarkedKeyEvent(code: CGKeyCode, isDown: Bool, flags: CGEventFlags, marker: Int64,
+                                   excludingOwnedModifiers: CGEventFlags = [],
                                    hardwareFlags: () -> CGEventFlags = { CGEventSource.flagsState(.hidSystemState) }) -> CGEvent? {
         guard let source = markedKeySource,
               let event = CGEvent(keyboardEventSource: source, virtualKey: code, keyDown: isDown)
         else { return nil }
         event.type = keyEventType(code: code, isDown: isDown)
-        // Synthetic modifiers must not re-inherit their own HID state on release.
+        // Voice modifiers and session-owned modifiers must not re-inherit their own HID state on release.
         // Preserve other physical modifiers, including the opposite-side key.
-        let inheritedFlags = ShortcutEventSequence.hardwareFlags(
-            hardwareFlags(),
-            excludingOwned: ShortcutEventSequence.modifierFlags(for: code)
-        )
+        let observedFlags = hardwareFlags()
+        let ownedModifiers = marker == orderedVoiceEventMarker
+            ? ShortcutEventSequence.modifierFlags(for: code)
+            : excludingOwnedModifiers
+        let inheritedFlags: CGEventFlags
+        if !ownedModifiers.isEmpty {
+            inheritedFlags = ShortcutEventSequence.hardwareFlags(observedFlags,
+                excludingOwned: ownedModifiers)
+        } else {
+            inheritedFlags = code == VoiceKeyMode.function.keyCode
+                ? observedFlags.subtracting(.maskSecondaryFn) : observedFlags
+        }
         event.flags = flags.union(inheritedFlags)
         event.setIntegerValueField(.eventSourceUserData, value: marker)
         return event

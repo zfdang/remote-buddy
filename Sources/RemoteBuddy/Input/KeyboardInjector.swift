@@ -49,16 +49,36 @@ enum KeyboardInjector {
     private static let transientAppSwitcher = AppSwitcherSession()
 
     final class AppSwitcherSession {
-        private let keyStatePoster: KeyStatePoster
+        typealias OwnedKeyStatePoster = (CGKeyCode, Bool, CGEventFlags, CGEventFlags) -> Bool
+
+        private let keyStatePoster: OwnedKeyStatePoster
+        private let hardwareFlags: () -> CGEventFlags
         private var diagnosticLogger: ((String) -> Void)?
         private(set) var isActive = false
+        private var ownedCommandFlags: CGEventFlags = []
         private var releaseTask: ScheduledOperation?
         private var releaseGeneration: UInt64 = 0
         private var releaseAttempts = 0
         private var scheduleRelease: OperationScheduler = ScheduledOperation.mainQueue
 
-        init(keyStatePoster: @escaping KeyStatePoster = KeyboardInjector.postKeyState) {
-            self.keyStatePoster = keyStatePoster
+        init(
+            hardwareFlags: @escaping () -> CGEventFlags = KeyboardHardwareModifierPolicy.current,
+            ownedKeyStatePoster: @escaping OwnedKeyStatePoster = KeyboardInjector.postOwnedKeyState
+        ) {
+            self.hardwareFlags = hardwareFlags
+            self.keyStatePoster = ownedKeyStatePoster
+        }
+
+        convenience init(
+            keyStatePoster: @escaping KeyStatePoster,
+            hardwareFlags: @escaping () -> CGEventFlags = KeyboardHardwareModifierPolicy.current
+        ) {
+            self.init(
+                hardwareFlags: hardwareFlags,
+                ownedKeyStatePoster: { code, isDown, flags, _ in
+                    keyStatePoster(code, isDown, flags)
+                }
+            )
         }
 
         func setDiagnosticLogger(_ logger: @escaping (String) -> Void) {
@@ -69,9 +89,10 @@ enum KeyboardInjector {
             _ keyCode: CGKeyCode,
             isDown: Bool,
             flags: CGEventFlags,
+            excludingOwned: CGEventFlags = [],
             role: String
         ) -> Bool {
-            let result = keyStatePoster(keyCode, isDown, flags)
+            let result = keyStatePoster(keyCode, isDown, flags, excludingOwned)
             diagnosticLogger?(
                 "role=\(role) key_code=\(keyCode) edge=\(isDown ? "down" : "up") " +
                     "command=\(flags.contains(.maskCommand)) success=\(result)"
@@ -86,9 +107,17 @@ enum KeyboardInjector {
                 return postTab()
             }
 
-            guard post(leftCommandKeyCode, isDown: true, flags: .maskCommand, role: "command") else {
-                return false
+            let physicalAtStart = KeyboardHardwareModifierPolicy.mappedActionFlags(hardwareFlags())
+            let shouldOwnCommand = !physicalAtStart.contains(.maskCommand)
+            let ownedFlags = shouldOwnCommand
+                ? ShortcutEventSequence.modifierFlags(for: leftCommandKeyCode)
+                : []
+            if shouldOwnCommand {
+                guard post(leftCommandKeyCode, isDown: true, flags: .maskCommand, role: "command") else {
+                    return false
+                }
             }
+            ownedCommandFlags = ownedFlags
             isActive = true
             guard postTab() else {
                 _ = releaseCommandKey()
@@ -136,9 +165,21 @@ enum KeyboardInjector {
             releaseTask?.cancel()
             releaseTask = nil
             guard isActive else { return true }
-            let released = post(leftCommandKeyCode, isDown: false, flags: [], role: "command")
+            guard !ownedCommandFlags.isEmpty else {
+                isActive = false
+                releaseAttempts = 0
+                return true
+            }
+            let released = post(
+                leftCommandKeyCode,
+                isDown: false,
+                flags: [],
+                excludingOwned: ownedCommandFlags,
+                role: "command"
+            )
             isActive = !released
             if released {
+                ownedCommandFlags = []
                 releaseAttempts = 0
             } else {
                 releaseAttempts += 1

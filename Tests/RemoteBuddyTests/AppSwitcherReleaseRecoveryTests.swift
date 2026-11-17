@@ -7,10 +7,13 @@ struct AppSwitcherReleaseRecoveryTests {
     @Test func failedReleaseRetriesAndOldTimersCannotReleaseANewSession() {
         let clock = ControlledTestScheduler()
         var releases = 0
-        let session = KeyboardInjector.AppSwitcherSession(keyStatePoster: { code, down, _ in
-            if code == 55 && !down { releases += 1; return releases >= 3 }
-            return true
-        })
+        let session = KeyboardInjector.AppSwitcherSession(
+            hardwareFlags: { [] },
+            keyStatePoster: { code, down, _, _ in
+                if code == 55 && !down { releases += 1; return releases >= 3 }
+                return true
+            }
+        )
         #expect(session.triggerTemporarily(schedule: clock.voiceSchedule))
         clock.advance(to: 1_000)
         #expect(session.isActive)
@@ -28,10 +31,13 @@ struct AppSwitcherReleaseRecoveryTests {
         let clock = ControlledTestScheduler()
         var canRelease = false
         var releases = 0
-        let session = KeyboardInjector.AppSwitcherSession(keyStatePoster: { code, down, _ in
-            if code == 55 && !down { releases += 1; return canRelease }
-            return true
-        })
+        let session = KeyboardInjector.AppSwitcherSession(
+            hardwareFlags: { [] },
+            keyStatePoster: { code, down, _, _ in
+                if code == 55 && !down { releases += 1; return canRelease }
+                return true
+            }
+        )
         #expect(session.triggerTemporarily(schedule: clock.voiceSchedule))
         clock.runAll()
         #expect(releases == 4)
@@ -45,11 +51,14 @@ struct AppSwitcherReleaseRecoveryTests {
     @Test func failedTabStillOwnsAndRetriesItsCommandRelease() {
         let clock = ControlledTestScheduler()
         var releases = 0
-        let session = KeyboardInjector.AppSwitcherSession(keyStatePoster: { code, down, _ in
-            if code == 48 { return false }
-            if code == 55 && !down { releases += 1; return releases > 1 }
-            return true
-        })
+        let session = KeyboardInjector.AppSwitcherSession(
+            hardwareFlags: { [] },
+            keyStatePoster: { code, down, _, _ in
+                if code == 48 { return false }
+                if code == 55 && !down { releases += 1; return releases > 1 }
+                return true
+            }
+        )
         #expect(!session.triggerTemporarily(schedule: clock.voiceSchedule))
         #expect(session.isActive)
         clock.runAll()

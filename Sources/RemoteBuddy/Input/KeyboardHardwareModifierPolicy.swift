@@ -2,6 +2,8 @@ import CoreGraphics
 
 /// Navigation-key decoration is not evidence of an independently held Fn key.
 enum KeyboardHardwareModifierPolicy {
+    private static let commandSideBits = CGEventFlags(rawValue: 0x0008 | 0x0010)
+
     /// Mapped actions inherit physical shortcut modifiers, but never implicit
     /// navigation decoration. An explicitly configured Fn is added separately.
     static func mappedActionFlags(_ flags: CGEventFlags) -> CGEventFlags {
@@ -33,11 +35,46 @@ enum KeyboardHardwareModifierPolicy {
         return fnKeyDown ? flags.union(.maskSecondaryFn) : flags
     }
 
+    /// Synthetic Command+Tab injection at `cghidEventTap` can leave bare `.maskCommand`
+    /// in `.hidSystemState` on seized devices without device-side bits or held keys.
+    static func appSwitcherNormalized(
+        _ flags: CGEventFlags,
+        leftCommandKeyDown: Bool,
+        rightCommandKeyDown: Bool,
+        fnKeyDown: Bool,
+        combinedFlags: CGEventFlags,
+        combinedFnKeyDown: Bool
+    ) -> CGEventFlags {
+        let base = mappedActionFlags(
+            normalized(
+                flags,
+                fnKeyDown: fnKeyDown,
+                combinedFlags: combinedFlags,
+                combinedFnKeyDown: combinedFnKeyDown
+            )
+        )
+        guard base.contains(.maskCommand) else { return base }
+        let hasHardwareCommandEvidence = !base.intersection(commandSideBits).isEmpty ||
+            leftCommandKeyDown || rightCommandKeyDown
+        return hasHardwareCommandEvidence ? base : base.subtracting(.maskCommand)
+    }
+
     static func current() -> CGEventFlags {
         normalized(CGEventSource.flagsState(.hidSystemState),
             fnKeyDown: CGEventSource.keyState(.hidSystemState, key: 63),
             combinedFlags: CGEventSource.flagsState(.combinedSessionState),
             combinedFnKeyDown: CGEventSource.keyState(.combinedSessionState, key: 63))
+    }
+
+    static func currentForAppSwitcher() -> CGEventFlags {
+        appSwitcherNormalized(
+            CGEventSource.flagsState(.hidSystemState),
+            leftCommandKeyDown: CGEventSource.keyState(.hidSystemState, key: 55),
+            rightCommandKeyDown: CGEventSource.keyState(.hidSystemState, key: 54),
+            fnKeyDown: CGEventSource.keyState(.hidSystemState, key: 63),
+            combinedFlags: CGEventSource.flagsState(.combinedSessionState),
+            combinedFnKeyDown: CGEventSource.keyState(.combinedSessionState, key: 63)
+        )
     }
 
     /// A fresh, read-only observation for intermittent paste failures. Queries

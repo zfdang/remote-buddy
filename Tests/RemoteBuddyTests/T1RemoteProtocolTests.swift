@@ -960,9 +960,17 @@ struct T1RemoteProtocolTests {
             runtimePermissions: { true },
             nativeSuppressionAvailable: { true },
             diagnosticLogger: { _ in },
-            appSwitcherKeyStatePoster: { code, down, flags in
-                postedEvents.append((code, down, flags))
-                return true
+            appSwitcherHardwareFlags: { [] },
+            appSwitcherOwnedKeyStatePoster: { code, down, flags, excludingOwned in
+                let event = KeyboardInjector.makeMappedKeyEvent(
+                    code: code,
+                    isDown: down,
+                    flags: flags,
+                    excludingOwnedModifiers: excludingOwned,
+                    hardwareFlags: { [] }
+                )
+                postedEvents.append((code, down, event?.flags ?? flags))
+                return event != nil
             }
         )
         monitor.connectSimulatedDevice(fingerprint: "t1-fp", profileID: profileID, isSeized: false)

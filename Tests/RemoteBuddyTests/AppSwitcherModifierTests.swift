@@ -7,14 +7,18 @@ struct AppSwitcherModifierTests {
     @Test(arguments: [UInt64(0x800100), 0xA00100])
     func nativeHomeFnDoesNotContaminateSwitcherOrCleanup(rawFlags: UInt64) throws {
         var events: [CGEvent] = []
-        let session = KeyboardInjector.AppSwitcherSession(keyStatePoster: { code, down, flags in
-            guard let event = KeyboardInjector.makeMappedKeyEvent(
-                code: code, isDown: down, flags: flags,
-                hardwareFlags: { CGEventFlags(rawValue: rawFlags) }
-            ) else { return false }
-            events.append(event)
-            return true
-        })
+        let session = KeyboardInjector.AppSwitcherSession(
+            hardwareFlags: { CGEventFlags(rawValue: rawFlags) },
+            keyStatePoster: { code, down, flags, excludingOwned in
+                guard let event = KeyboardInjector.makeMappedKeyEvent(
+                    code: code, isDown: down, flags: flags,
+                    excludingOwnedModifiers: excludingOwned,
+                    hardwareFlags: { CGEventFlags(rawValue: rawFlags) }
+                ) else { return false }
+                events.append(event)
+                return true
+            }
+        )
         #expect(session.trigger())
         #expect(session.trigger())
         #expect(session.moveSelection(left: true))
@@ -49,7 +53,7 @@ struct AppSwitcherModifierTests {
         var events: [CGEvent] = []
         let session = KeyboardInjector.AppSwitcherSession(
             hardwareFlags: { currentHardware },
-            ownedKeyStatePoster: { code, down, flags, excludingOwned in
+            keyStatePoster: { code, down, flags, excludingOwned in
                 guard let event = KeyboardInjector.makeMappedKeyEvent(
                     code: code, isDown: down, flags: flags,
                     excludingOwnedModifiers: excludingOwned,
@@ -88,7 +92,7 @@ struct AppSwitcherModifierTests {
         var events: [CGEvent] = []
         let session = KeyboardInjector.AppSwitcherSession(
             hardwareFlags: { heldCommand },
-            ownedKeyStatePoster: { code, down, flags, excludingOwned in
+            keyStatePoster: { code, down, flags, excludingOwned in
                 guard let event = KeyboardInjector.makeMappedKeyEvent(
                     code: code, isDown: down, flags: flags,
                     excludingOwnedModifiers: excludingOwned,
@@ -104,6 +108,95 @@ struct AppSwitcherModifierTests {
         #expect(!session.isActive)
         #expect(events.map { $0.getIntegerValueField(.keyboardEventKeycode) } == [48, 48, 124, 124])
         #expect(events.allSatisfy { $0.flags.contains(.maskCommand) })
+    }
+
+    @Test func earlyReleaseOfBorrowedPhysicalCommandEndsSessionAndAvoidsStaleSyntheticCommand() throws {
+        // 1. Releasing borrowed Command then calling cancel() ends cleanly with no Escape+Command post.
+        var currentHardware: CGEventFlags = [.maskCommand, CGEventFlags(rawValue: 0x0008)]
+        var events: [CGEvent] = []
+        let cancelSession = KeyboardInjector.AppSwitcherSession(
+            hardwareFlags: { currentHardware },
+            keyStatePoster: { code, down, flags, excludingOwned in
+                guard let event = KeyboardInjector.makeMappedKeyEvent(
+                    code: code, isDown: down, flags: flags,
+                    excludingOwnedModifiers: excludingOwned,
+                    hardwareFlags: { currentHardware }
+                ) else { return false }
+                events.append(event)
+                return true
+            }
+        )
+        #expect(cancelSession.trigger())
+        events.removeAll()
+        currentHardware = []
+        #expect(!cancelSession.moveSelection(left: false))
+        #expect(events.isEmpty)
+        #expect(!cancelSession.isActive)
+
+        // Reset: release borrowed Command then immediately call cancel().
+        currentHardware = [.maskCommand, CGEventFlags(rawValue: 0x0008)]
+        #expect(cancelSession.trigger())
+        events.removeAll()
+        currentHardware = []
+        #expect(cancelSession.cancel())
+        #expect(events.isEmpty)
+        #expect(!cancelSession.isActive)
+
+        // 2. Releasing borrowed Command then calling trigger() acquires paired synthetic ownership.
+        currentHardware = [.maskCommand, CGEventFlags(rawValue: 0x0008)]
+        #expect(cancelSession.trigger())
+        events.removeAll()
+        currentHardware = []
+        #expect(cancelSession.trigger())
+        #expect(events.map { $0.getIntegerValueField(.keyboardEventKeycode) } == [55, 48, 48])
+        currentHardware = CGEventFlags(rawValue: 0x20100100)
+        #expect(cancelSession.confirm())
+        let release = try #require(events.last)
+        #expect(release.getIntegerValueField(.keyboardEventKeycode) == 55)
+        #expect(!release.flags.contains(.maskCommand))
+        #expect(!cancelSession.isActive)
+    }
+
+    @Test func appSwitcherPolicyIgnoresPollutedBareCommandWithoutHardwareEvidence() {
+        let polluted = KeyboardHardwareModifierPolicy.appSwitcherNormalized(
+            CGEventFlags(rawValue: 0x20100100),
+            leftCommandKeyDown: false,
+            rightCommandKeyDown: false,
+            fnKeyDown: false,
+            combinedFlags: [],
+            combinedFnKeyDown: false
+        )
+        #expect(!polluted.contains(.maskCommand))
+
+        let realLeftBit = KeyboardHardwareModifierPolicy.appSwitcherNormalized(
+            [.maskCommand, CGEventFlags(rawValue: 0x0008)],
+            leftCommandKeyDown: false,
+            rightCommandKeyDown: false,
+            fnKeyDown: false,
+            combinedFlags: [],
+            combinedFnKeyDown: false
+        )
+        #expect(realLeftBit.contains(.maskCommand))
+
+        let realRightBit = KeyboardHardwareModifierPolicy.appSwitcherNormalized(
+            [.maskCommand, CGEventFlags(rawValue: 0x0010)],
+            leftCommandKeyDown: false,
+            rightCommandKeyDown: false,
+            fnKeyDown: false,
+            combinedFlags: [],
+            combinedFnKeyDown: false
+        )
+        #expect(realRightBit.contains(.maskCommand))
+
+        let realKeyState = KeyboardHardwareModifierPolicy.appSwitcherNormalized(
+            CGEventFlags(rawValue: 0x20100100),
+            leftCommandKeyDown: true,
+            rightCommandKeyDown: false,
+            fnKeyDown: false,
+            combinedFlags: [],
+            combinedFnKeyDown: false
+        )
+        #expect(realKeyState.contains(.maskCommand))
     }
 
     @Test func voiceKeyPathStillPreservesFn() throws {

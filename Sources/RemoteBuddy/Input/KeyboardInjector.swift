@@ -56,33 +56,38 @@ enum KeyboardInjector {
         private var diagnosticLogger: ((String) -> Void)?
         private(set) var isActive = false
         private var ownedCommandFlags: CGEventFlags = []
+        private var isBorrowingCommand = false
         private var releaseTask: ScheduledOperation?
         private var releaseGeneration: UInt64 = 0
         private var releaseAttempts = 0
         private var scheduleRelease: OperationScheduler = ScheduledOperation.mainQueue
 
         init(
-            hardwareFlags: @escaping () -> CGEventFlags = KeyboardHardwareModifierPolicy.current,
-            ownedKeyStatePoster: @escaping OwnedKeyStatePoster = KeyboardInjector.postOwnedKeyState
+            hardwareFlags: @escaping () -> CGEventFlags = KeyboardHardwareModifierPolicy.currentForAppSwitcher,
+            keyStatePoster: @escaping OwnedKeyStatePoster = KeyboardInjector.postOwnedKeyState
         ) {
             self.hardwareFlags = hardwareFlags
-            self.keyStatePoster = ownedKeyStatePoster
-        }
-
-        convenience init(
-            keyStatePoster: @escaping KeyStatePoster,
-            hardwareFlags: @escaping () -> CGEventFlags = KeyboardHardwareModifierPolicy.current
-        ) {
-            self.init(
-                hardwareFlags: hardwareFlags,
-                ownedKeyStatePoster: { code, isDown, flags, _ in
-                    keyStatePoster(code, isDown, flags)
-                }
-            )
+            self.keyStatePoster = keyStatePoster
         }
 
         func setDiagnosticLogger(_ logger: @escaping (String) -> Void) {
             diagnosticLogger = logger
+        }
+
+        private func hasPhysicalCommand() -> Bool {
+            KeyboardHardwareModifierPolicy.mappedActionFlags(hardwareFlags()).contains(.maskCommand)
+        }
+
+        private func endBorrowedSessionIfCommandReleased() -> Bool {
+            guard isActive, isBorrowingCommand, !hasPhysicalCommand() else { return false }
+            releaseGeneration &+= 1
+            releaseTask?.cancel()
+            releaseTask = nil
+            isActive = false
+            isBorrowingCommand = false
+            ownedCommandFlags = []
+            releaseAttempts = 0
+            return true
         }
 
         private func post(
@@ -104,11 +109,13 @@ enum KeyboardInjector {
         func trigger() -> Bool {
             if isActive {
                 guard releaseAttempts == 0 else { return false }
-                return postTab()
+                if !endBorrowedSessionIfCommandReleased() {
+                    return postTab()
+                }
+                // Borrowed physical Command ended early; acquire fresh synthetic ownership below.
             }
 
-            let physicalAtStart = KeyboardHardwareModifierPolicy.mappedActionFlags(hardwareFlags())
-            let shouldOwnCommand = !physicalAtStart.contains(.maskCommand)
+            let shouldOwnCommand = !hasPhysicalCommand()
             let ownedFlags = shouldOwnCommand
                 ? ShortcutEventSequence.modifierFlags(for: leftCommandKeyCode)
                 : []
@@ -118,6 +125,7 @@ enum KeyboardInjector {
                 }
             }
             ownedCommandFlags = ownedFlags
+            isBorrowingCommand = !shouldOwnCommand
             isActive = true
             guard postTab() else {
                 _ = releaseCommandKey()
@@ -147,6 +155,7 @@ enum KeyboardInjector {
         @discardableResult
         func cancel() -> Bool {
             guard isActive else { return true }
+            if endBorrowedSessionIfCommandReleased() { return true }
             // Releasing Command confirms the selection. Escape must dismiss the
             // native switcher while Command is still held before we release it.
             let pressed = post(53, isDown: true, flags: .maskCommand, role: "cancel")
@@ -165,8 +174,10 @@ enum KeyboardInjector {
             releaseTask?.cancel()
             releaseTask = nil
             guard isActive else { return true }
-            guard !ownedCommandFlags.isEmpty else {
+            if isBorrowingCommand {
                 isActive = false
+                isBorrowingCommand = false
+                ownedCommandFlags = []
                 releaseAttempts = 0
                 return true
             }
@@ -200,6 +211,7 @@ enum KeyboardInjector {
         @discardableResult
         func moveSelection(left: Bool) -> Bool {
             guard isActive else { return false }
+            if endBorrowedSessionIfCommandReleased() { return false }
             let keyCode: CGKeyCode = left ? 123 : 124
             let pressed = post(keyCode, isDown: true, flags: .maskCommand, role: "selection")
             let released = post(keyCode, isDown: false, flags: .maskCommand, role: "selection")

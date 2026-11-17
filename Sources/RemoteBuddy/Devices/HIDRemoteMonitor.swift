@@ -220,7 +220,9 @@ final class HIDRemoteMonitor {
         karabinerElementsInstalled: @escaping () -> Bool = {
             HIDRemoteMonitor.isKarabinerElementsInstalled()
         },
-        appSwitcherKeyStatePoster: KeyboardInjector.KeyStatePoster? = nil
+        appSwitcherKeyStatePoster: KeyboardInjector.KeyStatePoster? = nil,
+        appSwitcherHardwareFlags: @escaping () -> CGEventFlags = KeyboardHardwareModifierPolicy.currentForAppSwitcher,
+        appSwitcherOwnedKeyStatePoster: KeyboardInjector.AppSwitcherSession.OwnedKeyStatePoster? = nil
     ) {
         self.settings = settings
         self.allowsG9N9N = allowsG9N9N
@@ -236,9 +238,23 @@ final class HIDRemoteMonitor {
         self.runtimePermissions = runtimePermissions
         self.nativeSuppressionAvailable = nativeSuppressionAvailable ?? { eventSuppressor.isRunning }
         self.nativeKeyStatePoster = appSwitcherKeyStatePoster ?? KeyboardInjector.postKeyState
-        self.appSwitcherSession = appSwitcherKeyStatePoster.map {
-            KeyboardInjector.AppSwitcherSession(keyStatePoster: $0)
-        } ?? KeyboardInjector.AppSwitcherSession()
+        if let appSwitcherOwnedKeyStatePoster {
+            self.appSwitcherSession = KeyboardInjector.AppSwitcherSession(
+                hardwareFlags: appSwitcherHardwareFlags,
+                keyStatePoster: appSwitcherOwnedKeyStatePoster
+            )
+        } else if let appSwitcherKeyStatePoster {
+            self.appSwitcherSession = KeyboardInjector.AppSwitcherSession(
+                hardwareFlags: appSwitcherHardwareFlags,
+                keyStatePoster: { code, down, flags, _ in
+                    appSwitcherKeyStatePoster(code, down, flags)
+                }
+            )
+        } else {
+            self.appSwitcherSession = KeyboardInjector.AppSwitcherSession(
+                hardwareFlags: appSwitcherHardwareFlags
+            )
+        }
         self.actionPerformer = actionPerformer ?? { _, _, configured in
             KeyboardInjector.send(
                 configured.action,

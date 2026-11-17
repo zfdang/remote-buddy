@@ -221,7 +221,7 @@ struct SessionRecoveryRegressionTests {
             runtimePermissions: { true }, frontmostBundleIdentifier: { "test.editor" },
             diagnosticLogger: { _ in }, appSwitcherKeyStatePoster: { _, down, _ in
                 if !down { keyUps += 1 }; return true
-            })
+            }, appSwitcherHardwareFlags: { [] })
         monitor.onRuntimeButton = { _, _, phase in
             if phase == .release { releases += 1 }; return false
         }

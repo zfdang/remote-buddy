@@ -270,7 +270,8 @@ struct InputLifecycleRegressionTests {
             appSwitcherKeyStatePoster: { code, down, _ in
                 if down && (code == 123 || code == 124) { selections.append(code) }
                 return true
-            })
+            },
+            appSwitcherHardwareFlags: { [] })
         monitor.connectSimulatedDevice(fingerprint: "test", profileID: profile, isSeized: false)
         func report(_ button: RemoteButton?) {
             let usage = button?.hidUsage ?? 0

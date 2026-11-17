@@ -138,9 +138,12 @@ struct RuntimeReviewBoundaryTests {
     @Test func genericSwitcherHoldsCommandAndRepeatedTriggersExtendItsLifetime() throws {
         let clock = ControlledTestScheduler()
         var edges: [(CGKeyCode, Bool)] = []
-        let session = KeyboardInjector.AppSwitcherSession(keyStatePoster: { code, down, _ in
-            edges.append((code, down)); return true
-        })
+        let session = KeyboardInjector.AppSwitcherSession(
+            hardwareFlags: { [] },
+            keyStatePoster: { code, down, _, _ in
+                edges.append((code, down)); return true
+            }
+        )
         #expect(session.triggerTemporarily(schedule: clock.voiceSchedule))
         let old = try #require(clock.tasks.first)
         #expect(session.isActive)
@@ -151,7 +154,10 @@ struct RuntimeReviewBoundaryTests {
         clock.fire(afterMilliseconds: 1000)
         #expect(!session.isActive)
         #expect(edges.last?.0 == 55 && edges.last?.1 == false)
-        let forwarded = KeyboardInjector.AppSwitcherSession(keyStatePoster: { _, _, _ in true })
+        let forwarded = KeyboardInjector.AppSwitcherSession(
+            hardwareFlags: { [] },
+            keyStatePoster: { _, _, _, _ in true }
+        )
         #expect(KeyboardInjector.send(.appSwitcher, accessibilityTrusted: { true },
             keyPoster: { _, _ in Issue.record("Switcher must use a held session") }, appSwitcherSession: forwarded))
         #expect(forwarded.isActive)
@@ -161,9 +167,12 @@ struct RuntimeReviewBoundaryTests {
     @Test func failedSwitcherReleaseKeepsOwnershipUntilCleanupCanSucceed() {
         let clock = ControlledTestScheduler()
         var canRelease = false
-        let session = KeyboardInjector.AppSwitcherSession(keyStatePoster: { code, down, _ in
-            code != 55 || down || canRelease
-        })
+        let session = KeyboardInjector.AppSwitcherSession(
+            hardwareFlags: { [] },
+            keyStatePoster: { code, down, _, _ in
+                code != 55 || down || canRelease
+            }
+        )
         #expect(session.triggerTemporarily(schedule: clock.voiceSchedule))
         clock.fire(afterMilliseconds: 1000)
         #expect(session.isActive)

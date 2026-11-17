@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import base64
 import json
+import hashlib
 import os
 import shutil
 import subprocess
@@ -80,8 +81,7 @@ elif args[:2] == ['release', 'download']:
 else: sys.exit(1)
 """)
         gh.chmod(0o755)
-        metadata = dict(self.release, assets=self.release['assets'] +
-                        [{'name': path.name} for path in self.root.glob('appcast-*.xml')])
+        metadata = self.published_metadata()
         env = dict(os.environ, PATH=str(binaries) + os.pathsep + os.environ['PATH'],
                    RELEASE_TAG=self.tag, RUNNER_TEMP=str(project), GITHUB_OUTPUT=str(project / 'outputs'),
                    PUBLISHED_DIRECTORY=str(self.root), PUBLISHED_METADATA=json.dumps(metadata))
@@ -90,6 +90,31 @@ else: sys.exit(1)
         self.assertEqual(result.returncode, 0, result.stderr)
         for published in [*self.root.glob('*.pkg'), *self.root.glob('appcast-*.xml')]:
             self.assertEqual((staged / published.name).read_bytes(), published.read_bytes())
+
+    def published_metadata(self):
+        return dict(self.release, assets=[
+            {'name': path.name, 'size': path.stat().st_size,
+             'digest': 'sha256:' + hashlib.sha256(path.read_bytes()).hexdigest()}
+            for path in [*self.root.glob('*.pkg'), *self.root.glob('appcast-*.xml')]])
+
+    def test_published_assets_require_the_complete_set_and_matching_bytes(self):
+        metadata = self.published_metadata()
+        feeds.verify_published_assets(self.root, metadata)
+        package = next(self.root.glob('*arm64.pkg'))
+        original = package.read_bytes()
+        package.write_bytes(bytes([original[0] ^ 1]) + original[1:])
+        with self.assertRaisesRegex(ValueError, 'digest mismatch'):
+            feeds.verify_published_assets(self.root, metadata)
+        package.write_bytes(original)
+        for missing in metadata['assets']:
+            incomplete = dict(metadata, assets=[asset for asset in metadata['assets']
+                                              if asset['name'] != missing['name']])
+            with self.subTest(missing=missing['name']):
+                with self.assertRaisesRegex(ValueError, 'Incomplete published release'):
+                    feeds.verify_published_assets(self.root, incomplete)
+        metadata['assets'][0].pop('digest')
+        with self.assertRaisesRegex(ValueError, 'Missing SHA-256 digest'):
+            feeds.verify_published_assets(self.root, metadata)
 
     def test_complete_pair_matches_published_packages(self):
         feeds.verify(self.root, self.release)

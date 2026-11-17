@@ -272,9 +272,10 @@ jobs:
             existing_assets="$(jq -r '.assets[].name' "$RUNNER_TEMP/release.json")"
             if grep -q '^appcast-arm64\.xml$' <<< "$existing_assets" && grep -q '^appcast-intel\.xml$' <<< "$existing_assets"; then
               echo "Downloading published feeds from existing release $RELEASE_TAG..."
+              rm -f release/*.pkg release/appcast-*.xml
               gh release download "$RELEASE_TAG" --pattern "appcast-*.xml" --dir release --clobber
               gh release download "$RELEASE_TAG" --pattern "*.pkg" --dir release --clobber
-              python3 scripts/verify-pages-update-feeds.py release "$RUNNER_TEMP/release.json"
+              python3 scripts/verify-pages-update-feeds.py --published-assets release "$RUNNER_TEMP/release.json"
             else
               echo "Error: Release $RELEASE_TAG exists but is missing update feed assets." >&2
               echo "Cannot upload newly built feeds because package signatures may not match the published release." >&2

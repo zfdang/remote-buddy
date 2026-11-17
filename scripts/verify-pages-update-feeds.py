@@ -3,6 +3,8 @@
 import argparse
 import base64
 import json
+import hashlib
+import re
 from pathlib import Path
 import sys
 import xml.etree.ElementTree as ET
@@ -62,6 +64,29 @@ def rewrite_github_release_enclosures(directory, release):
         if enclosure.get('url') == github_url:
             enclosure.set('url', f'{PAGES_DOWNLOADS_BASE}/{package}')
             tree.write(path, encoding='utf-8', xml_declaration=True)
+
+
+def verify_published_assets(directory, release):
+    """Accept only a complete published feed/package set, including the uninstaller."""
+    directory = Path(directory)
+    tag, assets, installers, _ = _release_packages(release)
+    expected = [*installers.values(), f'Remote_Buddy_Uninstaller_{tag}_macOS_universal.pkg',
+                'appcast-arm64.xml', 'appcast-intel.xml']
+    for filename in expected:
+        asset = assets.get(filename)
+        if asset is None:
+            raise ValueError(f'Incomplete published release: missing {filename}')
+        path = directory / filename
+        if not path.is_file():
+            raise FileNotFoundError(f'Missing downloaded published asset: {filename}')
+        if path.stat().st_size != asset.get('size'):
+            raise ValueError(f'Published asset size mismatch: {filename}')
+        digest = asset.get('digest', '')
+        if not isinstance(digest, str) or not re.fullmatch(r'sha256:[0-9a-f]{64}', digest):
+            raise ValueError(f'Missing SHA-256 digest for published asset: {filename}')
+        actual = hashlib.sha256(path.read_bytes()).hexdigest()
+        if digest != 'sha256:' + actual:
+            raise ValueError(f'Published asset digest mismatch: {filename}')
 
 
 def verify(directory, release, *, require_packages=False):
@@ -154,6 +179,7 @@ def main():
     parser.add_argument('directory', type=Path)
     parser.add_argument('release_json', type=Path)
     parser.add_argument('--require-packages', action='store_true')
+    parser.add_argument('--published-assets', action='store_true')
     parser.add_argument('--write-manifest', action='store_true')
     parser.add_argument('--rewrite-github-enclosures', action='store_true')
     args = parser.parse_args()
@@ -163,6 +189,8 @@ def main():
     if args.write_manifest:
         write_latest_manifest(args.directory, release)
         return
+    if args.published_assets:
+        verify_published_assets(args.directory, release)
     verify(args.directory, release, require_packages=args.require_packages)
 
 

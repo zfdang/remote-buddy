@@ -63,7 +63,7 @@ button.addEventListener('blur', stop);
         badge: '语音工具',
         windowTitle: '输入法与语音工具集成 · Remote Buddy',
         src: 'assets/screenshots/integration-zh.jpg?v=261117screens',
-        alt: 'Remote Buddy 输入法与语音工具集成界面：当前语音触发方式、微信输入法、豆包输入法、Voice Buddy（语音搭子）、网易叭哥说、Typeless、macOS 听写等配置入口',
+        alt: 'Remote Buddy 输入法与语音工具集成界面：当前语音触发方式及受支持语音工具的配置入口',
         desc: '查看当前语音触发方式（热键与点按模式）和已选择的输入工具，通过向导调整热键、配置输入工具并完成语音测试生效。'
       },
       {
@@ -190,7 +190,7 @@ button.addEventListener('blur', stop);
         badge: 'Integrations',
         windowTitle: 'Voice Tools Integration · Remote Buddy',
         src: 'assets/screenshots/integration-en.jpg?v=261117screens',
-        alt: 'Remote Buddy Voice Tools interface: current voice trigger and setup guides for WeType, Doubao, Voice Buddy, NetEase Bageshuo, Typeless, macOS Dictation, and other tools',
+        alt: 'Remote Buddy Voice Tools interface: current voice trigger and setup guides for supported voice tools',
         desc: 'Review the active voice trigger shortcut, tap mode, and selected input tool, then launch the integration wizard to customize hotkeys, configure your tool, and verify with a voice test.'
       },
       {

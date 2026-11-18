@@ -531,7 +531,7 @@
 "onboarding.action.open_app" = "Open Remote Buddy";
 "onboarding.voice_tool.title" = "Which app do you use for voice typing?";
 "onboarding.voice_tool.detail" = "Choose an input tool and follow the setup steps on the right.";
-"onboarding.voice_tool.none_detected" = "No installed WeType, Doubao, Tencent Chatterfly, Voice Buddy, NetEase Bageshuo, or Typeless was found. You can still choose Other Voice Tool after installing and starting a voice input tool.";
+"onboarding.voice_tool.none_detected" = "No installed WeType, Doubao, Tencent Chatterfly, Voice Buddy, NetEase Bageshuo, or Typeless was found. You can still choose Other Voice App after installing and starting a voice input tool.";
 "onboarding.voice_tool.unselected.title" = "Not Selected";
 "onboarding.voice_tool.unselected.detail" = "No voice app selected yet.";
 "onboarding.voice_tool.doubao.title" = "Doubao";
@@ -1257,7 +1257,7 @@
 // Tencent Chatterfly hold-to-talk integration
 "onboarding.voice_tool.chatterfly.title" = "Tencent Chatterfly";
 "onboarding.voice_tool.chatterfly.detail" = "Hold to talk and release to finish in Tencent Chatterfly using its global voice shortcut.";
-"onboarding.voice_tool.chatterfly.website" = "Explore and download Tencent Chatterfly ↗";
+"onboarding.voice_tool.chatterfly.website" = "Explore Tencent Chatterfly and request early access ↗";
 "onboarding.voice_tool.hold_required" = "Tencent Chatterfly integration requires hold-to-talk. Turn off tap mode to continue.";
 "onboarding.voice_tool.enable_hold" = "Use hold-to-talk";
 "onboarding.voice_tool.guide.open_chatterfly" = "Open Tencent Chatterfly";

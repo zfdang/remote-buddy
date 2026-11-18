@@ -11,9 +11,11 @@ Remote Buddy uses an independent two-channel virtual microphone driver built fro
 - **Notes**: Installation requires administrator authorization and restarts macOS Core Audio, briefly interrupting playback or recording. After pairing and button testing, the first-run guide automatically verifies that both the driver and output are ready. If the device does not appear, click Refresh or restart your Mac as prompted.
 
 ## 3. Using It in Your Voice Input Tool
-1. In WeType, Doubao, Voice Buddy, NetEase Bageshuo, Typeless, macOS Dictation, or another voice input tool, select **Remote Buddy Mic** as the microphone and configure its voice shortcut following the guide.
+1. In WeType, Doubao, Tencent Chatterfly, Voice Buddy, NetEase Bageshuo, Typeless, macOS Dictation, or another voice input tool, select **Remote Buddy Mic** as the microphone and configure its voice shortcut following the guide.
 2. Adjust each remote's microphone gain individually on the Remote Connection page if needed.
 3. To test, click into any focused text field, then hold the voice button to speak and release when done (or use your configured tap gesture) to confirm voice recognition and text entry work.
+
+Tencent Chatterfly integration uses hold-to-talk only. Enable its global voice shortcut and turn off tap mode in Remote Buddy.
 
 ## 4. Signing & Source Code
 Current installer PKGs are unsigned and not notarized. The app and driver use a fixed self-signed certificate; online update packages also require this project's Sparkle signature. Matching driver source code, patches, and licenses are available at: https://github.com/zfdang/remote-buddy/blob/main/docs/source-code.md .

@@ -505,7 +505,7 @@ struct ProductBoundaryTests {
         #expect(!OnboardingFlowPolicy.canContinue(
             from: .voiceTool, voiceTool: .unselected, capabilities: passed
         ))
-        for tool in [OnboardingVoiceTool.weixin, .doubao, .voiceBuddy, .bageshuo, .typeless, .other] {
+        for tool in [OnboardingVoiceTool.weixin, .doubao, .chatterfly, .voiceBuddy, .bageshuo, .typeless, .other] {
             #expect(!OnboardingFlowPolicy.canContinue(
                 from: .voiceTool, voiceTool: tool, capabilities: OnboardingCapabilities()
             ))

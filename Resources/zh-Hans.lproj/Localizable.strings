@@ -1259,7 +1259,7 @@
 // Tencent Chatterfly hold-to-talk integration
 "onboarding.voice_tool.chatterfly.title" = "腾讯Chatterfly";
 "onboarding.voice_tool.chatterfly.detail" = "通过全局语音快捷键，在腾讯Chatterfly 中按住说话、松开结束。";
-"onboarding.voice_tool.chatterfly.website" = "了解并下载腾讯Chatterfly ↗";
+"onboarding.voice_tool.chatterfly.website" = "了解并申请体验腾讯Chatterfly ↗";
 "onboarding.voice_tool.hold_required" = "腾讯Chatterfly 仅集成按住说话，请先关闭点按模式。";
 "onboarding.voice_tool.enable_hold" = "使用按住说话";
 "onboarding.voice_tool.guide.open_chatterfly" = "打开腾讯Chatterfly";

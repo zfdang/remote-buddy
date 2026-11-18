@@ -283,6 +283,13 @@ struct ProductBoundaryTests {
             hasApplication: { _ in false }) == .notInstalled)
     }
 
+    @Test func globalVoiceDiagnosticsIncludeChatterflyAndDoubaoOnly() {
+        for tool in OnboardingVoiceTool.allCases {
+            #expect(OnboardingVoiceTestConfigurationPolicy.requiresGlobalVoiceConfirmation(for: tool)
+                == (tool == .doubao || tool == .chatterfly))
+        }
+    }
+
     @Test func integrationCatalogIncludesUninstalledToolsInConsistentOrder() {
         #expect(OnboardingVoiceToolVisibilityPolicy.tools == [
             .weixin, .doubao, .chatterfly, .voiceBuddy, .bageshuo, .typeless, .macosDictation, .other,

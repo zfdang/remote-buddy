@@ -384,7 +384,7 @@ enum OnboardingTranscriptInputPolicy {
 
 enum OnboardingVoiceTestConfigurationPolicy {
     static func requiresGlobalVoiceConfirmation(for voiceTool: OnboardingVoiceTool) -> Bool {
-        voiceTool == .doubao
+        voiceTool == .doubao || voiceTool == .chatterfly
     }
 }
 

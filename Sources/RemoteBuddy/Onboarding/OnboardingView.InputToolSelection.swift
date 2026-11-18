@@ -27,13 +27,6 @@ extension OnboardingView {
                 }
             }
 
-            if settings.onboardingVoiceTool == .chatterfly {
-                onboardingLink(id: "voice-tool.chatterfly.website", destination: AppLinks.chatterflyWebsite) {
-                    Text(localization.text("onboarding.voice_tool.chatterfly.website"))
-                }
-                .font(.system(size: 12, weight: .semibold))
-            }
-
             if voiceToolBlockingHintKey == "onboarding.voice_tool.tap_required" {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(localization.text("onboarding.voice_tool.tap_required"))
@@ -98,6 +91,13 @@ extension OnboardingView {
                 ForEach(visibleVoiceTools) { tool in
                     voiceToolCard(for: tool)
                 }
+            }
+
+            if settings.onboardingVoiceTool == .chatterfly {
+                onboardingLink(id: "voice-tool.chatterfly.website", destination: AppLinks.chatterflyWebsite) {
+                    Text(localization.text("onboarding.voice_tool.chatterfly.website"))
+                }
+                .font(.system(size: 12, weight: .semibold))
             }
 
             if settings.onboardingVoiceTool == .doubao && voiceToolAvailability[.doubao] == .notInstalled {

@@ -332,11 +332,12 @@ struct BluetoothReconnectPolicy {
         return min(Self.maximumDelay, nominalDelay * jitterFactor)
     }
 
-    /// Bypass cached retrieval for one discovery pass so connected/advertising paths run first;
-    /// once `maximumCachedTargetFailures` cached-target attempts fail (even across intervening
-    /// non-cached passes), stop blind cached connects until reset by wake, activity,
+    /// Returns whether the current discovery pass may use cached peripheral retrieval, and
+    /// clears a single-pass bypass for the following pass while below `maximumCachedTargetFailures`.
+    /// Once `maximumCachedTargetFailures` cached-target attempts fail (even across intervening
+    /// non-cached passes), blind cached connects stay paused until reset by wake, activity,
     /// Bluetooth power-on, or manual reconnect.
-    mutating func consumeCachedTargetRetrievalPermission() -> Bool {
+    mutating func nextCachedTargetRetrievalPermission() -> Bool {
         let allowed = allowsCachedTargetRetrieval
         if cachedTargetFailureCount < Self.maximumCachedTargetFailures {
             allowsCachedTargetRetrieval = true
@@ -442,6 +443,8 @@ enum BluetoothCentralRecoveryPolicy {
             }
             let requiresFreshConnectionCycle = phase == .waitingReconnect(generation) ||
                 phase == .waitingBluetoothPower(generation)
+            // Initial `.poweredOn` during `.scanning` fires on every normal reconnect timer's fresh
+            // CBCentralManager; only real recovery from `.waitingBluetoothPower`/`.waitingReconnect` resets backoff.
             return BluetoothCentralRecoveryTransition(
                 phase: requiresFreshConnectionCycle ? .stopped : phase,
                 shouldCancelScheduledReconnect: requiresFreshConnectionCycle,

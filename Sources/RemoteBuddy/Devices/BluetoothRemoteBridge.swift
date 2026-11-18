@@ -290,6 +290,31 @@ final class BluetoothRemoteBridge: NSObject {
 
     var isLifecycleReadyForTesting: Bool { lifecycle.isReady }
     var isConnectionCycleNeededForTesting: Bool { systemSuspension.connectionCycleNeeded }
+    var reconnectFailureCountForTesting: Int { reconnectPolicy.consecutiveFailureCount }
+    var cachedTargetFailureCountForTesting: Int { reconnectPolicy.cachedTargetFailureCount }
+    var allowsCachedTargetRetrievalForTesting: Bool { reconnectPolicy.allowsCachedTargetRetrieval }
+
+    @discardableResult
+    func advanceCachedTargetRetrievalPermissionForTesting() -> Bool {
+        reconnectPolicy.nextCachedTargetRetrievalPermission()
+    }
+
+    func simulateDiscoveryFailureReconnectForTesting(
+        bypassCachedTarget: Bool,
+        currentAttemptUsesCachedTarget: Bool
+    ) {
+        shouldRun = true
+        self.currentAttemptUsesCachedTarget = currentAttemptUsesCachedTarget
+        scheduleReconnect(bypassCachedTarget: bypassCachedTarget)
+    }
+
+    func simulatePowerOnRecoveryTransitionForTesting() {
+        shouldRun = true
+        generationCounter &+= 1
+        let generation = generationCounter
+        lifecycle = .waitingBluetoothPower(generation)
+        _ = applyCentralRecoveryTransition(.poweredOn, generation: generation)
+    }
 
     func simulateMicrophoneOpenedForTesting(_ opened: Bool) {
         microphoneOpened = opened
@@ -822,7 +847,7 @@ final class BluetoothRemoteBridge: NSObject {
 
         BluetoothDiscoverySequence.run(
             cachedTarget: { () -> CBPeripheral? in
-                guard reconnectPolicy.consumeCachedTargetRetrievalPermission(),
+                guard reconnectPolicy.nextCachedTargetRetrievalPermission(),
                       let identifier = targetIdentifier else { return nil }
                 return central.retrievePeripherals(withIdentifiers: [identifier]).first
             },
@@ -1161,6 +1186,7 @@ final class BluetoothRemoteBridge: NSObject {
         }
         reconnectWorkItem?.cancel()
         publishReconnectingState()
+        // Only count failures toward the blind-cached pause budget when the attempt itself came from `.cachedTarget`.
         let delay = nextAutomaticReconnectDelay(
             bypassCachedTarget: bypassCachedTarget || currentAttemptUsesCachedTarget,
             failedCachedTargetAttempt: currentAttemptUsesCachedTarget
@@ -1775,11 +1801,10 @@ extension BluetoothRemoteBridge: @preconcurrency CBCentralManagerDelegate {
         }
     }
 
-    private func applyCentralRecovery(
+    private func applyCentralRecoveryTransition(
         _ event: BluetoothCentralRecoveryEvent,
-        central: CBCentralManager,
         generation: UInt64
-    ) {
+    ) -> BluetoothCentralRecoveryTransition {
         let transition = BluetoothCentralRecoveryPolicy.transition(
             from: lifecycle,
             generation: generation,
@@ -1791,6 +1816,18 @@ extension BluetoothRemoteBridge: @preconcurrency CBCentralManagerDelegate {
             reconnectWorkItem = nil
         }
         lifecycle = transition.phase
+        if transition.shouldResetReconnectPolicy {
+            reconnectPolicy.reset()
+        }
+        return transition
+    }
+
+    private func applyCentralRecovery(
+        _ event: BluetoothCentralRecoveryEvent,
+        central: CBCentralManager,
+        generation: UInt64
+    ) {
+        let transition = applyCentralRecoveryTransition(event, generation: generation)
         if transition.shouldReleaseCentral {
             resetPeripheral(reason: .centralReleased)
             stopScan()
@@ -1799,9 +1836,6 @@ extension BluetoothRemoteBridge: @preconcurrency CBCentralManagerDelegate {
             centralGeneration = nil
             lifecycle = .stopped
             return
-        }
-        if transition.shouldResetReconnectPolicy {
-            reconnectPolicy.reset()
         }
         guard !systemSuspension.isSuspended else {
             if transition.shouldStartFreshConnectionCycle || transition.shouldDiscover {

@@ -314,10 +314,10 @@ struct BluetoothLifecycleTests {
             )
             #expect(delay == expectedDelay)
             #expect(!policy.allowsCachedTargetRetrieval)
-            let bypassedPass = policy.consumeCachedTargetRetrievalPermission()
+            let bypassedPass = policy.nextCachedTargetRetrievalPermission()
             #expect(!bypassedPass)
             #expect(policy.allowsCachedTargetRetrieval)
-            let retryPass = policy.consumeCachedTargetRetrievalPermission()
+            let retryPass = policy.nextCachedTargetRetrievalPermission()
             #expect(retryPass)
         }
 
@@ -329,7 +329,7 @@ struct BluetoothLifecycleTests {
         ) == 12)
         #expect(policy.cachedTargetFailureCount == 2)
         #expect(!policy.allowsCachedTargetRetrieval)
-        let bypassedAfterNonCachedFailure = policy.consumeCachedTargetRetrievalPermission()
+        let bypassedAfterNonCachedFailure = policy.nextCachedTargetRetrievalPermission()
         #expect(!bypassedAfterNonCachedFailure)
         #expect(policy.allowsCachedTargetRetrieval)
 
@@ -341,9 +341,9 @@ struct BluetoothLifecycleTests {
         ) == 24)
         #expect(policy.cachedTargetFailureCount == 3)
         #expect(!policy.allowsCachedTargetRetrieval)
-        let firstPausedPass = policy.consumeCachedTargetRetrievalPermission()
+        let firstPausedPass = policy.nextCachedTargetRetrievalPermission()
         #expect(!firstPausedPass)
-        let secondPausedPass = policy.consumeCachedTargetRetrievalPermission()
+        let secondPausedPass = policy.nextCachedTargetRetrievalPermission()
         #expect(!secondPausedPass)
         #expect(!policy.allowsCachedTargetRetrieval)
 
@@ -667,30 +667,72 @@ struct BluetoothLifecycleTests {
         #expect(!XiaomiVoiceRemoteNameMatcher.matches("小米"))
     }
 
-    @Test @MainActor func unacknowledgedWriteQueueCanSendReturnsFalseWithoutTransmitCharacteristic() throws {
-        @MainActor
-        final class DummyDelegate: BluetoothRemoteBridgeDelegate {
-            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didChange state: BluetoothBridgeState) {}
-            func bluetoothBridgeDidStartVoice(_ bridge: BluetoothRemoteBridge) {}
-            func bluetoothBridgeDidStopVoice(_ bridge: BluetoothRemoteBridge) {}
-            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didDecode samples: [Int16]) {}
-            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didUpdateBatteryLevel level: Int?) {}
-            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didIdentifyRemoteModel model: RemoteModel) {}
-            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didUpdatePowerState state: RemotePowerState?) {}
-            func bluetoothBridgeDeviceNameDidChange(_ bridge: BluetoothRemoteBridge) {}
-        }
+    @MainActor
+    private final class NoopBridgeDelegate: BluetoothRemoteBridgeDelegate {
+        func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didChange state: BluetoothBridgeState) {}
+        func bluetoothBridgeDidStartVoice(_ bridge: BluetoothRemoteBridge) {}
+        func bluetoothBridgeDidStopVoice(_ bridge: BluetoothRemoteBridge) {}
+        func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didDecode samples: [Int16]) {}
+        func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didUpdateBatteryLevel level: Int?) {}
+        func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didIdentifyRemoteModel model: RemoteModel) {}
+        func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didUpdatePowerState state: RemotePowerState?) {}
+        func bluetoothBridgeDeviceNameDidChange(_ bridge: BluetoothRemoteBridge) {}
+    }
 
+    @Test @MainActor func unacknowledgedWriteQueueCanSendReturnsFalseWithoutTransmitCharacteristic() throws {
         let suite = "bt-can-send-" + UUID().uuidString
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let bridge = BluetoothRemoteBridge(
             settings: AppSettings(defaults: defaults),
-            delegate: DummyDelegate()
+            delegate: NoopBridgeDelegate()
         )
         defer { bridge.stop() }
         bridge.simulateReadyStateForTesting()
 
         #expect(bridge.enqueueUnacknowledgedWriteForTesting(Data([0x0D, 0x01])))
         #expect(bridge.hasPendingWriteWorkForTesting)
+    }
+
+    @Test @MainActor func bridgeIsolatesCachedFailureBudgetAndResetsOnPowerOnRecovery() throws {
+        let suite = "bt-cached-pause-bridge-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let bridge = BluetoothRemoteBridge(
+            settings: AppSettings(defaults: defaults),
+            delegate: NoopBridgeDelegate(),
+            targetIdentifier: UUID(),
+            scheduleReconnect: { _, _ in }
+        )
+        defer { bridge.stop() }
+
+        // A non-cached failure bypasses one discovery pass without incrementing cachedTargetFailureCount.
+        bridge.simulateDiscoveryFailureReconnectForTesting(
+            bypassCachedTarget: true,
+            currentAttemptUsesCachedTarget: false
+        )
+        #expect(bridge.reconnectFailureCountForTesting == 1)
+        #expect(bridge.cachedTargetFailureCountForTesting == 0)
+        #expect(!bridge.allowsCachedTargetRetrievalForTesting)
+        #expect(!bridge.advanceCachedTargetRetrievalPermissionForTesting())
+        #expect(bridge.allowsCachedTargetRetrievalForTesting)
+
+        // Three genuine cached-target failures pause blind cached retrieval on the bridge.
+        for expectedCachedFailures in 1 ... BluetoothReconnectPolicy.maximumCachedTargetFailures {
+            bridge.simulateDiscoveryFailureReconnectForTesting(
+                bypassCachedTarget: true,
+                currentAttemptUsesCachedTarget: true
+            )
+            #expect(bridge.cachedTargetFailureCountForTesting == expectedCachedFailures)
+        }
+        #expect(!bridge.allowsCachedTargetRetrievalForTesting)
+        #expect(!bridge.advanceCachedTargetRetrievalPermissionForTesting())
+        #expect(!bridge.allowsCachedTargetRetrievalForTesting)
+
+        // Real Bluetooth power-on recovery resets both failure counters and resumes cached retrieval.
+        bridge.simulatePowerOnRecoveryTransitionForTesting()
+        #expect(bridge.reconnectFailureCountForTesting == 0)
+        #expect(bridge.cachedTargetFailureCountForTesting == 0)
+        #expect(bridge.allowsCachedTargetRetrievalForTesting)
     }
 }

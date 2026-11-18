@@ -103,6 +103,12 @@ extension SettingsView {
             Text(localization.text(tool.detailKey))
                 .font(.caption).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+            if tool == .voiceBuddy {
+                Link(destination: AppLinks.voiceBuddyWebsite(for: localization.locale)) {
+                    Text(localization.text("onboarding.voice_tool.voice_buddy.website"))
+                        .font(.caption.weight(.semibold))
+                }
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(16)
@@ -117,7 +123,7 @@ extension SettingsView {
                     lineWidth: isSelected ? 1.5 : 1
                 )
         }
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: tool == .voiceBuddy ? .contain : .combine)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

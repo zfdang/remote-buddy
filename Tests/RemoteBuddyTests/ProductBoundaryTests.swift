@@ -324,6 +324,7 @@ struct ProductBoundaryTests {
             "settings.integration.supported_tools",
             "settings.integration.active_badge",
             "settings.integration.shortcut_title",
+            "onboarding.voice_tool.voice_buddy.website",
         ]
         for language in [AppLanguage.english, .simplifiedChinese] {
             localization.select(language)

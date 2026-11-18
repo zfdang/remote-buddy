@@ -2,6 +2,7 @@ import AppKit
 import CoreGraphics
 import Foundation
 import Testing
+import SwiftUI
 @testable import RemoteBuddy
 
 @Suite("Voice shortcut configuration")
@@ -216,6 +217,49 @@ struct VoiceTriggerConfigurationTests {
                     #expect(hasSystemFn == (mode == .function && tool != .macosDictation))
                 }
             }
+        }
+    }
+
+    @Test(arguments: [OnboardingVoiceToolAvailability.notInstalled, .available])
+    func chatterflyHoldBannerFollowsInstallationPriority(availability: OnboardingVoiceToolAvailability) async throws {
+        let name = "chatterfly-hold-banner-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let settings = AppSettings(defaults: defaults)
+        settings.voiceFnTapModeEnabled = true
+        settings.setOnboardingControlSource(.xiaomiRemote)
+        settings.setOnboardingVoiceTool(.chatterfly)
+        settings.selectOnboardingFnTapMode(true)
+        settings.setOnboardingStep(.voiceTool)
+        let probe = OnboardingInteractionProbe(openURL: { _ in })
+        let view = OnboardingView(
+            model: BridgeAppModel(settings: settings, initialAudioDevices: []),
+            allowsInputSourceSwitching: false,
+            allowsHardwareMonitoring: false,
+            systemFunctionKeyAvailableOverride: true,
+            voiceToolAvailabilityOverride: [.chatterfly: availability],
+            interactionProbe: probe,
+            permissionOverrides: .allGranted
+        )
+        #expect(view.voiceToolBlockingHintKey == (availability == .available
+            ? "onboarding.voice_tool.hold_required" : "onboarding.voice_tool.install_required"))
+        let controller = NSHostingController(rootView: view
+            .environmentObject(LocalizationStore(settings: settings)))
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1100, height: 850),
+            styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.contentViewController = controller
+        defer { window.close() }
+        window.contentView?.layoutSubtreeIfNeeded()
+        try await waitForTestCondition("voice tool page registers controls") {
+            probe.actions["continue"] != nil && probe.actions["voice-tool.chatterfly.website"] != nil
+        }
+        #expect((probe.actions["voice-tool.enable-hold"] != nil) == (availability == .available))
+        if availability == .notInstalled {
+            probe.invoke("voice-tool.enable-hold")
+            #expect(settings.selectedVoiceTrigger.voiceFnTapModeEnabled)
+            #expect(settings.voiceFnTapModeEnabled)
+            #expect(view.proposedPairingPlan == nil)
         }
     }
 

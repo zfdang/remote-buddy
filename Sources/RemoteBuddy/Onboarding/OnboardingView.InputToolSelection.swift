@@ -15,7 +15,7 @@ extension OnboardingView {
             Text(voiceToolGuideText("onboarding.voice_tool.guide.match_shortcut"))
                 .font(.callout).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-            if voiceToolRequiresHoldConfirmation {
+            if voiceToolBlockingHintKey == "onboarding.voice_tool.hold_required" {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(localization.text("onboarding.voice_tool.hold_required"))
                         .foregroundStyle(.orange)

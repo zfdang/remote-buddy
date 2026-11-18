@@ -850,6 +850,7 @@ final class BluetoothRemoteBridge: NSObject {
                 )
             },
             scan: {
+                let wasScanning = state == .scanning
                 state = .scanning
                 stopScan()
                 scanSubscription = MainActor.assumeIsolated {
@@ -884,7 +885,9 @@ final class BluetoothRemoteBridge: NSObject {
                     guard let self, let central else { return }
                     self.discoverOrScan(using: central, generation: generation)
                 })
-                AppLogger.shared.write("BLE SCANNING")
+                if !wasScanning {
+                    AppLogger.shared.write("BLE SCANNING")
+                }
                 monitorRemoteWake()
             }
         )
@@ -1178,10 +1181,14 @@ final class BluetoothRemoteBridge: NSObject {
         )
         let cachedIdentifierBypassed = targetIdentifier != nil &&
             !reconnectPolicy.allowsCachedTargetRetrieval
+        let cachedPaused = targetIdentifier != nil &&
+            reconnectPolicy.cachedTargetFailureCount >= BluetoothReconnectPolicy.maximumCachedTargetFailures
         AppLogger.shared.write(
             "BLE RECONNECT scheduled failure_count=\(reconnectPolicy.consecutiveFailureCount) " +
                 "delay_ms=\(Int((delay * 1_000).rounded())) " +
-                "cached_identifier_bypassed=\(cachedIdentifierBypassed)"
+                "cached_identifier_bypassed=\(cachedIdentifierBypassed) " +
+                "cached_failures=\(reconnectPolicy.cachedTargetFailureCount) " +
+                "cached_paused=\(cachedPaused)"
         )
         return delay
     }

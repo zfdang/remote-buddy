@@ -300,10 +300,12 @@ struct BluetoothSystemSuspensionState {
 
 struct BluetoothReconnectPolicy {
     static let baseDelay: TimeInterval = 3
-    static let maximumDelay: TimeInterval = 60
+    static let maximumDelay: TimeInterval = 300
     static let jitterRatio = 0.1
+    static let maximumCachedTargetFailures = 3
 
     private(set) var consecutiveFailureCount = 0
+    private(set) var cachedTargetFailureCount = 0
     private(set) var allowsCachedTargetRetrieval = true
 
     mutating func nextAutomaticDelay(
@@ -312,10 +314,11 @@ struct BluetoothReconnectPolicy {
     ) -> TimeInterval {
         consecutiveFailureCount += 1
         if bypassCachedTarget {
+            cachedTargetFailureCount += 1
             allowsCachedTargetRetrieval = false
         }
 
-        let exponent = min(consecutiveFailureCount - 1, 5)
+        let exponent = min(consecutiveFailureCount - 1, 7)
         let nominalDelay = min(
             Self.maximumDelay,
             Self.baseDelay * pow(2, Double(exponent))
@@ -326,16 +329,20 @@ struct BluetoothReconnectPolicy {
         return min(Self.maximumDelay, nominalDelay * jitterFactor)
     }
 
-    /// Bypass a failed cached peripheral for one discovery pass, not forever.
-    /// The scan watchdog's next pass can actively retrieve the paired remote again.
+    /// Bypass a failed cached peripheral for one discovery pass so connected/advertising
+    /// paths run first; once `maximumCachedTargetFailures` consecutive cached attempts fail,
+    /// stop blind cached connects until reset by wake, activity, or manual reconnect.
     mutating func consumeCachedTargetRetrievalPermission() -> Bool {
         let allowed = allowsCachedTargetRetrieval
-        allowsCachedTargetRetrieval = true
+        if cachedTargetFailureCount < Self.maximumCachedTargetFailures {
+            allowsCachedTargetRetrieval = true
+        }
         return allowed
     }
 
     mutating func reset() {
         consecutiveFailureCount = 0
+        cachedTargetFailureCount = 0
         allowsCachedTargetRetrieval = true
     }
 }

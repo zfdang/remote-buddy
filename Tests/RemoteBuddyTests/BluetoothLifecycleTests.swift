@@ -233,18 +233,18 @@ struct BluetoothLifecycleTests {
             .acceptsProtocolData(generation: 1))
     }
 
-    @Test func automaticReconnectBackoffDoublesAndCapsAtSixtySeconds() {
+    @Test func automaticReconnectBackoffDoublesAndCapsAtThreeHundredSeconds() {
         var policy = BluetoothReconnectPolicy()
 
-        let delays = (0 ..< 7).map { _ in
+        let delays = (0 ..< 9).map { _ in
             policy.nextAutomaticDelay(
                 bypassCachedTarget: false,
                 jitterUnit: 0.5
             )
         }
 
-        #expect(delays == [3, 6, 12, 24, 48, 60, 60])
-        #expect(policy.consecutiveFailureCount == 7)
+        #expect(delays == [3, 6, 12, 24, 48, 96, 192, 300, 300])
+        #expect(policy.consecutiveFailureCount == 9)
     }
 
     @Test func automaticReconnectJitterIsBoundedAndDeterministicForTests() {
@@ -274,7 +274,7 @@ struct BluetoothLifecycleTests {
             bypassCachedTarget: false,
             jitterUnit: 1
         )
-        for _ in 0 ..< 5 {
+        for _ in 0 ..< 7 {
             _ = cappedLowJitterPolicy.nextAutomaticDelay(
                 bypassCachedTarget: false,
                 jitterUnit: 0.5
@@ -297,32 +297,48 @@ struct BluetoothLifecycleTests {
         #expect(abs(firstHighDelay - 3.3) < 0.000_001)
         #expect(abs(lowDelay - 5.4) < 0.000_001)
         #expect(abs(highDelay - 6.6) < 0.000_001)
-        #expect(abs(cappedLowDelay - 54) < 0.000_001)
-        #expect(abs(cappedHighDelay - 60) < 0.000_001)
+        #expect(abs(cappedLowDelay - 270) < 0.000_001)
+        #expect(abs(cappedHighDelay - 300) < 0.000_001)
     }
 
-    @Test func failedCachedTargetIsBypassedForOnlyOneDiscoveryPass() {
+    @Test func failedCachedTargetStopsRetryingAfterThresholdUntilReset() {
         var policy = BluetoothReconnectPolicy()
         #expect(policy.allowsCachedTargetRetrieval)
 
-        let delay = policy.nextAutomaticDelay(
-            bypassCachedTarget: true,
-            jitterUnit: 0.5
-        )
+        // First two cached failures bypass one discovery pass, then allow watchdog retry.
+        for expectedDelay in [3.0, 6.0] {
+            let delay = policy.nextAutomaticDelay(
+                bypassCachedTarget: true,
+                jitterUnit: 0.5
+            )
+            #expect(delay == expectedDelay)
+            #expect(!policy.allowsCachedTargetRetrieval)
+            let bypassedPass = policy.consumeCachedTargetRetrievalPermission()
+            #expect(!bypassedPass)
+            #expect(policy.allowsCachedTargetRetrieval)
+            let retryPass = policy.consumeCachedTargetRetrievalPermission()
+            #expect(retryPass)
+        }
 
-        #expect(delay == 3)
+        // Non-cached failure does not consume the cached-failure budget.
+        #expect(policy.nextAutomaticDelay(bypassCachedTarget: false, jitterUnit: 0.5) == 12)
+        #expect(policy.cachedTargetFailureCount == 2)
+        #expect(policy.allowsCachedTargetRetrieval)
+
+        // Third cached failure pauses blind cached retrieval across all subsequent passes.
+        #expect(policy.nextAutomaticDelay(bypassCachedTarget: true, jitterUnit: 0.5) == 24)
+        #expect(policy.cachedTargetFailureCount == 3)
         #expect(!policy.allowsCachedTargetRetrieval)
-        let firstPass = policy.consumeCachedTargetRetrievalPermission()
-        #expect(!firstPass)
-        #expect(policy.allowsCachedTargetRetrieval)
-        let nextPass = policy.consumeCachedTargetRetrievalPermission()
-        #expect(nextPass)
-        _ = policy.nextAutomaticDelay(bypassCachedTarget: false, jitterUnit: 0.5)
-        #expect(policy.allowsCachedTargetRetrieval)
+        let firstPausedPass = policy.consumeCachedTargetRetrievalPermission()
+        #expect(!firstPausedPass)
+        let secondPausedPass = policy.consumeCachedTargetRetrievalPermission()
+        #expect(!secondPausedPass)
+        #expect(!policy.allowsCachedTargetRetrieval)
 
         policy.reset()
 
         #expect(policy.consecutiveFailureCount == 0)
+        #expect(policy.cachedTargetFailureCount == 0)
         #expect(policy.allowsCachedTargetRetrieval)
         #expect(policy.nextAutomaticDelay(
             bypassCachedTarget: false,

@@ -589,6 +589,63 @@ struct VoiceInputActivationTests {
             tool: .doubao, reason: .switchFailed))
     }
 
+    @Test func missingApplicationVoiceToolTriggersPromptAndBlocksAllTriggerModes() throws {
+        let (model, defaults, suite) = try makeModel()
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        var available = false
+        model.voiceToolAvailabilityChecker = { _ in available ? .available : .notInstalled }
+
+        let cases: [(OnboardingVoiceTool, VoiceKeyMode, Bool, Bool)] = [
+            (.chatterfly, .suggestedShortcut, false, true),
+            (.voiceBuddy, .function, false, false),
+            (.bageshuo, .function, true, true),
+            (.typeless, .function, true, true),
+        ]
+        for (tool, mode, tapMode, forceSoftware) in cases {
+            model.settings.setOnboardingVoiceTool(tool)
+            model.settings.voiceKeyMode = mode
+            model.settings.voiceFnTapModeEnabled = tapMode
+            model.unavailableVoiceToolPrompt = nil
+            var posted: [Bool] = []
+            var completionResult: Bool?
+            #expect(!model.updateVoiceKeyState(
+                streaming: true,
+                forceSoftware: forceSoftware,
+                owner: .bluetooth,
+                keySetter: { _, down in posted.append(down); return true },
+                completion: { completionResult = $0 }
+            ))
+            #expect(completionResult == false)
+            #expect(posted.isEmpty)
+            #expect(model.unavailableVoiceToolPrompt == BridgeAppModel.VoiceToolUnavailablePrompt(
+                tool: tool,
+                reason: .applicationUnavailable
+            ))
+        }
+
+        available = true
+        model.settings.setOnboardingVoiceTool(.chatterfly)
+        model.settings.voiceKeyMode = .suggestedShortcut
+        model.settings.voiceFnTapModeEnabled = false
+        model.unavailableVoiceToolPrompt = nil
+        var posted: [Bool] = []
+        #expect(model.updateVoiceKeyState(
+            streaming: true,
+            forceSoftware: true,
+            owner: .bluetooth,
+            keySetter: { _, down in posted.append(down); return true }
+        ))
+        #expect(posted == [true])
+        #expect(model.unavailableVoiceToolPrompt == nil)
+        #expect(model.updateVoiceKeyState(
+            streaming: false,
+            forceSoftware: true,
+            owner: .bluetooth,
+            keySetter: { _, down in posted.append(down); return true }
+        ))
+    }
+
     @Test func asyncActivationTimeoutNotifiesFailureAndCancellationStaysSilent() throws {
         let target = try #require(OnboardingVoiceTool.doubao.preferredInputSourceID)
         var source = "previous"
@@ -641,12 +698,21 @@ struct VoiceInputActivationTests {
                 prompt: .init(tool: .doubao, reason: .switchFailed),
                 using: localization
             )
+            let appToolTitle = localization.text(OnboardingVoiceTool.chatterfly.titleKey)
+            let appUnavailable = UnavailableVoiceToolAlertContent(
+                prompt: .init(tool: .chatterfly, reason: .applicationUnavailable),
+                using: localization
+            )
             for content in [unavailable, switchFailed] {
                 #expect(!content.title.isEmpty && !content.title.contains("%@") && content.title.contains(toolTitle))
                 #expect(!content.message.isEmpty && !content.message.contains("%@") && content.message.contains(toolTitle))
                 #expect(!content.openSettingsTitle.isEmpty && content.openSettingsTitle != "voice_tool.unavailable.alert.open_settings")
                 #expect(!content.cancelTitle.isEmpty && content.cancelTitle != "common.action.cancel")
             }
+            #expect(!appUnavailable.title.isEmpty && !appUnavailable.title.contains("%@") && appUnavailable.title.contains(appToolTitle))
+            #expect(!appUnavailable.message.isEmpty && !appUnavailable.message.contains("%@") && appUnavailable.message.contains(appToolTitle))
+            #expect(appUnavailable.message != "voice_tool.application_unavailable.alert.message")
+            #expect(appUnavailable.message != unavailable.message)
             #expect(unavailable.title != "voice_tool.unavailable.alert.title")
             #expect(unavailable.message != "voice_tool.unavailable.alert.message")
             #expect(switchFailed.title != "voice_tool.switch_failed.alert.title")

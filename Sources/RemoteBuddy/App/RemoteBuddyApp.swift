@@ -23,6 +23,9 @@ struct UnavailableVoiceToolAlertContent: Equatable {
         case .unavailable:
             titleKey = "voice_tool.unavailable.alert.title"
             messageKey = "voice_tool.unavailable.alert.message"
+        case .applicationUnavailable:
+            titleKey = "voice_tool.unavailable.alert.title"
+            messageKey = "voice_tool.application_unavailable.alert.message"
         case .switchFailed:
             titleKey = "voice_tool.switch_failed.alert.title"
             messageKey = "voice_tool.switch_failed.alert.message"

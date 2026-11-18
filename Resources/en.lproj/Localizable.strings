@@ -423,6 +423,7 @@
 "settings.overview.integration_unavailable" = "%@ unavailable";
 "voice_tool.unavailable.alert.title" = "%@ Is Unavailable";
 "voice_tool.unavailable.alert.message" = "Remote Buddy could not switch to “%@” because this input method is not installed or enabled. Open Integration settings to select or reconfigure your voice tool.";
+"voice_tool.application_unavailable.alert.message" = "“%@” is not installed, so voice input could not start. Open Integration settings to select or reconfigure your voice tool.";
 "voice_tool.switch_failed.alert.title" = "Failed to Switch to %@";
 "voice_tool.switch_failed.alert.message" = "Remote Buddy could not complete switching to “%@”, so voice input could not start. Please try again or open Integration settings to check or change your voice tool.";
 "voice_tool.unavailable.alert.open_settings" = "Open Integration";

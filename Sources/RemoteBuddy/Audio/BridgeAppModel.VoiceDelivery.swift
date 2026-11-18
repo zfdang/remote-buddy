@@ -169,6 +169,9 @@ extension BridgeAppModel {
         if !streaming {
             voiceSession.pendingKeyRelease = nil
             applicationIntegrationController.cancelPending()
+        } else if !ensureVoiceToolApplicationAvailable() {
+            completion(false)
+            return false
         }
         // Tap conversion owns the full shortcut transaction; do not also hold its keys.
         if streaming && settings.effectiveVoiceFnTapModeEnabled {

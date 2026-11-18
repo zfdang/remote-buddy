@@ -68,6 +68,7 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
     struct VoiceToolUnavailablePrompt: Equatable {
         enum Reason: Equatable {
             case unavailable
+            case applicationUnavailable
             case switchFailed
         }
 
@@ -132,6 +133,24 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
     )
 
     private var lastUnavailableVoiceToolPrompt: (tool: OnboardingVoiceTool, uptime: TimeInterval)?
+    var voiceToolAvailabilityChecker: (OnboardingVoiceTool) -> OnboardingVoiceToolAvailability = {
+        OnboardingInputSourceSwitcher.integrationAvailability(for: $0)
+    }
+
+    func ensureVoiceToolApplicationAvailable(
+        now: TimeInterval = ProcessInfo.processInfo.systemUptime
+    ) -> Bool {
+        let tool = settings.onboardingVoiceTool
+        guard tool.applicationBundleIdentifier != nil else { return true }
+        guard voiceToolAvailabilityChecker(tool) == .notInstalled else { return true }
+        presentUnavailableVoiceToolPromptIfNeeded(
+            for: tool,
+            reason: .applicationUnavailable,
+            now: now
+        )
+        AppLogger.shared.write("VOICE KEY rejected reason=voice_tool_not_installed tool=\(tool.rawValue)")
+        return false
+    }
 
     func handleInputSourcePreparationFailure(
         for tool: OnboardingVoiceTool,

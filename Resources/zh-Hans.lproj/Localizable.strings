@@ -423,6 +423,7 @@
 "settings.overview.integration_unavailable" = "%@ 不可用";
 "voice_tool.unavailable.alert.title" = "无法使用“%@”进行语音输入";
 "voice_tool.unavailable.alert.message" = "当前选择的“%@”未安装或未在系统输入法中启用，按下语音键无法启动输入。请前往“输入法集成”重新选择或配置其他语音工具。";
+"voice_tool.application_unavailable.alert.message" = "当前选择的“%@”未安装，按下语音键无法启动输入。请前往“输入法集成”重新选择或配置其他语音工具。";
 "voice_tool.switch_failed.alert.title" = "无法切换到“%@”";
 "voice_tool.switch_failed.alert.message" = "未能完成向“%@”的输入法切换，按下语音键无法启动输入。请稍后重试，或前往“输入法集成”检查或重新选择其他语音工具。";
 "voice_tool.unavailable.alert.open_settings" = "前往输入法集成";

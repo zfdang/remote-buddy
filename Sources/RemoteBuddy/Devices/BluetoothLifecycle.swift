@@ -300,7 +300,7 @@ struct BluetoothSystemSuspensionState {
 
 struct BluetoothReconnectPolicy {
     static let baseDelay: TimeInterval = 3
-    static let maximumDelay: TimeInterval = 300
+    static let maximumDelay: TimeInterval = 60
     static let jitterRatio = 0.1
     static let maximumCachedTargetFailures = 3
 
@@ -310,15 +310,18 @@ struct BluetoothReconnectPolicy {
 
     mutating func nextAutomaticDelay(
         bypassCachedTarget: Bool,
+        failedCachedTargetAttempt: Bool = false,
         jitterUnit: Double
     ) -> TimeInterval {
         consecutiveFailureCount += 1
         if bypassCachedTarget {
-            cachedTargetFailureCount += 1
             allowsCachedTargetRetrieval = false
         }
+        if failedCachedTargetAttempt {
+            cachedTargetFailureCount += 1
+        }
 
-        let exponent = min(consecutiveFailureCount - 1, 7)
+        let exponent = min(consecutiveFailureCount - 1, 5)
         let nominalDelay = min(
             Self.maximumDelay,
             Self.baseDelay * pow(2, Double(exponent))
@@ -329,9 +332,10 @@ struct BluetoothReconnectPolicy {
         return min(Self.maximumDelay, nominalDelay * jitterFactor)
     }
 
-    /// Bypass a failed cached peripheral for one discovery pass so connected/advertising
-    /// paths run first; once `maximumCachedTargetFailures` consecutive cached attempts fail,
-    /// stop blind cached connects until reset by wake, activity, or manual reconnect.
+    /// Bypass cached retrieval for one discovery pass so connected/advertising paths run first;
+    /// once `maximumCachedTargetFailures` cached-target attempts fail (even across intervening
+    /// non-cached passes), stop blind cached connects until reset by wake, activity,
+    /// Bluetooth power-on, or manual reconnect.
     mutating func consumeCachedTargetRetrievalPermission() -> Bool {
         let allowed = allowsCachedTargetRetrieval
         if cachedTargetFailureCount < Self.maximumCachedTargetFailures {
@@ -395,6 +399,7 @@ struct BluetoothCentralRecoveryTransition: Equatable {
     let shouldDiscover: Bool
     let shouldStartFreshConnectionCycle: Bool
     let shouldReleaseCentral: Bool
+    let shouldResetReconnectPolicy: Bool
 }
 
 enum BluetoothCentralRecoveryPolicy {
@@ -412,7 +417,8 @@ enum BluetoothCentralRecoveryPolicy {
                     shouldCancelScheduledReconnect: true,
                     shouldDiscover: false,
                     shouldStartFreshConnectionCycle: false,
-                    shouldReleaseCentral: true
+                    shouldReleaseCentral: true,
+                    shouldResetReconnectPolicy: false
                 )
             }
             return BluetoothCentralRecoveryTransition(
@@ -420,7 +426,8 @@ enum BluetoothCentralRecoveryPolicy {
                 shouldCancelScheduledReconnect: true,
                 shouldDiscover: false,
                 shouldStartFreshConnectionCycle: false,
-                shouldReleaseCentral: false
+                shouldReleaseCentral: false,
+                shouldResetReconnectPolicy: false
             )
         case .poweredOn:
             guard shouldRun else {
@@ -429,7 +436,8 @@ enum BluetoothCentralRecoveryPolicy {
                     shouldCancelScheduledReconnect: true,
                     shouldDiscover: false,
                     shouldStartFreshConnectionCycle: false,
-                    shouldReleaseCentral: true
+                    shouldReleaseCentral: true,
+                    shouldResetReconnectPolicy: false
                 )
             }
             let requiresFreshConnectionCycle = phase == .waitingReconnect(generation) ||
@@ -440,7 +448,8 @@ enum BluetoothCentralRecoveryPolicy {
                 shouldDiscover: !requiresFreshConnectionCycle &&
                     phase == .scanning(generation),
                 shouldStartFreshConnectionCycle: requiresFreshConnectionCycle,
-                shouldReleaseCentral: false
+                shouldReleaseCentral: false,
+                shouldResetReconnectPolicy: requiresFreshConnectionCycle
             )
         case .unauthorized, .unsupported:
             return BluetoothCentralRecoveryTransition(
@@ -448,7 +457,8 @@ enum BluetoothCentralRecoveryPolicy {
                 shouldCancelScheduledReconnect: true,
                 shouldDiscover: false,
                 shouldStartFreshConnectionCycle: false,
-                shouldReleaseCentral: true
+                shouldReleaseCentral: true,
+                shouldResetReconnectPolicy: false
             )
         }
     }

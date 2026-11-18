@@ -850,7 +850,7 @@ final class BluetoothRemoteBridge: NSObject {
                 )
             },
             scan: {
-                let wasScanning = state == .scanning
+                let wasScanning = scanSubscription != nil
                 state = .scanning
                 stopScan()
                 scanSubscription = MainActor.assumeIsolated {
@@ -1162,7 +1162,8 @@ final class BluetoothRemoteBridge: NSObject {
         reconnectWorkItem?.cancel()
         publishReconnectingState()
         let delay = nextAutomaticReconnectDelay(
-            bypassCachedTarget: bypassCachedTarget || currentAttemptUsesCachedTarget
+            bypassCachedTarget: bypassCachedTarget || currentAttemptUsesCachedTarget,
+            failedCachedTargetAttempt: currentAttemptUsesCachedTarget
         )
         if let central, let peripheral, peripheral.state != .disconnected {
             requestedReconnectDelay = delay
@@ -1174,9 +1175,13 @@ final class BluetoothRemoteBridge: NSObject {
         finishAttempt(reconnectAfter: delay)
     }
 
-    private func nextAutomaticReconnectDelay(bypassCachedTarget: Bool) -> TimeInterval {
+    private func nextAutomaticReconnectDelay(
+        bypassCachedTarget: Bool,
+        failedCachedTargetAttempt: Bool
+    ) -> TimeInterval {
         let delay = reconnectPolicy.nextAutomaticDelay(
             bypassCachedTarget: bypassCachedTarget,
+            failedCachedTargetAttempt: failedCachedTargetAttempt,
             jitterUnit: Double.random(in: 0 ... 1)
         )
         let cachedIdentifierBypassed = targetIdentifier != nil &&
@@ -1200,7 +1205,8 @@ final class BluetoothRemoteBridge: NSObject {
             return 0
         }
         return requestedReconnectDelay ?? nextAutomaticReconnectDelay(
-            bypassCachedTarget: bypassCachedTarget
+            bypassCachedTarget: bypassCachedTarget,
+            failedCachedTargetAttempt: currentAttemptUsesCachedTarget
         )
     }
 
@@ -1793,6 +1799,9 @@ extension BluetoothRemoteBridge: @preconcurrency CBCentralManagerDelegate {
             centralGeneration = nil
             lifecycle = .stopped
             return
+        }
+        if transition.shouldResetReconnectPolicy {
+            reconnectPolicy.reset()
         }
         guard !systemSuspension.isSuspended else {
             if transition.shouldStartFreshConnectionCycle || transition.shouldDiscover {

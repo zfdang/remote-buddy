@@ -1,5 +1,5 @@
 /// Uses the same ordered discovery paths for new and registered remotes.
-/// A failed cached connection must still be able to find a system-connected device.
+/// A failed or paused cached connection must still fall through to system-connected and scanning paths.
 enum BluetoothDiscoverySequence {
     enum Source: String {
         case cachedTarget = "target_identifier"

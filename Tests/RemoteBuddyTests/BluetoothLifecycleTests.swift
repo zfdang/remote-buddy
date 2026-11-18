@@ -233,18 +233,18 @@ struct BluetoothLifecycleTests {
             .acceptsProtocolData(generation: 1))
     }
 
-    @Test func automaticReconnectBackoffDoublesAndCapsAtThreeHundredSeconds() {
+    @Test func automaticReconnectBackoffDoublesAndCapsAtSixtySeconds() {
         var policy = BluetoothReconnectPolicy()
 
-        let delays = (0 ..< 9).map { _ in
+        let delays = (0 ..< 7).map { _ in
             policy.nextAutomaticDelay(
                 bypassCachedTarget: false,
                 jitterUnit: 0.5
             )
         }
 
-        #expect(delays == [3, 6, 12, 24, 48, 96, 192, 300, 300])
-        #expect(policy.consecutiveFailureCount == 9)
+        #expect(delays == [3, 6, 12, 24, 48, 60, 60])
+        #expect(policy.consecutiveFailureCount == 7)
     }
 
     @Test func automaticReconnectJitterIsBoundedAndDeterministicForTests() {
@@ -274,7 +274,7 @@ struct BluetoothLifecycleTests {
             bypassCachedTarget: false,
             jitterUnit: 1
         )
-        for _ in 0 ..< 7 {
+        for _ in 0 ..< 5 {
             _ = cappedLowJitterPolicy.nextAutomaticDelay(
                 bypassCachedTarget: false,
                 jitterUnit: 0.5
@@ -297,8 +297,8 @@ struct BluetoothLifecycleTests {
         #expect(abs(firstHighDelay - 3.3) < 0.000_001)
         #expect(abs(lowDelay - 5.4) < 0.000_001)
         #expect(abs(highDelay - 6.6) < 0.000_001)
-        #expect(abs(cappedLowDelay - 270) < 0.000_001)
-        #expect(abs(cappedHighDelay - 300) < 0.000_001)
+        #expect(abs(cappedLowDelay - 54) < 0.000_001)
+        #expect(abs(cappedHighDelay - 60) < 0.000_001)
     }
 
     @Test func failedCachedTargetStopsRetryingAfterThresholdUntilReset() {
@@ -309,6 +309,7 @@ struct BluetoothLifecycleTests {
         for expectedDelay in [3.0, 6.0] {
             let delay = policy.nextAutomaticDelay(
                 bypassCachedTarget: true,
+                failedCachedTargetAttempt: true,
                 jitterUnit: 0.5
             )
             #expect(delay == expectedDelay)
@@ -320,13 +321,24 @@ struct BluetoothLifecycleTests {
             #expect(retryPass)
         }
 
-        // Non-cached failure does not consume the cached-failure budget.
-        #expect(policy.nextAutomaticDelay(bypassCachedTarget: false, jitterUnit: 0.5) == 12)
+        // Non-cached initialization/discovery failure bypasses one pass without consuming cached-pause budget.
+        #expect(policy.nextAutomaticDelay(
+            bypassCachedTarget: true,
+            failedCachedTargetAttempt: false,
+            jitterUnit: 0.5
+        ) == 12)
         #expect(policy.cachedTargetFailureCount == 2)
+        #expect(!policy.allowsCachedTargetRetrieval)
+        let bypassedAfterNonCachedFailure = policy.consumeCachedTargetRetrievalPermission()
+        #expect(!bypassedAfterNonCachedFailure)
         #expect(policy.allowsCachedTargetRetrieval)
 
         // Third cached failure pauses blind cached retrieval across all subsequent passes.
-        #expect(policy.nextAutomaticDelay(bypassCachedTarget: true, jitterUnit: 0.5) == 24)
+        #expect(policy.nextAutomaticDelay(
+            bypassCachedTarget: true,
+            failedCachedTargetAttempt: true,
+            jitterUnit: 0.5
+        ) == 24)
         #expect(policy.cachedTargetFailureCount == 3)
         #expect(!policy.allowsCachedTargetRetrieval)
         let firstPausedPass = policy.consumeCachedTargetRetrievalPermission()
@@ -360,7 +372,8 @@ struct BluetoothLifecycleTests {
             shouldCancelScheduledReconnect: true,
             shouldDiscover: false,
             shouldStartFreshConnectionCycle: false,
-            shouldReleaseCentral: false
+            shouldReleaseCentral: false,
+            shouldResetReconnectPolicy: false
         ))
 
         let poweredOn = BluetoothCentralRecoveryPolicy.transition(
@@ -375,7 +388,8 @@ struct BluetoothLifecycleTests {
             shouldCancelScheduledReconnect: true,
             shouldDiscover: false,
             shouldStartFreshConnectionCycle: true,
-            shouldReleaseCentral: false
+            shouldReleaseCentral: false,
+            shouldResetReconnectPolicy: true
         ))
     }
 
@@ -399,14 +413,16 @@ struct BluetoothLifecycleTests {
             shouldCancelScheduledReconnect: true,
             shouldDiscover: false,
             shouldStartFreshConnectionCycle: false,
-            shouldReleaseCentral: false
+            shouldReleaseCentral: false,
+            shouldResetReconnectPolicy: false
         ))
         #expect(poweredOn == BluetoothCentralRecoveryTransition(
             phase: .stopped,
             shouldCancelScheduledReconnect: true,
             shouldDiscover: false,
             shouldStartFreshConnectionCycle: true,
-            shouldReleaseCentral: false
+            shouldReleaseCentral: false,
+            shouldResetReconnectPolicy: true
         ))
     }
 
@@ -426,7 +442,8 @@ struct BluetoothLifecycleTests {
                 shouldCancelScheduledReconnect: true,
                 shouldDiscover: false,
                 shouldStartFreshConnectionCycle: false,
-                shouldReleaseCentral: true
+                shouldReleaseCentral: true,
+                shouldResetReconnectPolicy: false
             ))
         }
     }
@@ -448,7 +465,8 @@ struct BluetoothLifecycleTests {
                 shouldCancelScheduledReconnect: true,
                 shouldDiscover: false,
                 shouldStartFreshConnectionCycle: false,
-                shouldReleaseCentral: true
+                shouldReleaseCentral: true,
+                shouldResetReconnectPolicy: false
             ))
         }
     }
@@ -463,6 +481,7 @@ struct BluetoothLifecycleTests {
         )
 
         #expect(recovery.shouldStartFreshConnectionCycle)
+        #expect(recovery.shouldResetReconnectPolicy)
         #expect(!recovery.shouldDiscover)
 
         let freshPhase = BluetoothLifecyclePhase.scanning(finishedGeneration + 1)

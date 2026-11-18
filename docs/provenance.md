@@ -20,4 +20,4 @@
 
 README 另使用维护者于 2026-11-16 提供的三张真实应用截图：`readme-connection.jpg`、`readme-integration.jpg` 和 `readme-mapping.jpg`，分别展示双遥控器连接、输入法集成和 G9N9N 按键映射。这三张 JPEG 通过 `jpegtran` 无损优化并移除元数据，保留原始像素和分辨率；README 的显示宽度为 640。它们与自动渲染的示例截图分开维护。
 
-腾讯Chatterfly 的两张浅色向导截图由维护者于 2026-11-18 提供，分别展示语音快捷键与全局可用设置、Remote Buddy Mic 选择。设置截图裁去含商标与账号的侧栏，最长边不超过 1600 像素，以压缩 JPEG 保存；深色界面回退到同一浅色截图。
+腾讯Chatterfly 的两张浅色向导截图由维护者于 2026-11-18 提供，分别展示语音快捷键与全局可用设置、Remote Buddy Mic 选择。设置截图裁去含商标与账号的侧栏，最长边不超过 1600 像素，以压缩 JPEG 保存；深色界面回退到同一浅色截图。网页的 `integration-*`、`wizard-tool-*` 与 README 的 `readme-integration.jpg` 于 2026-11-18 使用当前源码的 Debug App 重新渲染以包含腾讯Chatterfly。

@@ -62,9 +62,9 @@ button.addEventListener('blur', stop);
         title: '输入法集成',
         badge: '语音工具',
         windowTitle: '输入法与语音工具集成 · Remote Buddy',
-        src: 'assets/screenshots/integration-zh.jpg?v=261117screens',
-        alt: 'Remote Buddy 输入法与语音工具集成界面：当前语音触发方式及受支持语音工具的配置入口',
-        desc: '查看当前语音触发方式（热键与点按模式）和已选择的输入工具，通过向导调整热键、配置输入工具并完成语音测试生效。'
+        src: 'assets/screenshots/integration-zh.jpg?v=261118screens',
+        alt: 'Remote Buddy 输入法与语音工具集成界面：当前语音触发方式及微信输入法、豆包、腾讯Chatterfly、Voice Buddy 等受支持语音工具列表',
+        desc: '查看当前语音触发方式（热键与点按模式）和已选择的输入工具，支持微信输入法、豆包输入法、腾讯Chatterfly、Voice Buddy、网易叭哥说、Typeless、macOS 听写等；通过向导调整热键、配置工具并完成语音测试生效。'
       },
       {
         title: '按键映射',
@@ -144,9 +144,9 @@ button.addEventListener('blur', stop);
         title: '第 6 步 · 输入工具',
         badge: '向导 · 工具设置',
         windowTitle: '输入工具 · 首次使用向导',
-        src: 'assets/screenshots/wizard-tool-zh.jpg?v=261117screens',
-        alt: '首次使用向导：输入工具选择与图文分步设置指引，包含微信输入法、豆包等操作步骤',
-        desc: '选择输入法或听写工具，按右侧步骤完成麦克风与对应语音热键及录音模式设置；也可点击一键切换当前系统输入法。'
+        src: 'assets/screenshots/wizard-tool-zh.jpg?v=261118screens',
+        alt: '首次使用向导：输入工具选择与图文分步设置指引，包含微信输入法、豆包、腾讯Chatterfly 等工具',
+        desc: '选择输入法或语音工具（含微信输入法、豆包输入法、腾讯Chatterfly、Voice Buddy、网易叭哥说、Typeless、macOS 听写等），按右侧图文步骤配置麦克风与语音热键；需系统输入法切换的工具可一键切换。'
       },
       {
         title: '第 7 步 · 语音测试',
@@ -189,9 +189,9 @@ button.addEventListener('blur', stop);
         title: 'Voice Tools',
         badge: 'Integrations',
         windowTitle: 'Voice Tools Integration · Remote Buddy',
-        src: 'assets/screenshots/integration-en.jpg?v=261117screens',
-        alt: 'Remote Buddy Voice Tools interface: current voice trigger and setup guides for supported voice tools',
-        desc: 'Review the active voice trigger shortcut, tap mode, and selected input tool, then launch the integration wizard to customize hotkeys, configure your tool, and verify with a voice test.'
+        src: 'assets/screenshots/integration-en.jpg?v=261118screens',
+        alt: 'Remote Buddy Voice Tools interface: current voice trigger and supported tools including WeType, Doubao, Tencent Chatterfly, and Voice Buddy',
+        desc: 'Review the active voice trigger shortcut, tap mode, and selected tool (supporting WeType, Doubao, Tencent Chatterfly, Voice Buddy, NetEase Bageshuo, Typeless, macOS Dictation, and more), then launch the wizard to customize hotkeys and verify with a voice test.'
       },
       {
         title: 'Button Mapping',
@@ -271,9 +271,9 @@ button.addEventListener('blur', stop);
         title: 'Step 6 · Input Tool',
         badge: 'Wizard · Tool Setup',
         windowTitle: 'Input Tool · Setup Wizard',
-        src: 'assets/screenshots/wizard-tool-en.jpg?v=261117screens',
-        alt: 'Setup Wizard: Voice input tool selection with visual step-by-step setup guides',
-        desc: 'Choose your input method or dictation tool and follow the guided steps on the right to configure Remote Buddy Mic and your voice shortcut.'
+        src: 'assets/screenshots/wizard-tool-en.jpg?v=261118screens',
+        alt: 'Setup Wizard: Voice input tool selection (WeType, Doubao, Tencent Chatterfly, Voice Buddy, etc.) with visual step-by-step setup guides',
+        desc: 'Choose your input method or voice tool (WeType, Doubao, Tencent Chatterfly, Voice Buddy, NetEase Bageshuo, Typeless, macOS Dictation, or other tools) and follow the guided steps on the right to configure Remote Buddy Mic and your voice shortcut.'
       },
       {
         title: 'Step 7 · Voice Test',

@@ -404,6 +404,19 @@ extension OnboardingView {
                     )
                 ),
             ]
+        case .chatterfly:
+            toolSteps = [
+                OnboardingInputMethodGuideStep(
+                    id: 1,
+                    titleKey: "onboarding.voice_tool.guide.open_chatterfly",
+                    content: .instruction(systemImage: "waveform", detailKey: "onboarding.voice_tool.guide.open_chatterfly.detail")
+                ),
+                OnboardingInputMethodGuideStep(
+                    id: 2,
+                    titleKey: "onboarding.voice_tool.guide.configure_chatterfly",
+                    content: .screenshot("chatterfly-settings")
+                ),
+            ]
         case .voiceBuddy:
             toolSteps = [
                 OnboardingInputMethodGuideStep(

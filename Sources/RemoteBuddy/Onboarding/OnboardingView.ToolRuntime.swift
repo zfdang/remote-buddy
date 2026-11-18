@@ -136,6 +136,7 @@ extension OnboardingView {
         switch tool {
         case .weixin: return "message.fill"
         case .doubao: return "quote.bubble.fill"
+        case .chatterfly: return "waveform"
         case .voiceBuddy: return "waveform.circle.fill"
         case .bageshuo: return "waveform.and.mic"
         case .typeless: return "waveform.badge.mic"

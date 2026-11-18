@@ -303,7 +303,7 @@ struct VoiceInputActivationTests {
     }
 
     @Test func standaloneToolsNeverSelectWaitForOrRestoreAnInputSource() {
-        for tool in [OnboardingVoiceTool.voiceBuddy, .typeless, .bageshuo, .other] {
+        for tool in [OnboardingVoiceTool.voiceBuddy, .chatterfly, .typeless, .bageshuo, .other] {
             #expect(tool.preferredInputSourceID == nil)
             var sourceOperations = 0
             let monitor = PreferredInputSourceMonitor(voiceTool: { tool },

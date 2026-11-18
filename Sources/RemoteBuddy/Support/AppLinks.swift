@@ -25,6 +25,7 @@ enum AppLinks {
     static let doubaoInputMethod = URL(
         string: "https://shurufa.doubao.com/"
     )!
+    static let chatterflyWebsite = URL(string: "https://chatterfly.tencent.com/")!
     static let bageshuoWebsite = URL(string: "https://bug.youdao.com/")!
     static let voiceBuddyChineseWebsite = URL(string: "https://myvoicebuddy.com/")!
     static let voiceBuddyEnglishWebsite = URL(

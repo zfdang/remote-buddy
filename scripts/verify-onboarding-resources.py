@@ -109,6 +109,7 @@ for name in sorted(names):
         'doubao-menu', 'doubao-settings', 'doubao-input-microphone',
         'weixin-input-menu', 'weixin-input-settings', 'weixin-input-microphone',
         'voicebuddy-setting-fn', 'voicebuddy-setting-mic',
+        'chatterfly-settings', 'chatterfly-input-microphone',
         'macos-dictation-enable', 'macos-dictation-shortcut', 'macos-dictation-microphone',
     }:
         assert dark is not None, f'Missing dark screenshot: {name}'

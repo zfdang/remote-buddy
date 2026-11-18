@@ -202,6 +202,8 @@ extension OnboardingView {
                 onboardingGuideScreenshot(
                     resourceName: "bageshuo-input-microphone"
                 )
+            } else if settings.onboardingVoiceTool == .chatterfly {
+                onboardingGuideScreenshot(resourceName: "chatterfly-input-microphone")
             } else if settings.onboardingVoiceTool == .voiceBuddy {
                 onboardingGuideScreenshot(resourceName: "voicebuddy-setting-mic")
             } else if settings.onboardingVoiceTool == .macosDictation {

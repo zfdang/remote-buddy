@@ -26,7 +26,7 @@ extension OnboardingVoiceTool {
     var supportsHoldVoiceRecording: Bool {
         switch self {
         case .typeless, .bageshuo, .macosDictation: return false
-        case .weixin, .doubao, .voiceBuddy, .unselected, .other: return true
+        case .weixin, .doubao, .chatterfly, .voiceBuddy, .unselected, .other: return true
         }
     }
 }

@@ -15,6 +15,25 @@ extension OnboardingView {
             Text(voiceToolGuideText("onboarding.voice_tool.guide.match_shortcut"))
                 .font(.callout).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+            if voiceToolRequiresHoldConfirmation {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(localization.text("onboarding.voice_tool.hold_required"))
+                        .foregroundStyle(.orange)
+                    onboardingActionButton(id: "voice-tool.enable-hold") {
+                        settings.selectOnboardingFnTapMode(false)
+                        stageCurrentDocumentedPairingPlanIfPossible()
+                    } label: { Text(localization.text("onboarding.voice_tool.enable_hold")) }
+                    .buttonStyle(.borderedProminent)
+                }
+            }
+
+            if settings.onboardingVoiceTool == .chatterfly {
+                onboardingLink(id: "voice-tool.chatterfly.website", destination: AppLinks.chatterflyWebsite) {
+                    Text(localization.text("onboarding.voice_tool.chatterfly.website"))
+                }
+                .font(.system(size: 12, weight: .semibold))
+            }
+
             if voiceToolBlockingHintKey == "onboarding.voice_tool.tap_required" {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(localization.text("onboarding.voice_tool.tap_required"))

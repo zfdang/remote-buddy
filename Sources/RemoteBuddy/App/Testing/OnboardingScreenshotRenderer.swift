@@ -248,6 +248,7 @@ enum OnboardingScreenshotRenderer {
                         voiceToolAvailabilityOverride: [
                             .weixin: allVoiceToolsUnavailable ? .notInstalled : .available,
                             .doubao: allVoiceToolsUnavailable ? .notInstalled : .available,
+                            .chatterfly: allVoiceToolsUnavailable ? .notInstalled : .available,
                             .voiceBuddy: allVoiceToolsUnavailable ? .notInstalled : .available,
                             .bageshuo: allVoiceToolsUnavailable ? .notInstalled : .available,
                             .typeless: allVoiceToolsUnavailable ? .notInstalled : .available,

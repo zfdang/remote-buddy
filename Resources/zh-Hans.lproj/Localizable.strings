@@ -531,7 +531,7 @@
 "onboarding.action.open_app" = "打开遥控搭子";
 "onboarding.voice_tool.title" = "你准备在哪个工具里说话？";
 "onboarding.voice_tool.detail" = "选择输入工具，并按右侧说明完成设置。";
-"onboarding.voice_tool.none_detected" = "未检测到已安装的微信输入法、豆包输入法、网易叭哥说或 Typeless。你仍可选择“其他语音工具”，但请先安装并打开一个支持语音输入的工具。";
+"onboarding.voice_tool.none_detected" = "未检测到已安装的微信输入法、豆包输入法、腾讯Chatterfly、Voice Buddy、网易叭哥说或 Typeless。你仍可选择“其他语音工具”，但请先安装并打开一个支持语音输入的工具。";
 "onboarding.voice_tool.unselected.title" = "尚未选择";
 "onboarding.voice_tool.unselected.detail" = "尚未选择常用语音工具。";
 "onboarding.voice_tool.doubao.title" = "豆包输入法";
@@ -1255,3 +1255,15 @@
 "common_phrases.g9n9n_partial_notice" = "当前选中的 G9N9N 处于部分支持（双键兼容）模式，仅支持语音键和「方向键 + OK」发 Enter，无法通过单键触发常用语。";
 "onboarding.chromecast.replace_hardware_advice" = "部分支持模式下功能缺失较多，仅作临时兼容；如需完整按键体验，建议更换为已验证支持 macOS 的遥控器硬件版本。";
 "onboarding.chromecast.replace_hardware_link" = "查看可完全支持的设备与选购指南 ↗";
+
+// Tencent Chatterfly hold-to-talk integration
+"onboarding.voice_tool.chatterfly.title" = "腾讯Chatterfly";
+"onboarding.voice_tool.chatterfly.detail" = "通过全局语音快捷键，在腾讯Chatterfly 中按住说话、松开结束。";
+"onboarding.voice_tool.chatterfly.website" = "了解并下载腾讯Chatterfly ↗";
+"onboarding.voice_tool.hold_required" = "腾讯Chatterfly 仅集成按住说话，请先关闭点按模式。";
+"onboarding.voice_tool.enable_hold" = "使用按住说话";
+"onboarding.voice_tool.guide.open_chatterfly" = "打开腾讯Chatterfly";
+"onboarding.voice_tool.guide.open_chatterfly.detail" = "安装并启动腾讯Chatterfly，保持它在后台运行，然后打开设置。";
+"onboarding.voice_tool.guide.configure_chatterfly" = "设置语音快捷键与全局可用";
+"onboarding.voice_tool.guide.screenshot.chatterfly_settings" = "在腾讯Chatterfly → 设置 → 语音设置中，将“语音输入”快捷键设为“%@”，并开启“快捷键全局可用”。使用按住说话、松开结束；截图中的快捷键仅为示例，请以本次选择为准。";
+"onboarding.voice_tool.guide.screenshot.chatterfly_input_microphone" = "在腾讯Chatterfly → 设置 → 音频设置 → 麦克风中，选择 Remote Buddy Mic。";

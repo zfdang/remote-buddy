@@ -4,6 +4,7 @@ enum OnboardingVoiceTool: String, CaseIterable, Codable, Identifiable {
     case unselected
     case weixin
     case doubao
+    case chatterfly
     case voiceBuddy = "voice_buddy"
     case bageshuo
     case typeless
@@ -26,13 +27,15 @@ enum OnboardingVoiceTool: String, CaseIterable, Codable, Identifiable {
             return "com.bytedance.inputmethod.doubaoime.pinyin"
         case .weixin:
             return "com.tencent.inputmethod.wetype.pinyin"
-        case .unselected, .voiceBuddy, .bageshuo, .typeless, .macosDictation, .other:
+        case .unselected, .chatterfly, .voiceBuddy, .bageshuo, .typeless, .macosDictation, .other:
             return nil
         }
     }
 
     var applicationBundleIdentifier: String? {
         switch self {
+        case .chatterfly:
+            return "com.tencent.inputmethod.chatterfly"
         case .voiceBuddy:
             return "com.voicebuddy.app"
         case .bageshuo:
@@ -109,6 +112,17 @@ struct VoiceToolAdapterProfile: Equatable {
                 defaultShortcutByMode: [.toggle: .function],
                 recommendedMode: .toggle,
                 installationProbe: .none,
+                evidenceState: .pending
+            )
+        case .chatterfly:
+            // Global voice shortcuts work without changing the active input source.
+            // Only hold-to-talk is integrated; onboarding still requires a real voice test.
+            return Self(
+                tool: tool,
+                supportedModes: [.hold],
+                defaultShortcutByMode: [.hold: .suggestedShortcut],
+                recommendedMode: .hold,
+                installationProbe: .applicationBundle,
                 evidenceState: .pending
             )
         case .voiceBuddy:

@@ -79,6 +79,7 @@ extension OnboardingView {
 
             if settings.onboardingStep == .voiceTool, let hint = voiceToolBlockingHintKey,
                hint != "onboarding.voice_tool.tap_required",
+               hint != "onboarding.voice_tool.hold_required",
                hint != "onboarding.voice_tool.trigger_incompatible" {
                 Text(verbatim: localization.text(hint))
                     .font(.system(size: 12))

@@ -219,6 +219,31 @@ struct VoiceTriggerConfigurationTests {
         }
     }
 
+    @Test func chatterflyRequiresExplicitHoldModeAndShowsSetupGuide() throws {
+        try withSettings { settings, _ in
+            settings.setOnboardingControlSource(.xiaomiRemote)
+            settings.setOnboardingVoiceTool(.chatterfly)
+            settings.selectOnboardingFnTapMode(true)
+            settings.selectOnboardingVoiceTrigger(.suggestedShortcut)
+            let view = OnboardingView(model: BridgeAppModel(settings: settings, initialAudioDevices: []),
+                voiceToolAvailabilityOverride: [.chatterfly: .available])
+            #expect(view.voiceToolRequiresHoldConfirmation)
+            #expect(view.voiceToolBlockingHintKey == "onboarding.voice_tool.hold_required")
+            #expect(view.proposedPairingPlan == nil)
+            #expect(settings.selectedVoiceTrigger.voiceFnTapModeEnabled)
+            settings.selectOnboardingFnTapMode(false)
+            #expect(!view.voiceToolRequiresHoldConfirmation)
+            let plan = try #require(view.proposedPairingPlan)
+            #expect(plan.binding.gestureMode == .hold)
+            #expect(plan.binding.shortcut == .suggestedShortcut)
+            #expect(!plan.fnTapModeEnabled)
+            #expect(view.voiceToolBlockingHintKey == "onboarding.voice_tool.guide.continue_hint")
+            let steps = view.inputMethodGuideSteps(for: .chatterfly)
+            #expect(Set(steps.map(\.id)).count == steps.count)
+            #expect(steps.contains { if case .screenshot("chatterfly-settings") = $0.content { return true }; return false })
+        }
+    }
+
     @Test func selectingATapOnlyToolDoesNotSilentlyChangeTheSelectedMode() throws {
         try withSettings { settings, _ in
             settings.setOnboardingControlSource(.xiaomiRemote)

@@ -89,6 +89,7 @@ Bluetooth pairing alone does not establish compatibility: the remote must use a 
 | --- | --- |
 | WeType / WeChat Input Method | Dedicated setup entry with virtual microphone and voice shortcut |
 | Doubao Input Method | Dedicated setup entry with hold and tap behavior |
+| [Tencent Chatterfly](https://chatterfly.tencent.com/) | Hold-to-talk only; enable global voice shortcuts, select Remote Buddy Mic, and verify with the guide |
 | [Voice Buddy](https://myvoicebuddy.com/en.html) | 100% local offline AI voice input & polish tool on Apple Silicon, supporting Hold and Toggle modes with virtual microphone and `Fn` trigger |
 | NetEase Bageshuo | Dedicated setup entry with voice shortcut and microphone configuration |
 | Typeless | Configure its voice shortcut and start/stop behavior |

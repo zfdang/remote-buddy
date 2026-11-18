@@ -531,7 +531,7 @@
 "onboarding.action.open_app" = "Open Remote Buddy";
 "onboarding.voice_tool.title" = "Which app do you use for voice typing?";
 "onboarding.voice_tool.detail" = "Choose an input tool and follow the setup steps on the right.";
-"onboarding.voice_tool.none_detected" = "No supported voice typing app was detected. You can still choose Other Voice App, but please install and open a supported voice tool before testing.";
+"onboarding.voice_tool.none_detected" = "No installed WeType, Doubao, Tencent Chatterfly, Voice Buddy, NetEase Bageshuo, or Typeless was found. You can still choose Other Voice Tool after installing and starting a voice input tool.";
 "onboarding.voice_tool.unselected.title" = "Not Selected";
 "onboarding.voice_tool.unselected.detail" = "No voice app selected yet.";
 "onboarding.voice_tool.doubao.title" = "Doubao";
@@ -1253,3 +1253,15 @@
 "common_phrases.g9n9n_partial_notice" = "The selected G9N9N is in Partial Support (two-key compatibility) mode, which only supports Voice and Arrow + OK for Enter; single-key common phrases are unavailable.";
 "onboarding.chromecast.replace_hardware_advice" = "Partial Support mode omits most button features and is intended only as a fallback. Replace with a verified macOS-compatible remote unit for full support.";
 "onboarding.chromecast.replace_hardware_link" = "See verified devices & buying guide ↗";
+
+// Tencent Chatterfly hold-to-talk integration
+"onboarding.voice_tool.chatterfly.title" = "Tencent Chatterfly";
+"onboarding.voice_tool.chatterfly.detail" = "Hold to talk and release to finish in Tencent Chatterfly using its global voice shortcut.";
+"onboarding.voice_tool.chatterfly.website" = "Explore and download Tencent Chatterfly ↗";
+"onboarding.voice_tool.hold_required" = "Tencent Chatterfly integration requires hold-to-talk. Turn off tap mode to continue.";
+"onboarding.voice_tool.enable_hold" = "Use hold-to-talk";
+"onboarding.voice_tool.guide.open_chatterfly" = "Open Tencent Chatterfly";
+"onboarding.voice_tool.guide.open_chatterfly.detail" = "Install and start Tencent Chatterfly, leave it running in the background, then open Settings.";
+"onboarding.voice_tool.guide.configure_chatterfly" = "Configure the global voice shortcut";
+"onboarding.voice_tool.guide.screenshot.chatterfly_settings" = "In Tencent Chatterfly → Settings → Voice Settings, set the Voice Input shortcut to “%@” and enable the global shortcut option. Hold to talk and release to finish. The screenshot shortcut is an example; use your selected shortcut.";
+"onboarding.voice_tool.guide.screenshot.chatterfly_input_microphone" = "In Tencent Chatterfly → Settings → Audio Settings → Microphone, select Remote Buddy Mic.";

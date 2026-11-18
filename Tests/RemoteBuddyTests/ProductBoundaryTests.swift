@@ -16,6 +16,7 @@ struct ProductBoundaryTests {
             "doubao-menu", "doubao-settings", "doubao-input-microphone",
             "weixin-input-menu", "weixin-input-settings", "weixin-input-microphone",
             "voicebuddy-setting-fn", "voicebuddy-setting-mic",
+            "chatterfly-settings", "chatterfly-input-microphone",
         ]
         for name in paired + lightOnly {
             let url = try #require(RemoteBuddyResourceBundle.onboardingImageURL(named: name, isDark: false, in: bundle))
@@ -249,9 +250,42 @@ struct ProductBoundaryTests {
         #expect(chromecastTogglePlan?.fnTapModeEnabled == true)
     }
 
+    @Test func chatterflyUsesGlobalHoldToTalkWithoutSwitchingInputSources() throws {
+        let tool = OnboardingVoiceTool.chatterfly
+        #expect(tool.applicationBundleIdentifier == "com.tencent.inputmethod.chatterfly")
+        #expect(tool.preferredInputSourceID == nil)
+        #expect(tool.supportsHoldVoiceRecording)
+        let profile = VoiceToolAdapterProfile.profile(for: tool)
+        #expect(profile.supportedModes == [.hold])
+        #expect(profile.installationProbe == .applicationBundle)
+        #expect(profile.evidenceState == .pending)
+        #expect(AppLinks.chatterflyWebsite.absoluteString == "https://chatterfly.tencent.com/")
+        for source in [OnboardingControlSource.xiaomiRemote, .t1Remote, .chromecastRemote] {
+            let plan = try #require(OnboardingVoicePairingPlan.resolve(tool: tool, controlSource: source))
+            #expect(plan.binding.gestureMode == .hold)
+            #expect(plan.binding.shortcut == .suggestedShortcut)
+            #expect(!plan.fnTapModeEnabled)
+        }
+        let toggle = VoiceToolUserBinding(tool: tool, shortcut: .suggestedShortcut,
+            gestureMode: .toggle, source: .manuallyConfirmed, validationState: .staged,
+            verifiedToolVersion: nil, verifiedAt: nil)
+        #expect(OnboardingVoicePairingPlan.resolve(tool: tool, controlSource: .xiaomiRemote,
+            userBinding: toggle) == nil)
+        var probedApplication = false
+        #expect(OnboardingInputSourceSwitcher.integrationAvailability(for: tool,
+            hasInputSource: { _, _ in Issue.record("Global voice must not probe input sources"); return true },
+            hasApplication: { identifier in
+                probedApplication = true
+                return identifier == "com.tencent.inputmethod.chatterfly"
+            }) == .available)
+        #expect(probedApplication)
+        #expect(OnboardingInputSourceSwitcher.integrationAvailability(for: tool,
+            hasApplication: { _ in false }) == .notInstalled)
+    }
+
     @Test func integrationCatalogIncludesUninstalledToolsInConsistentOrder() {
         #expect(OnboardingVoiceToolVisibilityPolicy.tools == [
-            .weixin, .doubao, .voiceBuddy, .bageshuo, .typeless, .macosDictation, .other,
+            .weixin, .doubao, .chatterfly, .voiceBuddy, .bageshuo, .typeless, .macosDictation, .other,
         ])
     }
 

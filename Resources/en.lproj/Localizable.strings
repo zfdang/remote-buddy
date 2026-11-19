@@ -1043,8 +1043,6 @@
 "remote.hid_binding.open" = "Buttons not detected? Link a compatible remote";
 "onboarding.remote.choose_device" = "Choose the remote being added";
 
-"audio.gain.per_device_help" = "Gain is saved separately and applies only to this remote.";
-
 "settings.driver.fixed_output_help" = "All remotes share this virtual microphone. Audio output is configured automatically.";
 
 "onboarding.voice_prompt.t1.fn_tap" = "Press and release the T1 voice button to start speaking, then press it once more to stop (tap conversion enabled).";
@@ -1275,3 +1273,34 @@
 "onboarding.voice_tool.guide.configure_chatterfly" = "Configure the global voice shortcut";
 "onboarding.voice_tool.guide.screenshot.chatterfly_settings" = "In Tencent Chatterfly → Settings → Voice Settings, set the Voice Input shortcut to “%@” and enable the global shortcut option. Hold to talk and release to finish. The screenshot shortcut is an example; use your selected shortcut.";
 "onboarding.voice_tool.guide.screenshot.chatterfly_input_microphone" = "In Tencent Chatterfly → Settings → Audio Settings → Microphone, select Remote Buddy Mic.";
+
+// Per-device Connection usage tips
+"connection.device_guide.title" = "Usage Tips";
+"connection.device_guide.badge.xiaomi_hold_only" = "Hold to Talk Only";
+"connection.device_guide.badge.t1_toggle" = "Tap Hands-Free";
+"connection.device_guide.xiaomi.voice.title" = "Hold-to-talk only (tap mode not supported)";
+"connection.device_guide.xiaomi.voice.detail" = "Hold Voice while speaking and release to stop; hardware stops pushing audio as soon as you let go, so Smart Toggle / tap-to-talk cannot be enabled.";
+"connection.device_guide.xiaomi.limit.title" = "~60-second single-hold hardware limit";
+"connection.device_guide.xiaomi.limit.detail" = "Firmware ends the stream after ~60 seconds of continuous holding. For longer dictation, release briefly and press again to continue.";
+"connection.device_guide.xiaomi.buttons.title" = "12 customizable buttons with Power & Voice protection";
+"connection.device_guide.xiaomi.buttons.detail" = "All 12 standard keys support click, double-click, long-press, and common phrases; Power and native Voice are protected from accidental sleep or conflicts.";
+"connection.device_guide.xiaomi.rc001.power.title" = "Replaceable batteries · Back + Home to pair";
+"connection.device_guide.xiaomi.rc001.power.detail" = "Uses dry batteries (RC001). To re-pair via Bluetooth, hold Back + Home near your Mac for ~3 seconds.";
+"connection.device_guide.xiaomi.rc003.power.title" = "USB-C rechargeable · Back + Home to pair";
+"connection.device_guide.xiaomi.rc003.power.detail" = "Recharges over USB-C (on-body NFC is unused on Mac). To re-pair via Bluetooth, hold Back + Home near your Mac for ~3 seconds.";
+"connection.device_guide.t1.voice.title" = "Press once to start, press again to stop (~5 min cap)";
+"connection.device_guide.t1.voice.detail" = "Press and release Voice to speak hands-free, then press once more to stop. Automatic keepalive caps sessions at ~5 minutes to avoid battery drain.";
+"connection.device_guide.t1.hold_compat.title" = "Works with hold-to-talk voice tools";
+"connection.device_guide.t1.hold_compat.detail" = "Remote Buddy holds your tool's voice shortcut while streaming and releases on stop, so no continuous physical hold is required.";
+"connection.device_guide.t1.keys.title" = "7 front buttons customizable · Air mouse & QWERTY passthrough";
+"connection.device_guide.t1.keys.detail" = "Power, Back, Home, Menu, Mute, and Volume +/- support click, double-click, and long-press; air mouse, front D-pad/OK, and rear QWERTY pass through natively.";
+"connection.device_guide.t1.pairing.title" = "Direct Bluetooth required · Home + Back to pair";
+"connection.device_guide.t1.pairing.detail" = "Connect directly over Mac Bluetooth (2.4G USB dongle is not supported). Hold Home + Back until the LED blinks slowly to pair.";
+"connection.device_guide.g9n9n.led.title" = "Bottom white LED indicates active voice streaming";
+"connection.device_guide.g9n9n.led.detail" = "Whenever the remote microphone is open and transmitting audio in either mode, the white LED near the bottom stays lit and turns off when stopped.";
+"connection.device_guide.g9n9n.limit.title" = "Both modes exceed 60s (~5-minute safety limit)";
+"connection.device_guide.g9n9n.limit.detail" = "Automatic hardware keepalive lets both Smart Toggle and Hold-to-Talk stream past 60s, capped at ~5 minutes per session to prevent accidental battery drain.";
+"connection.device_guide.g9n9n.other_key_stops.title" = "Pressing another button stops hands-free listening";
+"connection.device_guide.g9n9n.other_key_stops.detail" = "During hands-free streaming, tapping any other physical button makes firmware stop audio immediately—finish speaking before using other keys.";
+"connection.device_guide.g9n9n.power_pairing.title" = "2× AAA batteries · Back + Home to pair";
+"connection.device_guide.g9n9n.power_pairing.detail" = "Powered by two AAA batteries. To re-pair via Bluetooth, hold Back + Home near your Mac for ~3 seconds.";

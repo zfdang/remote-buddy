@@ -207,10 +207,6 @@ extension SettingsView {
                             .font(.system(.body, design: .monospaced)).frame(width: 54, alignment: .trailing)
                     }
                     Text(localization.text("audio.gain.help")).font(.caption).foregroundStyle(.secondary)
-                    Text(localization.text("audio.gain.per_device_help")).font(.caption).foregroundStyle(.secondary)
-                    if settings.selectedRemoteProfileID == profile.id {
-                        connectionStatusLine(symbol: "mic.fill", text: model.voiceShortcutStatus.text(using: localization), tint: .blue)
-                    }
                     if let identifier = profile.bluetoothIdentifier,
                        let information = model.remoteDeviceInformation[identifier],
                        information != RemoteDeviceInformation() {
@@ -222,27 +218,16 @@ extension SettingsView {
                         Divider()
                         VStack(alignment: .leading, spacing: 10) {
                             VStack(alignment: .leading, spacing: 6) {
-                                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                HStack(alignment: .center, spacing: 8) {
                                     Text(localization.text("connection.g9n9n.voice_button_mode.title"))
                                         .font(.headline)
                                     Spacer(minLength: 12)
-                                    Picker(
-                                        localization.text("connection.g9n9n.voice_button_mode.title"),
-                                        selection: Binding(
-                                            get: { settings.g9n9nVoiceButtonMode(for: profile.id) },
-                                            set: { settings.setG9N9NVoiceButtonMode($0, for: profile.id) }
-                                        )
-                                    ) {
-                                        Text(localization.text("connection.g9n9n.voice_button_mode.smart_toggle"))
-                                            .tag(G9N9NVoiceButtonMode.smartToggle)
-                                        Text(localization.text("connection.g9n9n.voice_button_mode.hold"))
-                                            .tag(G9N9NVoiceButtonMode.holdToTalk)
+                                    G9N9NVoiceButtonModeSelector(
+                                        selection: settings.g9n9nVoiceButtonMode(for: profile.id),
+                                        isDisabled: model.isVoiceConfigurationBusy
+                                    ) { selectedMode in
+                                        settings.setG9N9NVoiceButtonMode(selectedMode, for: profile.id)
                                     }
-                                    .labelsHidden()
-                                    .pickerStyle(.segmented)
-                                    .frame(maxWidth: 260)
-                                    .disabled(model.isVoiceConfigurationBusy)
-                                    .accessibilityIdentifier("g9n9n-voice-button-mode-picker")
                                 }
                                 Text(localization.text(
                                     voiceMode == .smartToggle
@@ -282,6 +267,9 @@ extension SettingsView {
                                 }
                             }
                         }
+                    }
+                    if let usageGuide = ConnectionDeviceUsageGuide.make(for: profile) {
+                        ConnectionDeviceUsageSection(guide: usageGuide)
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading).padding(.top, 10)
             }
@@ -330,19 +318,6 @@ extension SettingsView {
         } else {
             UnrecognizedRemotePhoto().frame(width: 82, height: 166)
         }
-    }
-
-    private func connectionStatusLine(symbol: String, text: String, tint: Color) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Image(systemName: symbol)
-                .foregroundStyle(tint)
-                .frame(width: 18)
-            Text(text)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
 }

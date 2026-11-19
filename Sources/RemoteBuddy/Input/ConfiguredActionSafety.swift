@@ -7,7 +7,16 @@ extension ButtonAction {
              .commandCut, .commandSelectAll, .commandUndo, .commandRedo, .commandFind,
              .commandSave, .commandDelete, .deleteBackward, .customShortcut:
             return true
-        default:
+        case .disabled, .escape, .commandClose, .commandQuit,
+             .arrowUp, .arrowDown, .arrowLeft, .arrowRight, .scrollUp, .scrollDown,
+             .showDesktop, .contextMenu, .appSwitcher, .focusInput,
+             .volumeUp, .volumeDown, .volumeMute, .playPause,
+             .previousCommandLeft, .nextCommandRight,
+             .toggleLongRecording, .openCommonPhrases,
+             .openCustomApplication, .openRemoteBuddy, .openCodex, .openClaude,
+             .openCmux, .openWeChat, .openCursor, .openXcode, .openSlack,
+             .openWeCom, .openNeteaseMusic, .openChrome, .openSafari, .openZed,
+             .repeatSingleClick:
             return false
         }
     }

@@ -6,13 +6,13 @@ case "${1:-}" in
 prepare)
     for executable in RemoteBuddy VoiceInputBuddy; do
     /usr/bin/pkill -u "$(/usr/bin/id -u)" -x "$executable" || true
-    for attempt in {1..50}; do
+    for _ in {1..50}; do
         /usr/bin/pgrep -u "$(/usr/bin/id -u)" -x "$executable" >/dev/null || break
         /bin/sleep 0.1
     done
     if /usr/bin/pgrep -u "$(/usr/bin/id -u)" -x "$executable" >/dev/null; then
         /usr/bin/pkill -9 -u "$(/usr/bin/id -u)" -x "$executable" || true
-        for attempt in {1..20}; do
+        for _ in {1..20}; do
             /usr/bin/pgrep -u "$(/usr/bin/id -u)" -x "$executable" >/dev/null || break
             /bin/sleep 0.1
         done

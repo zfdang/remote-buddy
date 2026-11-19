@@ -112,6 +112,17 @@ jobs:
             ${{ runner.os }}-${{ matrix.arch }}-swift-v2-xcode26.2-${{ hashFiles('Package.resolved', 'Package.swift') }}-
       - name: Restore Git commit timestamps for incremental compilation
         run: python3 scripts/restore-git-mtimes.py --marker-file .build/.cached-git-sha
+      - name: Lint shell scripts
+        run: |
+          shellcheck -S warning \
+            scripts/*.sh \
+            scripts/app-package/postinstall \
+            scripts/driver-package/preinstall \
+            scripts/driver-package/postinstall \
+            scripts/uninstaller/*.sh \
+            scripts/uninstaller/preinstall \
+            scripts/uninstaller/postinstall \
+            scripts/uninstaller/cleanup-postinstall
       - name: Test
         run: |
           python3 - <<'PY'

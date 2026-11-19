@@ -64,9 +64,9 @@ struct UpdatePackageDownloadCoordinator {
     }
 
     mutating func resetForManualCheck() {
-        guard pendingRetryVersion == nil else { return }
         activeFallbackVersion = nil
         activeFallbackURL = nil
+        pendingRetryVersion = nil
         attemptedFallbackVersions.removeAll()
     }
 

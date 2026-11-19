@@ -28,14 +28,11 @@ staging="$(mktemp -d "$root/dist/.driver-build.XXXXXX")"
 trap 'rm -rf "$staging"' EXIT
 driver="$staging/RemoteBuddyMic.driver"
 mkdir -p "$driver/Contents/MacOS" "$driver/Contents/Resources"
-for arch in "$BUILD_ARCH"; do
-    xcrun clang -arch "$arch" -mmacosx-version-min=14.0 -bundle -O2 -Werror=format-extra-args \
-        -framework CoreFoundation -framework CoreAudio -framework Accelerate \
-        '-DkDriver_Name="BuddyMic2ch"' '-DkPlugIn_BundleID="com.zfdang.remote-buddy.mic"' \
-        '-DkDevice_Name="Remote Buddy Mic"' -DkNumber_Of_Channels=2 -DkHas_Driver_Name_Format=0 \
-        "$source/BlackHole/BlackHole.c" -o "$staging/BuddyMic2ch-$arch"
-done
-cp "$staging/BuddyMic2ch-$BUILD_ARCH" "$driver/Contents/MacOS/RemoteBuddyMic"
+xcrun clang -arch "$BUILD_ARCH" -mmacosx-version-min=14.0 -bundle -O2 -Werror=format-extra-args \
+    -framework CoreFoundation -framework CoreAudio -framework Accelerate \
+    '-DkDriver_Name="BuddyMic2ch"' '-DkPlugIn_BundleID="com.zfdang.remote-buddy.mic"' \
+    '-DkDevice_Name="Remote Buddy Mic"' -DkNumber_Of_Channels=2 -DkHas_Driver_Name_Format=0 \
+    "$source/BlackHole/BlackHole.c" -o "$driver/Contents/MacOS/RemoteBuddyMic"
 cp "$source/BlackHole/BlackHole.plist" "$driver/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c 'Set :CFBundleExecutable RemoteBuddyMic' "$driver/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c 'Set :CFBundleIdentifier com.zfdang.remote-buddy.mic' "$driver/Contents/Info.plist"

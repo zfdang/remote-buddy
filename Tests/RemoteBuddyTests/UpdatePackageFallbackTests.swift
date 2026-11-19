@@ -125,4 +125,34 @@ struct UpdatePackageFallbackTests {
             #expect(!retried)
         }
     }
+
+    @Test func downloadSucceededAndManualResetClearActiveFallbackAndPendingRetryState() {
+        var coordinator = UpdatePackageDownloadCoordinator()
+        let primary = URL(string: "https://remote.zfdang.com/downloads/Remote_Buddy_v26-11-15.867_macOS_arm64.pkg")!
+        let fallback = URL(string: "https://github.com/zfdang/remote-buddy/releases/download/v26-11-15.867/Remote_Buddy_v26-11-15.867_macOS_arm64.pkg")!
+        let timeout = NSError(domain: NSURLErrorDomain, code: NSURLErrorTimedOut)
+
+        #expect(coordinator.recordDownloadFailure(forVersion: "867", fileURL: primary, error: timeout) == .retryWithFallback(fallback))
+        #expect(coordinator.hasPendingFallback)
+
+        // Manual check must clear even an unconsumed pending retry so stale state cannot linger.
+        coordinator.resetForManualCheck()
+        #expect(!coordinator.hasPendingFallback)
+        #expect(coordinator.downloadURLOverride(forVersion: "867", fileURL: primary) == nil)
+        let pendingRetryAfterReset = coordinator.consumePendingRetry()
+        #expect(!pendingRetryAfterReset)
+
+        // Succeeding on the fallback download clears active override and pending retry state.
+        #expect(coordinator.recordDownloadFailure(forVersion: "867", fileURL: primary, error: timeout) == .retryWithFallback(fallback))
+        coordinator.recordDownloadSucceeded(forVersion: "867")
+        #expect(!coordinator.hasPendingFallback)
+        #expect(coordinator.downloadURLOverride(forVersion: "867", fileURL: primary) == nil)
+
+        // Explicit cancellation also resets active and pending fallback state.
+        coordinator.resetForManualCheck()
+        #expect(coordinator.recordDownloadFailure(forVersion: "868", fileURL: primary, error: timeout) == .retryWithFallback(fallback))
+        coordinator.cancelFallback()
+        #expect(!coordinator.hasPendingFallback)
+        #expect(coordinator.downloadURLOverride(forVersion: "868", fileURL: primary) == nil)
+    }
 }

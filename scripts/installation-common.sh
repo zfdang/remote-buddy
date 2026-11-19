@@ -8,10 +8,27 @@ buddy_driver_fingerprint() {
     details="$(/usr/bin/codesign --display --verbose=4 "$driver" 2>&1)" || return 1
     /usr/bin/printf '%s\n' "$details" | /usr/bin/sed -nE 's/^CDHash=([0-9a-f]{40})$/\1/p'
 }
+buddy_check_bundle_layout() {
+    local path="$1" bundle_dir contents_dir
+    [[ ! -L "$path/Contents" && ! -L "$path/Contents/Info.plist" ]] || {
+        echo "Refusing symlinked bundle metadata: $path" >&2
+        return 1
+    }
+    if [[ -e "$path/Contents" ]]; then
+        [[ -d "$path/Contents" ]] || { echo "Refusing unexpected bundle: $path" >&2; return 1; }
+        bundle_dir="$(cd -- "$path" && /bin/pwd -P)" || return 1
+        contents_dir="$(cd -- "$path/Contents" && /bin/pwd -P)" || return 1
+        [[ "$contents_dir" == "$bundle_dir/Contents" ]] || {
+            echo "Refusing symlinked bundle metadata: $path" >&2
+            return 1
+        }
+    fi
+}
 buddy_check_bundle() {
     local path="$1" expected="$2"
     [[ -e "$path" || -L "$path" ]] || return 0
     [[ -d "$path" && ! -L "$path" ]] || { echo "Refusing unexpected bundle: $path" >&2; return 1; }
+    buddy_check_bundle_layout "$path" || return 1
     local actual
     actual="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$path/Contents/Info.plist" 2>/dev/null)" || return 1
     [[ "$actual" == "$expected" ]] || { echo "Refusing unrelated bundle: $path" >&2; return 1; }
@@ -22,6 +39,7 @@ buddy_check_install_target() {
     local path="$1" expected="$2" actual
     [[ -e "$path" || -L "$path" ]] || return 0
     [[ -d "$path" && ! -L "$path" ]] || return 1
+    buddy_check_bundle_layout "$path" || return 1
     if actual="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$path/Contents/Info.plist" 2>/dev/null)"; then
         [[ "$actual" == "$expected" ]] || { echo "Refusing unrelated bundle: $path" >&2; return 1; }
     else

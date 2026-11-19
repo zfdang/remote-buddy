@@ -59,8 +59,14 @@ class AppOwnershipTests(unittest.TestCase):
     def test_only_app_is_assigned_to_console_user_and_driver_step_still_runs(self):
         result = self.run_install()
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual([json.loads(line) for line in self.calls.read_text().splitlines()], [
-            ['-R', '-P', '-h', '501:20', str(self.app)], ['-h', '0:0', str(self.helper)]])
+        calls = [json.loads(line) for line in self.calls.read_text().splitlines()]
+        self.assertEqual(calls[0], ['-h', '0:0', str(self.helper)])
+        user_chowned = set()
+        for call in calls[1:]:
+            self.assertEqual(call[:2], ['-h', '501:20'])
+            user_chowned.update(call[2:])
+        self.assertIn(str(self.app), user_chowned)
+        self.assertNotIn(str(self.helper), user_chowned)
         self.assertEqual(self.driver_calls.read_text().splitlines(), ['package.pkg', '/', '/'])
 
     def test_no_desktop_user_or_offline_volume_keeps_system_ownership(self):
@@ -97,22 +103,19 @@ class AppOwnershipTests(unittest.TestCase):
         self.helper.unlink()
         self.helper.symlink_to(external)
         self.assertNotEqual(self.run_install().returncode, 0)
-        calls = [json.loads(line) for line in self.calls.read_text().splitlines()]
-        self.assertEqual(len(calls), 1)  # No command assigning root ownership.
-        self.calls.unlink()
+        self.assertFalse(self.calls.exists())
         current = self.version.parent / 'Current'
         current.unlink()
         current.symlink_to(outside, target_is_directory=True)
         self.assertNotEqual(self.run_install().returncode, 0)
-        calls = [json.loads(line) for line in self.calls.read_text().splitlines()]
-        self.assertEqual(len(calls), 1)
+        self.assertFalse(self.calls.exists())
         self.assertEqual(external.read_text(), 'must not change')
 
     def test_failed_root_helper_assignment_is_reported(self):
         (self.staging / 'chown').write_text('#!/bin/bash\n[[ "$1" != -h ]]\n')
         self.assertNotEqual(self.run_install().returncode, 0)
 
-    def test_quarantine_is_cleared_after_driver_without_following_external_links(self):
+    def test_quarantine_is_cleared_after_driver_and_before_user_chown(self):
         outside = self.root / 'outside'
         outside.write_text('external fixture')
         (self.app / 'Contents/external-link').symlink_to(outside)
@@ -122,11 +125,18 @@ class AppOwnershipTests(unittest.TestCase):
                             '0081;0;installer-test;', str(path)], check=True)
         subprocess.run(['/usr/bin/xattr', '-w', 'com.example.fixture', 'keep', str(self.helper)], check=True)
         original_driver = self.driver_script.read_text()
-        # The driver still sees quarantine: clearing must be the final installation step.
+        # Driver runs before quarantine removal; user ownership runs only after quarantine removal.
         self.driver_script.write_text(original_driver +
-            f'/usr/bin/xattr -p com.apple.quarantine "{self.app}" > /dev/null || exit 41\n')
+            f'/usr/bin/xattr -p com.apple.quarantine "{self.app}" > /dev/null || exit 41\n'
+            f'[[ ! -e "{self.calls}" ]] || exit 42\n')
+        xattr_seen_after_calls = self.root / 'xattr-after-calls'
+        real_xattr = '/usr/bin/xattr'
+        self.stub(real_xattr,
+            f'if [[ -e "{self.calls}" ]]; then touch "{xattr_seen_after_calls}"; fi\n'
+            f'exec {real_xattr} "$@"')
         result = self.run_install()
         self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(xattr_seen_after_calls.exists())
         for path in [self.app, self.helper]:
             attributes = subprocess.check_output(['/usr/bin/xattr', str(path)], text=True).splitlines()
             self.assertNotIn('com.apple.quarantine', attributes)
@@ -189,8 +199,13 @@ class AppOwnershipTests(unittest.TestCase):
         result = self.run_install()
         self.assertEqual(result.returncode, 0, result.stderr)
         calls = [json.loads(line) for line in self.calls.read_text().splitlines()]
-        self.assertIn('-P', calls[0])
-        self.assertEqual(calls[1], ['-h', '0:0', str(self.helper)])
+        self.assertEqual(calls[0], ['-h', '0:0', str(self.helper)])
+        user_chowned = set()
+        for call in calls[1:]:
+            self.assertEqual(call[:2], ['-h', f'{os.getuid()}:{os.getgid()}'])
+            user_chowned.update(call[2:])
+        self.assertIn(str(self.app), user_chowned)
+        self.assertNotIn(str(self.helper), user_chowned)
         self.assertTrue(link.is_symlink())
         self.assertEqual(os.readlink(link), 'MacOS/RemoteBuddy')
         self.assertEqual(executable.stat().st_mode, modes)

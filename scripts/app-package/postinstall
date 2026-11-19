@@ -2,23 +2,26 @@
 set -euo pipefail
 source "$(dirname "$0")/installation-common.sh"
 
-# The App belongs to the desktop user, except Sparkle's privileged update helper.
-# HAL drivers remain system-owned.
-# An offline volume or login window has no local desktop owner to use.
+app='/Applications/Remote Buddy.app'
 if [[ "${3:-/}" == / ]]; then
-    app='/Applications/Remote Buddy.app'
+    buddy_check_bundle "$app" com.zfdang.remote-buddy
+fi
+
+# Keep driver fingerprinting and conditional Core Audio restart in one place.
+/bin/bash "$(dirname "$0")/driver-postinstall" "$@"
+
+# Clear download quarantine and lock down privileged files while root still owns the bundle.
+# HAL drivers remain system-owned; an offline volume or login window has no local desktop owner.
+if [[ "${3:-/}" == / ]]; then
     buddy_check_bundle "$app" com.zfdang.remote-buddy
     if [[ -d "$app" ]]; then
-        owner_uid="$(/usr/bin/stat -f '%u' /dev/console)"
-        if [[ "$owner_uid" =~ ^[0-9]+$ && "$owner_uid" -ge 501 ]]; then
-            owner_gid="$(/usr/bin/id -g "$owner_uid")"
-            [[ "$owner_gid" =~ ^[0-9]+$ ]] || exit 1
-            # Do not follow bundle symlinks into paths outside the installed App.
-            /usr/sbin/chown -R -P -h "$owner_uid:$owner_gid" "$app"
-            echo 'App ownership assigned to the logged-in desktop user.'
+        # Act on symlinks themselves so recursion cannot change files outside this App.
+        if /usr/bin/xattr -dr -s com.apple.quarantine "$app"; then
+            echo 'App download quarantine cleared.'
         else
-            echo 'No desktop user; leaving system App ownership unchanged.'
+            echo 'Unable to clear App download quarantine; first launch may require manual approval.' >&2
         fi
+
         # Self-signed apps have no Apple Team ID. Sparkle therefore requires the
         # executable handling package updates to be root-owned inside the App.
         app_directory="$(cd -- "$app" && /bin/pwd -P)"
@@ -31,21 +34,16 @@ if [[ "${3:-/}" == / ]]; then
         [[ -f "$helper" && ! -L "$helper" ]] || { echo 'Invalid Sparkle update helper.' >&2; exit 1; }
         /usr/sbin/chown -h 0:0 "$helper"
         echo 'Sparkle package update helper remains system-owned.'
-    fi
-fi
 
-# Keep driver fingerprinting and conditional Core Audio restart in one place.
-/bin/bash "$(dirname "$0")/driver-postinstall" "$@"
-
-# Clear download quarantine only after the App and driver installation finish.
-# Act on symlinks themselves so recursion cannot change files outside this App.
-if [[ "${3:-/}" == / ]]; then
-    buddy_check_bundle "$app" com.zfdang.remote-buddy
-    if [[ -d "$app" ]]; then
-        if /usr/bin/xattr -dr -s com.apple.quarantine "$app"; then
-            echo 'App download quarantine cleared.'
+        owner_uid="$(/usr/bin/stat -f '%u' /dev/console)"
+        if [[ "$owner_uid" =~ ^[0-9]+$ && "$owner_uid" -ge 501 ]]; then
+            owner_gid="$(/usr/bin/id -g "$owner_uid")"
+            [[ "$owner_gid" =~ ^[0-9]+$ ]] || exit 1
+            # Never assign Sparkle's privileged helper to the desktop user, and never follow symlinks.
+            /usr/bin/find -P "$app_directory" ! -path "$helper" -exec /usr/sbin/chown -h "$owner_uid:$owner_gid" {} +
+            echo 'App ownership assigned to the logged-in desktop user.'
         else
-            echo 'Unable to clear App download quarantine; first launch may require manual approval.' >&2
+            echo 'No desktop user; leaving system App ownership unchanged.'
         fi
     fi
 fi

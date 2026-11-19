@@ -2,15 +2,20 @@
 set -euo pipefail
 source "$(dirname "$0")/installation-common.sh"
 volume="${3:-/}"
+driver="${volume%/}/Library/Audio/Plug-Ins/HAL/RemoteBuddyMic.driver"
 snapshot="$(dirname "$0")/driver-before-install.cdhash"
 before=""
 if [[ -f "$snapshot" ]]; then
     before="$(/bin/cat "$snapshot")"
 fi
 /bin/rm -f "$snapshot"
-after="$(buddy_driver_fingerprint "${volume%/}/Library/Audio/Plug-Ins/HAL/RemoteBuddyMic.driver")" || after=""
+after="$(buddy_driver_fingerprint "$driver")" || after=""
 if [[ -n "$before" && "$before" == "$after" ]]; then
     echo 'Microphone driver unchanged; leaving Core Audio running.'
+    exit 0
+fi
+if [[ "$volume" != / ]]; then
+    echo 'Microphone installed on offline volume; leaving Core Audio running.'
     exit 0
 fi
 # HAL plug-ins are enumerated by Core Audio, not by the app process.

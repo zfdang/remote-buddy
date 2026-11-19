@@ -1,10 +1,15 @@
 import CoreGraphics
 import Foundation
+import os
 
 /// Bounds repeated WindowServer disable/re-enable cycles on each tap.
-final class EventTapRecovery {
-    private var attempts = 0
-    private var lastAttempt: TimeInterval?
+final class EventTapRecovery: @unchecked Sendable {
+    private struct RetryState {
+        var attempts = 0
+        var lastAttempt: TimeInterval?
+    }
+
+    private let state = OSAllocatedUnfairLock(initialState: RetryState())
     private let now: () -> TimeInterval
     private let dispatch: (TimeInterval, @escaping () -> Void) -> Void
 
@@ -20,11 +25,15 @@ final class EventTapRecovery {
                  permissionsGranted: @escaping () -> Bool,
                  enable: @escaping () -> Bool, stop: @escaping () -> Void) {
         let time = now()
-        if let lastAttempt, time - lastAttempt > 30 { attempts = 0 }
-        lastAttempt = time
-        attempts += 1
-        let delay = min(8, 0.5 * pow(2, Double(attempts - 1)))
-        let exhausted = attempts > 5
+        let (delay, exhausted) = state.withLock { state -> (TimeInterval, Bool) in
+            if let lastAttempt = state.lastAttempt, time - lastAttempt > 30 {
+                state.attempts = 0
+            }
+            state.lastAttempt = time
+            state.attempts += 1
+            let delay = min(8, 0.5 * pow(2, Double(state.attempts - 1)))
+            return (delay, state.attempts > 5)
+        }
         EventTapPort.deferRecovery(type: type,
             dispatch: { self.dispatch(delay, $0) }, isCurrent: isCurrent,
             permissionsGranted: { !exhausted && permissionsGranted() }, enable: {

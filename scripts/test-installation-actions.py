@@ -39,6 +39,18 @@ class InstallationActionsTests(unittest.TestCase):
         self.assertNotEqual(self.remove(link, 'com.zfdang.remote-buddy.mic').returncode, 0)
         self.assertTrue(owned.exists())
 
+        symlink_contents = self.root / 'symlink-contents.app'
+        symlink_contents.mkdir()
+        (symlink_contents / 'Contents').symlink_to(owned / 'Contents', target_is_directory=True)
+        self.assertNotEqual(self.remove(symlink_contents, 'com.zfdang.remote-buddy.mic').returncode, 0)
+        self.assertTrue(owned.exists())
+
+        symlink_plist = self.root / 'symlink-plist.app'
+        (symlink_plist / 'Contents').mkdir(parents=True)
+        (symlink_plist / 'Contents/Info.plist').symlink_to(owned / 'Contents/Info.plist')
+        self.assertNotEqual(self.remove(symlink_plist, 'com.zfdang.remote-buddy.mic').returncode, 0)
+        self.assertTrue(owned.exists())
+
     def test_installation_preserves_current_driver_and_other_bundles(self):
         hal = self.root / 'Library/Audio/Plug-Ins/HAL'
         other = self.bundle(hal / 'OtherMicrophone.driver', 'com.example.microphone')
@@ -70,6 +82,14 @@ class InstallationActionsTests(unittest.TestCase):
             link.parent.mkdir()
             link.symlink_to(driver, target_is_directory=True)
             result = subprocess.run(['bash', str(staging / 'preinstall'), 'package.pkg', '/', str(volume)],
+                                    capture_output=True)
+            self.assertNotEqual(result.returncode, 0)
+
+            linked_contents_volume = self.root / f'linked-contents-{invalid}'
+            linked_app = linked_contents_volume / 'Applications/Remote Buddy.app'
+            linked_app.mkdir(parents=True)
+            (linked_app / 'Contents').symlink_to(driver / 'Contents', target_is_directory=True)
+            result = subprocess.run(['bash', str(staging / 'preinstall'), 'package.pkg', '/', str(linked_contents_volume)],
                                     capture_output=True)
             self.assertNotEqual(result.returncode, 0)
 
@@ -283,6 +303,10 @@ class DriverRestartTests(unittest.TestCase):
         # Replace only daemon commands; fingerprint verification uses real codesign.
         postinstall = self.staging / 'postinstall'
         source = postinstall.read_text()
+        source = source.replace(
+            'driver="${volume%/}/Library/Audio/Plug-Ins/HAL/RemoteBuddyMic.driver"',
+            f'driver="{self.driver}"',
+        )
         for command in ['pgrep', 'killall']:
             stub = self.staging / command
             source = source.replace('/usr/bin/' + command, str(stub))
@@ -299,8 +323,9 @@ class DriverRestartTests(unittest.TestCase):
             shutil.rmtree(self.driver)
         shutil.copytree(source, self.driver)
 
-    def run_script(self, name):
-        result = subprocess.run(['bash', str(self.staging / name), 'package.pkg', '/', str(self.root)],
+    def run_script(self, name, volume=None):
+        target_volume = (str(self.root) if name == 'preinstall' else '/') if volume is None else volume
+        result = subprocess.run(['bash', str(self.staging / name), 'package.pkg', '/', target_volume],
                                 capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         return result
@@ -383,6 +408,12 @@ class DriverRestartTests(unittest.TestCase):
         self.stub('killall', 1)
         result = self.run_script('postinstall')
         self.assertIn('Restart your Mac', result.stderr)
+
+    def test_offline_volume_skips_coreaudio_restart(self):
+        self.install_driver(self.original)
+        result = self.run_script('postinstall', volume=str(self.root))
+        self.assertIn('offline volume', result.stdout)
+        self.assertFalse(self.calls.exists())
 
 
 if __name__ == '__main__': unittest.main()

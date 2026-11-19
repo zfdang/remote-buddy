@@ -243,4 +243,42 @@ struct RuntimeAuditRegressionTests {
         #expect(keys == [true, false, true, false])
         #expect(!session.requiresCleanupBeforeMapping)
     }
+
+    @Test func configuredActionSafetyCoversAllActionsForSecureInput() {
+        let blocked: Set<ButtonAction> = [
+            .returnKey, .commandReturn, .shiftReturn, .commandCopy, .commandPaste,
+            .commandCut, .commandSelectAll, .commandUndo, .commandRedo, .commandFind,
+            .commandSave, .commandDelete, .deleteBackward, .customShortcut,
+        ]
+        for action in ButtonAction.allCases {
+            #expect(action.requiresNonSecureInput == blocked.contains(action))
+        }
+    }
+
+    @Test func eventTapRecoveryHandlesConcurrentRecoverCallsSafely() async {
+        let recovery = EventTapRecovery(
+            now: { 0 },
+            dispatch: { _, work in work() }
+        )
+        let lock = NSLock()
+        var stopCount = 0
+        await withTaskGroup(of: Void.self) { group in
+            for _ in 0..<8 {
+                group.addTask {
+                    recovery.recover(
+                        type: .tapDisabledByTimeout,
+                        isCurrent: { true },
+                        permissionsGranted: { true },
+                        enable: { true },
+                        stop: {
+                            lock.lock()
+                            stopCount += 1
+                            lock.unlock()
+                        }
+                    )
+                }
+            }
+        }
+        #expect(stopCount >= 3)
+    }
 }

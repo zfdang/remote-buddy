@@ -17,7 +17,7 @@ extension OnboardingView {
             if settings.onboardingDevice == .chromecastG9N9N {
                 Link(
                     localization.text("connection.g9n9n.compatibility_doc_link"),
-                    destination: AppLinks.g9n9nCompatibilityGuide
+                    destination: AppLinks.g9n9nCompatibilityGuide(for: localization.locale)
                 )
                 .font(.system(size: 12))
             }

@@ -4,9 +4,6 @@ enum AppLinks {
     static let githubRepository = URL(
         string: "https://github.com/zfdang/remote-buddy"
     )!
-    static let g9n9nCompatibilityGuide = githubRepository.appendingPathComponent(
-        "blob/main/docs/g9n9n-compatibility.md"
-    )
     static let githubReleases = URL(string: "https://github.com/zfdang/remote-buddy/releases")!
     static let githubReleasesLatest = URL(string: "https://github.com/zfdang/remote-buddy/releases/latest")!
     static let chineseDownloads = URL(string: "https://remote.zfdang.com/downloads/")!
@@ -36,6 +33,12 @@ enum AppLinks {
         URL(string: locale.identifier.lowercased().hasPrefix("zh")
             ? "https://remote.zfdang.com/device.html"
             : "https://remote.zfdang.com/device_en.html")!
+    }
+
+    static func g9n9nCompatibilityGuide(for locale: Locale) -> URL {
+        URL(string: locale.identifier.lowercased().hasPrefix("zh")
+            ? "https://remote.zfdang.com/g9n9n-compatibility.html"
+            : "https://remote.zfdang.com/g9n9n-compatibility_en.html")!
     }
 
     static func website(for locale: Locale) -> URL {

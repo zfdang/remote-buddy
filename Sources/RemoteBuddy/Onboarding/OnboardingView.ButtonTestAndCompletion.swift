@@ -353,7 +353,7 @@ extension OnboardingView {
                     }
                     HStack(spacing: 12) {
                         Link(localization.text("connection.g9n9n.compatibility_doc_link"),
-                             destination: AppLinks.g9n9nCompatibilityGuide)
+                             destination: AppLinks.g9n9nCompatibilityGuide(for: localization.locale))
                         Link(localization.text("onboarding.chromecast.replace_hardware_link"),
                              destination: AppLinks.devices(for: localization.locale))
                     }

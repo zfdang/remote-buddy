@@ -364,12 +364,12 @@ struct ProductBoundaryTests {
 
     @Test func deviceScopeKeepsAllFiveRemotesOrderedAndDistinct() {
         #expect(RemoteSetupDevice.allCases == [
-            .xiaomi, .t1Remote, .chromecastG9N9N, .googleStreamerGY3LE, .siriRemote,
+            .chromecastG9N9N, .t1Remote, .xiaomi, .googleStreamerGY3LE, .siriRemote,
         ])
         #expect(RemoteSetupDevice.chromecastG9N9N.googleHardwareModelNumber == "G9N9N")
         #expect(RemoteSetupDevice.googleStreamerGY3LE.googleHardwareModelNumber == "GY3LE")
         #expect(RemoteSetupDevice.allCases.filter(\.canStartSetup) == [
-            .xiaomi, .t1Remote, .chromecastG9N9N,
+            .chromecastG9N9N, .t1Remote, .xiaomi,
         ])
         // Listing non-Xiaomi devices must not admit them through the Xiaomi hardware bridge.
         #expect(XiaomiRemoteCatalog.entry(matchingDISModelNumber: "G9N9N") == nil)
@@ -474,7 +474,7 @@ struct ProductBoundaryTests {
     }
 
     @Test func wizardRequiresEachPermissionAndKeepsRemoteControl() {
-        #expect(OnboardingBuildCapabilities.availableControlSources == [.xiaomiRemote, .t1Remote, .chromecastRemote])
+        #expect(OnboardingBuildCapabilities.availableControlSources == [.chromecastRemote, .t1Remote, .xiaomiRemote])
         let ready = OnboardingCapabilities(
             bluetoothGranted: true,
             inputMonitoringGranted: true,

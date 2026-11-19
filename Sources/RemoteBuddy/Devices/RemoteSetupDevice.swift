@@ -1,9 +1,9 @@
 /// Product scope, separate from the catalog admitting validated hardware connections.
 /// Adapter readiness is separate from allowing a device to be selected for setup.
 enum RemoteSetupDevice: String, CaseIterable, Identifiable {
-    case xiaomi
-    case t1Remote
     case chromecastG9N9N
+    case t1Remote
+    case xiaomi
     case googleStreamerGY3LE
     case siriRemote
 

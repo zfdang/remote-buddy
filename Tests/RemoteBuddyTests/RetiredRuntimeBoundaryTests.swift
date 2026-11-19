@@ -11,6 +11,6 @@ struct RetiredRuntimeBoundaryTests {
             #expect(OnboardingControlSource(rawValue: value) == nil)
         }
         #expect(OnboardingControlMethod.physicalRemote.requiresBluetoothPermission)
-        #expect(OnboardingBuildCapabilities.availableControlSources == [.xiaomiRemote, .t1Remote, .chromecastRemote])
+        #expect(OnboardingBuildCapabilities.availableControlSources == [.chromecastRemote, .t1Remote, .xiaomiRemote])
     }
 }

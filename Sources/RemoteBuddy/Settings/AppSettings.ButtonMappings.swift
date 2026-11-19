@@ -403,7 +403,7 @@ extension AppSettings {
         guard let profileID,
               let index = remoteDeviceProfiles.firstIndex(where: { $0.id == profileID }),
               remoteDeviceProfiles[index].model.isChromecastRemote else { return }
-        let stored: G9N9NVoiceButtonMode? = mode == .holdToTalk ? nil : mode
+        let stored: G9N9NVoiceButtonMode? = mode == .smartToggle ? nil : mode
         guard remoteDeviceProfiles[index].g9n9nVoiceButtonMode != stored else { return }
         remoteDeviceProfiles[index].g9n9nVoiceButtonMode = stored
         AppLogger.shared.write(

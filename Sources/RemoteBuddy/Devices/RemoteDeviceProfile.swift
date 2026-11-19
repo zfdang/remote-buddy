@@ -132,7 +132,7 @@ struct RemoteDeviceProfile: Codable, Equatable, Identifiable {
     }
 
     var effectiveG9N9NVoiceButtonMode: G9N9NVoiceButtonMode {
-        model.isChromecastRemote ? (g9n9nVoiceButtonMode ?? .holdToTalk) : .holdToTalk
+        model.isChromecastRemote ? (g9n9nVoiceButtonMode ?? .smartToggle) : .holdToTalk
     }
 
     init(

@@ -156,7 +156,8 @@ extension BridgeAppModel {
             settings.g9n9nVoiceButtonMode(for: profileID) == .smartToggle
         voiceSession.begin(deviceIdentifier: identifier)
         if isSmartToggleEligible {
-            g9n9nSmartToggle.beginPhysicalPress(bridgeID: identifier, at: bridge.nowUptime())
+            let pressStartedAt = bridge.lastVoiceStartAt ?? bridge.nowUptime()
+            g9n9nSmartToggle.beginPhysicalPress(bridgeID: identifier, at: pressStartedAt)
             g9n9nSmartToggleBridge = bridge
         }
         updateVoiceKeyState(
@@ -317,7 +318,7 @@ extension BridgeAppModel {
                 bridgeID: identifier,
                 stopReason: bridge.lastVoiceStopReason,
                 localCloseRequested: bridge.localMicrophoneCloseRequested,
-                at: bridge.nowUptime()
+                at: bridge.lastVoiceStopAt ?? bridge.nowUptime()
             ) {
                 AppLogger.shared.write("G9N9N SMART_TOGGLE short_release_during_preparation")
                 return
@@ -374,7 +375,7 @@ extension BridgeAppModel {
             bridgeID: identifier,
             stopReason: bridge.lastVoiceStopReason,
             localCloseRequested: bridge.localMicrophoneCloseRequested,
-            at: bridge.nowUptime()
+            at: bridge.lastVoiceStopAt ?? bridge.nowUptime()
         ) {
             enterG9N9NSmartToggleAwaitingReopen(bridge: bridge, identifier: identifier)
             return
@@ -760,6 +761,13 @@ extension BridgeAppModel {
             activeSessionID: bridge.activeStreamSessionID,
             incomingSessionID: incomingSessionID
         )
+    }
+
+    func bluetoothBridgeIsClosingToggleVoice(_ bridge: BluetoothRemoteBridge) -> Bool {
+        guard let identifier = bridge.deviceIdentifier,
+              case .closing(identifier) = g9n9nSmartToggle.phase
+        else { return false }
+        return true
     }
 
     func bluetoothBridgeDidRequestStopToggleVoice(_ bridge: BluetoothRemoteBridge) {

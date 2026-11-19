@@ -214,7 +214,7 @@ struct G9N9NSmartToggleTests {
         #expect(state.ownerBridgeID == nil)
     }
 
-    @Test func voiceButtonModeDefaultsHoldAndPersistsForChromecastOnly() throws {
+    @Test func voiceButtonModeDefaultsSmartToggleAndPersistsForChromecastOnly() throws {
         let suite = "g9n9n-voice-mode-pref-" + UUID().uuidString
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
@@ -223,20 +223,20 @@ struct G9N9NSmartToggleTests {
         let googleID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         let xiaomiID = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
 
-        #expect(settings.g9n9nVoiceButtonMode(for: googleID) == .holdToTalk)
-        #expect(settings.g9n9nVoiceButtonMode(for: xiaomiID) == .holdToTalk)
-
-        settings.setG9N9NVoiceButtonMode(.smartToggle, for: googleID)
-        settings.setG9N9NVoiceButtonMode(.smartToggle, for: xiaomiID)
         #expect(settings.g9n9nVoiceButtonMode(for: googleID) == .smartToggle)
         #expect(settings.g9n9nVoiceButtonMode(for: xiaomiID) == .holdToTalk)
 
-        let reloaded = AppSettings(defaults: defaults)
-        #expect(reloaded.g9n9nVoiceButtonMode(for: googleID) == .smartToggle)
-        #expect(reloaded.remoteDeviceProfiles.first(where: { $0.id == googleID })?.g9n9nVoiceButtonMode == .smartToggle)
+        settings.setG9N9NVoiceButtonMode(.holdToTalk, for: googleID)
+        settings.setG9N9NVoiceButtonMode(.smartToggle, for: xiaomiID)
+        #expect(settings.g9n9nVoiceButtonMode(for: googleID) == .holdToTalk)
+        #expect(settings.g9n9nVoiceButtonMode(for: xiaomiID) == .holdToTalk)
 
-        reloaded.setG9N9NVoiceButtonMode(.holdToTalk, for: googleID)
+        let reloaded = AppSettings(defaults: defaults)
         #expect(reloaded.g9n9nVoiceButtonMode(for: googleID) == .holdToTalk)
+        #expect(reloaded.remoteDeviceProfiles.first(where: { $0.id == googleID })?.g9n9nVoiceButtonMode == .holdToTalk)
+
+        reloaded.setG9N9NVoiceButtonMode(.smartToggle, for: googleID)
+        #expect(reloaded.g9n9nVoiceButtonMode(for: googleID) == .smartToggle)
         #expect(reloaded.remoteDeviceProfiles.first(where: { $0.id == googleID })?.g9n9nVoiceButtonMode == nil)
 
         let localization = LocalizationStore(settings: reloaded)
@@ -511,5 +511,139 @@ struct G9N9NSmartToggleTests {
         #expect(!model.voiceSession.isActive)
         #expect(!model.isStreaming)
         #expect(keyEdges() == [true, false])
+    }
+
+    @Test func holdDurationUsesProtocolStartTimestampAcrossDelayedStartDelivery() async throws {
+        let fixture = try makeSmartToggleFixture(voiceButtonMode: .smartToggle)
+        let (model, bridge, clock, flushAudio, defaults, suite, writtenCommands, keyEdges) = fixture
+        defer {
+            model.started = false
+            bridge.stop()
+            defaults.removePersistentDomain(forName: suite)
+        }
+
+        // Physical press starts at 1_000, but audio/HID start delivery completes 500ms later.
+        bridge.simulateControlPacketForTesting(Data([0x04, 0x03, 0x02, 0x01]))
+        clock.advance(to: 1_500)
+        await flushAudio()
+        #expect(model.isStreaming)
+
+        // Release at 1_750 (750ms after 0x04, only 250ms after didStartVoice): must stop as long hold.
+        clock.advance(to: 1_750)
+        bridge.simulateControlPacketForTesting(Data([0x00]))
+        await flushAudio()
+
+        #expect(writtenCommands().isEmpty)
+        #expect(!model.g9n9nSmartToggle.isActive)
+        #expect(!model.isStreaming)
+        #expect(keyEdges() == [true, false])
+    }
+
+    @Test func secondPress0x04FollowedBy0x08SendsSingleMicClose() async throws {
+        let fixture = try makeSmartToggleFixture(voiceButtonMode: .smartToggle)
+        let (model, bridge, clock, flushAudio, defaults, suite, writtenCommands, keyEdges) = fixture
+        defer {
+            model.started = false
+            bridge.stop()
+            defaults.removePersistentDomain(forName: suite)
+        }
+
+        bridge.simulateControlPacketForTesting(Data([0x04, 0x03, 0x02, 0x01]))
+        await flushAudio()
+        clock.advance(to: 1_200)
+        bridge.simulateControlPacketForTesting(Data([0x00]))
+        await flushAudio()
+        clock.advance(to: 1_230)
+        bridge.simulateControlPacketForTesting(Data([0x04, 0x00, 0x02, 0x00]))
+        await flushAudio()
+
+        // Hardware sends 0x04 first and 0x08 a few ms later: MIC_CLOSE must only be written once.
+        clock.advance(to: 4_000)
+        bridge.simulateControlPacketForTesting(Data([0x04, 0x03, 0x02, 0x02]))
+        clock.advance(to: 4_020)
+        bridge.simulateControlPacketForTesting(Data([0x08]))
+        #expect(writtenCommands() == [Data([0x0C, 0x00]), Data([0x0D, 0x02])])
+
+        bridge.simulateControlPacketForTesting(Data([0x00]))
+        await flushAudio()
+        #expect(!model.g9n9nSmartToggle.isActive)
+        #expect(!model.isStreaming)
+        #expect(keyEdges() == [true, false])
+    }
+
+    @Test func retransmittedAudioStartDuringClosingKeepsWatchdogIntact() async throws {
+        let fixture = try makeSmartToggleFixture(voiceButtonMode: .smartToggle)
+        let (model, bridge, clock, flushAudio, defaults, suite, writtenCommands, keyEdges) = fixture
+        defer {
+            model.started = false
+            bridge.stop()
+            defaults.removePersistentDomain(forName: suite)
+        }
+
+        bridge.simulateControlPacketForTesting(Data([0x04, 0x03, 0x02, 0x01]))
+        await flushAudio()
+        clock.advance(to: 1_200)
+        bridge.simulateControlPacketForTesting(Data([0x00]))
+        await flushAudio()
+        clock.advance(to: 1_230)
+        bridge.simulateControlPacketForTesting(Data([0x04, 0x00, 0x02, 0x00]))
+        await flushAudio()
+
+        clock.advance(to: 4_000)
+        bridge.simulateControlPacketForTesting(Data([0x08]))
+        bridge.simulateControlPacketForTesting(Data([0x04, 0x00, 0x02, 0x00]))
+        #expect(writtenCommands() == [Data([0x0C, 0x00]), Data([0x0D, 0x00])])
+
+        // Original 5s stream-stop watchdog must still fire if 0x00 never arrives.
+        clock.advance(to: 9_000)
+        await flushAudio()
+        #expect(!model.g9n9nSmartToggle.isActive)
+        #expect(!model.isStreaming)
+        #expect(keyEdges() == [true, false])
+    }
+
+    @Test func rebindRemoteIsBlockedWhileSmartToggleAwaitsReopen() async throws {
+        let fixture = try makeSmartToggleFixture(voiceButtonMode: .smartToggle)
+        let (model, bridge, clock, flushAudio, defaults, suite, _, _) = fixture
+        defer {
+            model.started = false
+            bridge.stop()
+            defaults.removePersistentDomain(forName: suite)
+        }
+
+        let originalID = model.settings.registerBluetoothRemote(
+            identifier: UUID(),
+            model: .chromecastVoiceRemote
+        )
+        let replacementBridgeID = UUID()
+        let replacementID = model.settings.registerBluetoothRemote(
+            identifier: replacementBridgeID,
+            model: .chromecastVoiceRemote
+        )
+        let replacementBridge = BluetoothRemoteBridge(
+            settings: model.settings,
+            delegate: model,
+            targetIdentifier: replacementBridgeID,
+            allowsG9N9N: true,
+            voiceDiagnosticLogger: { _ in }
+        )
+        replacementBridge.simulateChromecastReadyStateForTesting()
+        model.connections.bridges[replacementBridgeID] = replacementBridge
+        model.connections.states[ObjectIdentifier(replacementBridge)] = .ready("Replacement")
+        defer { replacementBridge.stop() }
+
+        bridge.simulateControlPacketForTesting(Data([0x04, 0x03, 0x02, 0x01]))
+        await flushAudio()
+        clock.advance(to: 1_200)
+        bridge.simulateControlPacketForTesting(Data([0x00]))
+        await flushAudio()
+
+        #expect(model.g9n9nSmartToggle.isAwaitingReopen)
+        #expect(!model.hasActiveVirtualAudioSource)
+        #expect(!model.rebindRemote(profileID: originalID, to: replacementID))
+
+        bridge.simulateControlPacketForTesting(Data([0x08]))
+        #expect(!model.g9n9nSmartToggle.isActive)
+        #expect(model.rebindRemote(profileID: originalID, to: replacementID))
     }
 }

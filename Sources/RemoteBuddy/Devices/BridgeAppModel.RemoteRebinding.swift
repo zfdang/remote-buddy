@@ -9,6 +9,7 @@ extension BridgeAppModel {
     func rebindRemote(profileID: UUID, to replacementProfileID: UUID) -> Bool {
         guard !hasActiveVirtualAudioSource, !voiceKeyLatch.isHeld,
               !voiceFnTapSession.requiresCleanupBeforeMapping,
+              !g9n9nSmartToggle.isActive,
               voiceSession.pendingStart.identifier == nil,
               !isRemoteConnected(profileID), isRemoteConnected(replacementProfileID),
               let original = settings.remoteDeviceProfiles.first(where: { $0.id == profileID }),

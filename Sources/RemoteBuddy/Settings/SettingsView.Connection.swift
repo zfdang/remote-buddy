@@ -233,10 +233,10 @@ extension SettingsView {
                                             set: { settings.setG9N9NVoiceButtonMode($0, for: profile.id) }
                                         )
                                     ) {
-                                        Text(localization.text("connection.g9n9n.voice_button_mode.hold"))
-                                            .tag(G9N9NVoiceButtonMode.holdToTalk)
                                         Text(localization.text("connection.g9n9n.voice_button_mode.smart_toggle"))
                                             .tag(G9N9NVoiceButtonMode.smartToggle)
+                                        Text(localization.text("connection.g9n9n.voice_button_mode.hold"))
+                                            .tag(G9N9NVoiceButtonMode.holdToTalk)
                                     }
                                     .labelsHidden()
                                     .pickerStyle(.segmented)

@@ -180,96 +180,130 @@ extension SettingsView {
                     connectionDeviceActions(profile)
                 }.frame(width: 248)
                 Divider()
-                VStack(alignment: .leading, spacing: 14) {
-                    Text(localization.text("audio.gain.title")).font(.headline)
-                    HStack(spacing: 12) {
-                        Slider(value: Binding(get: { settings.gainDB(for: profile.id) },
-                            set: { settings.setGainDB($0, for: profile.id) }), in: 0...24, step: 1)
-                            .disabled(model.isStreaming)
-                        Text("\(Int(settings.gainDB(for: profile.id))) dB")
-                            .font(.system(.body, design: .monospaced)).frame(width: 54, alignment: .trailing)
+                VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(localization.text("audio.gain.title")).font(.headline)
+                        HStack(spacing: 12) {
+                            Slider(value: Binding(get: { settings.gainDB(for: profile.id) },
+                                set: { settings.setGainDB($0, for: profile.id) }), in: 0...24, step: 1)
+                                .disabled(model.isStreaming)
+                            Text("\(Int(settings.gainDB(for: profile.id))) dB")
+                                .font(.system(.body, design: .monospaced)).frame(width: 54, alignment: .trailing)
+                        }
+                        Text(localization.text("audio.gain.help"))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                    Text(localization.text("audio.gain.help")).font(.caption).foregroundStyle(.secondary)
+                    if profile.model.isChromecastRemote {
+                        let voiceMode = profile.effectiveG9N9NVoiceButtonMode
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack(alignment: .center, spacing: 8) {
+                                Text(localization.text("connection.g9n9n.voice_button_mode.title"))
+                                    .font(.headline)
+                                Spacer(minLength: 12)
+                                G9N9NVoiceButtonModeSelector(
+                                    selection: settings.g9n9nVoiceButtonMode(for: profile.id),
+                                    isDisabled: model.isVoiceConfigurationBusy
+                                ) { selectedMode in
+                                    settings.setG9N9NVoiceButtonMode(selectedMode, for: profile.id)
+                                }
+                            }
+                            Text(localization.text(
+                                voiceMode == .smartToggle
+                                    ? "connection.g9n9n.voice_button_mode.smart_toggle_help"
+                                    : "connection.g9n9n.voice_button_mode.hold_help"
+                            ))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
                     let hardwareInformation = profile.bluetoothIdentifier.flatMap { identifier in
                         let info = model.remoteDeviceInformation[identifier]
                         return (info != nil && info != RemoteDeviceInformation()) ? info : nil
                     }
-                    if let hardwareInformation {
-                        connectionDeviceInformation(hardwareInformation)
+                    let chromecastSupportMode = profile.model.isChromecastRemote ? profile.effectiveG9N9NInputMode : nil
+                    if hardwareInformation != nil || chromecastSupportMode != nil {
+                        connectionHardwareCard(
+                            information: hardwareInformation,
+                            chromecastSupportMode: chromecastSupportMode
+                        )
                     }
-                    if profile.model.isChromecastRemote {
-                        let mode = profile.effectiveG9N9NInputMode
-                        let voiceMode = profile.effectiveG9N9NVoiceButtonMode
-                        if hardwareInformation == nil {
-                            Divider()
-                        }
-                        g9n9nHardwareSupportSection(for: mode)
-                        Divider()
-                        VStack(alignment: .leading, spacing: 12) {
-                            VStack(alignment: .leading, spacing: 6) {
-                                HStack(alignment: .center, spacing: 8) {
-                                    Text(localization.text("connection.g9n9n.voice_button_mode.title"))
-                                        .font(.headline)
-                                    Spacer(minLength: 12)
-                                    G9N9NVoiceButtonModeSelector(
-                                        selection: settings.g9n9nVoiceButtonMode(for: profile.id),
-                                        isDisabled: model.isVoiceConfigurationBusy
-                                    ) { selectedMode in
-                                        settings.setG9N9NVoiceButtonMode(selectedMode, for: profile.id)
-                                    }
-                                }
-                                Text(localization.text(
-                                    voiceMode == .smartToggle
-                                        ? "connection.g9n9n.voice_button_mode.smart_toggle_help"
-                                        : "connection.g9n9n.voice_button_mode.hold_help"
-                                ))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                            }
-                            if let usageGuide = ConnectionDeviceUsageGuide.make(for: profile) {
-                                ConnectionDeviceUsageSection(guide: usageGuide, showsTopDivider: false)
-                            }
-                        }
-                    } else if let usageGuide = ConnectionDeviceUsageGuide.make(for: profile) {
+                    if let usageGuide = ConnectionDeviceUsageGuide.make(for: profile) {
                         ConnectionDeviceUsageSection(guide: usageGuide)
                     }
-                }.frame(maxWidth: .infinity, alignment: .leading).padding(.top, 10)
+                }.frame(maxWidth: .infinity, alignment: .leading).padding(.top, 4)
             }
         }
     }
 
-    private func connectionDeviceInformation(_ information: RemoteDeviceInformation) -> some View {
+    private func connectionHardwareCard(
+        information: RemoteDeviceInformation?,
+        chromecastSupportMode: G9N9NInputMode?
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if let information {
+                connectionDeviceInformation(information)
+            }
+            if let information, chromecastSupportMode != nil, !connectionDeviceReadings(information).isEmpty {
+                Divider()
+            }
+            if let chromecastSupportMode {
+                g9n9nHardwareSupportSection(for: chromecastSupportMode)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.primary.opacity(0.03), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(Color.secondary.opacity(0.14), lineWidth: 1)
+        }
+    }
+
+    private func connectionDeviceReadings(_ information: RemoteDeviceInformation) -> [(String, String)] {
+        let protocolSummary: String? = switch (information.protocolVersion, information.capabilities) {
+        case let (.some(version), .some(capabilities)):
+            "\(version) · \(LocalizedMessage("connection.device.frame_bytes", arguments: [String(capabilities.frameSize)]).text(using: localization))"
+        case let (.some(version), .none):
+            version
+        case let (.none, .some(capabilities)):
+            LocalizedMessage("connection.device.frame_bytes", arguments: [String(capabilities.frameSize)]).text(using: localization)
+        case (.none, .none):
+            nil
+        }
         let readings: [(String, String?)] = [
             ("connection.device.model", information.modelNumber),
             ("connection.device.identity", information.identityValue),
             ("connection.device.hid_version", information.hidVersionValue),
             ("connection.device.firmware", information.firmwareRevision),
-            ("connection.device.protocol", information.protocolVersion),
+            ("connection.device.protocol", protocolSummary),
             ("connection.device.audio", information.audioFormat),
-            ("connection.device.frame", information.capabilities.map {
-                LocalizedMessage("connection.device.frame_bytes", arguments: [String($0.frameSize)]).text(using: localization)
-            }),
         ]
-        let available = readings.compactMap { key, value -> (String, String)? in
+        return readings.compactMap { key, value in
             value.map { (key, $0) }
         }
-        return VStack(alignment: .leading, spacing: 10) {
-            Divider()
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), alignment: .leading), count: 3),
-                      alignment: .leading, spacing: 12) {
-                ForEach(available, id: \.0) { key, value in
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(localization.text(key))
-                            .font(.caption).foregroundStyle(.secondary)
-                        Text(value)
-                            .font(.system(size: 12, weight: .medium))
-                            .textSelection(.enabled)
-                            .lineLimit(1)
-                            .help(value)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func connectionDeviceInformation(_ information: RemoteDeviceInformation) -> some View {
+        let available = connectionDeviceReadings(information)
+        return LazyVGrid(
+            columns: Array(repeating: GridItem(.flexible(), alignment: .leading), count: 3),
+            alignment: .leading,
+            spacing: 10
+        ) {
+            ForEach(available, id: \.0) { key, value in
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(localization.text(key))
+                        .font(.caption).foregroundStyle(.secondary)
+                    Text(value)
+                        .font(.system(size: 12, weight: .medium))
+                        .textSelection(.enabled)
+                        .lineLimit(1)
+                        .help(value)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

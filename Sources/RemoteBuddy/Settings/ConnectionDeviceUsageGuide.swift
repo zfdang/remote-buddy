@@ -198,45 +198,48 @@ struct G9N9NVoiceButtonModeSelector: View {
 
 struct ConnectionDeviceUsageSection: View {
     let guide: ConnectionDeviceUsageGuide
-    var showsTopDivider: Bool = true
     @EnvironmentObject private var localization: LocalizationStore
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            if showsTopDivider {
-                Divider()
-            }
+        VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .center, spacing: 8) {
                 Text(localization.text("connection.device_guide.title"))
-                    .font(.headline)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
                 if let badgeKey = guide.badgeKey {
                     badgePill(titleKey: badgeKey, symbol: guide.badgeSymbol, tint: guide.badgeTint)
                 }
             }
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 6) {
                 ForEach(guide.items) { item in
-                    HStack(alignment: .top, spacing: 10) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Image(systemName: item.symbol)
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(item.tint)
-                            .frame(width: 24, height: 24)
-                            .background(item.tint.opacity(0.12), in: Circle())
-                        VStack(alignment: .leading, spacing: 2) {
+                            .frame(width: 14)
+                        (
                             Text(localization.text(item.titleKey))
-                                .font(.caption.weight(.semibold))
+                                .fontWeight(.semibold)
                                 .foregroundStyle(.primary)
-                                .fixedSize(horizontal: false, vertical: true)
-                            Text(localization.text(item.detailKey))
-                                .font(.caption)
+                            + Text(" · ")
+                                .foregroundStyle(.tertiary)
+                            + Text(localization.text(item.detailKey))
                                 .foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
+                        )
+                        .font(.caption)
+                        .fixedSize(horizontal: false, vertical: true)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
         }
+        .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.primary.opacity(0.03), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(Color.secondary.opacity(0.14), lineWidth: 1)
+        }
     }
 
     private func badgePill(titleKey: String, symbol: String?, tint: Color) -> some View {
@@ -249,8 +252,8 @@ struct ConnectionDeviceUsageSection: View {
                 .font(.system(size: 11, weight: .medium))
         }
         .foregroundStyle(tint)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 3)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 2)
         .background(tint.opacity(0.12), in: Capsule())
     }
 }

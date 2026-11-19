@@ -54,9 +54,9 @@ button.addEventListener('blur', stop);
         title: '遥控器连接',
         badge: '多设备管理',
         windowTitle: '遥控器连接 · Remote Buddy',
-        src: 'assets/screenshots/connection-zh.jpg?v=261117screens',
-        alt: 'Remote Buddy 遥控器连接界面：已添加的 G9N9N 遥控器、电量、麦克风增益与设备信息',
-        desc: '查看已添加遥控器的连接状态、电量和设备信息，为每台设备单独调整麦克风增益（0–24 dB）。'
+        src: 'assets/screenshots/connection-zh.jpg?v=261119screens',
+        alt: 'Remote Buddy 遥控器连接界面：已添加的小米与 G9N9N 遥控器、电量、麦克风增益、G9N9N 智能切换/按住说话选择及各机型使用指南',
+        desc: '查看已添加遥控器的连接状态、电量与设备参数，为每台设备单独调节麦克风增益（0–24 dB）；可切换 G9N9N 语音键触发方式，并直接查阅各机型语音限制与状态灯等使用指南。'
       },
       {
         title: '输入法集成',
@@ -78,7 +78,7 @@ button.addEventListener('blur', stop);
         title: '常用语编辑',
         badge: '常用语库管理',
         windowTitle: '常用语调整 · Remote Buddy',
-        src: 'assets/screenshots/phrases-zh.jpg?v=261117screens',
+        src: 'assets/screenshots/phrases-zh.jpg?v=261119screens',
         alt: 'Remote Buddy 常用语调整界面：小米遥控器按键分配、常用语库与短语编辑管理',
         desc: '编辑常用语列表，为方向键、确定键及功能键分配短语。在常用语面板中用遥控器选择要输入的内容。'
       },
@@ -94,7 +94,7 @@ button.addEventListener('blur', stop);
         title: '关于搭子',
         badge: '版本与更新',
         windowTitle: '关于搭子 · Remote Buddy',
-        src: 'assets/screenshots/about-zh.jpg?v=261117screens',
+        src: 'assets/screenshots/about-zh.jpg?v=261119screens',
         alt: 'Remote Buddy 关于界面：应用版本、测试版与软件更新检查、诊断与本地日志、官网与 GitHub 下载链接',
         desc: '集中查看当前版本、切换测试版（Preview）接收开关、检查软件更新、复制诊断信息或打开本地日志，并提供官网与 GitHub Releases 双下载入口。'
       }
@@ -112,7 +112,7 @@ button.addEventListener('blur', stop);
         title: '第 2 步 · 设备类型',
         badge: '向导 · 设备准备',
         windowTitle: '设备类型 · 首次使用向导',
-        src: 'assets/screenshots/wizard-source-zh.jpg?v=261117screens',
+        src: 'assets/screenshots/wizard-source-zh.jpg?v=261119screens',
         alt: '首次使用向导：遥控器型号列表与选中的 Chromecast Voice Remote（G9N9N）实拍图',
         desc: '选择遥控器型号，查看右侧的设备外观。各型号的适配进度见下方“兼容范围”。'
       },
@@ -120,7 +120,7 @@ button.addEventListener('blur', stop);
         title: '第 3 步 · 连接遥控器',
         badge: '向导 · 蓝牙配对',
         windowTitle: '连接遥控器 · 首次使用向导',
-        src: 'assets/screenshots/wizard-remote-zh.jpg?v=261117screens',
+        src: 'assets/screenshots/wizard-remote-zh.jpg?v=261119screens',
         alt: '首次使用向导：连接遥控器步骤，图解配对按键与实时连接检测',
         desc: '按提示完成蓝牙配对。只有一台匹配设备时会自动选中，再按普通按键确认连接。'
       },
@@ -152,7 +152,7 @@ button.addEventListener('blur', stop);
         title: '第 7 步 · 语音测试',
         badge: '向导 · 语音测试',
         windowTitle: '语音测试 · 首次使用向导',
-        src: 'assets/screenshots/wizard-test-zh.jpg?v=261117screens',
+        src: 'assets/screenshots/wizard-test-zh.jpg?v=261119screens',
         alt: '首次使用向导：语音测试输入框、麦克风增益与检测状态',
         desc: '按住语音键说一句话，松开后检查输入工具返回的文字。需要时调整麦克风增益。图中为等待试说的状态。'
       }
@@ -181,9 +181,9 @@ button.addEventListener('blur', stop);
         title: 'Devices',
         badge: 'Multi-device',
         windowTitle: 'Devices · Remote Buddy',
-        src: 'assets/screenshots/connection-en.jpg?v=261117screens',
-        alt: 'Remote Buddy Devices interface: connected G9N9N remote, battery level, microphone gain, and device information',
-        desc: 'Check connection status, battery level, and device details for added remotes. Adjust microphone gain for each device (0–24 dB).'
+        src: 'assets/screenshots/connection-en.jpg?v=261119screens',
+        alt: 'Remote Buddy Devices interface: Xiaomi and G9N9N remotes, battery level, microphone gain, G9N9N Smart Toggle / Hold to Talk switch, and usage tips',
+        desc: 'Check connection status, battery level, and hardware details for each remote, and set per-device microphone gain (0–24 dB). Switch G9N9N voice button mode and review model-specific voice limits and LED indicators.'
       },
       {
         title: 'Voice Tools',
@@ -205,7 +205,7 @@ button.addEventListener('blur', stop);
         title: 'Common Phrases',
         badge: 'Phrase Editor',
         windowTitle: 'Common Phrases · Remote Buddy',
-        src: 'assets/screenshots/phrases-en.jpg?v=261117screens',
+        src: 'assets/screenshots/phrases-en.jpg?v=261119screens',
         alt: 'Remote Buddy Common Phrases interface: Xiaomi remote button assignments and custom phrase library editor',
         desc: 'Edit phrase lists and assign phrases to the directional pad, OK, and extra remote buttons. Use the remote to choose text from the phrase panel.'
       },
@@ -221,7 +221,7 @@ button.addEventListener('blur', stop);
         title: 'About Remote Buddy',
         badge: 'Version & Updates',
         windowTitle: 'About Remote Buddy · Remote Buddy',
-        src: 'assets/screenshots/about-en.jpg?v=261117screens',
+        src: 'assets/screenshots/about-en.jpg?v=261119screens',
         alt: 'Remote Buddy About interface: version, preview updates switch, software update check, diagnostics and logs, website and GitHub download links',
         desc: 'Check the current version, toggle preview updates, check for software updates, copy diagnostics or open local logs, and access both direct website downloads and GitHub Releases.'
       }
@@ -239,7 +239,7 @@ button.addEventListener('blur', stop);
         title: 'Step 2 · Device Type',
         badge: 'Wizard · Device Choice',
         windowTitle: 'Control Source · Setup Wizard',
-        src: 'assets/screenshots/wizard-source-en.jpg?v=261117screens',
+        src: 'assets/screenshots/wizard-source-en.jpg?v=261119screens',
         alt: 'Setup Wizard: remote model list with the selected Chromecast Voice Remote (G9N9N) photograph',
         desc: 'Choose a remote model and view its appearance on the right. See Compatibility below for each model’s support status.'
       },
@@ -247,7 +247,7 @@ button.addEventListener('blur', stop);
         title: 'Step 3 · Connect Remote',
         badge: 'Wizard · Pairing',
         windowTitle: 'Connect Remote · Setup Wizard',
-        src: 'assets/screenshots/wizard-remote-en.jpg?v=261117screens',
+        src: 'assets/screenshots/wizard-remote-en.jpg?v=261119screens',
         alt: 'Setup Wizard: Remote pairing illustration and live connection status check',
         desc: 'Follow the Bluetooth pairing instructions. A single matching device is selected automatically; press an ordinary button to confirm the connection.'
       },
@@ -279,7 +279,7 @@ button.addEventListener('blur', stop);
         title: 'Step 7 · Voice Test',
         badge: 'Wizard · Speech Test',
         windowTitle: 'Voice Test · Setup Wizard',
-        src: 'assets/screenshots/wizard-test-en.jpg?v=261117screens',
+        src: 'assets/screenshots/wizard-test-en.jpg?v=261119screens',
         alt: 'Setup Wizard: voice test text field, microphone gain, and test status',
         desc: 'Hold the voice button, speak, then release and check the text returned by your input tool. Adjust microphone gain if needed. The screenshot shows the waiting state.'
       }

@@ -106,7 +106,7 @@ def main():
             # Include all G9N9N media buttons, both connection cards, Xiaomi common phrases, and an active voice tool.
             section_overrides = [
                 ("mapping", "mapping", 980, "0", "1", ""),
-                ("connection", "connection", 860, "1", "1", ""),
+                ("connection", "connection", 960, "1", "1", ""),
                 ("commonPhrases", "phrases", 772, "1", "0", ""),
                 ("integration", "integration", 772, "1", "1", "weixin"),
             ]

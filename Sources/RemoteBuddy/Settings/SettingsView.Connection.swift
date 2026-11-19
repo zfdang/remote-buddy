@@ -177,25 +177,8 @@ extension SettingsView {
                 VStack(spacing: 14) {
                     remoteDeviceCard(profile, fillsWidth: true)
                     connectionRemotePhoto(profile)
-                    if profile.bluetoothIdentifier != nil, !model.isRemoteConnected(profile.id) {
-                        Button(localization.text("remote.rebind.title")) { remoteRebindingProfile = profile }
-                            .compatibilityButtonStyle(.standard).disabled(model.isStreaming)
-                    }
-                    if profile.bluetoothIdentifier != nil {
-                        Button(localization.text("connection.action.reconnect")) {
-                            model.selectRemoteProfile(profile.id)
-                            model.reconnect()
-                        }.compatibilityButtonStyle(.standard).disabled(model.isStreaming)
-                    }
-                    Button(role: .destructive) {
-                        remoteRemovalProfile = profile
-                        isRemoteRemovalPresented = true
-                    } label: {
-                        Label(localization.text("remote.remove.action"), systemImage: "trash")
-                    }
-                    .compatibilityButtonStyle(.standard)
-                    .disabled(model.isVoiceConfigurationBusy)
-                }.frame(width: 230)
+                    connectionDeviceActions(profile)
+                }.frame(width: 248)
                 Divider()
                 VStack(alignment: .leading, spacing: 14) {
                     Text(localization.text("audio.gain.title")).font(.headline)
@@ -322,6 +305,46 @@ extension SettingsView {
     }
 
     @ViewBuilder
+    private func connectionDeviceActions(_ profile: RemoteDeviceProfile) -> some View {
+        VStack(spacing: 8) {
+            if profile.bluetoothIdentifier != nil, !model.isRemoteConnected(profile.id) {
+                ConnectionActionChipButton(
+                    title: localization.text("remote.rebind.title"),
+                    systemImage: "arrow.left.arrow.right",
+                    tint: .primary,
+                    isDisabled: model.isStreaming
+                ) {
+                    remoteRebindingProfile = profile
+                }
+            }
+            HStack(spacing: 8) {
+                if profile.bluetoothIdentifier != nil {
+                    ConnectionActionChipButton(
+                        title: localization.text("connection.action.reconnect"),
+                        systemImage: "arrow.clockwise",
+                        tint: .accentColor,
+                        isDisabled: model.isStreaming
+                    ) {
+                        model.selectRemoteProfile(profile.id)
+                        model.reconnect()
+                    }
+                }
+                ConnectionActionChipButton(
+                    title: localization.text("remote.remove.action"),
+                    systemImage: "trash",
+                    tint: .red,
+                    role: .destructive,
+                    isDisabled: model.isVoiceConfigurationBusy
+                ) {
+                    remoteRemovalProfile = profile
+                    isRemoteRemovalPresented = true
+                }
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    @ViewBuilder
     private func connectionRemotePhoto(_ profile: RemoteDeviceProfile) -> some View {
         if let resource = XiaomiRemoteCatalog.photoResource(for: profile.model) {
             RemoteCatalogPhoto(resourceName: resource).frame(width: 82, height: 166)
@@ -330,4 +353,46 @@ extension SettingsView {
         }
     }
 
+}
+
+private struct ConnectionActionChipButton: View {
+    let title: String
+    let systemImage: String
+    let tint: Color
+    var role: ButtonRole? = nil
+    let isDisabled: Bool
+    let action: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        let activeHover = isHovered && !isDisabled
+        Button(role: role, action: action) {
+            HStack(spacing: 5) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 11, weight: .semibold))
+                Text(title)
+                    .font(.system(size: 12, weight: .medium))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.9)
+            }
+            .foregroundStyle(tint)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 7)
+            .frame(maxWidth: .infinity)
+            .background(
+                tint.opacity(activeHover ? 0.16 : 0.09),
+                in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(tint.opacity(activeHover ? 0.42 : 0.24), lineWidth: 1)
+            }
+            .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .opacity(isDisabled ? 0.45 : 1)
+        .disabled(isDisabled)
+        .onHover { isHovered = $0 }
+    }
 }

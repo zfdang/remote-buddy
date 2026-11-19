@@ -14,7 +14,8 @@ extension BridgeAppModel {
         // A connected remote is not an audio source. Keep the engine only while
         // delivering voice or finishing buffered Fn-tap audio.
         hasActiveVirtualAudioSource || voiceSession.pendingStart.identifier != nil ||
-            voiceFnTapSession.hasPendingAudioSession || longRecordingRequested
+            voiceFnTapSession.hasPendingAudioSession || longRecordingRequested ||
+            g9n9nSmartToggle.isActive
     }
 
     var hasPendingBluetoothVoiceWork: Bool {

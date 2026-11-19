@@ -218,32 +218,68 @@ extension SettingsView {
                     }
                     if profile.model.isChromecastRemote {
                         let mode = profile.effectiveG9N9NInputMode
+                        let voiceMode = profile.effectiveG9N9NVoiceButtonMode
                         Divider()
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                g9n9nSupportBadge(for: mode)
-                                    .fixedSize()
+                        VStack(alignment: .leading, spacing: 10) {
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                    Text(localization.text("connection.g9n9n.voice_button_mode.title"))
+                                        .font(.headline)
+                                    Spacer(minLength: 12)
+                                    Picker(
+                                        localization.text("connection.g9n9n.voice_button_mode.title"),
+                                        selection: Binding(
+                                            get: { settings.g9n9nVoiceButtonMode(for: profile.id) },
+                                            set: { settings.setG9N9NVoiceButtonMode($0, for: profile.id) }
+                                        )
+                                    ) {
+                                        Text(localization.text("connection.g9n9n.voice_button_mode.hold"))
+                                            .tag(G9N9NVoiceButtonMode.holdToTalk)
+                                        Text(localization.text("connection.g9n9n.voice_button_mode.smart_toggle"))
+                                            .tag(G9N9NVoiceButtonMode.smartToggle)
+                                    }
+                                    .labelsHidden()
+                                    .pickerStyle(.segmented)
+                                    .frame(maxWidth: 260)
+                                    .disabled(model.isVoiceConfigurationBusy)
+                                    .accessibilityIdentifier("g9n9n-voice-button-mode-picker")
+                                }
                                 Text(localization.text(
-                                    mode == .twoKeyCompatibility
-                                        ? "connection.g9n9n.partial_support_notice"
-                                        : "connection.g9n9n.full_support_notice"
+                                    voiceMode == .smartToggle
+                                        ? "connection.g9n9n.voice_button_mode.smart_toggle_help"
+                                        : "connection.g9n9n.voice_button_mode.hold_help"
                                 ))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
                             }
-                            if mode == .twoKeyCompatibility {
-                                HStack(spacing: 12) {
-                                    Link(
-                                        localization.text("connection.g9n9n.compatibility_doc_link"),
-                                        destination: AppLinks.g9n9nCompatibilityGuide
-                                    )
-                                    Link(
-                                        localization.text("onboarding.chromecast.replace_hardware_link"),
-                                        destination: AppLinks.devices(for: localization.locale)
-                                    )
+                            Divider()
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                    g9n9nSupportBadge(for: mode)
+                                        .fixedSize()
+                                    Text(localization.text(
+                                        mode == .twoKeyCompatibility
+                                            ? "connection.g9n9n.partial_support_notice"
+                                            : "connection.g9n9n.full_support_notice"
+                                    ))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
                                 }
-                                .font(.caption)
+                                if mode == .twoKeyCompatibility {
+                                    HStack(spacing: 12) {
+                                        Link(
+                                            localization.text("connection.g9n9n.compatibility_doc_link"),
+                                            destination: AppLinks.g9n9nCompatibilityGuide
+                                        )
+                                        Link(
+                                            localization.text("onboarding.chromecast.replace_hardware_link"),
+                                            destination: AppLinks.devices(for: localization.locale)
+                                        )
+                                    }
+                                    .font(.caption)
+                                }
                             }
                         }
                     }

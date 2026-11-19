@@ -152,7 +152,8 @@ extension BridgeAppModel {
     var isVoiceConfigurationBusy: Bool {
         isStreaming || hasActiveVirtualAudioSource || voiceKeyLatch.isHeld ||
             voiceKeyActivationInProgress || voiceSession.pendingStart.identifier != nil ||
-            voiceFnTapSession.requiresCleanupBeforeMapping || voiceKeyReleaseRetry != nil
+            voiceFnTapSession.requiresCleanupBeforeMapping || voiceKeyReleaseRetry != nil ||
+            g9n9nSmartToggle.isActive
     }
 
     func handleVoiceFnTapFailure(_ failure: VoiceFnTapFailure) {

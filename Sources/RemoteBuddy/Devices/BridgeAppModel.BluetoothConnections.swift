@@ -232,6 +232,9 @@ extension BridgeAppModel {
                 if longRecordingBridge === bridge {
                     finishLongRecording(reason: "onboarding_remote_removed")
                 }
+                if g9n9nSmartToggle.ownerBridgeID == identifier || g9n9nSmartToggleBridge === bridge {
+                    clearG9N9NSmartToggleState(reason: "onboarding_remote_removed")
+                }
             }
             let ownsActiveVoice = BluetoothVoiceDeviceOwnershipPolicy.matches(
                 identifier,

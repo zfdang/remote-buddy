@@ -515,9 +515,10 @@ enum ATVVSessionGate {
 
     static func shouldCloseStreamingOnRemoteOpenRequest(
         isT1Candidate: Bool,
-        isStreaming: Bool
+        isStreaming: Bool,
+        allowsToggleStop: Bool = false
     ) -> Bool {
-        isT1Candidate && isStreaming
+        (isT1Candidate && isStreaming) || allowsToggleStop
     }
 
     static func cancelledOpenUptime(

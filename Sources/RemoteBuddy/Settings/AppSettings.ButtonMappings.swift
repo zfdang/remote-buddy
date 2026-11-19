@@ -391,6 +391,26 @@ extension AppSettings {
         remoteDeviceProfiles[index].g9n9nInputMode = stored
     }
 
+    func g9n9nVoiceButtonMode(for profileID: UUID?) -> G9N9NVoiceButtonMode {
+        guard let profileID,
+              let profile = remoteDeviceProfiles.first(where: { $0.id == profileID }) else {
+            return .holdToTalk
+        }
+        return profile.effectiveG9N9NVoiceButtonMode
+    }
+
+    func setG9N9NVoiceButtonMode(_ mode: G9N9NVoiceButtonMode, for profileID: UUID?) {
+        guard let profileID,
+              let index = remoteDeviceProfiles.firstIndex(where: { $0.id == profileID }),
+              remoteDeviceProfiles[index].model.isChromecastRemote else { return }
+        let stored: G9N9NVoiceButtonMode? = mode == .holdToTalk ? nil : mode
+        guard remoteDeviceProfiles[index].g9n9nVoiceButtonMode != stored else { return }
+        remoteDeviceProfiles[index].g9n9nVoiceButtonMode = stored
+        AppLogger.shared.write(
+            "SETTINGS VOICE_BUTTON_MODE g9n9n_mode=\(mode.rawValue) profile=\(profileID.uuidString)"
+        )
+    }
+
     var compatibleHIDBindings: [RemoteHIDBinding] {
         remoteDeviceProfiles.compactMap { profile in
             guard !profile.model.usesPrivateAdapter,

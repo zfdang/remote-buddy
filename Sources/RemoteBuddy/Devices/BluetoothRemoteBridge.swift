@@ -48,6 +48,29 @@ protocol BluetoothRemoteBridgeDelegate: AnyObject {
     func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didIdentifyRemoteModel model: RemoteModel)
     func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didUpdatePowerState state: RemotePowerState?)
     func bluetoothBridgeDeviceNameDidChange(_ bridge: BluetoothRemoteBridge)
+    func bluetoothBridgeShouldCloseStreamingOnRemoteOpenRequest(_ bridge: BluetoothRemoteBridge) -> Bool
+    func bluetoothBridgeShouldStopToggleVoiceOnRemoteAudioStart(
+        _ bridge: BluetoothRemoteBridge,
+        interaction: UInt8?,
+        incomingSessionID: UInt8?
+    ) -> Bool
+    func bluetoothBridgeDidRequestStopToggleVoice(_ bridge: BluetoothRemoteBridge)
+}
+
+extension BluetoothRemoteBridgeDelegate {
+    func bluetoothBridgeShouldCloseStreamingOnRemoteOpenRequest(_ bridge: BluetoothRemoteBridge) -> Bool {
+        false
+    }
+
+    func bluetoothBridgeShouldStopToggleVoiceOnRemoteAudioStart(
+        _ bridge: BluetoothRemoteBridge,
+        interaction: UInt8?,
+        incomingSessionID: UInt8?
+    ) -> Bool {
+        false
+    }
+
+    func bluetoothBridgeDidRequestStopToggleVoice(_ bridge: BluetoothRemoteBridge) {}
 }
 
 @MainActor
@@ -268,6 +291,24 @@ final class BluetoothRemoteBridge: NSObject {
         _ = t1Readiness.acceptCapabilities(Self.defaultCapabilities)
         _ = t1Readiness.acceptIdentity(.t1Remote)
         identifiedModel = .t1Remote
+        lifecycle = .ready(generationCounter)
+        state = .ready(deviceName)
+    }
+
+    func simulateChromecastReadyStateForTesting(
+        deviceName: String = "Chromecast Remote",
+        nowUptime: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }
+    ) {
+        self.nowUptime = nowUptime
+        shouldRun = true
+        generationCounter &+= 1
+        googleCandidate = true
+        capabilities = Self.defaultCapabilities
+        capabilitiesConfirmed = true
+        modelFormatResolved = true
+        _ = googleReadiness.acceptCapabilities(Self.defaultCapabilities)
+        _ = googleReadiness.acceptIdentity(.chromecast)
+        identifiedModel = .chromecastVoiceRemote
         lifecycle = .ready(generationCounter)
         state = .ready(deviceName)
     }

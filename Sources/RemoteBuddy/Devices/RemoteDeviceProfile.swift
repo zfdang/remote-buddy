@@ -108,6 +108,12 @@ enum G9N9NInputMode: String, Codable, Equatable, CaseIterable {
     case twoKeyCompatibility = "two_key_compatibility"
 }
 
+/// Physical voice button behavior for Chromecast G9N9N remotes.
+enum G9N9NVoiceButtonMode: String, Codable, Equatable, CaseIterable {
+    case holdToTalk = "hold_to_talk"
+    case smartToggle = "smart_toggle"
+}
+
 struct RemoteDeviceProfile: Codable, Equatable, Identifiable {
     let id: UUID
     var model: RemoteModel
@@ -117,11 +123,16 @@ struct RemoteDeviceProfile: Codable, Equatable, Identifiable {
     var gainDB: Double?
     var compatibleHIDBinding: RemoteHIDBinding?
     var g9n9nInputMode: G9N9NInputMode?
+    var g9n9nVoiceButtonMode: G9N9NVoiceButtonMode?
     var mappings: RemoteDeviceMappings
 
     var displayNameFallbackKey: String { model.localizationKey }
     var effectiveG9N9NInputMode: G9N9NInputMode {
         model.isChromecastRemote ? (g9n9nInputMode ?? .full) : .full
+    }
+
+    var effectiveG9N9NVoiceButtonMode: G9N9NVoiceButtonMode {
+        model.isChromecastRemote ? (g9n9nVoiceButtonMode ?? .holdToTalk) : .holdToTalk
     }
 
     init(
@@ -133,6 +144,7 @@ struct RemoteDeviceProfile: Codable, Equatable, Identifiable {
         compatibleHIDBinding: RemoteHIDBinding? = nil,
         gainDB: Double? = nil,
         g9n9nInputMode: G9N9NInputMode? = nil,
+        g9n9nVoiceButtonMode: G9N9NVoiceButtonMode? = nil,
         mappings: RemoteDeviceMappings
     ) {
         self.id = id
@@ -143,6 +155,7 @@ struct RemoteDeviceProfile: Codable, Equatable, Identifiable {
         self.gainDB = gainDB
         self.compatibleHIDBinding = compatibleHIDBinding
         self.g9n9nInputMode = g9n9nInputMode
+        self.g9n9nVoiceButtonMode = g9n9nVoiceButtonMode
         self.mappings = mappings
     }
 }

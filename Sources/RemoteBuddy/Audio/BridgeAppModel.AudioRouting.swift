@@ -262,6 +262,7 @@ extension BridgeAppModel {
         cancelVirtualAudioReleaseIfPending(trigger: "system_sleep")
         stopLongRecording(reason: "system_sleep")
         finishRC003VoiceExtensionTest(reason: "system_sleep")
+        clearG9N9NSmartToggleState(reason: "system_sleep")
         voiceSession.pendingStart.cancel()
         voiceSession.stopRequested = false
         voiceSession.isActive = false

@@ -13,6 +13,7 @@ extension BridgeAppModel {
         }
         guard isConnected,
               !voiceSession.isActive,
+              !g9n9nSmartToggle.isActive,
               longRecordingCloseTimer == nil,
               let bridge = selectedBluetoothBridge
         else {
@@ -215,5 +216,93 @@ extension BridgeAppModel {
         releaseVoiceKeyIfNeeded(owner: .bluetooth, forceSoftware: false)
         endVoiceSessionIfNeeded(flushAudio: true)
         AppLogger.shared.write("RC003 EXTENSION finished reason=\(reason)")
+    }
+
+    func enterG9N9NSmartToggleAwaitingReopen(
+        bridge: BluetoothRemoteBridge,
+        identifier: UUID
+    ) {
+        cancelG9N9NSmartToggleTimers()
+        g9n9nSmartToggleBridge = bridge
+        voiceSession.isActive = false
+        voiceSession.loggedBluetoothVoiceAudioDeviceIdentifier = nil
+        let generation = g9n9nSmartToggle.enterAwaitingReopen(bridgeID: identifier)
+        let opened = bridge.requestMicrophoneOpen()
+        AppLogger.shared.write(
+            "G9N9N SMART_TOGGLE awaiting_reopen opened=\(opened) generation=\(generation)"
+        )
+        if opened {
+            scheduleG9N9NSmartToggleReopenTimeout(generation: generation)
+        } else {
+            abortG9N9NSmartToggleSession(reason: "reopen_rejected", requestClose: false)
+        }
+    }
+
+    func scheduleG9N9NSmartToggleReopenTimeout(generation: UInt64) {
+        g9n9nSmartToggleReopenTimer?.cancel()
+        let timer = DispatchSource.makeTimerSource(queue: .main)
+        timer.schedule(deadline: .now() + G9N9NSmartToggleState.reopenTimeout)
+        timer.setEventHandler { [weak self] in
+            guard let self,
+                  self.g9n9nSmartToggle.isAwaitingReopen,
+                  self.g9n9nSmartToggle.generation == generation
+            else { return }
+            self.abortG9N9NSmartToggleSession(reason: "reopen_timeout", requestClose: true)
+        }
+        g9n9nSmartToggleReopenTimer = timer
+        timer.resume()
+    }
+
+    func scheduleG9N9NSmartToggleDeadline(generation: UInt64) {
+        g9n9nSmartToggleDeadlineTimer?.cancel()
+        let timer = DispatchSource.makeTimerSource(queue: .main)
+        timer.schedule(deadline: .now() + G9N9NSmartToggleState.maximumHandsFreeDuration)
+        timer.setEventHandler { [weak self] in
+            guard let self,
+                  case let .handsFreeActive(bridgeID) = self.g9n9nSmartToggle.phase,
+                  self.g9n9nSmartToggle.generation == generation
+            else { return }
+            let bridge = self.g9n9nSmartToggleBridge
+            if bridge?.streaming == true {
+                _ = self.g9n9nSmartToggle.enterClosing(bridgeID: bridgeID)
+                self.cancelG9N9NSmartToggleTimers()
+                _ = bridge?.requestMicrophoneClose()
+                AppLogger.shared.write("G9N9N SMART_TOGGLE stopping reason=safe_timeout")
+            } else {
+                self.abortG9N9NSmartToggleSession(reason: "safe_timeout", requestClose: true)
+            }
+        }
+        g9n9nSmartToggleDeadlineTimer = timer
+        timer.resume()
+    }
+
+    func abortG9N9NSmartToggleSession(reason: String, requestClose: Bool) {
+        guard g9n9nSmartToggle.isActive else { return }
+        let bridge = g9n9nSmartToggleBridge
+        clearG9N9NSmartToggleState(reason: reason)
+        if requestClose {
+            _ = bridge?.requestMicrophoneClose()
+        }
+        voiceSession.end()
+        _ = voiceFnTapSession.stopVoice()
+        releaseVoiceKeyIfNeeded(owner: .bluetooth, forceSoftware: true)
+        endVoiceSessionIfNeeded(flushAudio: false)
+        releaseVirtualAudioOutputIfUnused(reason: "g9n9n_smart_toggle_\(reason)")
+        AppLogger.shared.write("G9N9N SMART_TOGGLE aborted reason=\(reason)")
+    }
+
+    func clearG9N9NSmartToggleState(reason: String) {
+        guard g9n9nSmartToggle.isActive else { return }
+        cancelG9N9NSmartToggleTimers()
+        g9n9nSmartToggleBridge = nil
+        g9n9nSmartToggle.reset()
+        AppLogger.shared.write("G9N9N SMART_TOGGLE cleared reason=\(reason)")
+    }
+
+    func cancelG9N9NSmartToggleTimers() {
+        g9n9nSmartToggleReopenTimer?.cancel()
+        g9n9nSmartToggleReopenTimer = nil
+        g9n9nSmartToggleDeadlineTimer?.cancel()
+        g9n9nSmartToggleDeadlineTimer = nil
     }
 }

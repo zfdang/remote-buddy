@@ -1252,6 +1252,11 @@
 "connection.g9n9n.full_support_notice" = "语音键与全部 14 颗普通按键均可正常使用与自定义。";
 "connection.g9n9n.partial_support_notice" = "仅语音键可用，普通操作仅「方向键 + OK」可发 Enter 键，不可修改映射。功能受限较大，建议更换为已验证完全支持的遥控器或硬件版本；更换后请移除此设备并通过「添加新设备」重新识别。";
 "connection.g9n9n.compatibility_doc_link" = "查看 G9N9N 兼容性文档 ↗";
+"connection.g9n9n.voice_button_mode.title" = "语音键触发方式";
+"connection.g9n9n.voice_button_mode.hold" = "按住说话";
+"connection.g9n9n.voice_button_mode.smart_toggle" = "智能切换";
+"connection.g9n9n.voice_button_mode.hold_help" = "按住 Google Assistant 语音键说话，松开后立即停止收音。";
+"connection.g9n9n.voice_button_mode.smart_toggle_help" = "短按并松开后保持免提收音，再按一次停止（松手瞬间约有 0.2 秒硬件重连间隔）；若按住超过 0.7 秒则松手即停。";
 "button_mapping.voice.settings_button" = "前往输入法整合设置";
 "common_phrases.g9n9n_partial_notice" = "当前选中的 G9N9N 处于部分支持（双键兼容）模式，仅支持语音键和「方向键 + OK」发 Enter，无法通过单键触发常用语。";
 "onboarding.chromecast.replace_hardware_advice" = "部分支持模式下功能缺失较多，仅作临时兼容；如需完整按键体验，建议更换为已验证支持 macOS 的遥控器硬件版本。";

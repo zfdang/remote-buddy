@@ -1250,6 +1250,11 @@
 "connection.g9n9n.full_support_notice" = "Voice button and all 14 standard buttons work and can be customized.";
 "connection.g9n9n.partial_support_notice" = "Voice works; only Arrow + OK emits Return/Enter and mappings cannot be modified. Since functionality is heavily limited, replacing with a verified fully supported remote or hardware revision is recommended; after replacing, remove this device and run Add Device.";
 "connection.g9n9n.compatibility_doc_link" = "Read G9N9N Compatibility Docs ↗";
+"connection.g9n9n.voice_button_mode.title" = "Voice Button Mode";
+"connection.g9n9n.voice_button_mode.hold" = "Hold to Talk";
+"connection.g9n9n.voice_button_mode.smart_toggle" = "Smart Toggle";
+"connection.g9n9n.voice_button_mode.hold_help" = "Hold the Google Assistant voice button to speak and release to stop.";
+"connection.g9n9n.voice_button_mode.smart_toggle_help" = "Tap and release to keep speaking hands-free, then press again to stop (~0.2s mic reopen pause after tap); holding over 0.7s stops on release.";
 "button_mapping.voice.settings_button" = "Open Voice Integration";
 "common_phrases.g9n9n_partial_notice" = "The selected G9N9N is in Partial Support (two-key compatibility) mode, which only supports Voice and Arrow + OK for Enter; single-key common phrases are unavailable.";
 "onboarding.chromecast.replace_hardware_advice" = "Partial Support mode omits most button features and is intended only as a fallback. Replace with a verified macOS-compatible remote unit for full support.";

@@ -159,9 +159,12 @@ extension BridgeAppModel {
         streaming: Bool,
         forceSoftware: Bool,
         owner: VoiceKeyLatch.Owner,
-        keySetter: @escaping (VoiceKeyMode, Bool) -> Bool = { KeyboardInjector.setVoiceKeyPressed($0, isPressed: $1) },
+        keySetter: ((VoiceKeyMode, Bool) -> Bool)? = nil,
         completion: @escaping (Bool) -> Void = { _ in }
     ) -> Bool {
+        let resolvedKeySetter = keySetter ?? voiceKeyStateSetter ?? {
+            KeyboardInjector.setVoiceKeyPressed($0, isPressed: $1)
+        }
         guard !streaming || (!audio.suspensionState.isSuspended && voiceKeyReleaseRetry == nil) else {
             completion(false)
             return false
@@ -236,7 +239,7 @@ extension BridgeAppModel {
                     return
                 }
                 let submitted = self.submitVoiceKeyState(mode: mode, shouldHold: true,
-                    transition: transition, owner: owner, keySetter: keySetter)
+                    transition: transition, owner: owner, keySetter: resolvedKeySetter)
                 immediateResult = submitted
                 finish?(submitted)
             }
@@ -270,7 +273,7 @@ extension BridgeAppModel {
             return true
         }
         let submitted = submitVoiceKeyState(mode: mode, shouldHold: shouldHold,
-            transition: transition, owner: owner, keySetter: keySetter)
+            transition: transition, owner: owner, keySetter: resolvedKeySetter)
         completion(submitted)
         return submitted
     }
@@ -351,10 +354,11 @@ extension BridgeAppModel {
 
     @discardableResult
     func releaseVoiceKeyIfNeeded(
-        releaseKey: @escaping (VoiceKeyMode) -> Bool = {
-            KeyboardInjector.setVoiceKeyPressed($0, isPressed: false)
-        }
+        releaseKey: ((VoiceKeyMode) -> Bool)? = nil
     ) -> Bool {
+        let resolvedReleaseKey: (VoiceKeyMode) -> Bool = releaseKey ?? { mode in
+            self.voiceKeyStateSetter?(mode, false) ?? KeyboardInjector.setVoiceKeyPressed(mode, isPressed: false)
+        }
         voiceSession.pendingKeyRelease = nil
         applicationIntegrationController.cancelPending()
         defer { flushPendingVoiceToolMappingRefresh() }
@@ -381,12 +385,12 @@ extension BridgeAppModel {
         }
 
         // A denied post must not erase the held-key safety state. Retry after permission recovery.
-        guard releaseKey(heldVoiceKeyMode) else {
+        guard resolvedReleaseKey(heldVoiceKeyMode) else {
             AppLogger.shared.write("VOICE KEY cleanup deferred reason=release_failed mode=\(heldVoiceKeyMode.rawValue)")
             voiceKeyReleaseRetry = scheduleVoiceKeyReleaseRetry(1) { [weak self] in
                 guard let self, self.voiceKeyReleaseRetryGeneration == generation,
                       self.heldVoiceKeyMode == heldVoiceKeyMode else { return }
-                _ = self.releaseVoiceKeyIfNeeded(releaseKey: releaseKey)
+                _ = self.releaseVoiceKeyIfNeeded(releaseKey: resolvedReleaseKey)
             }
             return false
         }

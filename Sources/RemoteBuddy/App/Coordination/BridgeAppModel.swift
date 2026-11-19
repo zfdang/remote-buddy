@@ -198,6 +198,7 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
     var voiceKeyReleaseRetry: ScheduledOperation?
     var voiceKeyReleaseRetryGeneration: UInt64 = 0
     var scheduleVoiceKeyReleaseRetry: OperationScheduler = ScheduledOperation.mainQueue
+    var voiceKeyStateSetter: ((VoiceKeyMode, Bool) -> Bool)?
     var heldVoiceKeyMode: VoiceKeyMode?
     var pendingVoiceKeyMode: VoiceKeyMode?
     // Main-queue state; only input-source waits can pump/reenter that queue.
@@ -220,6 +221,10 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
     var rc003VoiceExtensionTimer: DispatchSourceTimer?
     var rc003VoiceExtensionOpenTimer: DispatchSourceTimer?
     var rc003VoiceExtensionDeadlineTimer: DispatchSourceTimer?
+    var g9n9nSmartToggle = G9N9NSmartToggleState()
+    weak var g9n9nSmartToggleBridge: BluetoothRemoteBridge?
+    var g9n9nSmartToggleReopenTimer: DispatchSourceTimer?
+    var g9n9nSmartToggleDeadlineTimer: DispatchSourceTimer?
     let hidEventSuppressor: KeyboardEventSuppressor
     let appSwitcherCoordinator = HIDAppSwitcherCoordinator()
     let permissionSnapshotProvider: () -> HIDPermissionSnapshot
@@ -423,6 +428,7 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
         stopObservingAudioHardware()
         stopLongRecording(reason: "app_stop")
         finishRC003VoiceExtensionTest(reason: "app_stop")
+        clearG9N9NSmartToggleState(reason: "app_stop")
         voiceInputDestinationCoordinator.shutdown()
         voiceFnTapSession.shutdown()
         connections.stopAll()

@@ -60,6 +60,16 @@ extension BridgeAppModel {
             rc003VoiceExtensionActive &&
             rc003VoiceExtensionAwaitingReopen &&
             rc003VoiceExtensionBridge === bridge
+        let isSmartToggleContinuation = g9n9nSmartToggle.isAwaitingReopen &&
+            g9n9nSmartToggle.ownerBridgeID == identifier &&
+            g9n9nSmartToggleBridge === bridge
+        if let smartToggleOwner = g9n9nSmartToggle.ownerBridgeID,
+           smartToggleOwner != identifier {
+            _ = bridge.requestMicrophoneClose()
+            cancelPendingBluetoothVoiceStart(for: identifier)
+            AppLogger.shared.write("ATVV STREAM rejected_busy reason=smart_toggle_owner")
+            return
+        }
         if let activeIdentifier = voiceSession.activeDeviceIdentifier,
            activeIdentifier != identifier {
             _ = bridge.requestMicrophoneClose()
@@ -140,7 +150,15 @@ extension BridgeAppModel {
         } else {
             pendingStartAudio = []
         }
+        let isSmartToggleEligible = !isSmartToggleContinuation &&
+            !longRecordingRequested &&
+            bridge.identifiedModel?.isChromecastRemote == true &&
+            settings.g9n9nVoiceButtonMode(for: profileID) == .smartToggle
         voiceSession.begin(deviceIdentifier: identifier)
+        if isSmartToggleEligible {
+            g9n9nSmartToggle.beginPhysicalPress(bridgeID: identifier, at: bridge.nowUptime())
+            g9n9nSmartToggleBridge = bridge
+        }
         updateVoiceKeyState(
             streaming: true,
             forceSoftware: requiresOrderedVoiceFn ||
@@ -148,6 +166,9 @@ extension BridgeAppModel {
             owner: .bluetooth,
             completion: { [self] activated in
             guard activated else {
+                if g9n9nSmartToggle.ownerBridgeID == identifier {
+                    clearG9N9NSmartToggleState(reason: "voice_key_rejected")
+                }
                 _ = bridge.requestMicrophoneClose()
                 voiceSession.isActive = false
                 voiceSession.activeDeviceIdentifier = nil
@@ -189,6 +210,15 @@ extension BridgeAppModel {
                 rc003VoiceExtensionOpenTimer = nil
                 AppLogger.shared.write(
                     "RC003 EXTENSION physical_segment_reopened trace=\(voiceSession.activeBluetoothVoiceTraceID ?? 0)"
+                )
+            } else if isSmartToggleContinuation {
+                if let deadlineGeneration = g9n9nSmartToggle.enterHandsFreeActive(bridgeID: identifier) {
+                    g9n9nSmartToggleReopenTimer?.cancel()
+                    g9n9nSmartToggleReopenTimer = nil
+                    scheduleG9N9NSmartToggleDeadline(generation: deadlineGeneration)
+                }
+                AppLogger.shared.write(
+                    "G9N9N SMART_TOGGLE reopened trace=\(voiceSession.activeBluetoothVoiceTraceID ?? 0)"
                 )
             } else {
                 if voiceFnTapSession.isEnabled {
@@ -232,6 +262,9 @@ extension BridgeAppModel {
                     let bufferedAudio = self.voiceSession.pendingStart.drain()
                     guard ready else {
                         self.voiceSession.pendingStart.audio.cancel()
+                        if self.g9n9nSmartToggle.ownerBridgeID == identifier {
+                            self.clearG9N9NSmartToggleState(reason: "audio_output_rejected")
+                        }
                         _ = bridge.requestMicrophoneClose()
                         AppLogger.shared.write("ATVV STREAM rejected_audio_output")
                         self.bluetoothBridgeDidStopVoice(bridge)
@@ -250,6 +283,9 @@ extension BridgeAppModel {
                     self.flushPendingCommandVoiceAudio(for: bridge)
                     if stopRequested {
                         self.bluetoothBridgeDidStopVoice(bridge)
+                    } else if self.g9n9nSmartToggle.isAwaitingReopenWithPendingPreparationRelease,
+                              self.g9n9nSmartToggle.ownerBridgeID == identifier {
+                        self.enterG9N9NSmartToggleAwaitingReopen(bridge: bridge, identifier: identifier)
                     }
                 }
             }
@@ -265,12 +301,31 @@ extension BridgeAppModel {
             }
             if outputReadyAtStart {
                 flushPendingCommandVoiceAudio(for: bridge)
+                if g9n9nSmartToggle.isAwaitingReopenWithPendingPreparationRelease,
+                   g9n9nSmartToggle.ownerBridgeID == identifier {
+                    enterG9N9NSmartToggleAwaitingReopen(bridge: bridge, identifier: identifier)
+                }
             }
         })
     }
 
     func bluetoothBridgeDidStopVoice(_ bridge: BluetoothRemoteBridge) {
         guard let identifier = bridge.deviceIdentifier else { return }
+        if (identifier == voiceSession.activeDeviceIdentifier && pendingVoiceKeyActivationOwner == .bluetooth) ||
+            voiceSession.pendingStart.identifier == identifier {
+            if g9n9nSmartToggle.recordShortReleaseDuringPreparation(
+                bridgeID: identifier,
+                stopReason: bridge.lastVoiceStopReason,
+                localCloseRequested: bridge.localMicrophoneCloseRequested,
+                at: bridge.nowUptime()
+            ) {
+                AppLogger.shared.write("G9N9N SMART_TOGGLE short_release_during_preparation")
+                return
+            }
+            if g9n9nSmartToggle.ownerBridgeID == identifier {
+                clearG9N9NSmartToggleState(reason: "stop_during_preparation")
+            }
+        }
         if identifier == voiceSession.activeDeviceIdentifier, pendingVoiceKeyActivationOwner == .bluetooth {
             _ = releaseVoiceKeyIfNeeded(owner: .bluetooth, forceSoftware: true)
             return
@@ -314,6 +369,18 @@ extension BridgeAppModel {
                     "generation=\(rc003VoiceExtensionGeneration)"
             )
             return
+        }
+        if g9n9nSmartToggle.shouldReopenOnPhysicalStop(
+            bridgeID: identifier,
+            stopReason: bridge.lastVoiceStopReason,
+            localCloseRequested: bridge.localMicrophoneCloseRequested,
+            at: bridge.nowUptime()
+        ) {
+            enterG9N9NSmartToggleAwaitingReopen(bridge: bridge, identifier: identifier)
+            return
+        }
+        if g9n9nSmartToggle.ownerBridgeID == identifier {
+            clearG9N9NSmartToggleState(reason: "session_stopped")
         }
         voiceSession.end()
         voiceSession.commandAudio.cancel()
@@ -641,6 +708,9 @@ extension BridgeAppModel {
                    rc003VoiceExtensionBridge === bridge {
                     finishRC003VoiceExtensionTest(reason: "bluetooth_not_ready")
                 }
+                if g9n9nSmartToggle.ownerBridgeID == identifier || g9n9nSmartToggleBridge === bridge {
+                    clearG9N9NSmartToggleState(reason: "bluetooth_not_ready")
+                }
                 voiceSession.isActive = false
                 voiceSession.activeDeviceIdentifier = nil
                 voiceSession.commandAudio.cancel()
@@ -671,5 +741,36 @@ extension BridgeAppModel {
                 self?.releaseVirtualAudioOutputIfUnused(reason: "bluetooth_not_ready")
             }
         }
+    }
+
+    func bluetoothBridgeShouldCloseStreamingOnRemoteOpenRequest(_ bridge: BluetoothRemoteBridge) -> Bool {
+        guard let identifier = bridge.deviceIdentifier else { return false }
+        return g9n9nSmartToggle.shouldStopOnRemoteOpenRequest(bridgeID: identifier)
+    }
+
+    func bluetoothBridgeShouldStopToggleVoiceOnRemoteAudioStart(
+        _ bridge: BluetoothRemoteBridge,
+        interaction: UInt8?,
+        incomingSessionID: UInt8?
+    ) -> Bool {
+        guard let identifier = bridge.deviceIdentifier else { return false }
+        return g9n9nSmartToggle.shouldStopOnRemoteAudioStart(
+            bridgeID: identifier,
+            interaction: interaction,
+            activeSessionID: bridge.activeStreamSessionID,
+            incomingSessionID: incomingSessionID
+        )
+    }
+
+    func bluetoothBridgeDidRequestStopToggleVoice(_ bridge: BluetoothRemoteBridge) {
+        guard let identifier = bridge.deviceIdentifier,
+              g9n9nSmartToggle.ownerBridgeID == identifier
+        else { return }
+        if !bridge.streaming {
+            abortG9N9NSmartToggleSession(reason: "second_press_before_stream", requestClose: false)
+            return
+        }
+        _ = g9n9nSmartToggle.enterClosing(bridgeID: identifier)
+        cancelG9N9NSmartToggleTimers()
     }
 }

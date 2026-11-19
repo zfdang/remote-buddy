@@ -628,4 +628,17 @@ final class VirtualAudioOutput: @unchecked Sendable {
                 "state={\(diagnosticState())}"
         )
     }
+
+#if DEBUG
+    func simulateReadyForTesting(device: AudioDeviceInfo) {
+        updateOutputState {
+            $0.selectedDevice = device
+            $0.actualDevice = device
+            $0.engineRunning = true
+            $0.playerPlaying = true
+            $0.ready = true
+            $0.healthy = true
+        }
+    }
+#endif
 }

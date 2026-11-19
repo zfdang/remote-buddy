@@ -236,6 +236,7 @@ final class VoiceInputDestinationCoordinator {
             self.querySnapshot = { completion in completion(snapshot()) }
         } else {
             self.querySnapshot = { completion in
+                nonisolated(unsafe) let completion = completion
                 AccessibilityMessaging.queryQueue.async {
                     let value = VoiceInputDestinationSnapshot.system()
                     DispatchQueue.main.async { completion(value) }

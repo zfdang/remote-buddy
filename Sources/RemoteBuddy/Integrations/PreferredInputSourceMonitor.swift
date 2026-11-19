@@ -97,7 +97,8 @@ final class PreferredInputSourceMonitor {
         shouldContinue: @escaping () -> Bool,
         now: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime },
         schedule: @escaping (TimeInterval, @escaping () -> Void) -> Void = { delay, work in
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
+            nonisolated(unsafe) let work = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { work() }
         },
         completion: @escaping (Bool) -> Void
     ) {

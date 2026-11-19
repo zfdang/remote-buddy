@@ -51,7 +51,10 @@ extension BridgeAppModel {
                 configured: false, devices: devices)
             return
         }
-        let configure = configureOutput ?? { self.audio.output.configureAsync(deviceUID: $0, completion: $1) }
+        let configure: (String, @escaping (Bool) -> Void) -> Void = configureOutput ?? { uid, completion in
+            nonisolated(unsafe) let completion = completion
+            self.audio.output.configureAsync(deviceUID: uid, completion: { completion($0) })
+        }
         let deviceUID = settings.selectedAudioDeviceUID
         audio.beginConfiguration(
             generation: configurationGeneration,
@@ -278,7 +281,10 @@ extension BridgeAppModel {
     ) {
         configureVirtualAudioOutput(
             reason: reason,
-            configureOutput: { self.audio.output.configureAsync(deviceUID: $0, completion: $1) },
+            configureOutput: { uid, completion in
+                nonisolated(unsafe) let completion = completion
+                self.audio.output.configureAsync(deviceUID: uid, completion: { completion($0) })
+            },
             completion: completion
         )
     }
@@ -345,7 +351,10 @@ extension BridgeAppModel {
         },
         completion: @escaping (Bool) -> Void
     ) {
-        let configure = configure ?? { self.audio.output.configureAsync(deviceUID: $0, completion: $1) }
+        let configure: (String, @escaping (Bool) -> Void) -> Void = configure ?? { uid, completion in
+            nonisolated(unsafe) let completion = completion
+            self.audio.output.configureAsync(deviceUID: uid, completion: { completion($0) })
+        }
         func attempt(retriesRemaining: Int) {
             guard self.started, self.audio.configurationGeneration == generation,
                   !self.isTerminating else { completion(false); return }
@@ -607,8 +616,8 @@ extension BridgeAppModel {
 
     func completeAudioRecoveryDeviceRefresh(generation: UInt64, reason: String, details: String,
         devices: [AudioDeviceInfo], outputSnapshot: VirtualAudioOutputDiagnosticSnapshot? = nil,
-        configureOutput: ((@escaping (Bool) -> Void) -> Void)? = nil,
-        diagnosticLog: @escaping (String) -> Void = { AppLogger.shared.write($0) }
+        configureOutput: (@MainActor (@escaping (Bool) -> Void) -> Void)? = nil,
+        diagnosticLog: @escaping @Sendable (String) -> Void = { AppLogger.shared.write($0) }
     ) {
         guard started, audio.recoveryGeneration == generation else { return }
         self.publishAudioDevices(devices)
@@ -624,6 +633,7 @@ extension BridgeAppModel {
                 "includes_hardware_change=\(coalesced.includesHardwareChange)"
         )
         if let inFlightGeneration = activeInFlightConfigurationGeneration(for: settings.selectedAudioDeviceUID) {
+            nonisolated(unsafe) let configureOutput = configureOutput
             diagnosticLog(
                 "AUDIO RECOVERY operation_id=\(generation) phase=waiting result=pending " +
                     "reason=\(effectiveReason) in_flight_generation=\(inFlightGeneration) " +

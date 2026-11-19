@@ -1,6 +1,6 @@
 import AppKit
 import ApplicationServices
-import CoreGraphics
+@preconcurrency import CoreGraphics
 import Darwin
 import Foundation
 
@@ -94,7 +94,7 @@ extension KeyboardInjector {
         }
     }
 
-    private static let markedKeySource = CGEventSource(stateID: .privateState)
+    private nonisolated(unsafe) static let markedKeySource = CGEventSource(stateID: .privateState)
 
     static func makeMarkedKeyEvent(code: CGKeyCode, isDown: Bool, flags: CGEventFlags, marker: Int64,
                                    excludingOwnedModifiers: CGEventFlags = [],

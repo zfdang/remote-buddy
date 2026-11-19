@@ -474,10 +474,11 @@ struct ApplicationIntegrationTests {
 
     @Test func automaticIntegrationSourceCannotEnableUndocumentedAccessibilityAttributes() throws {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-        let source = try String(contentsOf: root.appendingPathComponent("Sources/RemoteBuddy/Input/KeyboardInjector.Accessibility.swift"))
-        let start = try #require(source.range(of: "static func focusIntegratedApplication("))
-        let end = try #require(source.range(of: "static func weChatComposerFocusPoint", range: start.upperBound..<source.endIndex))
-        let automaticPath = source[start.lowerBound..<end.lowerBound]
+        let accessibilitySource = try String(contentsOf: root.appendingPathComponent("Sources/RemoteBuddy/Input/KeyboardInjector.Accessibility.swift"))
+        let start = try #require(accessibilitySource.range(of: "static func focusIntegratedApplication("))
+        let strategiesSource = try String(contentsOf: root.appendingPathComponent("Sources/RemoteBuddy/Input/KeyboardInjector.AppStrategies.swift"))
+        let strategiesEnd = try #require(strategiesSource.range(of: "static func weChatComposerFocusPoint"))
+        let automaticPath = accessibilitySource[start.lowerBound...] + "\n" + strategiesSource[..<strategiesEnd.lowerBound]
         for forbidden in ["announceManualAccessibility", "AXManualAccessibility", "AXEnhancedUserInterface"] {
             #expect(!automaticPath.contains(forbidden))
         }

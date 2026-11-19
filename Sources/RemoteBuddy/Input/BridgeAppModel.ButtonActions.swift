@@ -23,9 +23,17 @@ extension BridgeAppModel {
                 shortcut: configured.shortcut,
                 applicationProfile: applicationProfile,
                 focusInputCompletion: { [weak self] succeeded in
-                    if let requestID {
-                        self?.voiceInputDestinationCoordinator.completeFocusOperation(
-                            requestID: requestID, succeeded: succeeded)
+                    guard let requestID else { return }
+                    if Thread.isMainThread {
+                        MainActor.assumeIsolated {
+                            self?.voiceInputDestinationCoordinator.completeFocusOperation(
+                                requestID: requestID, succeeded: succeeded)
+                        }
+                    } else {
+                        DispatchQueue.main.async { [weak self] in
+                            self?.voiceInputDestinationCoordinator.completeFocusOperation(
+                                requestID: requestID, succeeded: succeeded)
+                        }
                     }
                 }
             )

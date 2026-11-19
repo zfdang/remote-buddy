@@ -3,6 +3,7 @@ import Combine
 import CoreBluetooth
 import SwiftUI
 
+@MainActor
 enum OnboardingImageCache {
     private static let images: NSCache<NSURL, NSImage> = {
         let cache = NSCache<NSURL, NSImage>()

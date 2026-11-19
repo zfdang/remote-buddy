@@ -59,7 +59,7 @@ struct BluetoothLifecycleTests {
     }
 
     @Test func batteryPollingOnlyRunsWithoutAnActiveNotificationSubscription() {
-        #expect(BluetoothBatteryPollingPolicy.interval == 300)
+        #expect(BluetoothBatteryPollingPolicy.interval == 1_800)
         #expect(BluetoothBatteryPollingPolicy.shouldPoll(
             supportsNotifications: false,
             isNotifying: false
@@ -72,6 +72,25 @@ struct BluetoothLifecycleTests {
             supportsNotifications: true,
             isNotifying: true
         ))
+    }
+
+    @Test @MainActor func batteryPollingDoesNotRestartWhileSystemSuspended() throws {
+        let name = "battery-suspend-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        final class DummyDelegate: BluetoothRemoteBridgeDelegate {
+            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didChange state: BluetoothBridgeState) {}
+            func bluetoothBridgeDidStartVoice(_ bridge: BluetoothRemoteBridge) {}
+            func bluetoothBridgeDidStopVoice(_ bridge: BluetoothRemoteBridge) {}
+            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didDecode samples: [Int16]) {}
+            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didUpdateBatteryLevel level: Int?) {}
+            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didIdentifyRemoteModel model: RemoteModel) {}
+            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didUpdatePowerState state: RemotePowerState?) {}
+            func bluetoothBridgeDeviceNameDidChange(_ bridge: BluetoothRemoteBridge) {}
+        }
+        let bridge = BluetoothRemoteBridge(settings: AppSettings(defaults: defaults), delegate: DummyDelegate())
+        bridge.simulateBatteryPollingScheduleDuringSuspensionForTesting()
+        #expect(!bridge.isBatteryPollingActiveForTesting)
     }
 
     @Test func onlySystemWakeForcesBluetoothRecovery() {

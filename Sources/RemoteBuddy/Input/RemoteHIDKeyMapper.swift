@@ -179,7 +179,7 @@ struct RemoteHIDMappingService {
 final class RemoteHIDKeyMapper {
     typealias ServiceProvider = () -> [RemoteHIDMappingService]
 
-    private static let mappingProperty = "UserKeyMapping" as CFString
+    private nonisolated(unsafe) static let mappingProperty = "UserKeyMapping" as CFString
 
     private struct OriginalMappings: Codable {
         let voice: HIDUsageMapping?

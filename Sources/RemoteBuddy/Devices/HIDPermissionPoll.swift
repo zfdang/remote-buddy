@@ -1,8 +1,8 @@
 import Foundation
 
 /// Shares one process-wide permission timer across all HID remote monitors.
-final class HIDPermissionPoll {
-    final class Subscription {
+final class HIDPermissionPoll: @unchecked Sendable {
+    final class Subscription: @unchecked Sendable {
         private let lock = NSLock()
         private var owner: HIDPermissionPoll?
         private var token: UUID?

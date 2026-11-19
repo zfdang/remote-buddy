@@ -89,6 +89,7 @@ enum OnboardingInputSourceSwitcher {
             completion?(false)
             return false
         }
+        nonisolated(unsafe) let completion = completion
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.activates = activates
         NSWorkspace.shared.openApplication(at: applicationURL, configuration: configuration) { app, error in

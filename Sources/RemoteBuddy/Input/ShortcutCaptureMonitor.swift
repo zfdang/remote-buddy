@@ -23,7 +23,7 @@ enum ShortcutCaptureStartFailure: Error, Equatable {
     case eventTapUnavailable
 }
 
-final class ShortcutCaptureMonitor {
+final class ShortcutCaptureMonitor: @unchecked Sendable {
     typealias CallbackDispatcher = (@escaping () -> Void) -> Void
     static let captureEventMask = CGEventMask(1 << CGEventType.keyDown.rawValue) |
         CGEventMask(1 << CGEventType.flagsChanged.rawValue)
@@ -49,8 +49,9 @@ final class ShortcutCaptureMonitor {
         modifierIsPressed: @escaping (UInt16) -> Bool = {
             CGEventSource.keyState(.hidSystemState, key: $0)
         },
-        dispatchCallback: @escaping CallbackDispatcher = {
-            DispatchQueue.main.async(execute: $0)
+        dispatchCallback: @escaping CallbackDispatcher = { callback in
+            nonisolated(unsafe) let callback = callback
+            DispatchQueue.main.async { callback() }
         }
     ) {
         self.onCapture = onCapture

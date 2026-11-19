@@ -2,7 +2,7 @@ import Darwin
 import Foundation
 import OSLog
 
-final class AppLogger: PublicDiagnosticEventSink {
+final class AppLogger: PublicDiagnosticEventSink, @unchecked Sendable {
     struct Metadata: Equatable {
         let processID: Int32
         let version: String

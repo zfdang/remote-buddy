@@ -1,16 +1,17 @@
 import AppKit
+@preconcurrency import ApplicationServices
 
 /// Inserts using AXSelectedText or a temporary clipboard paste after validating
 /// public focus metadata. Target text is never read.
-final class CommonPhraseInserter {
-    enum WriteResult {
+final class CommonPhraseInserter: @unchecked Sendable {
+    enum WriteResult: Sendable {
         case inserted
         case pasteSubmitted
         case failed(String)
     }
-    typealias Writer = (String, pid_t, @escaping (WriteResult) -> Void) -> Void
+    typealias Writer = (String, pid_t, @escaping @Sendable (WriteResult) -> Void) -> Void
 
-    private struct Request {
+    private struct Request: @unchecked Sendable {
         let operationID: UInt64
         let start: TimeInterval
         let text: String
@@ -70,7 +71,7 @@ final class CommonPhraseInserter {
         }
     }
 
-    private struct PasteTarget {
+    private struct PasteTarget: @unchecked Sendable {
         let processID: pid_t
         let element: AXUIElement?
         let terminal: Bool
@@ -89,9 +90,9 @@ final class CommonPhraseInserter {
     }
 
     private static func writeUsingAvailableRoute(_ text: String, processID: pid_t,
-                                                completion: @escaping (WriteResult) -> Void) {
+                                                completion: @escaping @Sendable (WriteResult) -> Void) {
         AccessibilityMessaging.queryQueue.async {
-            func finish(_ failure: String?) { DispatchQueue.main.async { completion(failure.map { .failed($0) } ?? .inserted) } }
+            @Sendable func finish(_ failure: String?) { DispatchQueue.main.async { completion(failure.map { .failed($0) } ?? .inserted) } }
             guard canSubmit(to: processID) else { finish(submissionFailure(processID)); return }
             let app = NSRunningApplication(processIdentifier: processID)
             let bundleID = app?.bundleIdentifier ?? ""
@@ -192,7 +193,7 @@ final class CommonPhraseInserter {
         return nil
     }
 
-    private static func paste(_ text: String, target: PasteTarget, completion: @escaping (WriteResult) -> Void) {
+    private static func paste(_ text: String, target: PasteTarget, completion: @escaping @Sendable (WriteResult) -> Void) {
         DispatchQueue.main.async {
             CommonPhraseClipboardPaste.shared.paste(text, validate: { done in
                 AccessibilityMessaging.queryQueue.async {

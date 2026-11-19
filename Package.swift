@@ -15,7 +15,8 @@ let package = Package(
         .executableTarget(
             name: "RemoteBuddy",
             dependencies: ["AudioExceptionGuard", .product(name: "Sparkle", package: "Sparkle")],
-            path: "Sources/RemoteBuddy"
+            path: "Sources/RemoteBuddy",
+            swiftSettings: [.enableUpcomingFeature("StrictConcurrency")]
         ),
         .target(
             name: "AudioExceptionGuard",

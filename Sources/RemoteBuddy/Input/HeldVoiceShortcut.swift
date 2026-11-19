@@ -3,7 +3,7 @@ import Foundation
 
 /// Holds a complete chord between the remote's voice-session edges.
 /// Only modifiers acquired by this session are released.
-final class HeldVoiceShortcut {
+final class HeldVoiceShortcut: @unchecked Sendable {
     static let shared = HeldVoiceShortcut()
     private struct HeldKey {
         let code: CGKeyCode

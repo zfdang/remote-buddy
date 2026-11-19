@@ -7,6 +7,7 @@ private final class CommonPhrasePanel: NSPanel {
     override var canBecomeMain: Bool { false }
 }
 
+@MainActor
 final class CommonPhraseController: ObservableObject {
     let store: CommonPhraseStore
     @Published private(set) var messageKey = "common_phrases.panel_hint"
@@ -34,27 +35,31 @@ final class CommonPhraseController: ObservableObject {
         self.frontmostProcessID = frontmostProcessID
         let workspaceCenter = NSWorkspace.shared.notificationCenter
         let activated = workspaceCenter.addObserver(forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { [weak self] notification in
-            guard let self, self.isVisible,
-                  let application = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
-                  application.processIdentifier != self.targetPID else { return }
-            self.close(reason: "frontmost_changed")
+            let processIdentifier = (notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?
+                .processIdentifier
+            MainActor.assumeIsolated {
+                guard let self, self.isVisible,
+                      let processIdentifier,
+                      processIdentifier != self.targetPID else { return }
+                self.close(reason: "frontmost_changed")
+            }
         }
         observers.append((workspaceCenter, activated))
         let resigned = NotificationCenter.default.addObserver(forName: NSApplication.didResignActiveNotification, object: nil, queue: .main) { [weak self] _ in
-            self?.close(reason: "app_background")
+            MainActor.assumeIsolated { self?.close(reason: "app_background") }
         }
         observers.append((.default, resigned))
         let slept = workspaceCenter.addObserver(forName: NSWorkspace.willSleepNotification, object: nil, queue: .main) { [weak self] _ in
-            self?.close(reason: "system_sleep")
+            MainActor.assumeIsolated { self?.close(reason: "system_sleep") }
         }
         observers.append((workspaceCenter, slept))
         let locked = workspaceCenter.addObserver(forName: NSWorkspace.sessionDidResignActiveNotification, object: nil, queue: .main) { [weak self] _ in
-            self?.close(reason: "session_inactive")
+            MainActor.assumeIsolated { self?.close(reason: "session_inactive") }
         }
         observers.append((workspaceCenter, locked))
     }
 
-    deinit { for (center, observer) in observers { center.removeObserver(observer) } }
+    isolated deinit { for (center, observer) in observers { center.removeObserver(observer) } }
 
     @discardableResult
     @MainActor func open(source: String, model: RemoteModel? = nil, localization: LocalizationStore) -> Bool {

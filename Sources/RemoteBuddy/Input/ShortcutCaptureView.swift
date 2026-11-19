@@ -24,7 +24,7 @@ struct ShortcutCaptureView: NSViewRepresentable {
         coordinator.stopMonitoring()
     }
 
-    final class Coordinator {
+    final class Coordinator: @unchecked Sendable {
         var onCapture: (CustomKeyboardShortcut) -> Void
         var onFailure: (ShortcutCaptureStartFailure) -> Void
         private var monitor: ShortcutCaptureMonitor?

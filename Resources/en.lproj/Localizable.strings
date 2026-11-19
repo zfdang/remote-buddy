@@ -1077,6 +1077,7 @@
 "connection.device.firmware" = "Firmware";
 "connection.device.model" = "Model";
 "connection.device.identity" = "Vendor / Product ID";
+"connection.device.hid_version" = "HID version";
 "connection.device.protocol" = "Voice protocol";
 "connection.device.audio" = "Audio format";
 "connection.device.frame" = "Audio frame";

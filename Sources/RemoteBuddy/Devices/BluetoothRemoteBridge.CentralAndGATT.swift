@@ -620,6 +620,7 @@ extension BluetoothRemoteBridge {
         if characteristic.uuid == pnpIDUUID {
             reportedHIDIdentity = RemoteHIDIdentity.fromPnP(data)
             deviceInformation.identity = reportedHIDIdentity
+            deviceInformation.hidVersion = RemoteHIDIdentity.productVersionFromPnP(data) ?? deviceInformation.hidVersion
             if googleCandidate {
                 guard googleReadiness.acceptIdentity(reportedHIDIdentity) else {
                     failInitialization(LocalizedMessage("google.remote.unconfirmed_identity"))

@@ -243,6 +243,7 @@ extension SettingsView {
         let readings: [(String, String?)] = [
             ("connection.device.model", information.modelNumber),
             ("connection.device.identity", information.identityValue),
+            ("connection.device.hid_version", information.hidVersionValue),
             ("connection.device.firmware", information.firmwareRevision),
             ("connection.device.protocol", information.protocolVersion),
             ("connection.device.audio", information.audioFormat),

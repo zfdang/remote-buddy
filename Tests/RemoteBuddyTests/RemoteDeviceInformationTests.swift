@@ -9,6 +9,7 @@ struct RemoteDeviceInformationTests {
         #expect(information.modelNumber == nil)
         #expect(information.firmwareRevision == nil)
         #expect(information.identityValue == nil)
+        #expect(information.hidVersionValue == nil)
         #expect(information.audioFormat == nil)
         #expect(information.protocolVersion == nil)
     }
@@ -33,5 +34,37 @@ struct RemoteDeviceInformationTests {
         let capabilities = try #require(ATVVCapabilities.parse(Data([0x0B, 1, 0, 1, 3, 0, 134])))
         let information = RemoteDeviceInformation(capabilities: capabilities)
         #expect(information.audioFormat == "8 kHz · IMA ADPCM")
+    }
+
+    @Test @MainActor func readsAndFormatsPnPHIDVersionAcrossBatchesAndLocales() throws {
+        let v0110 = Data([1, 0xD1, 0x18, 0x50, 0x94, 0x10, 0x01])
+        let v011B = Data([2, 0xD1, 0x18, 0x50, 0x94, 0x1B, 0x01])
+        let vZero = Data([2, 0xD1, 0x18, 0x50, 0x94, 0x00, 0x00])
+        #expect(RemoteHIDIdentity.productVersionFromPnP(v0110) == 0x0110)
+        #expect(RemoteHIDIdentity.productVersionFromPnP(v011B) == 0x011B)
+        #expect(RemoteHIDIdentity.productVersionFromPnP(vZero) == nil)
+        #expect(RemoteHIDIdentity.productVersionFromPnP(Data([1, 0xD1, 0x18])) == nil)
+
+        let info0110 = RemoteDeviceInformation(
+            identity: RemoteHIDIdentity.fromPnP(v0110),
+            hidVersion: RemoteHIDIdentity.productVersionFromPnP(v0110)
+        )
+        let info011B = RemoteDeviceInformation(
+            identity: RemoteHIDIdentity.fromPnP(v011B),
+            hidVersion: RemoteHIDIdentity.productVersionFromPnP(v011B)
+        )
+        #expect(info0110.hidVersionValue == "0x0110")
+        #expect(info011B.hidVersionValue == "0x011B")
+
+        let suite = "device-info-locale-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let localization = LocalizationStore(settings: AppSettings(defaults: defaults))
+        localization.select(.english)
+        let english = localization.text("connection.device.hid_version")
+        localization.select(.simplifiedChinese)
+        let chinese = localization.text("connection.device.hid_version")
+        #expect(english == "HID version")
+        #expect(chinese == "HID 版本")
     }
 }

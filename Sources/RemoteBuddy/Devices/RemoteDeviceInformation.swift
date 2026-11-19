@@ -5,6 +5,7 @@ struct RemoteDeviceInformation: Equatable {
     var modelNumber: String?
     var firmwareRevision: String?
     var identity: RemoteHIDIdentity?
+    var hidVersion: UInt16?
     var capabilities: ATVVCapabilities?
 
     static func deviceString(_ data: Data) -> String? {
@@ -15,6 +16,10 @@ struct RemoteDeviceInformation: Equatable {
 
     var identityValue: String? {
         identity.map { String(format: "%04X / %04X", $0.vendorID, $0.productID) }
+    }
+
+    var hidVersionValue: String? {
+        hidVersion.map { String(format: "0x%04X", $0) }
     }
 
     var protocolVersion: String? {

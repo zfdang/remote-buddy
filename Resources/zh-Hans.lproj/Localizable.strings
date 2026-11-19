@@ -1079,6 +1079,7 @@
 "connection.device.firmware" = "固件";
 "connection.device.model" = "型号";
 "connection.device.identity" = "厂商 / 产品 ID";
+"connection.device.hid_version" = "HID 版本";
 "connection.device.protocol" = "语音协议";
 "connection.device.audio" = "音频格式";
 "connection.device.frame" = "音频帧大小";

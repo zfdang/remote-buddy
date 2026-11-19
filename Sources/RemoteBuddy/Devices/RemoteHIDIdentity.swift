@@ -15,12 +15,23 @@ struct RemoteHIDIdentity: Codable, Hashable {
 
     // Bluetooth DIS PnP ID: namespace byte, then little-endian VID/PID/version.
     // It is only a hint until matched to actual Bluetooth HID metadata.
-    static func fromPnP(_ data: Data) -> Self? {
+    private static func parsePnP(_ data: Data) -> (identity: Self, productVersion: UInt16)? {
         let bytes = Array(data)
         guard bytes.count == 7, bytes[0] == 1 || bytes[0] == 2 else { return nil }
         let vendor = UInt16(bytes[1]) | UInt16(bytes[2]) << 8
         guard vendor != 0 else { return nil }
-        return Self(vendorID: vendor, productID: UInt16(bytes[3]) | UInt16(bytes[4]) << 8)
+        let product = UInt16(bytes[3]) | UInt16(bytes[4]) << 8
+        let version = UInt16(bytes[5]) | UInt16(bytes[6]) << 8
+        return (Self(vendorID: vendor, productID: product), version)
+    }
+
+    static func fromPnP(_ data: Data) -> Self? {
+        parsePnP(data)?.identity
+    }
+
+    static func productVersionFromPnP(_ data: Data) -> UInt16? {
+        guard let version = parsePnP(data)?.productVersion, version != 0 else { return nil }
+        return version
     }
 
     static func read(from device: IOHIDDevice) -> Self? {
@@ -29,6 +40,26 @@ struct RemoteHIDIdentity: Codable, Hashable {
               (1...65535).contains(vendor.intValue), (0...65535).contains(product.intValue)
         else { return nil }
         return Self(vendorID: UInt16(vendor.intValue), productID: UInt16(product.intValue))
+    }
+
+    static func readVersionNumber(from device: IOHIDDevice) -> UInt16? {
+        guard let version = IOHIDDeviceGetProperty(device, kIOHIDVersionNumberKey as CFString) as? NSNumber,
+              (1...65535).contains(version.intValue)
+        else { return nil }
+        return UInt16(version.intValue)
+    }
+
+    static func readVersionNumber(forFingerprint fingerprint: String) -> UInt16? {
+        let manager = IOHIDManagerCreate(kCFAllocatorDefault, IOOptionBits(kIOHIDOptionsTypeNone))
+        IOHIDManagerSetDeviceMatching(manager, nil)
+        let devices = IOHIDManagerCopyDevices(manager) as? Set<IOHIDDevice> ?? []
+        for device in devices {
+            guard HIDRemoteMonitor.fingerprint(for: device) == fingerprint,
+                  let version = readVersionNumber(from: device)
+            else { continue }
+            return version
+        }
+        return nil
     }
 }
 

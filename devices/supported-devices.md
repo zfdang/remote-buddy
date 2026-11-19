@@ -54,9 +54,10 @@
 
 <p><img src="../pages/assets/devices/g9n9j-in-hand.jpg" width="180" alt="Google G9N9N 遥控器真实照片" /></p>
 
-- **两种硬件情况与支持模式**：G9N9N 兼容款众多，同为 `18D1:9450` 甚至同报 DIS `A0` 的设备存在两种固件表现：
-  - **Fully Supported（完全支持模式，已验证 `HID VersionNumber 0x0110`）**：单键与松开信号均能被 macOS 正常识别，语音与全部 14 颗普通按键（单击/双击/长按）均可用。
-  - **Partially Supported（部分支持模式，如 `DIS A0 / 固件 26.7`）**：单键报告被 macOS 丢弃、系统无法认识单键输入，向导中经用户确认开启兼容模式后，仅支持 **1. 语音键按住说话** 与 **2.「方向键 + OK」发送 Enter 键**；因其余单键、双击/长按及常用语均不可用、功能缺失较多，**建议更换为完全支持的遥控器硬件版本**。购买前查看[设备页面](https://remote.zfdang.com/device.html)。
+- **三种已观察到的硬件 / HID 批次与表现**（三者 VID/PID 同为 `18D1:9450`、DIS 型号也可能同报 `A0`，连上后可在设置「遥控器连接」查看 **HID 版本** 字段区分）：
+  1. **Fully Supported（`HID 版本 0x0110` · Report ID `1` 完整 3 字节）**：单键与松开均完整上送 macOS `IOHID`，语音键（含智能切换免提 + 约 5 分钟保活）与全部 14 颗普通按键（单击/双击/长按/常用语）均完整可用。
+  2. **Partially Supported（如 `DIS A0 / 固件 26.7` · Report ID `1` 发 1 字节短报告）**：单键及松开报告在进入 `IOHID` 前被 macOS 丢弃，需在向导确认开启兼容模式，仅可用 **1. 语音键** 与 **2.「方向键 + OK」发送 Enter 键**。
+  3. **`HID 版本 0x011B` 批次（社区实测反馈：[brightac/remote-buddy#7](https://github.com/brightac/remote-buddy/issues/7)）**：使用 Report ID `2`（小端 16-bit consumer usage），因描述符声明 3 字节而固件实际发 2 字节，在 macOS `BTLEServer` 层即被丢弃，**公开 `IOHID` 既收不到单键也收不到双键**（语音键走 ATVV 仍可用，但 14 颗普通按键在公开接口下不可用），建议退换为 `0x0110` 批次。
 - **按键**：方向、OK、返回、主页、静音、音量加减、YouTube、Netflix、输入源、电源共 14 颗普通按键均收到按下和松开报告；可配置单击、双击和长按。
 - **语音**：全程按住 Google Assistant 键说话，松开停止。
 - **供电**：两节 AAA 电池；有电量读数时应用显示百分比。

@@ -32,6 +32,10 @@ extension BridgeAppModel {
         guard let name = bridge.currentSystemDeviceName(),
               let candidate = RemoteHIDCandidate.identified(identity: identity, expectedName: name,
                   among: RemoteHIDCandidate.available()) else { return }
+        if bridge.deviceInformation.hidVersion == nil,
+           let hidVersion = RemoteHIDIdentity.readVersionNumber(forFingerprint: candidate.binding.fingerprint) {
+            bridge.deviceInformation.hidVersion = hidVersion
+        }
         bindCompatibleRemote(candidate, profileID: profileID, select: false)
     }
 

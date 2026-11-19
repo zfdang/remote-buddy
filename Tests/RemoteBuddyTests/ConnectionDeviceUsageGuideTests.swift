@@ -43,14 +43,12 @@ struct ConnectionDeviceUsageGuideTests {
         #expect(rc001Guide?.items.map(\.titleKey) == [
             "connection.device_guide.xiaomi.voice.title",
             "connection.device_guide.xiaomi.limit.title",
-            "connection.device_guide.xiaomi.buttons.title",
         ])
 
         #expect(t1Guide?.badgeKey == "connection.device_guide.badge.t1_toggle")
         #expect(t1Guide?.items.map(\.titleKey) == [
             "connection.device_guide.t1.voice.title",
             "connection.device_guide.t1.hold_compat.title",
-            "connection.device_guide.t1.keys.title",
         ])
 
         #expect(g9n9nSmartGuide?.badgeKey == nil)

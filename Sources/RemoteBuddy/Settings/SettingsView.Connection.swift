@@ -207,16 +207,22 @@ extension SettingsView {
                             .font(.system(.body, design: .monospaced)).frame(width: 54, alignment: .trailing)
                     }
                     Text(localization.text("audio.gain.help")).font(.caption).foregroundStyle(.secondary)
-                    if let identifier = profile.bluetoothIdentifier,
-                       let information = model.remoteDeviceInformation[identifier],
-                       information != RemoteDeviceInformation() {
-                        connectionDeviceInformation(information)
+                    let hardwareInformation = profile.bluetoothIdentifier.flatMap { identifier in
+                        let info = model.remoteDeviceInformation[identifier]
+                        return (info != nil && info != RemoteDeviceInformation()) ? info : nil
+                    }
+                    if let hardwareInformation {
+                        connectionDeviceInformation(hardwareInformation)
                     }
                     if profile.model.isChromecastRemote {
                         let mode = profile.effectiveG9N9NInputMode
                         let voiceMode = profile.effectiveG9N9NVoiceButtonMode
+                        if hardwareInformation == nil {
+                            Divider()
+                        }
+                        g9n9nHardwareSupportSection(for: mode)
                         Divider()
-                        VStack(alignment: .leading, spacing: 10) {
+                        VStack(alignment: .leading, spacing: 12) {
                             VStack(alignment: .leading, spacing: 6) {
                                 HStack(alignment: .center, spacing: 8) {
                                     Text(localization.text("connection.g9n9n.voice_button_mode.title"))
@@ -238,37 +244,11 @@ extension SettingsView {
                                 .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
                             }
-                            Divider()
-                            VStack(alignment: .leading, spacing: 6) {
-                                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                    g9n9nSupportBadge(for: mode)
-                                        .fixedSize()
-                                    Text(localization.text(
-                                        mode == .twoKeyCompatibility
-                                            ? "connection.g9n9n.partial_support_notice"
-                                            : "connection.g9n9n.full_support_notice"
-                                    ))
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                }
-                                if mode == .twoKeyCompatibility {
-                                    HStack(spacing: 12) {
-                                        Link(
-                                            localization.text("connection.g9n9n.compatibility_doc_link"),
-                                            destination: AppLinks.g9n9nCompatibilityGuide
-                                        )
-                                        Link(
-                                            localization.text("onboarding.chromecast.replace_hardware_link"),
-                                            destination: AppLinks.devices(for: localization.locale)
-                                        )
-                                    }
-                                    .font(.caption)
-                                }
+                            if let usageGuide = ConnectionDeviceUsageGuide.make(for: profile) {
+                                ConnectionDeviceUsageSection(guide: usageGuide, showsTopDivider: false)
                             }
                         }
-                    }
-                    if let usageGuide = ConnectionDeviceUsageGuide.make(for: profile) {
+                    } else if let usageGuide = ConnectionDeviceUsageGuide.make(for: profile) {
                         ConnectionDeviceUsageSection(guide: usageGuide)
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading).padding(.top, 10)
@@ -309,6 +289,36 @@ extension SettingsView {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func g9n9nHardwareSupportSection(for mode: G9N9NInputMode) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                g9n9nSupportBadge(for: mode)
+                    .fixedSize()
+                Text(localization.text(
+                    mode == .twoKeyCompatibility
+                        ? "connection.g9n9n.partial_support_notice"
+                        : "connection.g9n9n.full_support_notice"
+                ))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            }
+            if mode == .twoKeyCompatibility {
+                HStack(spacing: 12) {
+                    Link(
+                        localization.text("connection.g9n9n.compatibility_doc_link"),
+                        destination: AppLinks.g9n9nCompatibilityGuide
+                    )
+                    Link(
+                        localization.text("onboarding.chromecast.replace_hardware_link"),
+                        destination: AppLinks.devices(for: localization.locale)
+                    )
+                }
+                .font(.caption)
+            }
+        }
     }
 
     @ViewBuilder

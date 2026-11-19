@@ -1282,14 +1282,10 @@
 "connection.device_guide.xiaomi.voice.detail" = "Hold Voice while speaking and release to stop; hardware stops pushing audio as soon as you let go, so Smart Toggle / tap-to-talk cannot be enabled.";
 "connection.device_guide.xiaomi.limit.title" = "~60-second single-hold hardware limit";
 "connection.device_guide.xiaomi.limit.detail" = "Firmware ends the stream after ~60 seconds of continuous holding. For longer dictation, release briefly and press again to continue.";
-"connection.device_guide.xiaomi.buttons.title" = "12 customizable buttons with Power & Voice protection";
-"connection.device_guide.xiaomi.buttons.detail" = "All 12 standard keys support click, double-click, long-press, and common phrases; Power and native Voice are protected from accidental sleep or conflicts.";
 "connection.device_guide.t1.voice.title" = "Press once to start, press again to stop (~5 min cap)";
 "connection.device_guide.t1.voice.detail" = "Press and release Voice to speak hands-free, then press once more to stop. Automatic keepalive caps sessions at ~5 minutes to avoid battery drain.";
 "connection.device_guide.t1.hold_compat.title" = "Works with hold-to-talk voice tools";
 "connection.device_guide.t1.hold_compat.detail" = "Remote Buddy holds your tool's voice shortcut while streaming and releases on stop, so no continuous physical hold is required.";
-"connection.device_guide.t1.keys.title" = "7 front buttons customizable · Air mouse & QWERTY passthrough";
-"connection.device_guide.t1.keys.detail" = "Power, Back, Home, Menu, Mute, and Volume +/- support click, double-click, and long-press; air mouse, front D-pad/OK, and rear QWERTY pass through natively.";
 "connection.device_guide.g9n9n.led.title" = "Bottom white LED indicates active voice streaming";
 "connection.device_guide.g9n9n.led.detail" = "Whenever the remote microphone is open and transmitting audio in either mode, the white LED near the bottom stays lit and turns off when stopped.";
 "connection.device_guide.g9n9n.limit.title" = "Both modes exceed 60s (~5-minute safety limit)";

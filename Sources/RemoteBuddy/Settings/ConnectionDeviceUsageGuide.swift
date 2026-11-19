@@ -48,12 +48,6 @@ struct ConnectionDeviceUsageGuide: Equatable {
                     titleKey: "connection.device_guide.xiaomi.limit.title",
                     detailKey: "connection.device_guide.xiaomi.limit.detail"
                 ),
-                ConnectionDeviceUsageItem(
-                    symbol: "square.grid.2x2",
-                    tint: .teal,
-                    titleKey: "connection.device_guide.xiaomi.buttons.title",
-                    detailKey: "connection.device_guide.xiaomi.buttons.detail"
-                ),
             ]
         )
     }
@@ -75,12 +69,6 @@ struct ConnectionDeviceUsageGuide: Equatable {
                     tint: .blue,
                     titleKey: "connection.device_guide.t1.hold_compat.title",
                     detailKey: "connection.device_guide.t1.hold_compat.detail"
-                ),
-                ConnectionDeviceUsageItem(
-                    symbol: "keyboard",
-                    tint: .teal,
-                    titleKey: "connection.device_guide.t1.keys.title",
-                    detailKey: "connection.device_guide.t1.keys.detail"
                 ),
             ]
         )
@@ -210,11 +198,14 @@ struct G9N9NVoiceButtonModeSelector: View {
 
 struct ConnectionDeviceUsageSection: View {
     let guide: ConnectionDeviceUsageGuide
+    var showsTopDivider: Bool = true
     @EnvironmentObject private var localization: LocalizationStore
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Divider()
+            if showsTopDivider {
+                Divider()
+            }
             HStack(alignment: .center, spacing: 8) {
                 Text(localization.text("connection.device_guide.title"))
                     .font(.headline)

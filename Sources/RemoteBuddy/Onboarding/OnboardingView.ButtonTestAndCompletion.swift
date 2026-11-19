@@ -417,20 +417,14 @@ extension OnboardingView {
                     }
                     diagnosticCopyFeedback
                     if settings.onboardingStep == .remote,
-                       let profile = settings.selectedRemoteProfile, selectedControlConnected {
-                        if BridgeAppModel.showsManualCompatibleHIDPicker(
-                            model: profile.model,
-                            source: settings.onboardingControlSource
-                        ) {
-                            Button(localization.text("remote.hid_binding.open")) { hidBindingProfile = profile }
-                                .buttonStyle(.bordered)
-                        } else if profile.model.isChromecastRemote {
-                            Link(
-                                localization.text("connection.g9n9n.compatibility_doc_link"),
-                                destination: AppLinks.g9n9nCompatibilityGuide
-                            )
-                            .font(.system(size: 12))
-                        }
+                       let profile = settings.selectedRemoteProfile,
+                       selectedControlConnected,
+                       BridgeAppModel.showsManualCompatibleHIDPicker(
+                           model: profile.model,
+                           source: settings.onboardingControlSource
+                       ) {
+                        Button(localization.text("remote.hid_binding.open")) { hidBindingProfile = profile }
+                            .buttonStyle(.bordered)
                     }
                 }
                 .padding(.top, 8)

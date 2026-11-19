@@ -14,6 +14,13 @@ extension OnboardingView {
             ForEach(RemoteSetupDevice.allCases) { device in
                 deviceSelectionCard(device)
             }
+            if settings.onboardingDevice == .chromecastG9N9N {
+                Link(
+                    localization.text("connection.g9n9n.compatibility_doc_link"),
+                    destination: AppLinks.g9n9nCompatibilityGuide
+                )
+                .font(.system(size: 12))
+            }
         }
     }
 

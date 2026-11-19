@@ -276,6 +276,12 @@ extension OnboardingView {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
+
+            Link(
+                localization.text("connection.g9n9n.compatibility_doc_link"),
+                destination: AppLinks.g9n9nCompatibilityGuide
+            )
+            .font(.system(size: 12))
         }
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)

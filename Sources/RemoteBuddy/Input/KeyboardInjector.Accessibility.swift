@@ -179,10 +179,6 @@ extension KeyboardInjector {
 
     /// Only invoked by an accepted voice start. A separate gate keeps this from
     /// cancelling explicit application-launch/focus button actions.
-    private final class ClickAttemptState: @unchecked Sendable {
-        var clickAttempted = false
-    }
-
     static func focusIntegratedApplication(_ integration: ApplicationIntegration,
                                            processIdentifier: pid_t,
                                            completion: @escaping (ApplicationFocusResult) -> Void) -> ScheduledOperation {
@@ -200,27 +196,27 @@ extension KeyboardInjector {
                 completion(result)
             }
         }
-        let clickState = ClickAttemptState()
-        @Sendable func attempt(_ number: Int) {
+        @Sendable func attempt(_ number: Int, clickAttempted: Bool) {
             focusQueue.asyncAfter(deadline: .now() + (number == 0 ? 0 : 0.15)) {
                 let canContinue = {
                     gate.isCurrent(requestID) && applicationIsFrontmost(processIdentifier) &&
                         isAccessibilityTrusted && !SecureInputMonitor.isEnabled()
                 }
                 guard canContinue() else { finish(.unavailable); return }
+                var nextClickAttempted = clickAttempted
                 let result = focusIntegratedComposer(integration, processIdentifier: processIdentifier,
-                    clickAttempted: &clickState.clickAttempted, canContinue: canContinue)
+                    clickAttempted: &nextClickAttempted, canContinue: canContinue)
                 if result != .unavailable {
                     AppLogger.shared.write("APP INTEGRATION \(result == .preserved ? "preserved" : "focused") bundle=\(bundleIdentifier)")
                     finish(result)
                 } else if number < 2, canContinue() {
-                    attempt(number + 1)
+                    attempt(number + 1, clickAttempted: nextClickAttempted)
                 } else {
                     finish(.unavailable)
                 }
             }
         }
-        attempt(0)
+        attempt(0, clickAttempted: false)
         return ScheduledOperation { _ = gate.begin() }
     }
 

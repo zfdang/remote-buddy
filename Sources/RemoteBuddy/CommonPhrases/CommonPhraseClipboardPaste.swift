@@ -25,6 +25,7 @@ final class CommonPhraseClipboardPaste: ObservableObject {
     private var restoration: (snapshot: Snapshot, lease: Int)?
     private var busy = false
     private var snapshotInFlight = false
+    private var snapshotWaitingToken: UInt64?
     private var generation: UInt64 = 0
 
     init(board: NSPasteboard = .general,
@@ -92,10 +93,6 @@ final class CommonPhraseClipboardPaste: ObservableObject {
         return pasteKeyDownSubmitted
     }
 
-    private final class WaitingState: @unchecked Sendable {
-        var waiting = true
-    }
-
     private nonisolated static func onMain(_ work: @escaping @MainActor @Sendable () -> Void) {
         if Thread.isMainThread {
             MainActor.assumeIsolated { work() }
@@ -127,11 +124,11 @@ final class CommonPhraseClipboardPaste: ObservableObject {
                     let originalCount = self.board.changeCount
                     let name = self.board.name
                     self.snapshotInFlight = true
-                    let waitingState = WaitingState()
+                    self.snapshotWaitingToken = token
                     let deadline = self.schedule(2) {
                         Self.onMain {
-                            guard waitingState.waiting, self.busy, self.generation == token else { return }
-                            waitingState.waiting = false
+                            guard self.snapshotWaitingToken == token, self.busy, self.generation == token else { return }
+                            self.snapshotWaitingToken = nil
                             self.snapshotInFlight = false
                             self.finish("clipboard_write_failed", completion)
                         }
@@ -145,9 +142,9 @@ final class CommonPhraseClipboardPaste: ObservableObject {
                             ? Self.readSnapshotInHelper(name: name, executableURL: snapshotExecutableURL)
                             : Self.snapshot(NSPasteboard(name: name))
                         Self.onMain {
-                            guard waitingState.waiting, self.busy, self.generation == token else { return }
+                            guard self.snapshotWaitingToken == token, self.busy, self.generation == token else { return }
+                            self.snapshotWaitingToken = nil
                             self.snapshotInFlight = false
-                            waitingState.waiting = false
                             deadline.cancel()
                             guard let saved, self.board.changeCount == originalCount else {
                                 self.finish("clipboard_write_failed", completion); return
@@ -269,6 +266,7 @@ final class CommonPhraseClipboardPaste: ObservableObject {
     }
 
     private func finish(_ failure: String?, _ completion: (String?) -> Void) {
+        snapshotWaitingToken = nil
         busy = false
         completion(failure)
     }

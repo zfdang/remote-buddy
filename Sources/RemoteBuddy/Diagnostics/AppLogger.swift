@@ -1,5 +1,6 @@
 import Darwin
 import Foundation
+import os
 import OSLog
 
 final class AppLogger: PublicDiagnosticEventSink, @unchecked Sendable {
@@ -26,10 +27,11 @@ final class AppLogger: PublicDiagnosticEventSink, @unchecked Sendable {
 
     typealias RetirementHandler = (URL) throws -> Void
 
+    static let diagnosticLoggingEnabledKey = "diagnosticLoggingEnabled"
     static let shared = AppLogger()
 
     let logURL: URL
-    let isEnabled: Bool
+    var isEnabled: Bool { enabledLock.withLock { $0 } }
 
     var logDirectoryURL: URL {
         logURL.deletingLastPathComponent()
@@ -43,11 +45,13 @@ final class AppLogger: PublicDiagnosticEventSink, @unchecked Sendable {
     private static let fileHeader = Data("Remote Buddy runtime log (UTF-8)\n".utf8)
 
     private let queue = DispatchQueue(label: "RemoteBuddy.logger")
+    private let enabledLock: OSAllocatedUnfairLock<Bool>
     private let formatter: ISO8601DateFormatter
     private let metadata: Metadata
     private let maximumFileSize: UInt64
     private let archiveCount: Int
     private let fileManager: FileManager
+    private let retirementHandler: RetirementHandler?
     private let now: () -> Date
     private let reportFailure: (String) -> Void
     private var sessionDescriptor: Int32 = -1
@@ -94,7 +98,7 @@ final class AppLogger: PublicDiagnosticEventSink, @unchecked Sendable {
         isEnabled: Bool = true
     ) {
         self.logURL = logURL
-        self.isEnabled = isEnabled
+        self.enabledLock = OSAllocatedUnfairLock(initialState: isEnabled)
         self.metadata = Metadata(
             processID: metadata.processID,
             version: Self.stableToken(metadata.version),
@@ -103,6 +107,7 @@ final class AppLogger: PublicDiagnosticEventSink, @unchecked Sendable {
         self.archiveCount = max(0, archiveCount)
         self.maximumFileSize = max(UInt64(Self.fileHeader.count), maximumFileSize)
         self.fileManager = fileManager
+        self.retirementHandler = retirementHandler
         self.now = now
         self.reportFailure = reportFailure ?? { message in
             Self.systemLogger.error("\(message, privacy: .public)")
@@ -114,6 +119,33 @@ final class AppLogger: PublicDiagnosticEventSink, @unchecked Sendable {
         self.formatter = formatter
 
         guard isEnabled else { return }
+        openSessionIfNeeded()
+    }
+
+    /// Enables or disables local file logging at runtime without requiring a restart.
+    func setEnabled(_ enabled: Bool) {
+        dispatchPrecondition(condition: .notOnQueue(queue))
+        queue.sync {
+            let currentlyEnabled = enabledLock.withLock { $0 }
+            guard enabled != currentlyEnabled else { return }
+            if enabled {
+                openSessionIfNeeded()
+                enabledLock.withLock { $0 = true }
+                appendRecord(message: "LOGS enabled_by_user", date: now())
+            } else {
+                if sessionDescriptor >= 0, !fileLoggingStopped {
+                    appendRecord(message: "LOGS disabled_by_user", date: now())
+                }
+                enabledLock.withLock { $0 = false }
+                closeSessionDescriptor()
+            }
+        }
+    }
+
+    private func openSessionIfNeeded() {
+        guard sessionDescriptor < 0 else { return }
+        fileLoggingStopped = false
+        oversizedRecordWasReported = false
         do {
             try fileManager.createDirectory(
                 at: logDirectoryURL,
@@ -126,17 +158,43 @@ final class AppLogger: PublicDiagnosticEventSink, @unchecked Sendable {
             )
 
             try withExclusiveLogLock {
-                // Session names are unique. Never overwrite an existing file or follow a link.
-                let descriptor = Darwin.open(logURL.path,
+                // Session names are unique. Never follow symlinks; when re-enabled in-process,
+                // only append to an existing regular file owned by the current user.
+                let openMode = mode_t(S_IRUSR | S_IWUSR)
+                var descriptor = Darwin.open(
+                    logURL.path,
                     O_CREAT | O_EXCL | O_RDWR | O_APPEND | O_CLOEXEC | O_NOFOLLOW,
-                    mode_t(S_IRUSR | S_IWUSR))
+                    openMode
+                )
+                var openedExistingFile = false
+                if descriptor < 0, errno == EEXIST {
+                    descriptor = Darwin.open(
+                        logURL.path,
+                        O_RDWR | O_APPEND | O_CLOEXEC | O_NOFOLLOW,
+                        openMode
+                    )
+                    openedExistingFile = descriptor >= 0
+                }
                 guard descriptor >= 0 else { throw POSIXError(.EIO) }
-                guard flock(descriptor, LOCK_SH | LOCK_NB) == 0 else {
+                var status = stat()
+                guard fstat(descriptor, &status) == 0,
+                      (status.st_mode & S_IFMT) == S_IFREG,
+                      status.st_uid == getuid(),
+                      flock(descriptor, LOCK_SH | LOCK_NB) == 0
+                else {
                     _ = Darwin.close(descriptor)
                     throw POSIXError(.EIO)
                 }
                 sessionDescriptor = descriptor
-                try appendAtomically(Self.fileHeader)
+                if openedExistingFile {
+                    sessionSize = UInt64(max(0, status.st_size))
+                    if sessionSize == 0 {
+                        try appendAtomically(Self.fileHeader)
+                    }
+                } else {
+                    sessionSize = 0
+                    try appendAtomically(Self.fileHeader)
+                }
                 do { try retireOldSessions(archiveCount: max(0, archiveCount), handler: retirementHandler) }
                 catch { diagnose("session_retirement_failed", error: error) }
             }
@@ -144,6 +202,16 @@ final class AppLogger: PublicDiagnosticEventSink, @unchecked Sendable {
             fileLoggingStopped = true
             diagnose("session_file_create_failed", error: error)
         }
+    }
+
+    private func closeSessionDescriptor() {
+        if sessionDescriptor >= 0 {
+            _ = Darwin.close(sessionDescriptor)
+            sessionDescriptor = -1
+        }
+        sessionSize = 0
+        oversizedRecordWasReported = false
+        fileLoggingStopped = false
     }
 
     deinit {
@@ -187,7 +255,7 @@ final class AppLogger: PublicDiagnosticEventSink, @unchecked Sendable {
     func write(_ message: String) {
         guard isEnabled else { return }
         queue.async { [weak self] in
-            guard let self else { return }
+            guard let self, self.isEnabled else { return }
             self.appendRecord(message: message, date: self.now())
         }
     }
@@ -202,7 +270,7 @@ final class AppLogger: PublicDiagnosticEventSink, @unchecked Sendable {
             }
             .map { Self.singleLine(String($0)) }
         queue.async { [weak self] in
-            guard let self else { return }
+            guard let self, self.isEnabled else { return }
             let eventDate = self.now()
             self.appendRecord(message: "\(normalizedEvent) BEGIN", date: eventDate)
             for line in lines {
@@ -225,7 +293,6 @@ final class AppLogger: PublicDiagnosticEventSink, @unchecked Sendable {
     }
 
     func flush() {
-        guard isEnabled else { return }
         dispatchPrecondition(condition: .notOnQueue(queue))
         queue.sync {}
     }
@@ -235,11 +302,12 @@ final class AppLogger: PublicDiagnosticEventSink, @unchecked Sendable {
         guard isEnabled else { return }
         dispatchPrecondition(condition: .notOnQueue(queue))
         queue.sync {
+            guard isEnabled else { return }
             appendRecord(message: message, date: date)
         }
     }
 
-    static func shouldEnableSharedLogging(
+    static func isTestProcess(
         arguments: [String] = ProcessInfo.processInfo.arguments,
         environment: [String: String] = ProcessInfo.processInfo.environment
     ) -> Bool {
@@ -249,7 +317,21 @@ final class AppLogger: PublicDiagnosticEventSink, @unchecked Sendable {
         let hasTestEnvironment = environment["XCTestConfigurationFilePath"] != nil ||
             environment["XCTestBundlePath"] != nil ||
             environment["XCTestSessionIdentifier"] != nil
-        return !isXCTestProcess && !hasTestEnvironment
+        return isXCTestProcess || hasTestEnvironment
+    }
+
+    static func shouldEnableSharedLogging(
+        arguments: [String] = ProcessInfo.processInfo.arguments,
+        environment: [String: String] = ProcessInfo.processInfo.environment,
+        defaults: UserDefaults = .standard
+    ) -> Bool {
+        guard !isTestProcess(arguments: arguments, environment: environment) else {
+            return false
+        }
+        if defaults.object(forKey: diagnosticLoggingEnabledKey) == nil {
+            return true
+        }
+        return defaults.bool(forKey: diagnosticLoggingEnabledKey)
     }
 
     static func errorFields(_ error: Error) -> String {

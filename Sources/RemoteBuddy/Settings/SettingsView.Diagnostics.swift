@@ -107,10 +107,28 @@ extension SettingsView {
     }
 
     var inlineDiagnosticsSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(localization.text("diagnostics.logs.privacy"))
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 12) {
+                Image(systemName: "doc.text.magnifyingglass")
+                    .font(.system(size: 21, weight: .medium))
+                    .foregroundStyle(Color.accentColor)
+                    .frame(width: 34)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(localization.text("diagnostics.logs.enabled.title"))
+                        .font(.subheadline.weight(.semibold))
+                    Text(localization.text("diagnostics.logs.enabled.detail"))
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 16)
+                Toggle("", isOn: $settings.diagnosticLoggingEnabled)
+                    .labelsHidden()
+                    .accessibilityLabel(localization.text("diagnostics.logs.enabled.title"))
+                    .toggleStyle(.switch)
+            }
+
+            Divider()
 
             HStack(spacing: 12) {
                 Image(systemName: "doc.text")
@@ -123,6 +141,7 @@ extension SettingsView {
                     Text(localization.text("diagnostics.logs.last_entry"))
                         .font(.system(size: 12))
                         .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 8) {
@@ -132,6 +151,10 @@ extension SettingsView {
                         .compatibilityButtonStyle(.standard)
                 }
             }
+
+            Text(localization.text("diagnostics.logs.privacy"))
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
         }
         .padding(.vertical, 2)
     }

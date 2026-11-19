@@ -349,6 +349,8 @@
 "permissions.upgrade_identity_help" = "If access was lost after an update, keep Remote Buddy in Applications and grant the missing permission again.";
 "diagnostics.title" = "Diagnostics";
 "diagnostics.logs.title" = "App Logs";
+"diagnostics.logs.enabled.title" = "Enable Troubleshooting Logs";
+"diagnostics.logs.enabled.detail" = "Turn off during normal use to stop writing local log files; enable when troubleshooting issues.";
 "diagnostics.logs.privacy" = "Diagnostic logs stay on this Mac and are never uploaded.";
 "diagnostics.logs.last_entry" = "Open local text logs, or copy environment and diagnostic info for troubleshooting.";
 "diagnostics.logs.show_in_finder" = "Show Logs in Finder";
@@ -951,6 +953,8 @@
 
 "diagnostics.logs.open_failed" = "Unable to open the log file";
 "diagnostics.logs.open_failed.detail" = "Check that your Library/Logs/RemoteBuddy folder is writable, then try again.";
+"diagnostics.logs.disabled_empty" = "No Log Files Yet";
+"diagnostics.logs.disabled_empty.detail" = "Troubleshooting logs are currently turned off, so no log file has been created. Enable \"Enable Troubleshooting Logs\" to start recording.";
 
 "update.dialog.window" = "Software Update";
 "update.dialog.permission" = "Automatically check for updates?";

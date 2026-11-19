@@ -12,11 +12,18 @@ extension BridgeAppModel {
         logger.flush()
         if FileManager.default.fileExists(atPath: logger.logURL.path) {
             NSWorkspace.shared.activateFileViewerSelecting([logger.logURL])
+        } else if FileManager.default.fileExists(atPath: logger.logDirectoryURL.path) {
+            NSWorkspace.shared.open(logger.logDirectoryURL)
         } else {
             let localization = LocalizationStore(settings: settings)
             let alert = NSAlert()
-            alert.messageText = localization.text("diagnostics.logs.open_failed")
-            alert.informativeText = localization.text("diagnostics.logs.open_failed.detail")
+            if !settings.diagnosticLoggingEnabled {
+                alert.messageText = localization.text("diagnostics.logs.disabled_empty")
+                alert.informativeText = localization.text("diagnostics.logs.disabled_empty.detail")
+            } else {
+                alert.messageText = localization.text("diagnostics.logs.open_failed")
+                alert.informativeText = localization.text("diagnostics.logs.open_failed.detail")
+            }
             alert.runModal()
         }
     }

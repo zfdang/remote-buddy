@@ -349,6 +349,8 @@
 "permissions.upgrade_identity_help" = "如果升级后权限失效，请将遥控搭子保留在“应用程序”中，并重新授予缺失的权限。";
 "diagnostics.title" = "诊断";
 "diagnostics.logs.title" = "应用日志";
+"diagnostics.logs.enabled.title" = "启用排错日志";
+"diagnostics.logs.enabled.detail" = "仅在需要排查问题时开启；平时可关闭以停止写入本地日志文件。";
 "diagnostics.logs.privacy" = "诊断日志仅保存在本机，永不上传。";
 "diagnostics.logs.last_entry" = "打开本地文本日志，或复制环境与诊断信息用于排障反馈。";
 "diagnostics.logs.show_in_finder" = "在 Finder 中显示日志";
@@ -948,6 +950,8 @@
 
 "diagnostics.logs.open_failed" = "无法打开日志文件";
 "diagnostics.logs.open_failed.detail" = "请检查 Library/Logs/RemoteBuddy 目录是否可写，然后重试。";
+"diagnostics.logs.disabled_empty" = "暂无日志文件";
+"diagnostics.logs.disabled_empty.detail" = "当前已关闭排错日志，因此尚未生成日志文件。如需记录，请先开启“启用排错日志”。";
 
 "update.dialog.window" = "软件更新";
 "update.dialog.permission" = "自动检查更新";

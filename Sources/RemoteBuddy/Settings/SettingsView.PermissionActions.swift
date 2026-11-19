@@ -104,6 +104,7 @@ extension SettingsView {
             audioOutputReady: model.isAudioOutputReady,
             voiceTool: settings.onboardingVoiceTool.rawValue,
             voiceKeyMode: settings.voiceKeyMode.rawValue,
+            runtimeLogEnabled: settings.diagnosticLoggingEnabled,
             runtimeLogAvailable: logExists,
             runtimeLogPath: SettingsDiagnosticSnapshot.sanitizePath(logURL.path),
             runtimeLogSizeBytes: logSizeBytes,

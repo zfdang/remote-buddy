@@ -176,4 +176,101 @@ struct LocalDiagnosticTests {
         #expect(!contents.contains("Alice's Secret Living Room Siri Remote"))
         #expect(!contents.contains("Siri Remote"))
     }
+
+    @Test func loggerCanBeToggledOffAndBackOnAtRuntime() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let logURL = directory.appendingPathComponent("runtime.log")
+        let logger = AppLogger(logURL: logURL, reportFailure: { _ in }, isEnabled: true)
+
+        logger.write("first entry")
+        logger.flush()
+        #expect(try String(contentsOf: logURL, encoding: .utf8).contains("first entry"))
+
+        logger.setEnabled(false)
+        #expect(!logger.isEnabled)
+        logger.write("suppressed entry")
+        logger.flush()
+
+        let textWhileDisabled = try String(contentsOf: logURL, encoding: .utf8)
+        #expect(textWhileDisabled.contains("LOGS disabled_by_user"))
+        #expect(!textWhileDisabled.contains("suppressed entry"))
+
+        logger.setEnabled(true)
+        #expect(logger.isEnabled)
+        logger.write("resumed entry")
+        logger.flush()
+
+        let textAfterReenable = try String(contentsOf: logURL, encoding: .utf8)
+        #expect(textAfterReenable.contains("LOGS enabled_by_user"))
+        #expect(textAfterReenable.contains("resumed entry"))
+        #expect(!textAfterReenable.contains("suppressed entry"))
+    }
+
+    @Test func loggerStartingDisabledCreatesFileOnlyAfterBeingEnabled() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let logURL = directory.appendingPathComponent("deferred.log")
+        let logger = AppLogger(logURL: logURL, reportFailure: { _ in }, isEnabled: false)
+
+        logger.write("ignored before enable")
+        logger.flush()
+        #expect(!FileManager.default.fileExists(atPath: logURL.path))
+
+        logger.setEnabled(true)
+        logger.write("written after enable")
+        logger.flush()
+
+        let contents = try String(contentsOf: logURL, encoding: .utf8)
+        #expect(contents.contains("LOGS enabled_by_user"))
+        #expect(contents.contains("written after enable"))
+        #expect(!contents.contains("ignored before enable"))
+    }
+
+    @Test @MainActor func diagnosticLoggingPreferenceDefaultsTrueAndPersists() throws {
+        let suite = "diagnostic-logging-\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        #expect(AppLogger.shouldEnableSharedLogging(arguments: ["RemoteBuddy"], environment: [:], defaults: defaults))
+        #expect(!AppLogger.shouldEnableSharedLogging(arguments: ["TestBundle.xctest"], environment: [:], defaults: defaults))
+
+        let settings = AppSettings(defaults: defaults)
+        #expect(settings.diagnosticLoggingEnabled)
+
+        settings.diagnosticLoggingEnabled = false
+        #expect(!AppLogger.shouldEnableSharedLogging(arguments: ["RemoteBuddy"], environment: [:], defaults: defaults))
+        #expect(!AppSettings(defaults: defaults).diagnosticLoggingEnabled)
+
+        settings.diagnosticLoggingEnabled = true
+        #expect(AppLogger.shouldEnableSharedLogging(arguments: ["RemoteBuddy"], environment: [:], defaults: defaults))
+        #expect(AppSettings(defaults: defaults).diagnosticLoggingEnabled)
+
+        let snapshot = SettingsDiagnosticSnapshot(
+            appVersion: "1.0.0",
+            bluetoothGranted: true,
+            inputMonitoringGranted: true,
+            accessibilityGranted: true,
+            runtimeLogEnabled: false,
+            runtimeLogAvailable: false
+        )
+        #expect(snapshot.summary.contains("已关闭 (Disabled)"))
+        #expect(snapshot.summary.contains("runtime_log_enabled: false"))
+
+        let localization = LocalizationStore(settings: settings)
+        for key in [
+            "diagnostics.logs.enabled.title",
+            "diagnostics.logs.enabled.detail",
+            "diagnostics.logs.disabled_empty",
+            "diagnostics.logs.disabled_empty.detail",
+        ] {
+            localization.select(.english)
+            let english = localization.text(key)
+            localization.select(.simplifiedChinese)
+            let chinese = localization.text(key)
+            #expect(english != key)
+            #expect(chinese != key)
+            #expect(english != chinese)
+        }
+    }
 }

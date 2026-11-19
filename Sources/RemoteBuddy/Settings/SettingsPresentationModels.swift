@@ -90,6 +90,7 @@ struct SettingsDiagnosticSnapshot: Equatable {
     let audioOutputReady: Bool
     let voiceTool: String
     let voiceKeyMode: String
+    let runtimeLogEnabled: Bool
     let runtimeLogAvailable: Bool
     let runtimeLogPath: String
     let runtimeLogSizeBytes: Int64?
@@ -115,6 +116,7 @@ struct SettingsDiagnosticSnapshot: Equatable {
         audioOutputReady: Bool = false,
         voiceTool: String = "unselected",
         voiceKeyMode: String = "press_and_hold",
+        runtimeLogEnabled: Bool = true,
         runtimeLogAvailable: Bool,
         runtimeLogPath: String = SettingsDiagnosticSnapshot.sanitizePath(AppLogger.shared.logURL.path),
         runtimeLogSizeBytes: Int64? = nil,
@@ -139,6 +141,7 @@ struct SettingsDiagnosticSnapshot: Equatable {
         self.audioOutputReady = audioOutputReady
         self.voiceTool = voiceTool
         self.voiceKeyMode = voiceKeyMode
+        self.runtimeLogEnabled = runtimeLogEnabled
         self.runtimeLogAvailable = runtimeLogAvailable
         self.runtimeLogPath = Self.sanitizePath(runtimeLogPath)
         self.runtimeLogSizeBytes = runtimeLogSizeBytes
@@ -199,6 +202,7 @@ struct SettingsDiagnosticSnapshot: Equatable {
             "- 按键模式 / Voice Key Mode: \(voiceKeyMode)",
             "",
             "#### 诊断日志 / Runtime Logs",
+            "- 日志记录状态 / Logging Enabled: \(runtimeLogEnabled ? "已开启 (Enabled)" : "已关闭 (Disabled)")",
             "- 日志文件状态 / Log Available: \(runtimeLogAvailable ? "存在 (\(formattedLogSize))" : "未找到 (Not Found)")",
             "- 本地路径 / Log Path: \(runtimeLogPath)",
             "- 隐私承诺 / Privacy Notice: 诊断日志仅保存在本机，永不上传，绝不含语音、转写文本或剪贴板等隐私数据 (Logs stay on this Mac, are never uploaded, and never contain audio, transcripts, or clipboard contents).",
@@ -224,6 +228,7 @@ struct SettingsDiagnosticSnapshot: Equatable {
             "audio_output: \(audioOutputReady)",
             "voice_tool: \"\(voiceTool)\"",
             "voice_key_mode: \"\(voiceKeyMode)\"",
+            "runtime_log_enabled: \(runtimeLogEnabled)",
             "runtime_log_available: \(runtimeLogAvailable)",
             "```"
         ]

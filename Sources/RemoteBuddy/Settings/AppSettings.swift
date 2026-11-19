@@ -22,6 +22,7 @@ final class AppSettings: ObservableObject {
         static let showStatusBarIcon = "showStatusBarIcon"
         static let openMainWindowAtLaunch = "openMainWindowAtLaunch"
         static let checksForPreReleaseUpdates = "checksForPreReleaseUpdates"
+        static let diagnosticLoggingEnabled = AppLogger.diagnosticLoggingEnabledKey
         static let voiceFnTapModeEnabled = "voiceFnTapModeEnabled"
         static let voiceKeyMode = "voiceKeyMode"
         static let lastLaunchedBuild = "launch.lastLaunchedBuild"
@@ -197,6 +198,15 @@ final class AppSettings: ObservableObject {
     @Published var checksForPreReleaseUpdates: Bool {
         didSet {
             defaults.set(checksForPreReleaseUpdates, forKey: Keys.checksForPreReleaseUpdates)
+        }
+    }
+
+    @Published var diagnosticLoggingEnabled: Bool {
+        didSet {
+            defaults.set(diagnosticLoggingEnabled, forKey: Keys.diagnosticLoggingEnabled)
+            if defaults === UserDefaults.standard, !AppLogger.isTestProcess() {
+                AppLogger.shared.setEnabled(diagnosticLoggingEnabled)
+            }
         }
     }
 
@@ -480,6 +490,9 @@ final class AppSettings: ObservableObject {
             ? true
             : defaults.bool(forKey: Keys.openMainWindowAtLaunch)
         checksForPreReleaseUpdates = defaults.bool(forKey: Keys.checksForPreReleaseUpdates)
+        diagnosticLoggingEnabled = defaults.object(forKey: Keys.diagnosticLoggingEnabled) == nil
+            ? true
+            : defaults.bool(forKey: Keys.diagnosticLoggingEnabled)
         voiceFnTapModeEnabled = defaults.bool(forKey: Keys.voiceFnTapModeEnabled)
         voiceKeyMode = VoiceKeyMode(
             rawValue: defaults.string(forKey: Keys.voiceKeyMode) ?? ""

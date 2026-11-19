@@ -39,23 +39,29 @@ struct ConnectionDeviceUsageGuideTests {
         let g9n9nHoldGuide = ConnectionDeviceUsageGuide.make(for: g9n9nHold)
 
         #expect(rc001Guide?.badgeKey == "connection.device_guide.badge.xiaomi_hold_only")
-        #expect(rc001Guide?.items.map(\.titleKey).contains("connection.device_guide.xiaomi.rc001.power.title") == true)
-        #expect(rc003Guide?.items.map(\.titleKey).contains("connection.device_guide.xiaomi.rc003.power.title") == true)
+        #expect(rc001Guide == rc003Guide)
+        #expect(rc001Guide?.items.map(\.titleKey) == [
+            "connection.device_guide.xiaomi.voice.title",
+            "connection.device_guide.xiaomi.limit.title",
+            "connection.device_guide.xiaomi.buttons.title",
+        ])
 
         #expect(t1Guide?.badgeKey == "connection.device_guide.badge.t1_toggle")
-        #expect(t1Guide?.items.count == 4)
+        #expect(t1Guide?.items.map(\.titleKey) == [
+            "connection.device_guide.t1.voice.title",
+            "connection.device_guide.t1.hold_compat.title",
+            "connection.device_guide.t1.keys.title",
+        ])
 
         #expect(g9n9nSmartGuide?.badgeKey == nil)
         #expect(g9n9nSmartGuide?.items.map(\.titleKey) == [
             "connection.device_guide.g9n9n.led.title",
             "connection.device_guide.g9n9n.limit.title",
             "connection.device_guide.g9n9n.other_key_stops.title",
-            "connection.device_guide.g9n9n.power_pairing.title",
         ])
         #expect(g9n9nHoldGuide?.items.map(\.titleKey) == [
             "connection.device_guide.g9n9n.led.title",
             "connection.device_guide.g9n9n.limit.title",
-            "connection.device_guide.g9n9n.power_pairing.title",
         ])
 
         #expect(ConnectionDeviceUsageGuide.make(for: makeProfile(model: .unknown, customName: "Unknown")) == nil)

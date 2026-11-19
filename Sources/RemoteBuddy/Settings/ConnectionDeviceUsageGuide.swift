@@ -20,7 +20,7 @@ struct ConnectionDeviceUsageGuide: Equatable {
     static func make(for profile: RemoteDeviceProfile) -> Self? {
         switch profile.model {
         case .rc001, .rc003:
-            return xiaomiGuide(isRechargeable: profile.model == .rc003)
+            return xiaomiGuide()
         case .t1Remote:
             return t1Guide()
         case .chromecastVoiceRemote:
@@ -30,18 +30,8 @@ struct ConnectionDeviceUsageGuide: Equatable {
         }
     }
 
-    private static func xiaomiGuide(isRechargeable: Bool) -> Self {
-        let powerItem = ConnectionDeviceUsageItem(
-            symbol: isRechargeable ? "bolt.fill" : "battery.100percent",
-            tint: .green,
-            titleKey: isRechargeable
-                ? "connection.device_guide.xiaomi.rc003.power.title"
-                : "connection.device_guide.xiaomi.rc001.power.title",
-            detailKey: isRechargeable
-                ? "connection.device_guide.xiaomi.rc003.power.detail"
-                : "connection.device_guide.xiaomi.rc001.power.detail"
-        )
-        return Self(
+    private static func xiaomiGuide() -> Self {
+        Self(
             badgeKey: "connection.device_guide.badge.xiaomi_hold_only",
             badgeSymbol: "hand.point.up.left.fill",
             badgeTint: .blue,
@@ -64,7 +54,6 @@ struct ConnectionDeviceUsageGuide: Equatable {
                     titleKey: "connection.device_guide.xiaomi.buttons.title",
                     detailKey: "connection.device_guide.xiaomi.buttons.detail"
                 ),
-                powerItem,
             ]
         )
     }
@@ -92,12 +81,6 @@ struct ConnectionDeviceUsageGuide: Equatable {
                     tint: .teal,
                     titleKey: "connection.device_guide.t1.keys.title",
                     detailKey: "connection.device_guide.t1.keys.detail"
-                ),
-                ConnectionDeviceUsageItem(
-                    symbol: "antenna.radiowaves.left.and.right",
-                    tint: .orange,
-                    titleKey: "connection.device_guide.t1.pairing.title",
-                    detailKey: "connection.device_guide.t1.pairing.detail"
                 ),
             ]
         )
@@ -128,14 +111,6 @@ struct ConnectionDeviceUsageGuide: Equatable {
                 )
             )
         }
-        items.append(
-            ConnectionDeviceUsageItem(
-                symbol: "antenna.radiowaves.left.and.right",
-                tint: .teal,
-                titleKey: "connection.device_guide.g9n9n.power_pairing.title",
-                detailKey: "connection.device_guide.g9n9n.power_pairing.detail"
-            )
-        )
         return Self(
             badgeKey: nil,
             badgeSymbol: nil,

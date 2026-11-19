@@ -43,7 +43,6 @@ struct G9N9NSmartToggleTests {
             }
         )
         model.started = true
-        model.audio.output.simulateReadyForTesting(device: micDevice)
 
         var recordedKeys: [Bool] = []
         model.voiceKeyStateSetter = { _, down in
@@ -103,6 +102,7 @@ struct G9N9NSmartToggleTests {
         bridge.simulateChromecastReadyStateForTesting(nowUptime: { Double(clock.now) / 1_000 })
         model.connections.states[ObjectIdentifier(bridge)] = .ready("Chromecast Remote")
         model.refreshBluetoothPresentation()
+        model.cancelVirtualAudioReleaseIfPending(trigger: "smart_toggle_fixture")
         model.audio.output.simulateReadyForTesting(device: micDevice)
 
         return (model, bridge, clock, flushAudio, defaults, suite, { commands }, { recordedKeys })
@@ -631,6 +631,16 @@ struct G9N9NSmartToggleTests {
         model.connections.bridges[replacementBridgeID] = replacementBridge
         model.connections.states[ObjectIdentifier(replacementBridge)] = .ready("Replacement")
         defer { replacementBridge.stop() }
+        // `simulateChromecastReadyStateForTesting` invokes `didChange(.ready)` -> `applyHIDSettings()`,
+        // which schedules an idle audio release; clear and keep virtual audio ready before starting.
+        model.cancelVirtualAudioReleaseIfPending(trigger: "replacement_ready")
+        model.audio.output.simulateReadyForTesting(
+            device: AudioDeviceInfo(
+                id: 202,
+                uid: model.settings.selectedAudioDeviceUID,
+                name: "Test Remote Buddy Mic"
+            )
+        )
 
         bridge.simulateControlPacketForTesting(Data([0x04, 0x03, 0x02, 0x01]))
         await flushAudio()

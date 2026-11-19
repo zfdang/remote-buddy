@@ -66,6 +66,9 @@ struct CompatibleRemoteBindingTests {
         #expect(!BridgeAppModel.canLearnHIDIdentity(model: .chromecastVoiceRemote, source: .xiaomiRemote))
         #expect(!BridgeAppModel.canLearnHIDIdentity(model: .unknown, source: .xiaomiRemote))
         #expect(!BridgeAppModel.canLearnHIDIdentity(model: .appleSiriRemoteA2854, source: .siriRemote))
+        #expect(!BridgeAppModel.showsManualCompatibleHIDPicker(model: .chromecastVoiceRemote, source: .chromecastRemote))
+        #expect(BridgeAppModel.showsManualCompatibleHIDPicker(model: .rc003, source: .xiaomiRemote))
+        #expect(BridgeAppModel.showsManualCompatibleHIDPicker(model: .t1Remote, source: .t1Remote))
         try withSettings { settings in
             let first = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
             let second = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)

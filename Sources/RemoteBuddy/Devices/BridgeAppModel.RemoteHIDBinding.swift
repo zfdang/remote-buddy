@@ -48,6 +48,10 @@ extension BridgeAppModel {
         }
     }
 
+    static func showsManualCompatibleHIDPicker(model: RemoteModel, source: OnboardingControlSource) -> Bool {
+        !model.isChromecastRemote && canLearnHIDIdentity(model: model, source: source)
+    }
+
     @discardableResult
     func bindCompatibleRemote(_ candidate: RemoteHIDCandidate, profileID: UUID, select: Bool = true) -> Bool {
         guard let profile = settings.remoteDeviceProfiles.first(where: { $0.id == profileID }),

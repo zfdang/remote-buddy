@@ -148,10 +148,14 @@ extension OnboardingView {
         pendingColor: Color?
     ) {
         if selectedControlConnected {
+            let baseDetail = localization.text("onboarding.remote.connected_detail")
+            let hardwareDetail = settings.selectedRemoteProfile?.bluetoothIdentifier
+                .flatMap { model.remoteDeviceInformation[$0] }?
+                .conciseHardwareSummary(using: localization)
             return (
                 "checkmark.circle.fill",
                 localization.text("onboarding.remote.connected"),
-                localization.text("onboarding.remote.connected_detail"),
+                hardwareDetail.map { "\(baseDetail)\n\($0)" } ?? baseDetail,
                 nil
             )
         }

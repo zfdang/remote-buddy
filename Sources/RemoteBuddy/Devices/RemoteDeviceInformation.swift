@@ -22,6 +22,24 @@ struct RemoteDeviceInformation: Equatable {
         hidVersion.map { String(format: "0x%04X", $0) }
     }
 
+    @MainActor
+    func conciseHardwareSummary(using localization: LocalizationStore) -> String? {
+        var parts: [String] = []
+        if let modelNumber {
+            parts.append("\(localization.text("connection.device.model")) \(modelNumber)")
+        }
+        if let identityValue {
+            parts.append("VID/PID \(identityValue)")
+        }
+        if let hidVersionValue {
+            parts.append("\(localization.text("connection.device.hid_version")) \(hidVersionValue)")
+        }
+        if let firmwareRevision {
+            parts.append("\(localization.text("connection.device.firmware")) \(firmwareRevision)")
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
     var protocolVersion: String? {
         capabilities.map { "ATVV \($0.version >> 8).\($0.version & 0xFF)" }
     }

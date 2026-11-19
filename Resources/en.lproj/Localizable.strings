@@ -1080,7 +1080,6 @@
 "connection.device.hid_version" = "HID version";
 "connection.device.protocol" = "Voice protocol";
 "connection.device.audio" = "Audio format";
-"connection.device.frame" = "Audio frame";
 "connection.device.frame_bytes" = "%@ bytes";
 "onboarding.remote.chromecast_pairing.third" = "Select the remote in your Mac’s Bluetooth list and connect. Then press a button other than Voice to check input. When pairing again, forget the device in Bluetooth settings first if needed.";
 

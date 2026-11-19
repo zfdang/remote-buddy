@@ -1082,7 +1082,6 @@
 "connection.device.hid_version" = "HID 版本";
 "connection.device.protocol" = "语音协议";
 "connection.device.audio" = "音频格式";
-"connection.device.frame" = "音频帧大小";
 "connection.device.frame_bytes" = "%@ 字节";
 "onboarding.remote.chromecast_pairing.third" = "在 Mac 的蓝牙列表中选择遥控器并连接。连接后按一个普通按键，确认电脑收到输入。重新配对时，可先在蓝牙设置中忽略设备。";
 

@@ -66,5 +66,23 @@ struct RemoteDeviceInformationTests {
         let chinese = localization.text("connection.device.hid_version")
         #expect(english == "HID version")
         #expect(chinese == "HID 版本")
+
+        let localizedInfo = RemoteDeviceInformation(
+            modelNumber: "A0",
+            firmwareRevision: "26.2",
+            identity: RemoteHIDIdentity.fromPnP(v0110),
+            hidVersion: 0x0110
+        )
+        localization.select(.english)
+        #expect(
+            localizedInfo.conciseHardwareSummary(using: localization)
+                == "Model A0 · VID/PID 18D1 / 9450 · HID version 0x0110 · Firmware 26.2"
+        )
+        localization.select(.simplifiedChinese)
+        #expect(
+            localizedInfo.conciseHardwareSummary(using: localization)
+                == "型号 A0 · VID/PID 18D1 / 9450 · HID 版本 0x0110 · 固件 26.2"
+        )
+        #expect(RemoteDeviceInformation().conciseHardwareSummary(using: localization) == nil)
     }
 }

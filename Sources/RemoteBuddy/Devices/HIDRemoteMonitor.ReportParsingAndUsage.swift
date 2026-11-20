@@ -376,18 +376,20 @@ extension HIDRemoteMonitor {
             guard activeUsages == usages else { break }
             guard let button = RemoteButton.usageMap[usage] else { continue }
             let preflightProfileID = profileID
-            let preflightRecognizesDoubleClick = settings.configuredAction(
+            let preflightDirectPassthrough = isDirectPassthrough(button: button, profileID: preflightProfileID)
+            let preflightRecognizesDoubleClick = !preflightDirectPassthrough && settings.configuredAction(
                 for: button,
                 trigger: .doubleClick,
                 profileID: preflightProfileID
             ).action != .disabled
-            let preflightRecognizesLongPress = settings.configuredAction(
+            let preflightRecognizesLongPress = !preflightDirectPassthrough && settings.configuredAction(
                 for: button,
                 trigger: .longPress,
                 profileID: preflightProfileID
             ).action != .disabled && !settings.allowsHoldRepeat(for: button, profileID: preflightProfileID)
             let preflightAction = settings.action(for: button, profileID: preflightProfileID)
             let usesNativePassthrough = preflightProfileID != nil &&
+                !preflightDirectPassthrough &&
                 claimsRuntimeButton?(preflightProfileID, button) != true && shouldUseNativePassthrough(
                 button: button,
                 action: preflightAction,
@@ -475,6 +477,28 @@ extension HIDRemoteMonitor {
                 )
                 continue
             }
+            if isDirectPassthrough(button: button, profileID: profileID) {
+                guard mappingDeliveryIsSafe else {
+                    pauseForUnavailableNativeFilter()
+                    continue
+                }
+                guard let keyCode = button.directionKeyCode else { continue }
+                guard runtimePermissionsAreValid() else {
+                    releaseForRevokedPermissions()
+                    continue
+                }
+                directPassthroughUsages.insert(usage)
+                scheduleHardCeiling(for: usage)
+                refreshUsageExpiry(usage)
+                diagnosticLogger(
+                    "HID DIRECT PASSTHROUGH press button=\(button.rawValue) keyCode=\(keyCode)"
+                )
+                AppLogger.shared.write(
+                    "HID BUTTON button=\(button.rawValue) trigger=directPassthrough action=directPassthrough"
+                )
+                _ = nativeKeyStatePoster(keyCode, true, [])
+                continue
+            }
             if recognizesDoubleClick || recognizesLongPress || gestureRecognizer.isTracking(button) {
                 let commands = gestureRecognizer.press(
                     button,
@@ -506,13 +530,31 @@ extension HIDRemoteMonitor {
     func processReleases(for released: Set<UInt16>) {
         for usage in released {
             let usedNativePassthrough = nativePassthroughUsages.remove(usage) != nil
+            let usedDirectPassthrough = directPassthroughUsages.remove(usage) != nil
             if !activeDeviceIsSeized, !usedNativePassthrough,
                let button = RemoteButton.usageMap[usage] {
                 eventSuppressor.arm(button: button, edge: .up)
             }
             cancelRepeat(for: usage)
             if let button = RemoteButton.usageMap[usage] {
-                if onRuntimeButton?(profileID, button, .release) == true { continue }
+                if onRuntimeButton?(profileID, button, .release) == true {
+                    if usedDirectPassthrough, let keyCode = button.directionKeyCode {
+                        _ = nativeKeyStatePoster(keyCode, false, [])
+                    }
+                    continue
+                }
+                if usedDirectPassthrough {
+                    usageHardCeilingTimers.removeValue(forKey: usage)?.cancel()
+                    usageExpiryTokens.removeValue(forKey: usage)
+                    usageExpiryTimers.removeValue(forKey: usage)?.cancel()
+                    if let keyCode = button.directionKeyCode {
+                        _ = nativeKeyStatePoster(keyCode, false, [])
+                    }
+                    diagnosticLogger(
+                        "HID DIRECT PASSTHROUGH release button=\(button.rawValue)"
+                    )
+                    continue
+                }
                 scheduleNonRepeatableRelease(for: button)
                 guard processGestureCommands(gestureRecognizer.release(button)) else { continue }
             }
@@ -590,6 +632,13 @@ extension HIDRemoteMonitor {
                     _ = nativeKeyStatePoster(code, false, [])
                 }
             }
+        } else if directPassthroughUsages.remove(usage) != nil {
+            if let keyCode = button.directionKeyCode {
+                _ = nativeKeyStatePoster(keyCode, false, [])
+            }
+            if !activeDeviceIsSeized {
+                eventSuppressor.arm(button: button, edge: .up)
+            }
         } else if !activeDeviceIsSeized {
             eventSuppressor.arm(button: button, edge: .up)
         }
@@ -602,7 +651,7 @@ extension HIDRemoteMonitor {
     func recoverMissingRelease(for usage: UInt16) {
         // Some remotes send no reports during a repeat or native passthrough hold.
         // Check again in case repeat stops before the independent hard ceiling.
-        if repeatTimers[usage] != nil || nativePassthroughUsages.contains(usage) {
+        if repeatTimers[usage] != nil || nativePassthroughUsages.contains(usage) || directPassthroughUsages.contains(usage) {
             refreshUsageExpiry(usage)
             return
         }

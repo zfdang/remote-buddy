@@ -29,6 +29,22 @@ enum RemoteButton: String, CaseIterable, Codable, Identifiable {
         .volumeUp, .home, .volumeDown, .menu, .tv,
     ]
 
+    static let directionButtons: Set<RemoteButton> = [.up, .down, .left, .right]
+
+    var isDirectional: Bool {
+        Self.directionButtons.contains(self)
+    }
+
+    var directionKeyCode: CGKeyCode? {
+        switch self {
+        case .up: return 126
+        case .down: return 125
+        case .left: return 123
+        case .right: return 124
+        default: return nil
+        }
+    }
+
     var id: String { rawValue }
 
     var hidUsage: UInt16 {

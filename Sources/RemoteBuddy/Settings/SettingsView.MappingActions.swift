@@ -158,9 +158,22 @@ extension SettingsView {
 
     func mappingActionSummary(for button: RemoteButton, trigger: ButtonTrigger,
                                       configuredAction: ConfiguredButtonAction? = nil) -> String {
+        if trigger != .singleClick && mappingConfiguration(for: button, trigger: .singleClick).action == .directPassthrough {
+            return "-"
+        }
         let configured = configuredAction ?? mappingConfiguration(for: button, trigger: trigger)
         guard configured.action != .disabled else {
             return localization.text("button_mapping.action.not_set")
+        }
+        if configured.action == .directPassthrough {
+            let tag = localization.text("action.direct_passthrough.tag")
+            switch button {
+            case .up: return "↑ " + tag
+            case .down: return "↓ " + tag
+            case .left: return "← " + tag
+            case .right: return "→ " + tag
+            default: return localization.text("action.direct_passthrough")
+            }
         }
         if configured.action == .customShortcut, let shortcut = configured.shortcut {
             return shortcut.visualDisplayName(using: localization)

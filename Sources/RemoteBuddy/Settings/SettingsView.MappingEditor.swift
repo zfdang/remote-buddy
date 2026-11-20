@@ -10,81 +10,105 @@ extension SettingsView {
         trigger: ButtonTrigger
     ) -> some View {
         let configured = mappingConfiguration(for: button, trigger: trigger)
+        let isDirectPassthroughActive = mappingConfiguration(for: button, trigger: .singleClick).action == .directPassthrough
         let installedBundleIdentifiers = PresetApplication.installedBundleIdentifiers
         let actions = ButtonAction.pickerActions(
             installedBundleIdentifiers: installedBundleIdentifiers,
-            current: configured.action
+            current: configured.action,
+            button: button,
+            trigger: trigger
         ).filter { $0 != .disabled && $0 != .repeatSingleClick }
         return VStack(alignment: .leading, spacing: 16) {
-            if trigger == .longPress {
-                let isHoldRepeatSelected = configured.action == .repeatSingleClick
-                Button {
-                    setMappingAction(.repeatSingleClick, for: button, trigger: .longPress)
-                    shortcutCaptureTarget = nil
-                    applicationShortcutCaptureProfileID = nil
-                } label: {
-                    Label(localization.text("action.repeat_single_click"), systemImage:
-                        isHoldRepeatSelected ? "checkmark.circle.fill" : "circle")
-                        .frame(maxWidth: .infinity, alignment: .leading)
+            if trigger != .singleClick && isDirectPassthroughActive {
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "info.circle.fill")
+                        .foregroundStyle(.blue)
+                        .font(.system(size: 16))
+                    Text(localization.text("button_mapping.direct_passthrough.active_note"))
+                        .font(.system(size: 13))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .buttonStyle(.bordered)
-                .accessibilityIdentifier("button-mapping.hold-repeat")
-                .accessibilityAddTraits(isHoldRepeatSelected ? .isSelected : [])
-                Text(localization.text("button_mapping.hold_repeat.help"))
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-            }
-
-            mappingActionFilterControl
-
-            let currentCategory = mappingActionFilter.category
-            let groupedActions = actions.filter { $0.category == currentCategory }
-            if !groupedActions.isEmpty {
-                mappingActionGroup(
-                    category: currentCategory,
-                    actions: groupedActions,
-                    selectedAction: configured.action,
-                    installedBundleIdentifiers: installedBundleIdentifiers,
-                    onSelect: { action in
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.blue.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+            } else {
+                if trigger == .longPress {
+                    let isHoldRepeatSelected = configured.action == .repeatSingleClick
+                    Button {
+                        setMappingAction(.repeatSingleClick, for: button, trigger: .longPress)
+                        shortcutCaptureTarget = nil
                         applicationShortcutCaptureProfileID = nil
-                        if action == .customShortcut {
-                            shortcutCaptureTarget = ShortcutEditingTarget(button: button, trigger: trigger)
-                        } else {
-                            setMappingAction(action, for: button, trigger: trigger)
-                            shortcutCaptureTarget = nil
-                        }
+                    } label: {
+                        Label(localization.text("action.repeat_single_click"), systemImage:
+                            isHoldRepeatSelected ? "checkmark.circle.fill" : "circle")
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                )
-
-                if currentCategory == .applications, configured.action == .openCustomApplication {
-                    customApplicationEditor(
-                        button: button,
-                        trigger: trigger,
-                        configured: configured
-                    )
+                    .buttonStyle(.bordered)
+                    .accessibilityIdentifier("button-mapping.hold-repeat")
+                    .accessibilityAddTraits(isHoldRepeatSelected ? .isSelected : [])
+                    Text(localization.text("button_mapping.hold_repeat.help"))
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
                 }
 
-                if currentCategory == .custom, configured.action == .customShortcut {
-                    inlineShortcutEditor(
-                        button: button,
-                        trigger: trigger,
-                        configured: configured
-                    )
-                }
-            }
+                mappingActionFilterControl
 
-            if trigger == .doubleClick && configured.action != .disabled {
-                Text(localization.text("button_mapping.double_click.effect"))
-                    .font(.system(size: 12))
-                    .foregroundStyle(.orange)
-            } else if trigger == .longPress && configured.action != .disabled && configured.action != .repeatSingleClick {
-                Text(localization.text("button_mapping.long_press.effect"))
-                    .font(.system(size: 12))
-                    .foregroundStyle(.orange)
-            } else if trigger == .singleClick {
-                Text(localization.text("button_mapping.single_click.help"))
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
+                let currentCategory = mappingActionFilter.category
+                let groupedActions = actions.filter { $0.category == currentCategory }
+                if !groupedActions.isEmpty {
+                    mappingActionGroup(
+                        category: currentCategory,
+                        actions: groupedActions,
+                        selectedAction: configured.action,
+                        installedBundleIdentifiers: installedBundleIdentifiers,
+                        onSelect: { action in
+                            applicationShortcutCaptureProfileID = nil
+                            if action == .customShortcut {
+                                shortcutCaptureTarget = ShortcutEditingTarget(button: button, trigger: trigger)
+                            } else {
+                                setMappingAction(action, for: button, trigger: trigger)
+                                shortcutCaptureTarget = nil
+                            }
+                        }
+                    )
+
+                    if currentCategory == .applications, configured.action == .openCustomApplication {
+                        customApplicationEditor(
+                            button: button,
+                            trigger: trigger,
+                            configured: configured
+                        )
+                    }
+
+                    if currentCategory == .custom, configured.action == .customShortcut {
+                        inlineShortcutEditor(
+                            button: button,
+                            trigger: trigger,
+                            configured: configured
+                        )
+                    }
+                }
+
+                if trigger == .doubleClick && configured.action != .disabled {
+                    Text(localization.text("button_mapping.double_click.effect"))
+                        .font(.system(size: 12))
+                        .foregroundStyle(.orange)
+                } else if trigger == .longPress && configured.action != .disabled && configured.action != .repeatSingleClick {
+                    Text(localization.text("button_mapping.long_press.effect"))
+                        .font(.system(size: 12))
+                        .foregroundStyle(.orange)
+                } else if trigger == .singleClick {
+                    if configured.action == .directPassthrough {
+                        Text(localization.text("action.direct_passthrough.help"))
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text(localization.text("button_mapping.single_click.help"))
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                    }
+                }
             }
         }
         .sheet(isPresented: Binding(

@@ -389,7 +389,7 @@ enum KeyboardInjector {
             break
         case .openCustomApplication:
             break
-        case .toggleLongRecording, .openCommonPhrases:
+        case .toggleLongRecording, .openCommonPhrases, .directPassthrough:
             break
         case .openRemoteBuddy, .openCodex, .openClaude, .openCmux, .openWeChat, .openCursor, .openXcode,
              .openSlack, .openWeCom, .openNeteaseMusic, .openChrome, .openSafari, .openZed:

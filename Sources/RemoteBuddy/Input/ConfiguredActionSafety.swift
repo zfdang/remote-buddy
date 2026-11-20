@@ -8,7 +8,7 @@ extension ButtonAction {
              .commandSave, .commandDelete, .deleteBackward, .customShortcut:
             return true
         case .disabled, .escape, .commandClose, .commandQuit,
-             .arrowUp, .arrowDown, .arrowLeft, .arrowRight, .scrollUp, .scrollDown,
+             .arrowUp, .arrowDown, .arrowLeft, .arrowRight, .directPassthrough, .scrollUp, .scrollDown,
              .showDesktop, .contextMenu, .appSwitcher, .focusInput,
              .volumeUp, .volumeDown, .volumeMute, .playPause,
              .previousCommandLeft, .nextCommandRight,

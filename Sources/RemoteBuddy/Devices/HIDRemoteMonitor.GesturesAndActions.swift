@@ -32,6 +32,15 @@ extension HIDRemoteMonitor {
         return ![.arrowUp, .arrowDown, .arrowLeft, .arrowRight, .deleteBackward].contains(action)
     }
 
+    func isDirectPassthrough(button: RemoteButton, profileID: UUID?) -> Bool {
+        guard button.isDirectional else { return false }
+        return settings.configuredAction(
+            for: button,
+            trigger: .singleClick,
+            profileID: profileID
+        ).action == .directPassthrough
+    }
+
     func shouldUseNativePassthrough(
         button: RemoteButton,
         action: ButtonAction,
@@ -282,6 +291,11 @@ extension HIDRemoteMonitor {
         repeatTimers.values.forEach { $0.cancel() }
         repeatTimers.removeAll()
         repeatTokens.removeAll()
+        for usage in directPassthroughUsages {
+            guard let button = RemoteButton.usageMap[usage], let keyCode = button.directionKeyCode else { continue }
+            _ = nativeKeyStatePoster(keyCode, false, [])
+        }
+        directPassthroughUsages.removeAll()
         nonRepeatableReleaseTimers.values.forEach { $0.cancel() }
         nonRepeatableReleaseTimers.removeAll()
         nonRepeatablePressedButtons.removeAll()
@@ -333,6 +347,11 @@ extension HIDRemoteMonitor {
             }
         }
         nativePassthroughUsages.removeAll()
+        for usage in directPassthroughUsages {
+            guard let button = RemoteButton.usageMap[usage], let keyCode = button.directionKeyCode else { continue }
+            _ = nativeKeyStatePoster(keyCode, false, [])
+        }
+        directPassthroughUsages.removeAll()
         usageExpiryTokens.removeAll()
         usageExpiryTimers.values.forEach { $0.cancel() }
         usageExpiryTimers.removeAll()

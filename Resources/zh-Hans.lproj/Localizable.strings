@@ -162,6 +162,10 @@
 "action.arrow_down" = "方向下";
 "action.arrow_left" = "方向左";
 "action.arrow_right" = "方向右";
+"action.direct_passthrough" = "按键直通";
+"action.direct_passthrough.tag" = "直通";
+"action.direct_passthrough.help" = "按下时立即发送按键，松开时立即结束。适合观看视频时按住开启倍速播放，不支持双击与长按手势。";
+"button_mapping.direct_passthrough.active_note" = "当前按键已设置为「按键直通」，按下时立即发送按键、松开时立即结束，不支持双击与长按手势。";
 "action.scroll_up" = "向上滚动";
 "action.scroll_down" = "向下滚动";
 "action.delete_backspace" = "Delete（退格）";

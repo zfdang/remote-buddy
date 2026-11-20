@@ -162,6 +162,10 @@
 "action.arrow_down" = "Down Arrow";
 "action.arrow_left" = "Left Arrow";
 "action.arrow_right" = "Right Arrow";
+"action.direct_passthrough" = "Direct Passthrough";
+"action.direct_passthrough.tag" = "Passthrough";
+"action.direct_passthrough.help" = "Emits key down on press and key up on release immediately. Ideal for holding to speed up video playback. Double-click and long-press gestures are bypassed.";
+"button_mapping.direct_passthrough.active_note" = "This button is configured for Direct Passthrough. Press sends key down and release sends key up immediately. Double-click and long-press gestures are bypassed.";
 "action.scroll_up" = "Scroll Up";
 "action.scroll_down" = "Scroll Down";
 "action.delete_backspace" = "Delete (Backspace)";

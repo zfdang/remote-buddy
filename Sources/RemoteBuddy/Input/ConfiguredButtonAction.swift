@@ -110,6 +110,7 @@ enum ButtonAction: String, CaseIterable, Codable, Identifiable {
     case openZed
     case customShortcut
     case repeatSingleClick
+    case directPassthrough = "direct_passthrough"
 
     var id: String { rawValue }
 
@@ -137,6 +138,7 @@ enum ButtonAction: String, CaseIterable, Codable, Identifiable {
         case .arrowDown: return localization.text("action.arrow_down")
         case .arrowLeft: return localization.text("action.arrow_left")
         case .arrowRight: return localization.text("action.arrow_right")
+        case .directPassthrough: return localization.text("action.direct_passthrough")
         case .scrollUp: return localization.text("action.scroll_up")
         case .scrollDown: return localization.text("action.scroll_down")
         case .deleteBackward: return localization.text("action.delete_backspace")
@@ -195,7 +197,7 @@ enum ButtonAction: String, CaseIterable, Codable, Identifiable {
         case .disabled, .escape, .returnKey, .commandReturn, .shiftReturn, .commandCopy,
              .commandPaste, .commandClose, .commandQuit, .commandCut, .commandSelectAll,
              .commandUndo, .commandRedo, .commandFind, .commandSave, .commandDelete,
-             .arrowUp, .arrowDown, .arrowLeft, .arrowRight, .scrollUp, .scrollDown,
+             .arrowUp, .arrowDown, .arrowLeft, .arrowRight, .directPassthrough, .scrollUp, .scrollDown,
              .deleteBackward:
             return .basicKeys
         case .showDesktop, .contextMenu, .appSwitcher, .focusInput, .volumeUp, .volumeDown, .volumeMute,
@@ -220,9 +222,17 @@ enum ButtonAction: String, CaseIterable, Codable, Identifiable {
 
     static func pickerActions(
         installedBundleIdentifiers: Set<String>,
-        current: ButtonAction
+        current: ButtonAction,
+        button: RemoteButton? = nil,
+        trigger: ButtonTrigger? = nil
     ) -> [ButtonAction] {
         let actions = allCases.filter { action in
+            if action == .directPassthrough {
+                guard let button, button.isDirectional, trigger == nil || trigger == .singleClick else {
+                    return action == current
+                }
+                return true
+            }
             guard let application = action.presetApplication else { return true }
             return installedBundleIdentifiers.contains(application.bundleIdentifier) || action == current
         }

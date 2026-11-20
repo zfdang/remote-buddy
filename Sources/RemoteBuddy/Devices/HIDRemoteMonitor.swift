@@ -163,6 +163,7 @@ final class HIDRemoteMonitor {
     var activeDeviceIsSeized = false
     var activeUsages = Set<UInt16>()
     var nativePassthroughUsages = Set<UInt16>()
+    var directPassthroughUsages = Set<UInt16>()
     var suppressedUntilReleasedUsages = Set<UInt16>()
     var suppressedUsageExpiryTimers: [UInt16: HIDRemoteScheduledTask] = [:]
     var usageExpiryTimers: [UInt16: HIDRemoteScheduledTask] = [:]

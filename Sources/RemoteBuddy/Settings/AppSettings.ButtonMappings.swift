@@ -313,7 +313,14 @@ extension AppSettings {
 
     func configuredAction(for button: RemoteButton, trigger: ButtonTrigger,
                           profileID: UUID?) -> ConfiguredButtonAction {
+        if trigger != .singleClick,
+           configuredBaseAction(for: button, trigger: .singleClick, profileID: profileID).action == .directPassthrough {
+            return .disabled
+        }
         let configured = configuredBaseAction(for: button, trigger: trigger, profileID: profileID)
+        if configured.action == .directPassthrough, !button.isDirectional || trigger != .singleClick {
+            return .disabled
+        }
         guard configured.action != .repeatSingleClick || trigger == .longPress else { return .disabled }
         return configured
     }

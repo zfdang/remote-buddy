@@ -99,13 +99,13 @@
     <details class="troubleshooting-card">
       <summary><span class="troubleshooting-question">What is "Direct Passthrough" and when should I use it?</span></summary>
       <div class="troubleshooting-body">
-        <p><strong>Background:</strong> Regular buttons in Remote Buddy support Single Tap, Double Tap, and Long Press gestures. To differentiate a single tap from a double tap, the software must wait a brief arbitration window before emitting keystrokes; furthermore, default long-press behaviors repeat single clicks every 0.35 seconds (software rapid-fire).</p>
+        <p><strong>Background:</strong> Regular buttons in Remote Buddy support Single Tap, Double Tap, and Long Press gestures. To differentiate a single tap from a double tap, the software must wait a brief arbitration window before emitting keystrokes; furthermore, default long-press behaviors enter rapid-fire repeating single clicks every 100ms after a 350ms hold delay (software rapid-fire).</p>
         <p><strong>How Direct Passthrough Works:</strong> Direct Passthrough <strong>bypasses all gesture delays, tap arbitrations, and repeat loops</strong>. When a direction key (Up, Down, Left, Right) is pressed, Remote Buddy dispatches an authentic KeyDown event to macOS with zero latency. When your finger releases the button, an authentic KeyUp event is dispatched immediately. It behaves exactly like a real physical keyboard arrow key.</p>
         <p><strong>Primary Use Cases:</strong></p>
         <ol>
-          <li><strong>Holding Right Arrow for 2x Video Speed:</strong> In Bilibili, YouTube, and desktop media players, holding down the keyboard right arrow (→) speeds up playback (e.g. 2x or 3x speed), returning to normal speed upon release. In Direct Passthrough mode, holding right direction key performs genuine speed-up seamlessly—eliminating the annoying 15-second skip repeats!</li>
+          <li><strong>Holding Right Arrow for 2x Video Speed:</strong> In Bilibili, YouTube, and desktop media players, holding down the keyboard right arrow (→) speeds up playback (e.g. 2x or 3x speed), returning to normal speed upon release. In Direct Passthrough mode, holding right direction key performs genuine speed-up seamlessly—eliminating key repeat jumps!</li>
           <li><strong>Smooth Document Navigation &amp; Gaming:</strong> Fine cursor adjustments, continuous smooth page scrolling, and retro emulator direction controls.</li>
-          <li><strong>Built-in Safety Watchdog:</strong> Direct Passthrough includes a 30-second safety watchdog. Even in the event of extreme Bluetooth packet loss, it automatically releases stuck keys after timeout, preventing infinite keystroke repetition.</li>
+          <li><strong>Built-in Safety Watchdog:</strong> Direct Passthrough includes a 60-second safety watchdog. Even in the event of extreme Bluetooth packet loss, it automatically releases stuck keys after timeout, preventing infinite keystroke repetition.</li>
         </ol>
       </div>
     </details>

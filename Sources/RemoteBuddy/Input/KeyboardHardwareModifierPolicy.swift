@@ -3,15 +3,78 @@ import CoreGraphics
 /// Navigation-key decoration is not evidence of an independently held Fn key.
 enum KeyboardHardwareModifierPolicy {
     private static let commandSideBits = CGEventFlags(rawValue: 0x0008 | 0x0010)
+    private static let deviceModifierBits: UInt64 = 0x207F
+    private static let userModifierMask = CGEventFlags(rawValue:
+        CGEventFlags.maskAlphaShift.rawValue |
+        CGEventFlags.maskShift.rawValue |
+        CGEventFlags.maskControl.rawValue |
+        CGEventFlags.maskAlternate.rawValue |
+        CGEventFlags.maskCommand.rawValue |
+        CGEventFlags.maskHelp.rawValue |
+        CGEventFlags.maskSecondaryFn.rawValue |
+        deviceModifierBits
+    )
+
+    private struct HardwareModifierFamily {
+        let flag: CGEventFlags
+        let leftKey: CGKeyCode
+        let leftBit: CGEventFlags
+        let rightKey: CGKeyCode
+        let rightBit: CGEventFlags
+    }
+
+    private static let modifierFamilies: [HardwareModifierFamily] = [
+        HardwareModifierFamily(flag: .maskControl, leftKey: 59, leftBit: CGEventFlags(rawValue: 0x0001),
+            rightKey: 62, rightBit: CGEventFlags(rawValue: 0x2000)),
+        HardwareModifierFamily(flag: .maskAlternate, leftKey: 58, leftBit: CGEventFlags(rawValue: 0x0020),
+            rightKey: 61, rightBit: CGEventFlags(rawValue: 0x0040)),
+        HardwareModifierFamily(flag: .maskShift, leftKey: 56, leftBit: CGEventFlags(rawValue: 0x0002),
+            rightKey: 60, rightBit: CGEventFlags(rawValue: 0x0004)),
+        HardwareModifierFamily(flag: .maskCommand, leftKey: 55, leftBit: CGEventFlags(rawValue: 0x0008),
+            rightKey: 54, rightBit: CGEventFlags(rawValue: 0x0010)),
+    ]
+
+    /// Retains only genuine keyboard modifier bits and side bits, stripping
+    /// non-modifier internal bits like NX_NONCOALESCEDMASK (0x100) and 0x20000000.
+    static func sanitizedEventFlags(_ flags: CGEventFlags) -> CGEventFlags {
+        flags.intersection(userModifierMask)
+    }
 
     /// Mapped actions inherit physical shortcut modifiers, but never implicit
-    /// navigation decoration. An explicitly configured Fn is added separately.
+    /// navigation decoration or internal non-modifier event flags. An explicitly configured Fn is added separately.
     static func mappedActionFlags(_ flags: CGEventFlags) -> CGEventFlags {
-        flags.subtracting([.maskSecondaryFn, .maskNumericPad])
+        sanitizedEventFlags(flags).subtracting([.maskSecondaryFn, .maskNumericPad])
     }
 
     static func currentForMappedAction() -> CGEventFlags {
         mappedActionFlags(current())
+    }
+
+    /// Reconciles `.hidSystemState` modifier flags against physical key states so
+    /// synthetic modifiers lingering after `cghidEventTap` voice shortcuts never look held.
+    static func voiceShortcutNormalized(_ flags: CGEventFlags, heldKeys: Set<CGKeyCode>) -> CGEventFlags {
+        var result = mappedActionFlags(flags)
+        for family in modifierFamilies {
+            let leftHeld = heldKeys.contains(family.leftKey)
+            let rightHeld = heldKeys.contains(family.rightKey)
+            if !leftHeld { result.remove(family.leftBit) }
+            if !rightHeld { result.remove(family.rightBit) }
+            if !leftHeld && !rightHeld {
+                result.remove(family.flag)
+            } else {
+                result.formUnion(family.flag)
+            }
+        }
+        return result
+    }
+
+    static func currentForVoiceShortcut() -> CGEventFlags {
+        var heldKeys: Set<CGKeyCode> = []
+        for family in modifierFamilies {
+            if CGEventSource.keyState(.hidSystemState, key: family.leftKey) { heldKeys.insert(family.leftKey) }
+            if CGEventSource.keyState(.hidSystemState, key: family.rightKey) { heldKeys.insert(family.rightKey) }
+        }
+        return voiceShortcutNormalized(current(), heldKeys: heldKeys)
     }
 
     static func normalized(_ flags: CGEventFlags, fnKeyDown: Bool,

@@ -37,4 +37,20 @@ struct OnboardingTranscriptInputTests {
         #expect(!OnboardingTranscriptInputPolicy.canEditText(keyCode: 123, characters: "\u{F702}", commandHeld: false))
         #expect(!OnboardingTranscriptInputPolicy.canEditText(keyCode: 8, characters: "c", commandHeld: true))
     }
+
+    @Test func unconsumedOwnVoiceShortcutEventsCannotPasteOrInsertFallbackText() {
+        #expect(OnboardingTranscriptInputPolicy.isSyntheticVoiceTriggerEvent(
+            marker: KeyboardInjector.orderedVoiceEventMarker))
+        #expect(OnboardingTranscriptInputPolicy.isSyntheticVoiceTriggerEvent(
+            marker: KeyboardInjector.syntheticEventMarker))
+        #expect(!OnboardingTranscriptInputPolicy.isSyntheticVoiceTriggerEvent(marker: nil))
+        #expect(!OnboardingTranscriptInputPolicy.isSyntheticVoiceTriggerEvent(marker: 0))
+
+        #expect(OnboardingTranscriptInputPolicy.isUnconsumedVoiceShortcutKeyDown(
+            eventTypeRawValue: 10, marker: KeyboardInjector.orderedVoiceEventMarker))
+        #expect(!OnboardingTranscriptInputPolicy.isUnconsumedVoiceShortcutKeyDown(
+            eventTypeRawValue: 11, marker: KeyboardInjector.orderedVoiceEventMarker))
+        #expect(!OnboardingTranscriptInputPolicy.isUnconsumedVoiceShortcutKeyDown(
+            eventTypeRawValue: 10, marker: 0))
+    }
 }

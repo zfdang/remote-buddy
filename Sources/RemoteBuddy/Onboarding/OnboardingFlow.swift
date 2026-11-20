@@ -367,6 +367,19 @@ enum OnboardingTranscriptInputPolicy {
     private static let keyDownEventTypeRawValue: UInt = 10
     private static let hidSystemStateRawValue: Int64 = 1
 
+    static func isSyntheticVoiceTriggerEvent(marker: Int64?) -> Bool {
+        guard let marker else { return false }
+        return marker == KeyboardInjector.orderedVoiceEventMarker || marker == KeyboardInjector.syntheticEventMarker
+    }
+
+    static func isUnconsumedVoiceShortcutKeyDown(eventTypeRawValue: UInt?, marker: Int64?) -> Bool {
+        guard eventTypeRawValue == keyDownEventTypeRawValue,
+              let marker else {
+            return false
+        }
+        return marker == KeyboardInjector.orderedVoiceEventMarker
+    }
+
     static func isConfirmedPhysicalKeyboardInput(
         eventTypeRawValue: UInt?,
         sourceStateID: Int64?,

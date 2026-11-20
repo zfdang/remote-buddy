@@ -167,7 +167,7 @@ enum KeyboardInjector {
         secureInputEnabled: () -> Bool = SecureInputMonitor.isEnabled,
         shortcutSession: HeldVoiceShortcut = .shared,
         shortcutKeyStatePoster: @escaping KeyStatePoster = postVoiceShortcutState,
-        shortcutHardwareFlags: @escaping () -> CGEventFlags = KeyboardHardwareModifierPolicy.currentForMappedAction
+        shortcutHardwareFlags: @escaping () -> CGEventFlags = KeyboardHardwareModifierPolicy.currentForVoiceShortcut
     ) -> Bool {
         guard !isPressed || !secureInputEnabled() else { return false }
         guard accessibilityTrusted() else { return false }

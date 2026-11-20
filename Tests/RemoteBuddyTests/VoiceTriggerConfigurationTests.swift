@@ -632,4 +632,58 @@ struct HeldVoiceShortcutTests {
         #expect(trigger.setPressed(false))
     }
 
+    @Test func consecutiveVoiceSessionsStillSendEveryModifierWhenHIDSnapshotLags() {
+        let session = HeldVoiceShortcut()
+        let chord = CustomKeyboardShortcut(keyCode: 9, modifierFlags: [.control, .command], keyLabel: "V")
+        var observed: CGEventFlags = []
+        var sequences: [[(UInt16, Bool)]] = []
+        var current: [(UInt16, Bool)] = []
+        var now: TimeInterval = 100
+        let post: KeyboardInjector.KeyStatePoster = { code, down, flags in
+            current.append((code, down))
+            if down { observed = flags }
+            return true
+        }
+        for _ in 0..<4 {
+            current = []
+            #expect(session.setPressed(true, shortcut: chord, post: post,
+                hardwareFlags: { observed }, uptime: { now }))
+            #expect(session.setPressed(false, shortcut: chord, post: post))
+            sequences.append(current)
+            now += 2
+        }
+        let expected: [(UInt16, Bool)] = [(59, true), (55, true), (9, true), (9, false), (55, false), (59, false)]
+        for seq in sequences {
+            #expect(seq.map(\.0) == expected.map(\.0))
+            #expect(seq.map(\.1) == expected.map(\.1))
+        }
+    }
+
+    @Test func voiceShortcutPolicyClearsStaleHIDModifiersWithoutPhysicalKeysAndStripsInternalBits() {
+        let polluted = CGEventFlags(rawValue: 0x2014_0109) // 0x20000000 | Control | Command | 0x100 | 0x0001 | 0x0008
+        #expect(KeyboardHardwareModifierPolicy.voiceShortcutNormalized(polluted, heldKeys: []) == [])
+        let shiftOnly = KeyboardHardwareModifierPolicy.voiceShortcutNormalized(
+            polluted.union(.maskShift), heldKeys: [60]
+        )
+        #expect(shiftOnly == .maskShift)
+    }
+
+    @Test func voiceKeyEventsStripNonCoalescedAndQuartzInternalFlags() throws {
+        let polluted = CGEventFlags(rawValue: 0x2000_0100)
+        for mode in [VoiceKeyMode.function, .rightOption] {
+            let down = try #require(KeyboardInjector.makeMarkedKeyEvent(
+                code: mode.keyCode, isDown: true, flags: mode.eventFlags,
+                marker: KeyboardInjector.orderedVoiceEventMarker,
+                hardwareFlags: { polluted }
+            ))
+            #expect(down.flags == mode.eventFlags)
+            let up = try #require(KeyboardInjector.makeMarkedKeyEvent(
+                code: mode.keyCode, isDown: false, flags: [],
+                marker: KeyboardInjector.orderedVoiceEventMarker,
+                hardwareFlags: { polluted.union(ShortcutEventSequence.modifierFlags(for: mode.keyCode)) }
+            ))
+            #expect(up.flags == [])
+        }
+    }
+
 }

@@ -223,13 +223,36 @@ private final class OnboardingTranscriptTextView: NSTextView {
     var onPhysicalEdit: (() -> Void)?
 
     override func paste(_ sender: Any?) {
+        let event = NSApp.currentEvent
+        if OnboardingTranscriptInputPolicy.isSyntheticVoiceTriggerEvent(
+            marker: event?.cgEvent?.getIntegerValueField(.eventSourceUserData)
+        ) {
+            return
+        }
         recordPasteOrigin()
         super.paste(sender)
     }
 
     override func pasteAsPlainText(_ sender: Any?) {
+        let event = NSApp.currentEvent
+        if OnboardingTranscriptInputPolicy.isSyntheticVoiceTriggerEvent(
+            marker: event?.cgEvent?.getIntegerValueField(.eventSourceUserData)
+        ) {
+            return
+        }
         recordPasteOrigin()
         super.pasteAsPlainText(sender)
+    }
+
+    override func insertText(_ string: Any, replacementRange: NSRange) {
+        let event = NSApp.currentEvent
+        if OnboardingTranscriptInputPolicy.isUnconsumedVoiceShortcutKeyDown(
+            eventTypeRawValue: event?.type.rawValue,
+            marker: event?.cgEvent?.getIntegerValueField(.eventSourceUserData)
+        ) {
+            return
+        }
+        super.insertText(string, replacementRange: replacementRange)
     }
 
     private func recordPasteOrigin() {

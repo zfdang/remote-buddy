@@ -274,8 +274,8 @@
 "connection.status.voice_active" = "Microphone in Use";
 "common.status.ready" = "Ready";
 "connection.status.voice_trigger" = "Voice trigger";
-"connection.voice_fn_tap.enabled" = "Tap Mode";
-"connection.voice_fn_tap.hint_short" = "On: tap the shortcut to start and stop. Off: hold it throughout recording.";
+"connection.voice_fn_tap.enabled" = "Tap Hotkey Mode (only for tap-only input tools)";
+"connection.voice_fn_tap.hint_short" = "• Keep unchecked by default (recommended): whenever your input tool supports Hold-to-Talk (such as Doubao, WeType, Voice Buddy, or Chatterfly), leave this unchecked and choose Hold mode inside the input tool.\n• Remote taps are handled automatically: regardless of whether your remote uses hold or tap-to-toggle, Remote Buddy translates every remote voice session into a continuous held shortcut for your input tool.\n• When to check: enable this only when using a hold-to-talk remote with an input tool that cannot hold and only accepts start/stop taps (such as Typeless, NetEase Bageshuo, or macOS Dictation).";
 "connection.voice_key_mode.title" = "Voice Shortcut";
 "connection.voice_key.mode.fn" = "Fn/Globe";
 "connection.voice_key.mode.left_command" = "Left Command (⌘)";
@@ -885,9 +885,9 @@
 "custom_application.accessibility.test" = "Test input field";
 
 "onboarding.voice_tool.guide.screenshot.doubao_menu" = "In the input menu, choose Doubao (豆包输入法), then Settings (设置).";
-"onboarding.voice_tool.guide.screenshot.doubao_settings" = "In Voice Input, set the shortcut for the selected mode to “%@”. Enable global voice activation and select the Remote Buddy virtual microphone.";
+"onboarding.voice_tool.guide.screenshot.doubao_settings" = "In Voice Input, choose Hold-to-Talk mode (avoid toggle/hands-free—Remote Buddy handles remote tap conversion automatically), set the shortcut to “%@”, enable global voice activation, and select the Remote Buddy virtual microphone.";
 "onboarding.voice_tool.guide.screenshot.weixin_input_menu" = "In the input menu, choose WeType (微信输入法), then Settings (设置).";
-"onboarding.voice_tool.guide.screenshot.weixin_input_settings" = "In Voice Input, set the shortcut to “%@”, match the recording mode in the current pairing plan, and enable global shortcut activation.";
+"onboarding.voice_tool.guide.screenshot.weixin_input_settings" = "In Voice Input, set the shortcut to “%@”, prefer Hold-to-Talk (Remote Buddy handles remote tap conversion automatically), and enable global shortcut activation.";
 "onboarding.voice_tool.guide.screenshot.weixin_app_shortcuts" = "The WeChat app’s global voice shortcut can conflict with any voice tool. Check whether it uses “%@” and clear only the conflicting shortcut.";
 "onboarding.voice_tool.guide.screenshot.bageshuo_menu" = "In the menu bar, click the NetEase Bageshuo icon, then select Settings.";
 "onboarding.voice_tool.guide.screenshot.bageshuo_settings" = "In Settings → Shortcuts, set the voice shortcut to “%@” and use press-to-start/stop mode.";

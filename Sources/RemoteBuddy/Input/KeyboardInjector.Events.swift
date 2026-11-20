@@ -98,14 +98,14 @@ extension KeyboardInjector {
 
     static func makeMarkedKeyEvent(code: CGKeyCode, isDown: Bool, flags: CGEventFlags, marker: Int64,
                                    excludingOwnedModifiers: CGEventFlags = [],
-                                   hardwareFlags: () -> CGEventFlags = { CGEventSource.flagsState(.hidSystemState) }) -> CGEvent? {
+                                   hardwareFlags: () -> CGEventFlags = KeyboardHardwareModifierPolicy.current) -> CGEvent? {
         guard let source = markedKeySource,
               let event = CGEvent(keyboardEventSource: source, virtualKey: code, keyDown: isDown)
         else { return nil }
         event.type = keyEventType(code: code, isDown: isDown)
         // Voice modifiers and session-owned modifiers must not re-inherit their own HID state on release.
         // Preserve other physical modifiers, including the opposite-side key.
-        let observedFlags = hardwareFlags()
+        let observedFlags = KeyboardHardwareModifierPolicy.sanitizedEventFlags(hardwareFlags())
         let ownedModifiers = marker == orderedVoiceEventMarker
             ? ShortcutEventSequence.modifierFlags(for: code)
             : excludingOwnedModifiers
@@ -117,7 +117,7 @@ extension KeyboardInjector {
             inheritedFlags = code == VoiceKeyMode.function.keyCode
                 ? observedFlags.subtracting(.maskSecondaryFn) : observedFlags
         }
-        event.flags = flags.union(inheritedFlags)
+        event.flags = KeyboardHardwareModifierPolicy.sanitizedEventFlags(flags.union(inheritedFlags))
         event.setIntegerValueField(.eventSourceUserData, value: marker)
         return event
     }

@@ -13,24 +13,30 @@ final class HeldVoiceShortcut: @unchecked Sendable {
     private var held: [HeldKey] = []
     private var shortcut: CustomKeyboardShortcut?
     private var ownedModifierFlags: CGEventFlags = []
+    private var unconfirmedReleasedModifiers: CGEventFlags = []
+    private var unconfirmedReleasedAtUptime: TimeInterval?
+    private static let staleReleaseProtectionWindow: TimeInterval = 30
     private var post: KeyboardInjector.KeyStatePoster?
     private var readHardware: (() -> CGEventFlags)?
+    private var uptime: () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }
     private var recovery: ScheduledOperation?
 
     func setPressed(
         _ pressed: Bool, shortcut requested: CustomKeyboardShortcut,
         post: @escaping KeyboardInjector.KeyStatePoster,
-        hardwareFlags: @escaping () -> CGEventFlags = KeyboardHardwareModifierPolicy.currentForMappedAction,
-        schedule: @escaping OperationScheduler = ScheduledOperation.mainQueue
+        hardwareFlags: @escaping () -> CGEventFlags = KeyboardHardwareModifierPolicy.currentForVoiceShortcut,
+        schedule: @escaping OperationScheduler = ScheduledOperation.mainQueue,
+        uptime: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }
     ) -> Bool {
         lock.lock()
         defer { lock.unlock() }
+        self.uptime = uptime
         if !pressed { return release() }
         if shortcut == requested { return true }
         guard release(), VoiceKeyMode.supportsShortcut(requested) else { return false }
         self.post = post
         readHardware = hardwareFlags
-        let physical = hardwareFlags()
+        let physical = physicalFlags()
         let modifiers = ShortcutEventSequence.selectedModifiers(for: requested.cgEventFlags)
         for modifier in modifiers {
             let alreadyHeld = modifier.sideSpecific
@@ -54,7 +60,29 @@ final class HeldVoiceShortcut: @unchecked Sendable {
     }
 
     private func physicalFlags() -> CGEventFlags {
-        ShortcutEventSequence.hardwareFlags(readHardware?() ?? [], excludingOwned: ownedModifierFlags)
+        let observed = KeyboardHardwareModifierPolicy.mappedActionFlags(readHardware?() ?? [])
+        let staleMask = activeUnconfirmedReleasedModifiers(reconcilingWith: observed)
+        let activeOwned = ownedModifierFlags.union(staleMask)
+        return activeOwned.isEmpty
+            ? observed
+            : ShortcutEventSequence.hardwareFlags(observed, excludingOwned: activeOwned)
+    }
+
+    private func activeUnconfirmedReleasedModifiers(reconcilingWith observed: CGEventFlags) -> CGEventFlags {
+        guard !unconfirmedReleasedModifiers.isEmpty else { return [] }
+        if let unconfirmedReleasedAtUptime,
+           uptime() - unconfirmedReleasedAtUptime >= Self.staleReleaseProtectionWindow {
+            unconfirmedReleasedModifiers = []
+            self.unconfirmedReleasedAtUptime = nil
+            return []
+        }
+        // Once macOS drops a released modifier bit from the HID snapshot, stop ignoring it
+        // so a real subsequent physical press is respected.
+        unconfirmedReleasedModifiers = unconfirmedReleasedModifiers.intersection(observed)
+        if unconfirmedReleasedModifiers.isEmpty {
+            unconfirmedReleasedAtUptime = nil
+        }
+        return unconfirmedReleasedModifiers
     }
 
     private func flags() -> CGEventFlags {
@@ -75,7 +103,16 @@ final class HeldVoiceShortcut: @unchecked Sendable {
             }
         }
         shortcut = nil
-        if held.isEmpty { self.post = nil; readHardware = nil; ownedModifierFlags = [] }
+        if held.isEmpty {
+            if !ownedModifierFlags.isEmpty {
+                let currentObserved = KeyboardHardwareModifierPolicy.mappedActionFlags(readHardware?() ?? [])
+                unconfirmedReleasedModifiers.formUnion(ownedModifierFlags.intersection(currentObserved))
+                unconfirmedReleasedAtUptime = unconfirmedReleasedModifiers.isEmpty ? nil : uptime()
+            }
+            self.post = nil
+            readHardware = nil
+            ownedModifierFlags = []
+        }
         return held.isEmpty
     }
 

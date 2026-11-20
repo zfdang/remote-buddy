@@ -760,9 +760,9 @@ struct VoiceInputActivationTests {
     }
 
     @Test func bypassInputSourceSwitchingSkipsPrepareAndActivation() throws {
-        let (model, defaults, suite) = try makeModel()
+        let (_, defaults, suite) = try makeModel()
         defer { defaults.removePersistentDomain(forName: suite) }
-        var source = "ABC"
+        let source = "ABC"
         var prepared = false
         var activated = false
         var logged: [String] = []
@@ -812,5 +812,19 @@ struct VoiceInputActivationTests {
         // Completing onboarding resets to false
         model.settings.completeOnboarding()
         #expect(model.settings.bypassInputSourceSwitching == false)
+    }
+
+    @Test func bypassInputSourceSwitchingLocalizationKeys() throws {
+        let zh = LocalizationSnapshot(language: .simplifiedChinese)
+        #expect(zh.text("settings.integration.bypass_switch_title.weixin") == "已开启“快捷键全局生效”")
+        #expect(zh.text("settings.integration.bypass_switch_title.doubao") == "已开启“全局唤起语音”")
+        #expect(zh.text("settings.integration.bypass_switch_detail.weixin").contains("遥控搭子将不再主动切换系统输入法"))
+        #expect(zh.text("settings.integration.bypass_switch_detail.doubao").contains("遥控搭子将不再主动切换系统输入法"))
+
+        let en = LocalizationSnapshot(language: .english)
+        #expect(en.text("settings.integration.bypass_switch_title.weixin") == "\"Global Shortcut\" Enabled")
+        #expect(en.text("settings.integration.bypass_switch_title.doubao") == "\"Global Voice Activation\" Enabled")
+        #expect(en.text("settings.integration.bypass_switch_detail.weixin").contains("no longer proactively switch macOS input sources"))
+        #expect(en.text("settings.integration.bypass_switch_detail.doubao").contains("no longer proactively switch macOS input sources"))
     }
 }

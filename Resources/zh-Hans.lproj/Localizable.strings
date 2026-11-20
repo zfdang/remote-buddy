@@ -914,8 +914,12 @@
 "settings.integration.supported_tools" = "支持的语音工具";
 "settings.integration.active_badge" = "当前使用";
 "settings.integration.shortcut_title" = "语音触发方式";
-"settings.integration.bypass_switch_title" = "已开启输入法「快捷键全局生效」";
-"settings.integration.bypass_switch_detail" = "跳过系统输入法切换，直接唤醒语音输入。可解决 Antigravity 等编辑器提示“按 Command + V 粘贴”的问题。";
+"settings.integration.bypass_switch_title" = "已开启“快捷键全局生效”";
+"settings.integration.bypass_switch_detail" = "开启后，遥控搭子将不再主动切换系统输入法，避免 Antigravity 等应用失去光标焦点。请确保已在输入法设置中开启全局语音快捷键。";
+"settings.integration.bypass_switch_title.weixin" = "已开启“快捷键全局生效”";
+"settings.integration.bypass_switch_detail.weixin" = "开启后，遥控搭子将不再主动切换系统输入法，避免 Antigravity 等应用失去光标焦点。请确保已在微信输入法设置中开启“快捷键全局生效”。";
+"settings.integration.bypass_switch_title.doubao" = "已开启“全局唤起语音”";
+"settings.integration.bypass_switch_detail.doubao" = "开启后，遥控搭子将不再主动切换系统输入法，避免 Antigravity 等应用失去光标焦点。请确保已在豆包输入法设置中开启“全局唤起语音”。";
 
 "remote.device.illustration" = "遥控器示意图";
 

@@ -917,8 +917,12 @@
 "settings.integration.supported_tools" = "Supported Voice Tools";
 "settings.integration.active_badge" = "Current";
 "settings.integration.shortcut_title" = "Voice trigger";
-"settings.integration.bypass_switch_title" = "Input Method Global Shortcut Enabled";
-"settings.integration.bypass_switch_detail" = "Skip system input source switching to directly trigger voice input. Solves \"Press Command + V to paste\" in Antigravity and Chromium editors.";
+"settings.integration.bypass_switch_title" = "\"Global Shortcut\" Enabled";
+"settings.integration.bypass_switch_detail" = "When enabled, Remote Buddy will no longer proactively switch macOS input sources, avoiding focus loss in apps like Antigravity. Please ensure global voice shortcut is enabled in input method settings.";
+"settings.integration.bypass_switch_title.weixin" = "\"Global Shortcut\" Enabled";
+"settings.integration.bypass_switch_detail.weixin" = "When enabled, Remote Buddy will no longer proactively switch macOS input sources, avoiding focus loss in apps like Antigravity. Please ensure \"Global shortcut\" is enabled in WeChat Input Method settings.";
+"settings.integration.bypass_switch_title.doubao" = "\"Global Voice Activation\" Enabled";
+"settings.integration.bypass_switch_detail.doubao" = "When enabled, Remote Buddy will no longer proactively switch macOS input sources, avoiding focus loss in apps like Antigravity. Please ensure \"Global voice activation\" is enabled in Doubao Input Method settings.";
 
 "remote.device.illustration" = "Remote control illustration";
 

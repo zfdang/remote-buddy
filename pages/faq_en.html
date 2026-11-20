@@ -131,15 +131,15 @@
     <h2 class="section-title" id="cat-integrations-title">3. Application Integration &amp; Core Benefits</h2>
 
     <details class="troubleshooting-card">
-      <summary><span class="troubleshooting-question">What is "Application Integration" and why is it useful?</span></summary>
+      <summary><span class="troubleshooting-question">What is "App Integrations" and what does it do?</span></summary>
       <div class="troubleshooting-body">
-        <p>In standard desktop workflows, voice typing requires you to first reach for your mouse, locate WeChat, Slack, or Apple Notes, click the text box to reveal a blinking cursor, and only then speak. <strong>Application Integration eliminates this friction completely.</strong></p>
-        <p>Its primary capabilities include:</p>
-        <ol>
-          <li><strong>Instant App Foregrounding:</strong> Map any button to "Launch / Bring App to Front" under System &amp; Media. One click brings your communication or note-taking tool to the forefront.</li>
-          <li><strong>Intelligent Input Focus (Focus Target):</strong> Utilizing macOS Accessibility trees, Remote Buddy automatically searches the foreground window for its primary editable text element (e.g. WeChat's conversation composition box) and focuses the cursor, ensuring dictation lands exactly where intended.</li>
-          <li><strong>Input Method Passthrough (Bypass Input Source Switching):</strong> Modern voice tools (such as Doubao, WeChat Keyboard, or Voice Buddy) activate independently via global hotkeys. Remote Buddy provides an option to bypass legacy macOS input-source switching, preventing UI jitter and key-repeat delays.</li>
-        </ol>
+        <p><strong>Core Purpose:</strong> "App Integrations" automatically <strong>focuses the conversation input text box when a supported application is already your active frontmost window</strong>, preventing dropped text when cursor focus is absent.</p>
+        <p><strong>Use Cases &amp; How It Works:</strong></p>
+        <ul>
+          <li><strong>Solves Missing Focus Without Reaching for the Mouse:</strong> When using apps like WeChat, ChatGPT, Antigravity, Claude, DeepSeek, or WorkBuddy, you often scroll through conversation history or click elsewhere, leaving the text box unselected. Without App Integrations, speaking into your remote would fail to insert text because no text box has focus.</li>
+          <li><strong>Automatic Intelligent Focusing:</strong> When integration is enabled for an app, pressing the remote voice button prompts Remote Buddy to inspect the window's Accessibility hierarchy and automatically focus its primary message input box. If a text field is already focused, Remote Buddy preserves your current selection.</li>
+        </ul>
+        <p><strong>Important Clarification:</strong> App Integrations <strong>does not launch or foreground applications</strong> and has no passthrough functionality. It operates strictly when the application is <strong>already the active frontmost window</strong>, saving you from having to grab the mouse and click the text box before speaking.</p>
       </div>
     </details>
   </section>
@@ -152,16 +152,16 @@
     <details class="troubleshooting-card">
       <summary><span class="troubleshooting-question">Which input methods and voice tools are currently supported?</span></summary>
       <div class="troubleshooting-body">
-        <p>Remote Buddy is inherently compatible with any macOS application that supports <strong>global shortcut triggering</strong> and allows selecting an audio input microphone. Popular options include:</p>
-        <p><strong>1. Apple System Dictation: Built-in &amp; Zero-Config</strong><br>Included natively with macOS. Default hotkey is pressing Fn twice. Runs on-device on Apple Silicon Macs without third-party installations.</p>
-        <p><strong>2. Voice Buddy: Recommended Offline Companion</strong><br>Native offline companion app powered by on-device large language and speech models. Runs 100% locally on the Apple Silicon Neural Engine with zero data transmission, millisecond latency, and intelligent punctuation.</p>
-        <p><strong>3. Doubao AI for macOS:</strong> ByteDance's AI voice input tool featuring high recognition accuracy and automatic spoken-to-written polish.</p>
-        <p><strong>4. WeChat Keyboard for macOS:</strong> Offers built-in voice-to-text hotkeys, great for everyday instant messaging.</p>
-        <p><strong>5. NetEase Bageshuo:</strong> Fast real-time voice typing with LLM text refining capabilities.</p>
-        <p><strong>6. Chatterfly:</strong> Professional voice productivity tool crafted for developers and power users.</p>
-        <p><strong>7. Typeless:</strong> Modern, clean, cross-platform voice typing companion.</p>
-        <p><strong>8. Sogou &amp; Baidu Input for Mac:</strong> Support customized voice trigger hotkeys out of the box.</p>
-        <p><strong>Universal Setup Rule:</strong> In your voice tool or macOS Sound settings, select <code>Remote Buddy Mic</code> as the input device, and set the tool's trigger hotkey in Remote Buddy's Input Method Integration pane!</p>
+        <p>Remote Buddy is inherently compatible with any macOS software that supports <strong>global shortcut triggering</strong> and allows selecting an audio input microphone. Officially integrated tools (ordered as supported in the app) include:</p>
+        <p><strong>1. WeChat Input Method (WeType):</strong> Send remote voice to WeType. Tencent's official input method, featuring configurable voice hotkeys and "Global shortcut" support for instant triggering without switching input sources.</p>
+        <p><strong>2. Doubao Input Method:</strong> Send remote voice to Doubao. ByteDance's AI voice typing tool with high recognition accuracy, LLM text polishing, and "Global voice activation".</p>
+        <p><strong>3. Tencent Chatterfly:</strong> Hold to talk and release to finish in Tencent Chatterfly using its global voice shortcut.</p>
+        <p><strong>4. Voice Buddy: Companion Offline AI Tool</strong><br>Local, offline AI voice input and text polishing. Our native tool running 100% locally on Apple Silicon Neural Engine with zero data transmission, millisecond latency, and intelligent punctuation.</p>
+        <p><strong>5. NetEase Bageshuo:</strong> NetEase AI voice dictation with real-time transcription and smart text polish.</p>
+        <p><strong>6. Typeless:</strong> Use voice typing in Typeless. Modern, clean, cross-platform voice typing companion.</p>
+        <p><strong>7. macOS Dictation: Built-in &amp; Zero-Install</strong><br>Use built-in Dictation without installing a third-party app. Runs on-device on Apple Silicon Macs. Default hotkey is pressing Fn twice.</p>
+        <p><strong>8. Other Voice Apps:</strong> Test in your favorite voice typing app. Any third-party software that allows setting a global voice hotkey and selecting an input microphone can be used.</p>
+        <p><strong>Universal Setup Rule:</strong> In your voice tool or macOS Sound settings, select <code>Remote Buddy Mic</code> as the input device, and set the tool's trigger hotkey in Remote Buddy's setup wizard!</p>
       </div>
     </details>
 

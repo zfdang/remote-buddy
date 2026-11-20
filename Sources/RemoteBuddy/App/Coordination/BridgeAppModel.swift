@@ -389,8 +389,26 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
         if let terminationObserver {
             NotificationCenter.default.removeObserver(terminationObserver)
         }
+        cancelAllScheduledWork(reason: "deinit")
+    }
+
+    func cancelAllScheduledWork(reason: String = "cancelled") {
+        cancelHIDMappingRecovery(reason: reason)
+        completedUpdateHIDRecoveryWorkItem?.cancel()
+        completedUpdateHIDRecoveryWorkItem = nil
+        cancelHIDFilterRetry()
+        cancelLongRecordingTimers()
+        rc003VoiceExtensionTimer?.cancel()
+        rc003VoiceExtensionTimer = nil
+        rc003VoiceExtensionOpenTimer?.cancel()
+        rc003VoiceExtensionOpenTimer = nil
+        rc003VoiceExtensionDeadlineTimer?.cancel()
+        rc003VoiceExtensionDeadlineTimer = nil
+        cancelG9N9NSmartToggleTimers()
         applicationIntegrationStatusExpiry?.cancel()
+        applicationIntegrationStatusExpiry = nil
         voiceKeyReleaseRetry?.cancel()
+        voiceKeyReleaseRetry = nil
     }
 
     private(set) var isTerminating = false
@@ -426,10 +444,7 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
             return
         }
         started = false
-        cancelHIDMappingRecovery(reason: "app_stop")
-        completedUpdateHIDRecoveryWorkItem?.cancel()
-        completedUpdateHIDRecoveryWorkItem = nil
-        cancelHIDFilterRetry()
+        cancelAllScheduledWork(reason: "app_stop")
         audio.invalidatePendingWork()
         stopObservingAudioHardware()
         stopLongRecording(reason: "app_stop")

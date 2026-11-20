@@ -262,11 +262,13 @@ struct RuntimeBoundaryTests {
 
         let xiaomiMonitor = model.makeHIDMonitor(
             profileID: xiaomiProfile.id,
-            targetFingerprint: "xiaomi-fp"
+            targetFingerprint: "xiaomi-fp",
+            runtimePermissions: { true }
         )
         let t1Monitor = model.makeHIDMonitor(
             profileID: t1Profile.id,
-            targetFingerprint: "t1-fp"
+            targetFingerprint: "t1-fp",
+            runtimePermissions: { true }
         )
 
         // When Settings/Onboarding window is backgrounded (e.g. user focused another app), neither remote suppresses actions.

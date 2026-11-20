@@ -120,7 +120,7 @@ extension BridgeAppModel {
         AppLogger.shared.write("LONG RECORDING finished reason=\(reason)")
     }
 
-    private func cancelLongRecordingTimers() {
+    func cancelLongRecordingTimers() {
         longRecordingOpenTimer?.cancel()
         longRecordingOpenTimer = nil
         longRecordingCloseTimer?.cancel()

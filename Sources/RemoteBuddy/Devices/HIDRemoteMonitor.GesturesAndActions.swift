@@ -296,6 +296,14 @@ extension HIDRemoteMonitor {
             _ = nativeKeyStatePoster(keyCode, false, [])
         }
         directPassthroughUsages.removeAll()
+        usageExpiryTokens.removeAll()
+        usageExpiryTimers.values.forEach { $0.cancel() }
+        usageExpiryTimers.removeAll()
+        usageHardCeilingTimers.values.forEach { $0.cancel() }
+        usageHardCeilingTimers.removeAll()
+        suppressedUntilReleasedUsages.removeAll()
+        suppressedUsageExpiryTimers.values.forEach { $0.cancel() }
+        suppressedUsageExpiryTimers.removeAll()
         nonRepeatableReleaseTimers.values.forEach { $0.cancel() }
         nonRepeatableReleaseTimers.removeAll()
         nonRepeatablePressedButtons.removeAll()
@@ -307,6 +315,8 @@ extension HIDRemoteMonitor {
         lastT1MouseHeader = nil
         lastT1MouseLogTime = 0
         resetGestureRecognition()
+        activeUsages.removeAll()
+        emitActiveButtons()
         appSwitcherCoordinator.finishIfActive(reason: "common_phrases_opened", confirmed: false)
     }
 

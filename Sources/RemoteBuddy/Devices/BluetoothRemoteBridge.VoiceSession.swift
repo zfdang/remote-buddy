@@ -627,18 +627,14 @@ extension BluetoothRemoteBridge {
     func rejectUnsupportedAudio(_ message: LocalizedMessage) {
         state = .failed(message)
         closeMicrophoneIfNeeded()
-        if streaming {
-            stopStreaming(reason: .unsupportedAudio)
-        } else {
-            audioDecoder.reset()
-        }
+        resetSession(reason: .unsupportedAudio)
         scheduleReconnect(bypassCachedTarget: true)
     }
 
     func failInitialization(_ message: LocalizedMessage) {
         AppLogger.shared.write("BLE INITIALIZATION failed reason=\(message.key)")
         state = .failed(message)
-        audioDecoder.reset()
+        resetSession(reason: .initializationFailed)
         scheduleReconnect(bypassCachedTarget: true)
     }
 }

@@ -235,7 +235,7 @@ final class UpdateInformationStore: ObservableObject {
         self.schedule = schedule
     }
 
-    deinit { checkingDeadline?.cancel() }
+    isolated deinit { checkingDeadline?.cancel() }
 
     private func cancelCheckingDeadline() {
         checkingGeneration = UUID()

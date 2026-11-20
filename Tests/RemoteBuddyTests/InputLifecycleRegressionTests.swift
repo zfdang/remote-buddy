@@ -670,9 +670,51 @@ struct InputLifecycleRegressionTests {
         let model = BridgeAppModel(settings: settings, initialAudioDevices: [])
         let xiaomiID = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         let googleID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
-        let monitorA = model.makeHIDMonitor(profileID: xiaomiID, targetFingerprint: "fp-a")
-        let monitorB = model.makeHIDMonitor(profileID: googleID, targetFingerprint: "fp-b")
+        let monitorA = model.makeHIDMonitor(profileID: xiaomiID, targetFingerprint: "fp-a", runtimePermissions: { true })
+        let monitorB = model.makeHIDMonitor(profileID: googleID, targetFingerprint: "fp-b", runtimePermissions: { true })
         #expect(monitorA.appSwitcherCoordinator === model.appSwitcherCoordinator)
         #expect(monitorB.appSwitcherCoordinator === model.appSwitcherCoordinator)
+    }
+
+    @Test @MainActor func cancelPendingButtonActionsCleansActiveUsagesAndTimers() throws {
+        let (values, name) = defaults()
+        defer { values.removePersistentDomain(forName: name) }
+        let settings = AppSettings(defaults: values)
+        settings.customMappingEnabled = true
+        let profile = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
+        var activeButtonsHistory: [Set<RemoteButton>] = []
+        let monitor = HIDRemoteMonitor(
+            settings: settings,
+            profileID: profile,
+            runtimePermissions: { true },
+            actionPerformer: { _, _, _ in true }
+        )
+        monitor.onActiveButtons = { _, buttons in
+            activeButtonsHistory.append(buttons)
+        }
+        monitor.connectSimulatedDevice(fingerprint: "test-fp", profileID: profile, isSeized: false)
+        defer { monitor.disconnectSimulatedDevice() }
+
+        let okUsage = RemoteButton.ok.hidUsage
+        monitor.handleSimulatedReport(reportID: 1, data: Data([UInt8(okUsage & 255), UInt8(okUsage >> 8)]))
+        #expect(monitor.activeUsages.contains(okUsage))
+
+        monitor.cancelPendingButtonActions()
+        #expect(monitor.activeUsages.isEmpty)
+        #expect(monitor.usageExpiryTimers.isEmpty)
+        #expect(monitor.usageHardCeilingTimers.isEmpty)
+        #expect(activeButtonsHistory.last?.isEmpty == true)
+    }
+
+    @Test @MainActor func bridgeAppModelCancelAllScheduledWorkCleansTimers() throws {
+        let (values, name) = defaults()
+        defer { values.removePersistentDomain(forName: name) }
+        let settings = AppSettings(defaults: values)
+        let model = BridgeAppModel(settings: settings, initialAudioDevices: [])
+        model.completedUpdateHIDRecoveryWorkItem = DispatchWorkItem {}
+        model.hidFilterRetryWorkItem = DispatchWorkItem {}
+        model.cancelAllScheduledWork(reason: "test")
+        #expect(model.completedUpdateHIDRecoveryWorkItem == nil)
+        #expect(model.hidFilterRetryWorkItem == nil)
     }
 }

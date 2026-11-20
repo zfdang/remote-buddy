@@ -318,14 +318,14 @@ extension HIDRemoteMonitor {
             let claimedByAppSwitcher = appSwitcherCoordinator.isActive && Self.handlesAppSwitcherControl(button)
             guard claimedByRuntime || claimedByAppSwitcher else { continue }
 
-            if !activeDeviceIsSeized {
-                eventSuppressor.arm(button: button, edge: .down)
-            }
-            interceptedT1PassthroughUsages.insert(usage)
             guard mappingDeliveryIsSafe else {
                 pauseForUnavailableNativeFilter()
                 continue
             }
+            if !activeDeviceIsSeized {
+                eventSuppressor.arm(button: button, edge: .down)
+            }
+            interceptedT1PassthroughUsages.insert(usage)
             diagnosticLogger(
                 "HID T1 modal_passthrough phase=press button=\(button.rawValue) " +
                     "runtime=\(claimedByRuntime) app_switcher=\(claimedByAppSwitcher)"

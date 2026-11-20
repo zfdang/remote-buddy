@@ -97,4 +97,40 @@ struct BluetoothVoiceStopDiagnosticTests {
         #expect(logs[0].contains("session=1 reason=local_stop"))
         #expect(logs[1].contains("session=2 reason=remote_notification"))
     }
+
+    @Test func rejectUnsupportedAudioAndFailInitializationResetVoiceState() async {
+        let suite = "voice-stop-reject-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let delegate = Delegate()
+        let queue = DispatchQueue(label: "voice-stop-reject")
+        let bridge = BluetoothRemoteBridge(settings: AppSettings(defaults: defaults), delegate: delegate,
+            allowsT1Remote: true, audioPipeline: BluetoothAudioPipeline(queue: queue))
+        defer { bridge.stop() }
+        bridge.simulateT1ReadyStateForTesting()
+        func flush() async {
+            await withCheckedContinuation { continuation in
+                queue.async { DispatchQueue.main.async { continuation.resume() } }
+            }
+        }
+
+        // 1. Audio started, then rejectUnsupportedAudio called -> must notify delegate stop with .unsupportedAudio
+        bridge.simulateControlPacketForTesting(Data([0x04, 0x03, 0x02, 0x01]))
+        await flush()
+        #expect(bridge.hasPendingVoiceWork)
+        bridge.rejectUnsupportedAudio(LocalizedMessage("test_unsupported"))
+        await flush()
+        #expect(delegate.reasons == [.unsupportedAudio])
+        #expect(!bridge.hasPendingVoiceWork)
+
+        // 2. Audio started, then failInitialization called -> must notify delegate stop with .initializationFailed
+        bridge.simulateT1ReadyStateForTesting()
+        bridge.simulateControlPacketForTesting(Data([0x04, 0x03, 0x02, 0x02]))
+        await flush()
+        #expect(bridge.hasPendingVoiceWork)
+        bridge.failInitialization(LocalizedMessage("test_failed"))
+        await flush()
+        #expect(delegate.reasons == [.unsupportedAudio, .initializationFailed])
+        #expect(!bridge.hasPendingVoiceWork)
+    }
 }

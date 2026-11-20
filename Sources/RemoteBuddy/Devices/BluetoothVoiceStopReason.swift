@@ -20,4 +20,5 @@ enum BluetoothVoiceStopReason: String {
     case sessionReplaced = "session_replaced"
     case decodeBacklog = "decode_backlog"
     case unsupportedAudio = "unsupported_audio"
+    case initializationFailed = "initialization_failed"
 }

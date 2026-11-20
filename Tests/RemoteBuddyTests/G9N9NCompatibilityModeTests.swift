@@ -380,7 +380,7 @@ struct G9N9NCompatibilityModeTests {
         settings.selectRemoteProfile(xiaomiID)
 
         let model = BridgeAppModel(settings: settings, initialAudioDevices: [])
-        let monitor = model.makeHIDMonitor(profileID: googleID, targetFingerprint: nil)
+        let monitor = model.makeHIDMonitor(profileID: googleID, targetFingerprint: nil, runtimePermissions: { true })
         monitor.connectSimulatedDevice(fingerprint: "google", profileID: googleID)
         defer { monitor.disconnectSimulatedDevice() }
 

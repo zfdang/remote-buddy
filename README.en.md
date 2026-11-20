@@ -31,7 +31,7 @@ Supports **macOS 14 and later**, on Apple Silicon and Intel Macs. Windows suppor
 - Use a remote's microphone for voice input, without reaching for the keyboard.
 - Map supported remote buttons to keyboard shortcuts, application actions, or common phrases, with category filtering, independent single/double/long-press actions, and individual trigger reset. Phrase content can mix languages and stays the same when the interface language changes.
 - Configure hold-to-talk or press-to-start/stop behavior for your input tool.
-- Optional app integrations preserve your selected editable input in WeChat, Antigravity, ChatGPT, Claude, and WorkBuddy, locating the conversation input only when needed, with individual and bulk switches.
+- Optional app integrations preserve your selected editable input in WeChat, Antigravity, ChatGPT, Claude, DeepSeek, and WorkBuddy, locating the conversation input only when needed, with individual and bulk switches.
 - Set up permissions, the microphone driver, device connection, and input integration in one guide.
 
 Each newly added remote starts with its model defaults. Saved custom mappings belong to that device; mappings from other devices or before pairing are not copied.

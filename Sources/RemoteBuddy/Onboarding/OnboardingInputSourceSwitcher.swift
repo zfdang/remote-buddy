@@ -144,6 +144,14 @@ enum OnboardingInputSourceSwitcher {
         return isSelected(voiceTool) ? .selected : select(voiceTool)
     }
 
+    static func isInputSourceAvailable(
+        for voiceTool: OnboardingVoiceTool,
+        includeAllInstalled: Bool = false
+    ) -> Bool {
+        guard let targetID = voiceTool.preferredInputSourceID else { return true }
+        return inputSource(withID: targetID, includeAllInstalled: includeAllInstalled) != nil
+    }
+
     static func prepareForVoiceSession(
         _ voiceTool: OnboardingVoiceTool
     ) -> OnboardingInputSourceSwitchResult {

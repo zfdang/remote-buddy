@@ -352,6 +352,56 @@ struct VoiceTriggerConfigurationTests {
         #expect(key(started: true, samples: true, ended: true, result: .audioDeliveryFailed) == "onboarding.recovery.voice.audio_delivery_failed.title")
     }
 
+    @Test @MainActor func externalToolNoCommitRecoveryDetailDynamicallyReflectsConfiguredShortcutAndTool() throws {
+        try withSettings { settings, _ in
+            let view = OnboardingView(model: BridgeAppModel(settings: settings, initialAudioDevices: []))
+
+            // 1. zh-Hans with Doubao and default suggested shortcut (Ctrl + Shift + R)
+            settings.applicationLanguage = .simplifiedChinese
+            settings.setOnboardingVoiceTool(.doubao)
+            settings.selectOnboardingVoiceTrigger(.suggestedShortcut)
+            var loc = LocalizationStore(settings: settings, resourceBundle: RemoteBuddyResourceBundle.mainOrDevelopment)
+            var detail = view.recoveryDetailText(for: .voiceExternalToolNoCommit, using: loc)
+            #expect(detail.contains("豆包输入法"))
+            #expect(detail.contains("Remote Buddy Mic"))
+            #expect(detail.contains("Ctrl (⌃) + Shift (⇧) + R"))
+            #expect(!detail.contains("%1$@"))
+            #expect(!detail.contains("%2$@"))
+            #expect(!detail.contains("%3$@"))
+            #expect(!detail.contains("%@"))
+
+            // 2. English with WeType
+            settings.applicationLanguage = .english
+            settings.setOnboardingVoiceTool(.weixin)
+            loc = LocalizationStore(settings: settings, resourceBundle: RemoteBuddyResourceBundle.mainOrDevelopment)
+            detail = view.recoveryDetailText(for: .voiceExternalToolNoCommit, using: loc)
+            #expect(detail.contains("WeType"))
+            #expect(detail.contains("Remote Buddy Mic"))
+            #expect(detail.contains("Ctrl (⌃) + Shift (⇧) + R"))
+            #expect(!detail.contains("%1$@"))
+            #expect(!detail.contains("%2$@"))
+            #expect(!detail.contains("%3$@"))
+            #expect(!detail.contains("%@"))
+
+            // 3. Modifier mode (.function)
+            settings.applicationLanguage = .simplifiedChinese
+            settings.selectOnboardingVoiceTrigger(.function)
+            loc = LocalizationStore(settings: settings, resourceBundle: RemoteBuddyResourceBundle.mainOrDevelopment)
+            detail = view.recoveryDetailText(for: .voiceExternalToolNoCommit, using: loc)
+            #expect(detail.contains("Fn/地球键"))
+            #expect(!detail.contains("%@"))
+
+            // 4. Custom shortcut
+            let custom = VoiceKeyMode.shortcut(CustomKeyboardShortcut(
+                keyCode: 9, modifierFlags: [.control, .option], keyLabel: "V"
+            ))
+            settings.selectOnboardingVoiceTrigger(custom)
+            detail = view.recoveryDetailText(for: .voiceExternalToolNoCommit, using: loc)
+            #expect(detail.contains("Ctrl (⌃) + Option (⌥) + V"))
+            #expect(!detail.contains("%@"))
+        }
+    }
+
     @Test func voiceChordsUseWordsSymbolsAndPlusSeparators() throws {
         try withSettings { settings, _ in
             for language in [AppLanguage.simplifiedChinese, .english] {

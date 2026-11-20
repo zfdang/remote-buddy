@@ -792,7 +792,7 @@
 "onboarding.recovery.voice.audio_delivery_failed.detail" = "Remote Buddy received audio from the remote, but could not deliver all of it to the virtual microphone (Remote Buddy Mic). Set up audio again, then retry.";
 "onboarding.recovery.voice.audio_delivery_failed.action" = "Retry Audio Output";
 "onboarding.recovery.voice.external_tool_no_commit.title" = "Audio worked, but the voice app did not enter text";
-"onboarding.recovery.voice.external_tool_no_commit.detail" = "Remote Buddy sent audio, and the text field was ready. Check your voice typing app’s settings. It must support voice input and use the selected audio output device as its microphone. Then try again.";
+"onboarding.recovery.voice.external_tool_no_commit.detail" = "Audio was received normally, but %1$@ did not enter text. Please check %1$@ settings: 1. Ensure the microphone is set to “%2$@”; 2. Ensure the voice shortcut is manually recorded as “%3$@” and global shortcut activation is enabled.";
 "onboarding.recovery.voice.external_tool_no_commit.action" = "Check and Try Again";
 "onboarding.recovery.controls.not_confirmed.title" = "Try three different control buttons";
 "onboarding.recovery.controls.not_confirmed.detail" = "Reconnect if needed, then press three different control buttons.";

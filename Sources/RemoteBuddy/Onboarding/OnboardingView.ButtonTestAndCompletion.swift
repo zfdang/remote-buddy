@@ -537,49 +537,64 @@ extension OnboardingView {
         return Self.remoteNotFoundRecoveryDetailKey(for: settings.onboardingControlSource)
     }
 
-    private func recoveryDetailText(for failure: FirstUseFailureReason) -> String {
+    func recoveryDetailText(
+        for failure: FirstUseFailureReason,
+        using overrideLocalization: LocalizationStore? = nil
+    ) -> String {
+        let activeLocalization = overrideLocalization ?? localization
         switch failure {
         case .voiceSessionNotStarted:
             return LocalizedMessage(
                 "onboarding.recovery.voice.session_not_started.detail",
-                arguments: [recoveryVoiceGestureInstruction]
-            ).text(using: localization)
+                arguments: [recoveryVoiceGestureInstruction(using: activeLocalization)]
+            ).text(using: activeLocalization)
         case .voiceNoSamples:
             return LocalizedMessage(
                 "onboarding.recovery.voice.no_samples.detail",
-                arguments: [recoveryVoiceGestureInstruction]
-            ).text(using: localization)
+                arguments: [recoveryVoiceGestureInstruction(using: activeLocalization)]
+            ).text(using: activeLocalization)
         case .voiceSessionNotEnded:
             return LocalizedMessage(
                 "onboarding.recovery.voice.session_not_ended.detail",
-                arguments: [recoveryVoiceFinishInstruction]
-            ).text(using: localization)
+                arguments: [recoveryVoiceFinishInstruction(using: activeLocalization)]
+            ).text(using: activeLocalization)
+        case .voiceExternalToolNoCommit:
+            let toolName = activeLocalization.text(settings.onboardingVoiceTool.titleKey)
+            let micName = selectedAudioDevice?.name ?? BuddyMicrophoneDevicePolicy.deviceName
+            let shortcutText = (settings.stagedVoiceToolBinding?.shortcut ?? settings.selectedVoiceTrigger.voiceKeyMode)
+                .displayName(using: activeLocalization)
+            return LocalizedMessage(
+                "onboarding.recovery.voice.external_tool_no_commit.detail",
+                arguments: [toolName, micName, shortcutText]
+            ).text(using: activeLocalization)
         default:
-            return localization.text(recoveryDetailKey(for: failure))
+            return activeLocalization.text(recoveryDetailKey(for: failure))
         }
     }
 
-    private var recoveryVoiceGestureInstruction: String {
+    private func recoveryVoiceGestureInstruction(using overrideLocalization: LocalizationStore? = nil) -> String {
+        let loc = overrideLocalization ?? localization
         if settings.onboardingControlSource == .t1Remote {
-            return localization.text("onboarding.recovery.voice.gesture.t1")
+            return loc.text("onboarding.recovery.voice.gesture.t1")
         }
         switch effectivePreferredGesture {
         case .hold:
-            return localization.text("onboarding.recovery.voice.gesture.hold")
+            return loc.text("onboarding.recovery.voice.gesture.hold")
         case .toggle:
-            return localization.text("onboarding.recovery.voice.gesture.toggle")
+            return loc.text("onboarding.recovery.voice.gesture.toggle")
         }
     }
 
-    private var recoveryVoiceFinishInstruction: String {
+    private func recoveryVoiceFinishInstruction(using overrideLocalization: LocalizationStore? = nil) -> String {
+        let loc = overrideLocalization ?? localization
         if settings.onboardingControlSource == .t1Remote {
-            return localization.text("onboarding.recovery.voice.finish.toggle")
+            return loc.text("onboarding.recovery.voice.finish.toggle")
         }
         switch effectivePreferredGesture {
         case .hold:
-            return localization.text("onboarding.recovery.voice.finish.hold")
+            return loc.text("onboarding.recovery.voice.finish.hold")
         case .toggle:
-            return localization.text("onboarding.recovery.voice.finish.toggle")
+            return loc.text("onboarding.recovery.voice.finish.toggle")
         }
     }
 

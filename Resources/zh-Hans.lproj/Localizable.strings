@@ -789,7 +789,7 @@
 "onboarding.recovery.voice.audio_delivery_failed.detail" = "遥控搭子已收到遥控器声音，但未能将音频完整输送到虚拟麦克风（Remote Buddy Mic）。请重试音频设置后再说一次。";
 "onboarding.recovery.voice.audio_delivery_failed.action" = "重试音频输出";
 "onboarding.recovery.voice.external_tool_no_commit.title" = "遥控器声音传输正常，但语音工具没有写入文字";
-"onboarding.recovery.voice.external_tool_no_commit.detail" = "遥控搭子已收到并输出声音，输入框也已准备好。请确认所选工具支持语音输入，并在工具自己的设置中选择当前语音输出设备作为麦克风，然后重试。";
+"onboarding.recovery.voice.external_tool_no_commit.detail" = "已正常听到声音，但%1$@未写入文字。请重点检查%1$@设置：1. 麦克风是否已选择“%2$@”；2. 语音快捷键是否已手动录制为“%3$@”且启用了全局生效。";
 "onboarding.recovery.voice.external_tool_no_commit.action" = "检查后重新测试";
 "onboarding.recovery.controls.not_confirmed.title" = "请试三个不同的普通按键";
 "onboarding.recovery.controls.not_confirmed.detail" = "如有需要先重新连接，然后按三个不同的普通按键。";

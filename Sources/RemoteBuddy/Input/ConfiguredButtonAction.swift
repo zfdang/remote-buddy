@@ -39,6 +39,7 @@ struct ConfiguredButtonAction: Codable, Equatable {
 
 
 enum ButtonActionCategory: String, CaseIterable, Identifiable {
+    case directPassthrough
     case basicKeys
     case systemAndMedia
     case applications
@@ -49,6 +50,7 @@ enum ButtonActionCategory: String, CaseIterable, Identifiable {
 
     var localizationKey: String {
         switch self {
+        case .directPassthrough: return "action.direct_passthrough"
         case .basicKeys: return "button_mapping.action_group.basic_keys"
         case .systemAndMedia: return "button_mapping.action_group.system_and_media"
         case .applications: return "button_mapping.action_group.applications"
@@ -194,10 +196,12 @@ enum ButtonAction: String, CaseIterable, Codable, Identifiable {
     var category: ButtonActionCategory {
         if presetApplication != nil { return .applications }
         switch self {
+        case .directPassthrough:
+            return .directPassthrough
         case .disabled, .escape, .returnKey, .commandReturn, .shiftReturn, .commandCopy,
              .commandPaste, .commandClose, .commandQuit, .commandCut, .commandSelectAll,
              .commandUndo, .commandRedo, .commandFind, .commandSave, .commandDelete,
-             .arrowUp, .arrowDown, .arrowLeft, .arrowRight, .directPassthrough, .scrollUp, .scrollDown,
+             .arrowUp, .arrowDown, .arrowLeft, .arrowRight, .scrollUp, .scrollDown,
              .deleteBackward:
             return .basicKeys
         case .showDesktop, .contextMenu, .appSwitcher, .focusInput, .volumeUp, .volumeDown, .volumeMute,

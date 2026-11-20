@@ -63,6 +63,27 @@ struct DirectionKeysPassthroughTests {
         }
     }
 
+    @Test func directPassthroughCategoryAndFilterVisibility() {
+        #expect(ButtonAction.directPassthrough.category == .directPassthrough)
+        #expect(ButtonActionCategory.directPassthrough.id == "directPassthrough")
+
+        // For direction buttons on singleClick: directPassthrough is the first category filter
+        for button in RemoteButton.directionButtons {
+            let filters = MappingActionFilter.visibleCases(for: button, trigger: .singleClick)
+            #expect(filters.first == .directPassthrough)
+            #expect(filters.contains(.directPassthrough))
+
+            // On doubleClick / longPress: directPassthrough filter MUST NOT be visible
+            #expect(!MappingActionFilter.visibleCases(for: button, trigger: .doubleClick).contains(.directPassthrough))
+            #expect(!MappingActionFilter.visibleCases(for: button, trigger: .longPress).contains(.directPassthrough))
+        }
+
+        // For non-direction buttons: directPassthrough filter MUST NOT be visible
+        for button in [RemoteButton.ok, .back, .power, .volumeUp, .home] {
+            #expect(!MappingActionFilter.visibleCases(for: button, trigger: .singleClick).contains(.directPassthrough))
+        }
+    }
+
     @Test func configuredActionDisablesSecondaryTriggersWhenDirectPassthroughIsActive() throws {
         try withSettings { settings in
             let profile = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)

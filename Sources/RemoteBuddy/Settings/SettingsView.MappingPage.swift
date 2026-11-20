@@ -89,9 +89,11 @@ extension SettingsView {
                     onEdit: { button, trigger in
                         selectedRemoteButton = button
                         let current = settings.configuredAction(for: button, trigger: trigger).action
+                        let validFilters = MappingActionFilter.visibleCases(for: button, trigger: trigger)
+                        let targetFilter = MappingActionFilter(category: current.category)
                         mappingActionFilter = (current == .disabled || current == .repeatSingleClick)
-                            ? .basicKeys
-                            : MappingActionFilter(category: current.category)
+                            ? (validFilters.contains(.directPassthrough) && current == .directPassthrough ? .directPassthrough : .basicKeys)
+                            : (validFilters.contains(targetFilter) ? targetFilter : .basicKeys)
                         mappingEditingTarget = ShortcutEditingTarget(
                             button: button,
                             trigger: trigger

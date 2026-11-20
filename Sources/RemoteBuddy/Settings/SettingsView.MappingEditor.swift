@@ -12,6 +12,8 @@ extension SettingsView {
         let configured = mappingConfiguration(for: button, trigger: trigger)
         let isDirectPassthroughActive = mappingConfiguration(for: button, trigger: .singleClick).action == .directPassthrough
         let installedBundleIdentifiers = PresetApplication.installedBundleIdentifiers
+        let visibleFilters = MappingActionFilter.visibleCases(for: button, trigger: trigger)
+        let activeFilter = visibleFilters.contains(mappingActionFilter) ? mappingActionFilter : (visibleFilters.first ?? .basicKeys)
         let actions = ButtonAction.pickerActions(
             installedBundleIdentifiers: installedBundleIdentifiers,
             current: configured.action,
@@ -52,9 +54,9 @@ extension SettingsView {
                         .foregroundStyle(.secondary)
                 }
 
-                mappingActionFilterControl
+                mappingActionFilterControl(filters: visibleFilters, activeFilter: activeFilter)
 
-                let currentCategory = mappingActionFilter.category
+                let currentCategory = activeFilter.category
                 let groupedActions = actions.filter { $0.category == currentCategory }
                 if !groupedActions.isEmpty {
                     mappingActionGroup(
@@ -99,15 +101,9 @@ extension SettingsView {
                         .font(.system(size: 12))
                         .foregroundStyle(.orange)
                 } else if trigger == .singleClick {
-                    if configured.action == .directPassthrough {
-                        Text(localization.text("action.direct_passthrough.help"))
-                            .font(.system(size: 12))
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Text(localization.text("button_mapping.single_click.help"))
-                            .font(.system(size: 12))
-                            .foregroundStyle(.secondary)
-                    }
+                    Text(localization.text("button_mapping.single_click.help"))
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
                 }
             }
         }
@@ -122,10 +118,10 @@ extension SettingsView {
         }
     }
 
-    private var mappingActionFilterControl: some View {
+    private func mappingActionFilterControl(filters: [MappingActionFilter], activeFilter: MappingActionFilter) -> some View {
         HStack(spacing: 8) {
-            ForEach(MappingActionFilter.visibleCases) { filter in
-                let isSelected = mappingActionFilter == filter
+            ForEach(filters) { filter in
+                let isSelected = activeFilter == filter
                 Button {
                     guard mappingActionFilter != filter else { return }
                     mappingActionFilter = filter
@@ -168,7 +164,7 @@ extension SettingsView {
         installedBundleIdentifiers: Set<String>,
         onSelect: @escaping (ButtonAction) -> Void
     ) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             Text(localization.text(category.localizationKey))
                 .font(.system(size: 14, weight: .semibold))
 
@@ -178,6 +174,21 @@ extension SettingsView {
                 installedBundleIdentifiers: installedBundleIdentifiers,
                 onSelect: onSelect
             )
+
+            if category == .directPassthrough {
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "info.circle.fill")
+                        .foregroundStyle(Color.accentColor)
+                        .font(.system(size: 16))
+                    Text(localization.text("action.direct_passthrough.help"))
+                        .font(.system(size: 13))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.accentColor.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+            }
         }
     }
 

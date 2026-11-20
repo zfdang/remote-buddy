@@ -438,6 +438,7 @@ enum CustomApplicationLearningState: Equatable {
 }
 
 enum MappingActionFilter: String, CaseIterable, Identifiable {
+    case directPassthrough
     case basicKeys
     case systemAndMedia
     case applications
@@ -446,12 +447,20 @@ enum MappingActionFilter: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    static func visibleCases(for button: RemoteButton? = nil, trigger: ButtonTrigger? = nil) -> [Self] {
+        if let button, button.isDirectional, trigger == nil || trigger == .singleClick {
+            return [.directPassthrough, .basicKeys, .systemAndMedia, .applications, .commonPhrases, .custom]
+        }
+        return [.basicKeys, .systemAndMedia, .applications, .commonPhrases, .custom]
+    }
+
     static var visibleCases: [Self] {
         [.basicKeys, .systemAndMedia, .applications, .commonPhrases, .custom]
     }
 
     var localizationKey: String {
         switch self {
+        case .directPassthrough: return ButtonActionCategory.directPassthrough.localizationKey
         case .basicKeys: return ButtonActionCategory.basicKeys.localizationKey
         case .systemAndMedia: return ButtonActionCategory.systemAndMedia.localizationKey
         case .applications: return ButtonActionCategory.applications.localizationKey
@@ -462,6 +471,7 @@ enum MappingActionFilter: String, CaseIterable, Identifiable {
 
     var category: ButtonActionCategory {
         switch self {
+        case .directPassthrough: return .directPassthrough
         case .basicKeys: return .basicKeys
         case .systemAndMedia: return .systemAndMedia
         case .applications: return .applications
@@ -472,6 +482,7 @@ enum MappingActionFilter: String, CaseIterable, Identifiable {
 
     init(category: ButtonActionCategory) {
         switch category {
+        case .directPassthrough: self = .directPassthrough
         case .basicKeys: self = .basicKeys
         case .systemAndMedia: self = .systemAndMedia
         case .applications: self = .applications

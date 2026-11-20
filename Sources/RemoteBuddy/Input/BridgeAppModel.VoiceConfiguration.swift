@@ -140,7 +140,7 @@ extension BridgeAppModel {
             !settings.enabledApplicationIntegrations.isEmpty) || OrderedVoiceActivationPolicy.needsSoftwareFn(
             mode: settings.effectiveVoiceKeyMode,
             fnTapEnabled: settings.effectiveVoiceFnTapModeEnabled,
-            preferredInputSourceID: settings.onboardingVoiceTool.preferredInputSourceID
+            preferredInputSourceID: settings.onboardingVoiceTool.automaticVoiceSessionInputSourceID
         )
     }
     /// Native Xiaomi services remain present when the selected card is a

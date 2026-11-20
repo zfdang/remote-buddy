@@ -101,7 +101,7 @@ struct StatusItemPresentationTests {
             }, onStateChange: { model.recordApplicationIntegrationStatus($0) })
         model.applicationIntegrationController = controller
         model.preferredInputSourceMonitor = PreferredInputSourceMonitor(
-            voiceTool: { .weixin }, prepareInputSource: { _ in .selected },
+            voiceTool: { .doubao }, prepareInputSource: { _ in .selected },
             currentInputSourceID: { "before" }, restoreInputSource: { _ in .selected },
             waitForInputSourceActivation: { _, _, _, done in sourceDone = done },
             installMonitor: { _ in nil }, logger: { _ in })

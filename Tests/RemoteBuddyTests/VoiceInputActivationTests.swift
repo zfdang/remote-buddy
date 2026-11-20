@@ -7,11 +7,11 @@ import Testing
 @Suite("Ordered voice input activation")
 @MainActor
 struct VoiceInputActivationTests {
-    private func makeModel() throws -> (model: BridgeAppModel, defaults: UserDefaults, suite: String) {
+    private func makeModel(voiceTool: OnboardingVoiceTool = .doubao) throws -> (model: BridgeAppModel, defaults: UserDefaults, suite: String) {
         let suite = "voice-activation-" + UUID().uuidString
         let defaults = try #require(UserDefaults(suiteName: suite))
         let settings = AppSettings(defaults: defaults)
-        settings.setOnboardingVoiceTool(.weixin)
+        settings.setOnboardingVoiceTool(voiceTool)
         settings.voiceKeyMode = .function
         return (BridgeAppModel(settings: settings, initialAudioDevices: []), defaults, suite)
     }
@@ -29,51 +29,50 @@ struct VoiceInputActivationTests {
         })
     }
 
-    @Test func tapPreparationWaitsForWeixinAndDoubaoAndCancelsLateActivation() throws {
-        for tool in [OnboardingVoiceTool.weixin, .doubao] {
-            let (model, defaults, suite) = try makeModel()
-            defer { defaults.removePersistentDomain(forName: suite) }
-            useReadyDestination(model)
-            model.settings.setOnboardingVoiceTool(tool)
-            let target = try #require(tool.preferredInputSourceID)
-            var source = "ABC"
-            var activate: ((Bool) -> Void)?
-            var continuing: (() -> Bool)?
-            var results: [VoiceInputDestinationWaitResult] = []
-            model.preferredInputSourceMonitor = PreferredInputSourceMonitor(
-                voiceTool: { tool }, prepareInputSource: { _ in source = target; return .selected },
-                currentInputSourceID: { source }, restoreInputSource: { source = $0; return .selected },
-                waitForInputSourceActivation: { _, _, active, done in continuing = active; activate = done },
-                installMonitor: { _ in nil }, logger: { _ in })
-            let clock = ControlledTestScheduler()
-            let wait = model.prepareIntegratedVoiceInputDestination(completion: { results.append($0) },
-                schedule: clock.voiceSchedule)
-            guard case let .waiting(operation) = wait else { Issue.record("Expected source activation wait"); continue }
-            #expect(results.isEmpty)
-            operation.cancel()
-            #expect(continuing?() == false)
-            activate?(true)
-            #expect(results.isEmpty)
-            #expect(source == "ABC")
-            let nextWait = model.prepareIntegratedVoiceInputDestination(completion: { results.append($0) }, schedule: clock.voiceSchedule)
-            withExtendedLifetime(nextWait) { activate?(true) }
-            #expect(results == [.ready])
-            model.preferredInputSourceMonitor.markVoiceTriggerSubmitted()
-            model.preferredInputSourceMonitor.endVoiceSession()
-            #expect(source == target)
-        }
+    @Test func tapPreparationWaitsForAutomaticInputSourceAndCancelsLateActivation() throws {
+        let tool = OnboardingVoiceTool.doubao
+        let (model, defaults, suite) = try makeModel()
+        defer { defaults.removePersistentDomain(forName: suite) }
+        useReadyDestination(model)
+        model.settings.setOnboardingVoiceTool(tool)
+        let target = try #require(tool.automaticVoiceSessionInputSourceID)
+        var source = "ABC"
+        var activate: ((Bool) -> Void)?
+        var continuing: (() -> Bool)?
+        var results: [VoiceInputDestinationWaitResult] = []
+        model.preferredInputSourceMonitor = PreferredInputSourceMonitor(
+            voiceTool: { tool }, prepareInputSource: { _ in source = target; return .selected },
+            currentInputSourceID: { source }, restoreInputSource: { source = $0; return .selected },
+            waitForInputSourceActivation: { _, _, active, done in continuing = active; activate = done },
+            installMonitor: { _ in nil }, logger: { _ in })
+        let clock = ControlledTestScheduler()
+        let wait = model.prepareIntegratedVoiceInputDestination(completion: { results.append($0) },
+            schedule: clock.voiceSchedule)
+        guard case let .waiting(operation) = wait else { Issue.record("Expected source activation wait"); return }
+        #expect(results.isEmpty)
+        operation.cancel()
+        #expect(continuing?() == false)
+        activate?(true)
+        #expect(results.isEmpty)
+        #expect(source == "ABC")
+        let nextWait = model.prepareIntegratedVoiceInputDestination(completion: { results.append($0) }, schedule: clock.voiceSchedule)
+        withExtendedLifetime(nextWait) { activate?(true) }
+        #expect(results == [.ready])
+        model.preferredInputSourceMonitor.markVoiceTriggerSubmitted()
+        model.preferredInputSourceMonitor.endVoiceSession()
+        #expect(source == target)
     }
 
     @Test func productionTapSessionMarksSuccessfulTriggerAndRetainsInputSource() throws {
         let (model, defaults, suite) = try makeModel()
         defer { defaults.removePersistentDomain(forName: suite) }
-        let target = try #require(OnboardingVoiceTool.weixin.preferredInputSourceID)
+        let target = try #require(OnboardingVoiceTool.doubao.automaticVoiceSessionInputSourceID)
         var source = "ABC"
         var edges: [Bool] = []
         useReadyDestination(model)
         model.settings.voiceKeyMode = .rightOption
         model.preferredInputSourceMonitor = PreferredInputSourceMonitor(
-            voiceTool: { .weixin }, prepareInputSource: { _ in source = target; return .selected },
+            voiceTool: { .doubao }, prepareInputSource: { _ in source = target; return .selected },
             currentInputSourceID: { source }, restoreInputSource: { source = $0; return .selected },
             waitForInputSourceActivation: { _, _, _, done in done(true) },
             installMonitor: { _ in nil }, logger: { _ in })
@@ -95,11 +94,11 @@ struct VoiceInputActivationTests {
     @Test func firstFnWaitsForActivationAndLeavesSourceSelectedAfterStop() throws {
         let (model, defaults, suite) = try makeModel()
         defer { defaults.removePersistentDomain(forName: suite) }
-        let target = try #require(OnboardingVoiceTool.weixin.preferredInputSourceID)
+        let target = try #require(OnboardingVoiceTool.doubao.automaticVoiceSessionInputSourceID)
         var source = "previous"
         var events: [String] = []
         model.preferredInputSourceMonitor = PreferredInputSourceMonitor(
-            voiceTool: { .weixin }, prepareInputSource: { _ in events.append("select"); return .selected },
+            voiceTool: { .doubao }, prepareInputSource: { _ in events.append("select"); return .selected },
             currentInputSourceID: { source },
             restoreInputSource: { source = $0; events.append("restore"); return .selected },
             waitForInputSourceActivation: { requested, current, continuing, done in
@@ -134,7 +133,7 @@ struct VoiceInputActivationTests {
         var cancel = true
         var posted: [Bool] = []
         model.preferredInputSourceMonitor = PreferredInputSourceMonitor(
-            voiceTool: { .weixin }, prepareInputSource: { _ in .selected },
+            voiceTool: { .doubao }, prepareInputSource: { _ in .selected },
             currentInputSourceID: { source }, restoreInputSource: { source = $0; return .selected },
             waitForInputSourceActivation: { target, _, continuing, done in
                 source = target
@@ -161,7 +160,7 @@ struct VoiceInputActivationTests {
         let cleaned = model.releaseVoiceKeyIfNeeded(releaseKey: { _ in posted.append(false); return true })
         #expect(cleaned)
         #expect(posted == [true, false])
-        #expect(source == OnboardingVoiceTool.weixin.preferredInputSourceID)
+        #expect(source == OnboardingVoiceTool.doubao.automaticVoiceSessionInputSourceID)
     }
 
     @Test func activationTimeoutRollsBackBeforePostingAnyKey() throws {
@@ -170,7 +169,7 @@ struct VoiceInputActivationTests {
         var source = "previous"
         var posts = 0
         model.preferredInputSourceMonitor = PreferredInputSourceMonitor(
-            voiceTool: { .weixin }, prepareInputSource: { _ in .selected },
+            voiceTool: { .doubao }, prepareInputSource: { _ in .selected },
             currentInputSourceID: { source }, restoreInputSource: { source = $0; return .selected },
             waitForInputSourceActivation: { _, _, _, done in done(false) }, installMonitor: { _ in nil }, logger: { _ in })
         let started = model.updateVoiceKeyState(streaming: true, forceSoftware: true, owner: .bluetooth,
@@ -187,7 +186,7 @@ struct VoiceInputActivationTests {
         defer { defaults.removePersistentDomain(forName: suite) }
         var source = "previous"
         model.preferredInputSourceMonitor = PreferredInputSourceMonitor(
-            voiceTool: { .weixin }, prepareInputSource: { tool in source = tool.preferredInputSourceID!; return .selected },
+            voiceTool: { .doubao }, prepareInputSource: { tool in source = tool.automaticVoiceSessionInputSourceID!; return .selected },
             currentInputSourceID: { source }, restoreInputSource: { source = $0; return .selected },
             waitForInputSourceActivation: { _, _, continuing, done in done(continuing()) }, installMonitor: { _ in nil }, logger: { _ in })
         let started = model.updateVoiceKeyState(streaming: true, forceSoftware: true, owner: .bluetooth,
@@ -197,17 +196,17 @@ struct VoiceInputActivationTests {
             keySetter: { _, _ in false })
         #expect(!stopped)
         #expect(model.voiceKeyLatch.isHeld)
-        #expect(source == OnboardingVoiceTool.weixin.preferredInputSourceID)
+        #expect(source == OnboardingVoiceTool.doubao.automaticVoiceSessionInputSourceID)
         let cleaned = model.releaseVoiceKeyIfNeeded(releaseKey: { _ in true })
         #expect(cleaned)
-        #expect(source == OnboardingVoiceTool.weixin.preferredInputSourceID)
+        #expect(source == OnboardingVoiceTool.doubao.automaticVoiceSessionInputSourceID)
     }
 
     @Test func alreadySelectedSourceAndUserChangesArePreserved() throws {
-        let target = try #require(OnboardingVoiceTool.weixin.preferredInputSourceID)
+        let target = try #require(OnboardingVoiceTool.doubao.automaticVoiceSessionInputSourceID)
         var source = target
         var restored: [String] = []
-        let monitor = PreferredInputSourceMonitor(voiceTool: { .weixin },
+        let monitor = PreferredInputSourceMonitor(voiceTool: { .doubao },
             prepareInputSource: { _ in source = target; return .selected }, currentInputSourceID: { source },
             restoreInputSource: { restored.append($0); source = $0; return .selected },
             waitForInputSourceActivation: { _, _, continuing, done in done(continuing()) }, installMonitor: { _ in nil }, logger: { _ in })
@@ -224,8 +223,8 @@ struct VoiceInputActivationTests {
 
     @Test func ordinaryKeyboardFnLeavesItsInputSourceSelected() throws {
         var source = "previous"
-        let target = try #require(OnboardingVoiceTool.weixin.preferredInputSourceID)
-        let monitor = PreferredInputSourceMonitor(voiceTool: { .weixin },
+        let target = try #require(OnboardingVoiceTool.doubao.automaticVoiceSessionInputSourceID)
+        let monitor = PreferredInputSourceMonitor(voiceTool: { .doubao },
             prepareInputSource: { _ in source = target; return .selected }, currentInputSourceID: { source },
             restoreInputSource: { source = $0; return .selected }, installMonitor: { _ in nil }, logger: { _ in })
         monitor.handleFunctionKeyPressed(true)
@@ -238,11 +237,11 @@ struct VoiceInputActivationTests {
     @Test func delayedResultRemainsAttachedAfterKeyUpAndMonitorStop() throws {
         let (model, defaults, suite) = try makeModel()
         defer { defaults.removePersistentDomain(forName: suite) }
-        let target = try #require(OnboardingVoiceTool.weixin.preferredInputSourceID)
+        let target = try #require(OnboardingVoiceTool.doubao.automaticVoiceSessionInputSourceID)
         var source = "previous"
         var restores = 0
         model.preferredInputSourceMonitor = PreferredInputSourceMonitor(
-            voiceTool: { .weixin },
+            voiceTool: { .doubao },
             prepareInputSource: { _ in source = target; return .selected },
             currentInputSourceID: { source },
             restoreInputSource: { source = $0; restores += 1; return .selected },
@@ -261,11 +260,11 @@ struct VoiceInputActivationTests {
     }
 
     @Test func monitorStopDuringSubmittedVoiceRetainsSourceAndUserSelection() throws {
-        let target = try #require(OnboardingVoiceTool.weixin.preferredInputSourceID)
+        let target = try #require(OnboardingVoiceTool.doubao.automaticVoiceSessionInputSourceID)
         for userChanged in [false, true] {
             var source = "previous"
             var restores = 0
-            let monitor = PreferredInputSourceMonitor(voiceTool: { .weixin },
+            let monitor = PreferredInputSourceMonitor(voiceTool: { .doubao },
                 prepareInputSource: { _ in source = target; return .selected },
                 currentInputSourceID: { source },
                 restoreInputSource: { source = $0; restores += 1; return .selected },
@@ -282,10 +281,10 @@ struct VoiceInputActivationTests {
     }
 
     @Test func unsubmittedSessionRollsBackAndDoesNotAffectLaterSuccessfulSession() throws {
-        let target = try #require(OnboardingVoiceTool.weixin.preferredInputSourceID)
+        let target = try #require(OnboardingVoiceTool.doubao.automaticVoiceSessionInputSourceID)
         var source = "previous"
         var restored: [String] = []
-        let monitor = PreferredInputSourceMonitor(voiceTool: { .weixin },
+        let monitor = PreferredInputSourceMonitor(voiceTool: { .doubao },
             prepareInputSource: { _ in source = target; return .selected },
             currentInputSourceID: { source },
             restoreInputSource: { restored.append($0); source = $0; return .selected },
@@ -302,9 +301,11 @@ struct VoiceInputActivationTests {
         #expect(restored == ["previous"])
     }
 
-    @Test func standaloneToolsNeverSelectWaitForOrRestoreAnInputSource() {
-        for tool in [OnboardingVoiceTool.voiceBuddy, .chatterfly, .typeless, .bageshuo, .other] {
-            #expect(tool.preferredInputSourceID == nil)
+    @Test func globalShortcutAndStandaloneToolsNeverSelectWaitForOrRestoreAnInputSource() {
+        #expect(OnboardingVoiceTool.weixin.preferredInputSourceID == "com.tencent.inputmethod.wetype.pinyin")
+        #expect(OnboardingVoiceTool.weixin.requiresInputSourceSelection)
+        for tool in [OnboardingVoiceTool.weixin, .voiceBuddy, .chatterfly, .typeless, .bageshuo, .other] {
+            #expect(tool.automaticVoiceSessionInputSourceID == nil)
             var sourceOperations = 0
             let monitor = PreferredInputSourceMonitor(voiceTool: { tool },
                 prepareInputSource: { _ in sourceOperations += 1; return .failed },
@@ -322,24 +323,23 @@ struct VoiceInputActivationTests {
         }
     }
 
-    @Test func bothSystemInputMethodsRetainSelectionAfterSuccessfulTrigger() throws {
-        for tool in [OnboardingVoiceTool.weixin, .doubao] {
-            let target = try #require(tool.preferredInputSourceID)
-            var source = "previous"
-            var restored: [String] = []
-            let monitor = PreferredInputSourceMonitor(voiceTool: { tool },
-                prepareInputSource: { _ in source = target; return .selected },
-                currentInputSourceID: { source },
-                restoreInputSource: { restored.append($0); source = $0; return .selected },
-                waitForInputSourceActivation: { _, _, continuing, done in done(continuing()) },
-                installMonitor: { _ in nil }, logger: { _ in })
-            #expect(beginInlineSession(monitor))
-            monitor.markVoiceTriggerSubmitted()
-            monitor.endVoiceSession()
-            monitor.stop()
-            #expect(source == target)
-            #expect(restored.isEmpty)
-        }
+    @Test func automaticInputSourceMethodRetainsSelectionAfterSuccessfulTrigger() throws {
+        let tool = OnboardingVoiceTool.doubao
+        let target = try #require(tool.automaticVoiceSessionInputSourceID)
+        var source = "previous"
+        var restored: [String] = []
+        let monitor = PreferredInputSourceMonitor(voiceTool: { tool },
+            prepareInputSource: { _ in source = target; return .selected },
+            currentInputSourceID: { source },
+            restoreInputSource: { restored.append($0); source = $0; return .selected },
+            waitForInputSourceActivation: { _, _, continuing, done in done(continuing()) },
+            installMonitor: { _ in nil }, logger: { _ in })
+        #expect(beginInlineSession(monitor))
+        monitor.markVoiceTriggerSubmitted()
+        monitor.endVoiceSession()
+        monitor.stop()
+        #expect(source == target)
+        #expect(restored.isEmpty)
     }
 
     @Test func modifierDeliveryDiagnosticsStayWithinVoiceAttemptsWithoutAcquiringSyntheticOwners() throws {
@@ -400,8 +400,8 @@ struct VoiceInputActivationTests {
             var source = "previous"
             var posts = 0
             model.preferredInputSourceMonitor = PreferredInputSourceMonitor(
-                voiceTool: { .weixin }, prepareInputSource: { tool in
-                    if selection == .selected { source = tool.preferredInputSourceID! }
+                voiceTool: { .doubao }, prepareInputSource: { tool in
+                    if selection == .selected { source = tool.automaticVoiceSessionInputSourceID! }
                     return selection
                 }, currentInputSourceID: { source }, restoreInputSource: { source = $0; return .selected },
                 waitForInputSourceActivation: { _, _, continuing, done in done(continuing()) },
@@ -440,7 +440,7 @@ struct VoiceInputActivationTests {
         var source = "previous"
         var posts: [Bool] = []
         model.preferredInputSourceMonitor = PreferredInputSourceMonitor(
-            voiceTool: { .weixin }, prepareInputSource: { tool in source = tool.preferredInputSourceID!; return .selected },
+            voiceTool: { .doubao }, prepareInputSource: { tool in source = tool.automaticVoiceSessionInputSourceID!; return .selected },
             currentInputSourceID: { source }, restoreInputSource: { source = $0; return .selected },
             waitForInputSourceActivation: { _, _, continuing, done in done(continuing()) }, installMonitor: { _ in nil }, logger: { _ in })
         let setter: (VoiceKeyMode, Bool) -> Bool = { _, down in posts.append(down); return true }
@@ -449,11 +449,11 @@ struct VoiceInputActivationTests {
         #expect(first && second)
         let firstStop = model.updateVoiceKeyState(streaming: false, forceSoftware: true, owner: .bluetooth, keySetter: setter)
         #expect(firstStop)
-        #expect(source == OnboardingVoiceTool.weixin.preferredInputSourceID)
+        #expect(source == OnboardingVoiceTool.doubao.automaticVoiceSessionInputSourceID)
         #expect(posts == [true])
         let secondStop = model.updateVoiceKeyState(streaming: false, forceSoftware: true, owner: .chromecast, keySetter: setter)
         #expect(secondStop)
-        #expect(source == OnboardingVoiceTool.weixin.preferredInputSourceID)
+        #expect(source == OnboardingVoiceTool.doubao.automaticVoiceSessionInputSourceID)
         #expect(posts == [true, false])
     }
     @Test func toolChangesRemainPendingUntilBothRecordingAndKeyCleanupEnd() throws {
@@ -526,7 +526,7 @@ struct VoiceInputActivationTests {
         var confirmations: [(Bool) -> Void] = []
         var posted: [Bool] = []
         model.preferredInputSourceMonitor = PreferredInputSourceMonitor(
-            voiceTool: { .weixin }, prepareInputSource: { tool in source = tool.preferredInputSourceID!; return .selected },
+            voiceTool: { .doubao }, prepareInputSource: { tool in source = tool.automaticVoiceSessionInputSourceID!; return .selected },
             currentInputSourceID: { source }, restoreInputSource: { source = $0; return .selected },
             waitForInputSourceActivation: { _, _, _, done in confirmations.append(done) },
             installMonitor: { _ in nil }, logger: { _ in })

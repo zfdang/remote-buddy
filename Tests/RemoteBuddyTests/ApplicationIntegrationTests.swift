@@ -111,7 +111,7 @@ struct ApplicationIntegrationTests {
             model.applicationIntegrationController = controller
             var source = "previous"
             model.preferredInputSourceMonitor = PreferredInputSourceMonitor(
-                voiceTool: { .weixin }, prepareInputSource: { _ in events.append("select_source"); return .selected },
+                voiceTool: { .doubao }, prepareInputSource: { _ in events.append("select_source"); return .selected },
                 currentInputSourceID: { source }, restoreInputSource: { _ in .selected },
                 waitForInputSourceActivation: { target, _, _, done in
                     source = target

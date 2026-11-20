@@ -565,7 +565,7 @@ struct HIDHotPathIdempotencyTests {
         let harness = try makeHarness(
             customMappingEnabled: true,
             voiceKeyMode: .function,
-            voiceTool: .weixin,
+            voiceTool: .doubao,
             hasMatchingHIDServices: true
         )
         defer { harness.cleanup() }
@@ -865,7 +865,7 @@ struct HIDHotPathIdempotencyTests {
             configureSecondProfile: true,
             modelType: .rc003,
             voiceKeyMode: .function,
-            voiceTool: .weixin,
+            voiceTool: .doubao,
             hasMatchingHIDServices: true,
             secondaryServiceEnabled: false
         )
@@ -926,7 +926,7 @@ struct HIDHotPathIdempotencyTests {
         let harness = try makeHarness(
             customMappingEnabled: true,
             voiceKeyMode: .function,
-            voiceTool: .weixin,
+            voiceTool: .doubao,
             hasMatchingHIDServices: true
         )
         defer { harness.cleanup() }

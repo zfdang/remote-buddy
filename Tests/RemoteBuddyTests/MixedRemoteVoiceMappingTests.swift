@@ -43,7 +43,7 @@ struct MixedRemoteVoiceMappingTests {
         settings.setAllApplicationIntegrations(enabled: false)
         let xiaomi = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         let google = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
-        settings.setOnboardingVoiceTool(.weixin)
+        settings.setOnboardingVoiceTool(.doubao)
         settings.voiceKeyMode = .function
         settings.voiceFnTapModeEnabled = false
         let model = BridgeAppModel(settings: settings)
@@ -52,6 +52,9 @@ struct MixedRemoteVoiceMappingTests {
             #expect(model.requiresOrderedVoiceFn)
             #expect(model.shouldNeutralizeNativeVoiceKey)
         }
+        settings.setOnboardingVoiceTool(.weixin)
+        #expect(!model.requiresOrderedVoiceFn)
+        #expect(!model.shouldNeutralizeNativeVoiceKey)
         settings.setOnboardingVoiceTool(.other)
         #expect(!model.shouldNeutralizeNativeVoiceKey)
     }

@@ -32,6 +32,19 @@ enum OnboardingVoiceTool: String, CaseIterable, Codable, Identifiable {
         }
     }
 
+    /// Input source selected automatically before each live voice session.
+    /// WeType listens for its global shortcut across active input sources; calling
+    /// `TISSelectInputSource` from a background helper before sending the trigger
+    /// can break direct text insertion in Electron/Chromium hosts (Command+V fallback).
+    var automaticVoiceSessionInputSourceID: String? {
+        switch self {
+        case .doubao:
+            return preferredInputSourceID
+        case .weixin, .unselected, .chatterfly, .voiceBuddy, .bageshuo, .typeless, .macosDictation, .other:
+            return nil
+        }
+    }
+
     var applicationBundleIdentifier: String? {
         switch self {
         case .chatterfly:

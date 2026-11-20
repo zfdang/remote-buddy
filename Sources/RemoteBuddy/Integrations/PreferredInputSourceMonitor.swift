@@ -174,7 +174,7 @@ final class PreferredInputSourceMonitor {
         functionKeyIsPressed = pressed
         if !pressed {
             let selectedVoiceTool = voiceTool()
-            if selectedVoiceTool.preferredInputSourceID != nil || managedInputSourceSession != nil {
+            if selectedVoiceTool.automaticVoiceSessionInputSourceID != nil || managedInputSourceSession != nil {
                 logger(
                     "VOICE INPUT function_key edge=up tool=\(selectedVoiceTool.rawValue)"
                 )
@@ -187,7 +187,7 @@ final class PreferredInputSourceMonitor {
         }
 
         let selectedVoiceTool = voiceTool()
-        if selectedVoiceTool.preferredInputSourceID != nil || managedInputSourceSession != nil {
+        if selectedVoiceTool.automaticVoiceSessionInputSourceID != nil || managedInputSourceSession != nil {
             logger(
                 "VOICE INPUT function_key edge=down tool=\(selectedVoiceTool.rawValue)"
             )
@@ -264,13 +264,13 @@ final class PreferredInputSourceMonitor {
         owner: ManagedInputSourceSession.Owner
     ) -> Bool {
         let selectedVoiceTool = voiceTool()
-        if selectedVoiceTool.preferredInputSourceID != nil || managedInputSourceSession != nil {
+        if selectedVoiceTool.automaticVoiceSessionInputSourceID != nil || managedInputSourceSession != nil {
             logger(
                 "VOICE INPUT session edge=down reason=\(reason) " +
                     "tool=\(selectedVoiceTool.rawValue)"
             )
         }
-        guard let targetInputSourceID = selectedVoiceTool.preferredInputSourceID else { return true }
+        guard let targetInputSourceID = selectedVoiceTool.automaticVoiceSessionInputSourceID else { return true }
         if var session = managedInputSourceSession {
             guard session.targetInputSourceID == targetInputSourceID else {
                 logger("VOICE INPUT session_rejected reason=target_changed")

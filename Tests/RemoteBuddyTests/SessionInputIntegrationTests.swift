@@ -9,13 +9,13 @@ struct SessionInputIntegrationTests {
         let defaults = try #require(UserDefaults(suiteName: name))
         defer { defaults.removePersistentDomain(forName: name) }
         let settings = AppSettings(defaults: defaults)
-        settings.setOnboardingVoiceTool(.weixin)
+        settings.setOnboardingVoiceTool(.doubao)
         settings.voiceKeyMode = .function
         let model = BridgeAppModel(settings: settings)
         var source = "previous"
         var posts: [Bool] = []
         model.preferredInputSourceMonitor = PreferredInputSourceMonitor(
-            voiceTool: { .weixin }, prepareInputSource: { _ in .selected },
+            voiceTool: { .doubao }, prepareInputSource: { _ in .selected },
             currentInputSourceID: { source }, restoreInputSource: { source = $0; return .selected },
             waitForInputSourceActivation: { target, _, _, done in
                 source = target

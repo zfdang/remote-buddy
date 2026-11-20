@@ -12,7 +12,7 @@ enum VoiceKeyMode: Hashable, RawRepresentable, Codable, CaseIterable, Identifiab
     case rightOption
     case shortcut(CustomKeyboardShortcut)
 
-    static let shortcutPresets: [VoiceKeyMode] = [(UInt16(9), "V"), (UInt16(15), "R")].flatMap { keyCode, label in
+    static let shortcutPresets: [VoiceKeyMode] = [(UInt16(15), "R"), (UInt16(9), "V")].flatMap { keyCode, label in
         ([
             [.control, .shift], [.control, .option], [.control, .command],
         ] as [NSEvent.ModifierFlags]).map { modifiers in

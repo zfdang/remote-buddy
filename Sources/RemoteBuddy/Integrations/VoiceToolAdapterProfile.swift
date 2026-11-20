@@ -73,7 +73,7 @@ struct VoiceToolAdapterProfile: Equatable {
             return Self(
                 tool: tool,
                 supportedModes: [.hold, .toggle],
-                defaultShortcutByMode: [.hold: .function, .toggle: .rightCommand],
+                defaultShortcutByMode: [.hold: .suggestedShortcut, .toggle: .rightCommand],
                 recommendedMode: .hold,
                 installationProbe: .inputSource,
                 evidenceState: .pending
@@ -82,7 +82,7 @@ struct VoiceToolAdapterProfile: Equatable {
             return Self(
                 tool: tool,
                 supportedModes: [.hold, .toggle],
-                defaultShortcutByMode: [.hold: .function, .toggle: .rightCommand],
+                defaultShortcutByMode: [.hold: .suggestedShortcut, .toggle: .rightCommand],
                 recommendedMode: .hold,
                 installationProbe: .inputSource,
                 evidenceState: .verified
@@ -91,7 +91,7 @@ struct VoiceToolAdapterProfile: Equatable {
             return Self(
                 tool: tool,
                 supportedModes: [.toggle],
-                defaultShortcutByMode: [.toggle: .function],
+                defaultShortcutByMode: [.toggle: .suggestedShortcut],
                 recommendedMode: .toggle,
                 installationProbe: .applicationBundle,
                 evidenceState: .verified
@@ -100,7 +100,7 @@ struct VoiceToolAdapterProfile: Equatable {
             return Self(
                 tool: tool,
                 supportedModes: [.toggle],
-                defaultShortcutByMode: [.toggle: .function],
+                defaultShortcutByMode: [.toggle: .suggestedShortcut],
                 recommendedMode: .toggle,
                 installationProbe: .applicationBundle,
                 evidenceState: .verified
@@ -138,10 +138,10 @@ struct VoiceToolAdapterProfile: Equatable {
             return Self(
                 tool: tool,
                 supportedModes: [.hold, .toggle],
-                // The third-party tool remains unobserved; Fn is only the
-                // temporary Onboarding trigger and still requires the user's
+                // The third-party tool remains unobserved; the preset chord is only
+                // the temporary Onboarding trigger and still requires the user's
                 // real voice-text confirmation before it can be committed.
-                defaultShortcutByMode: [.hold: .function, .toggle: .function],
+                defaultShortcutByMode: [.hold: .suggestedShortcut, .toggle: .suggestedShortcut],
                 recommendedMode: .hold,
                 installationProbe: .none,
                 evidenceState: .unknown

@@ -282,7 +282,8 @@
 "connection.voice_key.mode.right_command" = "右 Command (⌘)";
 "connection.voice_key.mode.left_option" = "左 Option (⌥)";
 "connection.voice_key.mode.right_option" = "右 Option (⌥)";
-"connection.voice_key_mode.help" = "下一步请在输入工具中设置相同语音热键和录音方式。";
+"connection.voice_key_mode.help" = "下一步请在输入工具中设置相同语音热键和录音方式（建议尽量不要选用 Fn 键，容易被 macOS 系统地球键、微信等应用占用冲突）。";
+"connection.voice_key_mode.fn_caution_help" = "建议尽量不要选用 Fn 键（除 macOS 系统听写外）：Fn 键极易被 macOS 系统、微信等各类应用占用冲突，推荐改用 Ctrl (⌃) + Shift (⇧) + R。";
 "onboarding.voice_trigger.save_hint" = "通过后续语音测试后，新设置才会生效。";
 "connection.voice_key_mode.command_permission" = "修饰键模式需要辅助功能权限";
 "connection.action.reconnect" = "立即重新连接";
@@ -1197,7 +1198,7 @@
 
 "shortcut.keyboard.main_key_required" = "请再选择一个普通按键，或只保留一个修饰键。";
 
-"connection.voice_key.chord_help" = "输入工具须支持此组合键和所选录音方式。请设置一致，并避开其他应用已用的快捷键。";
+"connection.voice_key.chord_help" = "下一步请在输入工具中设置相同组合键和所选录音方式，并避开其他应用已用的快捷键（推荐尽量不要用 Fn 键，Fn 容易被系统、微信等各类软件占用冲突）。";
 
 "shortcut.keyboard.help" = "点击修饰键和普通按键来组合快捷键，也可以直接录入。左右按键分别设置。";
 "shortcut.keyboard.use_shortcut" = "使用此快捷键";

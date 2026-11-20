@@ -160,7 +160,7 @@ struct VoiceTriggerConfigurationTests {
             }
             view.continueFlow()
             #expect(settings.onboardingStep == .voiceTool)
-            #expect(settings.voiceKeyMode == .function)
+            #expect(settings.voiceKeyMode == .suggestedShortcut)
             // Switching to Fn adds its system-conflict instruction to the required views.
             settings.selectOnboardingVoiceTrigger(.function)
             #expect(!view.hasViewedInputMethodGuideSteps(ids))
@@ -366,9 +366,12 @@ struct VoiceTriggerConfigurationTests {
 
     @Test func voiceShortcutPresetsMatchTheSupportedMenuChoices() {
         let expected: [NSEvent.ModifierFlags] = [[.control, .shift], [.control, .option], [.control, .command]]
-        let chords: [VoiceKeyMode] = [(UInt16(9), "V"), (UInt16(15), "R")].flatMap { keyCode, label in
+        let chords: [VoiceKeyMode] = [(UInt16(15), "R"), (UInt16(9), "V")].flatMap { keyCode, label in
             expected.map { .shortcut(CustomKeyboardShortcut(keyCode: keyCode, modifierFlags: $0, keyLabel: label)) }
         }
+        #expect(VoiceKeyMode.suggestedShortcut == .shortcut(CustomKeyboardShortcut(
+            keyCode: 15, modifierFlags: [.control, .shift], keyLabel: "R"
+        )))
         #expect(VoiceKeyMode.shortcutPresets == chords)
         #expect(VoiceKeyMode.allCases == [.function, .rightOption, .rightCommand] + chords)
         #expect(VoiceKeyMode.allCases.count == 9)
@@ -408,6 +411,17 @@ struct VoiceTriggerConfigurationTests {
             #expect(!settings.voiceFnTapModeEnabled)
             #expect(OnboardingPurpose.integration.previousStep(before: .voiceTrigger) == nil)
             #expect(OnboardingPurpose.integration.nextStep(after: .voiceTrigger) == .voiceTool)
+        }
+    }
+
+    @Test func freshSettingsDefaultToCtrlShiftRInsteadOfFn() throws {
+        try withSettings { settings, _ in
+            let expected = VoiceKeyMode.shortcut(CustomKeyboardShortcut(
+                keyCode: 15, modifierFlags: [.control, .shift], keyLabel: "R"
+            ))
+            #expect(VoiceKeyMode.suggestedShortcut == expected)
+            #expect(settings.voiceKeyMode == expected)
+            #expect(settings.selectedVoiceTrigger.voiceKeyMode == expected)
         }
     }
 }

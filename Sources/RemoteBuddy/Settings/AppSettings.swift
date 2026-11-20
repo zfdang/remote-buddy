@@ -496,7 +496,7 @@ final class AppSettings: ObservableObject {
         voiceFnTapModeEnabled = defaults.bool(forKey: Keys.voiceFnTapModeEnabled)
         voiceKeyMode = VoiceKeyMode(
             rawValue: defaults.string(forKey: Keys.voiceKeyMode) ?? ""
-        ) ?? .function
+        ) ?? .suggestedShortcut
         onboardingPurpose = defaults.string(forKey: Keys.onboardingPurpose)
             .flatMap(OnboardingPurpose.init(rawValue:)) ?? .initialSetup
         onboardingCompletedVersion = defaults.integer(forKey: Keys.onboardingCompletedVersion)

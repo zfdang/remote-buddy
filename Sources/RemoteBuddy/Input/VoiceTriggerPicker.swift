@@ -30,9 +30,11 @@ struct VoiceTriggerPicker: View {
             }
             Text(localization.text({
                 if case .shortcut = selection { return "connection.voice_key.chord_help" }
+                if selection == .function { return "connection.voice_key_mode.fn_caution_help" }
                 return "connection.voice_key_mode.help"
             }()))
-                .font(.caption).foregroundStyle(.secondary)
+                .font(.caption)
+                .foregroundStyle(selection == .function ? Color.orange : .secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .sheet(isPresented: $editing) {

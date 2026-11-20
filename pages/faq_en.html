@@ -97,6 +97,21 @@
     </details>
 
     <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">Why is using the Fn / Globe (🌐) key as a voice shortcut discouraged, and what is recommended instead?</span></summary>
+      <div class="troubleshooting-body">
+        <p><strong>Core Reason: The Fn / Globe (🌐) key is the single most conflict-prone hotkey across macOS and desktop applications.</strong></p>
+        <ul>
+          <li><strong>Frequent Third-Party App Hijacking:</strong> Popular applications—most notably the WeChat macOS desktop client—frequently register global listeners for the Fn key. When hijacked, pressing the remote voice button sends Fn directly to WeChat instead of your intended voice dictation tool.</li>
+          <li><strong>macOS System Interception:</strong> By default, macOS binds the 🌐 key to "Show Emoji &amp; Symbols" or "Change Input Source", causing unexpected popups or input layout switching.</li>
+          <li><strong>High Troubleshooting Burden:</strong> Single-key collisions can be subtle and frustrating to diagnose, forcing users to comb through multiple system panes and third-party app settings.</li>
+        </ul>
+        <p><strong>Strongly Recommended Best Practice:</strong></p>
+        <p>Configure both Remote Buddy and your voice input tool to use a <strong>custom multi-modifier shortcut (such as <code>Ctrl (⌃) + Option (⌥) + V</code>)</strong>:</p>
+        <p>Multi-modifier combinations provide exceptional global uniqueness and are virtually never claimed by system defaults or everyday software, ensuring reliable, maintenance-free triggering out of the box.</p>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
       <summary><span class="troubleshooting-question">What is "Direct Passthrough" and when should I use it?</span></summary>
       <div class="troubleshooting-body">
         <p><strong>Background:</strong> Regular buttons in Remote Buddy support Single Tap, Double Tap, and Long Press gestures. To differentiate a single tap from a double tap, the software must wait a brief arbitration window before emitting keystrokes; furthermore, default long-press behaviors enter rapid-fire repeating single clicks every 100ms after a 350ms hold delay (software rapid-fire).</p>
@@ -271,21 +286,6 @@
           <li>Once set to Do Nothing, macOS passes Fn events cleanly to your third-party voice tool.</li>
         </ol>
         <p>Note: If you selected <strong>macOS Dictation</strong> as your input tool, keep the system 🌐 key active and set <strong>Dictation → Shortcut</strong> to <strong>Press 🌐 key twice</strong> as shown in the Setup Wizard.</p>
-      </div>
-    </details>
-
-    <details class="troubleshooting-card">
-      <summary><span class="troubleshooting-question">Why is using the Fn / Globe (🌐) key as a voice shortcut discouraged, and what is recommended instead?</span></summary>
-      <div class="troubleshooting-body">
-        <p><strong>Core Reason: The Fn / Globe (🌐) key is the single most conflict-prone hotkey across macOS and desktop applications.</strong></p>
-        <ul>
-          <li><strong>Frequent Third-Party App Hijacking:</strong> Popular applications—most notably the WeChat macOS desktop client—frequently register global listeners for the Fn key. When hijacked, pressing the remote voice button sends Fn directly to WeChat instead of your intended voice dictation tool.</li>
-          <li><strong>macOS System Interception:</strong> By default, macOS binds the 🌐 key to "Show Emoji &amp; Symbols" or "Change Input Source", causing unexpected popups or input layout switching.</li>
-          <li><strong>High Troubleshooting Burden:</strong> Single-key collisions can be subtle and frustrating to diagnose, forcing users to comb through multiple system panes and third-party app settings.</li>
-        </ul>
-        <p><strong>Strongly Recommended Best Practice:</strong></p>
-        <p>Configure both Remote Buddy and your voice input tool to use a <strong>custom multi-modifier shortcut (such as <code>Ctrl (⌃) + Option (⌥) + V</code>)</strong>:</p>
-        <p>Multi-modifier combinations provide exceptional global uniqueness and are virtually never claimed by system defaults or everyday software, ensuring reliable, maintenance-free triggering out of the box.</p>
       </div>
     </details>
 

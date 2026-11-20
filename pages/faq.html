@@ -97,6 +97,21 @@
     </details>
 
     <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">为什么强烈建议避免使用 Fn 键作为语音热键？推荐使用什么热键？</span></summary>
+      <div class="troubleshooting-body">
+        <p><strong>核心原因：Fn / 地球键（🌐）是 macOS 系统与各类桌面应用中最容易发生冲突的单键。</strong></p>
+        <ul>
+          <li><strong>极易被第三方应用抢占：</strong>许多常用的桌面应用（最典型的如桌面端微信）会在后台静默注册全局 Fn 监听。一旦被占用，遥控器发出的 Fn 信号会被微信率先拦截，导致你选择的第三方语音输入工具根本收不到信号。</li>
+          <li><strong>容易触发 macOS 系统原生行为：</strong>在 macOS 默认设置中，按下 🌐 键通常用于“显示表情符号与符号”或“切换输入源”，经常导致屏幕弹出 Emoji 面板或打字法被切走。</li>
+          <li><strong>排查繁琐成本高：</strong>单键冲突非常隐蔽，一旦遇到语音失灵，用户往往需要在 macOS 系统设置、微信快捷键以及其他后台软件中逐个排查，排错体验很差。</li>
+        </ul>
+        <p><strong>官方推荐实践：</strong></p>
+        <p>在 Remote Buddy 与你的输入工具中，<strong>强烈建议改用不易冲突的自定义多修饰组合键（例如 <code>Ctrl (⌃) + Option (⌥) + V</code>）</strong>作为语音热键：</p>
+        <p>多修饰组合键拥有极高的全局唯一性，几乎不会被系统功能或日常应用程序占用，无需任何繁琐的系统排查设置即可获得长期稳定、开箱即用的触发体验！</p>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
       <summary><span class="troubleshooting-question">按键的“直通模式（Direct Passthrough）”是什么意思？用在什么场景下？</span></summary>
       <div class="troubleshooting-body">
         <p><strong>诞生背景：</strong>Remote Buddy 默认的普通按键支持“单击、双击、长按”三种手势。为了区分单击和双击，系统在用户按下按键后必须等待数十毫秒的手势判定窗口；且默认的长按手势是在持续按住 350ms 启动延迟后，以 100ms 为周期自动连发单击（软件连发）。</p>
@@ -271,21 +286,6 @@
           <li>如在其它软件中不希望按 Fn 弹出表情或切换输入法，改完后系统即会直接放行 Fn 给语音输入工具使用。</li>
         </ol>
         <p>注意：如果你选择的工具本身就是 <strong>macOS 听写</strong>，则<strong>不要</strong>禁用系统 🌐 键——请保留系统听写设置，并按向导说明在“听写 → 快捷键”中选择“按两下 🌐 键”。</p>
-      </div>
-    </details>
-
-    <details class="troubleshooting-card">
-      <summary><span class="troubleshooting-question">为什么强烈建议避免使用 Fn 键作为语音热键？推荐使用什么热键？</span></summary>
-      <div class="troubleshooting-body">
-        <p><strong>核心原因：Fn / 地球键（🌐）是 macOS 系统与各类桌面应用中最容易发生冲突的单键。</strong></p>
-        <ul>
-          <li><strong>极易被第三方应用抢占：</strong>许多常用的桌面应用（最典型的如桌面端微信）会在后台静默注册全局 Fn 监听。一旦被占用，遥控器发出的 Fn 信号会被微信率先拦截，导致你选择的第三方语音输入工具根本收不到信号。</li>
-          <li><strong>容易触发 macOS 系统原生行为：</strong>在 macOS 默认设置中，按下 🌐 键通常用于“显示表情符号与符号”或“切换输入源”，经常导致屏幕弹出 Emoji 面板或打字法被切走。</li>
-          <li><strong>排查繁琐成本高：</strong>单键冲突非常隐蔽，一旦遇到语音失灵，用户往往需要在 macOS 系统设置、微信快捷键以及其他后台软件中逐个排查，排错体验很差。</li>
-        </ul>
-        <p><strong>官方推荐实践：</strong></p>
-        <p>在 Remote Buddy 与你的输入工具中，<strong>强烈建议改用不易冲突的自定义多修饰组合键（例如 <code>Ctrl (⌃) + Option (⌥) + V</code>）</strong>作为语音热键：</p>
-        <p>多修饰组合键拥有极高的全局唯一性，几乎不会被系统功能或日常应用程序占用，无需任何繁琐的系统排查设置即可获得长期稳定、开箱即用的触发体验！</p>
       </div>
     </details>
 

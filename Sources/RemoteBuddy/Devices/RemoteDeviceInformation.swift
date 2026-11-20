@@ -18,6 +18,10 @@ struct RemoteDeviceInformation: Equatable {
         identity.map { String(format: "%04X / %04X", $0.vendorID, $0.productID) }
     }
 
+    private var compactIdentityValue: String? {
+        identity.map { String(format: "%04X/%04X", $0.vendorID, $0.productID) }
+    }
+
     var hidVersionValue: String? {
         hidVersion.map { String(format: "0x%04X", $0) }
     }
@@ -28,8 +32,8 @@ struct RemoteDeviceInformation: Equatable {
         if let modelNumber {
             parts.append("\(localization.text("connection.device.model")) \(modelNumber)")
         }
-        if let identityValue {
-            parts.append("VID/PID \(identityValue)")
+        if let compactIdentityValue {
+            parts.append("VID/PID \(compactIdentityValue)")
         }
         if let hidVersionValue {
             parts.append("\(localization.text("connection.device.hid_version")) \(hidVersionValue)")

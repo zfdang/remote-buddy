@@ -76,12 +76,12 @@ struct RemoteDeviceInformationTests {
         localization.select(.english)
         #expect(
             localizedInfo.conciseHardwareSummary(using: localization)
-                == "Model A0 · VID/PID 18D1 / 9450 · HID version 0x0110 · Firmware 26.2"
+                == "Model A0 · VID/PID 18D1/9450 · HID version 0x0110 · Firmware 26.2"
         )
         localization.select(.simplifiedChinese)
         #expect(
             localizedInfo.conciseHardwareSummary(using: localization)
-                == "型号 A0 · VID/PID 18D1 / 9450 · HID 版本 0x0110 · 固件 26.2"
+                == "型号 A0 · VID/PID 18D1/9450 · HID 版本 0x0110 · 固件 26.2"
         )
         #expect(RemoteDeviceInformation().conciseHardwareSummary(using: localization) == nil)
     }

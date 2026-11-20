@@ -30,9 +30,9 @@ enum RemoteModel: String, Codable, CaseIterable, Identifiable {
         case .rc001: return "remote.device.model.rc001"
         case .rc003: return "remote.device.model.rc003"
         case .appleSiriRemoteA2854:
-            return "remote.device.model.unknown"
+            return "remote.device.model.apple_siri_remote_a2854"
         case .appleSiriRemoteA2540:
-            return "remote.device.model.unknown"
+            return "remote.device.model.apple_siri_remote_a2540"
         case .chromecastVoiceRemote:
             return "remote.catalog.chromecastG9N9N.title"
         case .t1Remote:

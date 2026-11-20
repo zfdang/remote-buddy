@@ -84,6 +84,30 @@ struct LocalizationResourceDefaultTests {
         #expect(AppLinks.downloads(for: Locale(identifier: "zh_CN")) == URL(string: "https://remote.zfdang.com/downloads/")!)
     }
 
+    @Test func unknownAndSiriRemoteModelDisplayNamesResolveInBothLanguages() throws {
+        let name = "locale-remote-names-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let store = LocalizationStore(settings: AppSettings(defaults: defaults))
+
+        store.select(.simplifiedChinese)
+        #expect(store.text(RemoteModel.unknown.localizationKey) == "未识别的遥控器")
+        #expect(store.text(RemoteModel.appleSiriRemoteA2854.localizationKey) == "苹果遥控器第 7 代")
+        #expect(store.text(RemoteModel.appleSiriRemoteA2540.localizationKey) == "苹果遥控器第 6 代")
+
+        let unknownProfile = RemoteDeviceProfile(
+            model: .unknown,
+            mappings: .init(buttonBindings: [:], buttonShortcuts: [:], secondaryButtonBindings: [:])
+        )
+        #expect(store.text(unknownProfile.displayNameFallbackKey) == "未识别的遥控器")
+
+        store.select(.english)
+        #expect(store.text(RemoteModel.unknown.localizationKey) == "Unrecognized Remote")
+        #expect(store.text(RemoteModel.appleSiriRemoteA2854.localizationKey) == "Apple Remote (7th Generation)")
+        #expect(store.text(RemoteModel.appleSiriRemoteA2540.localizationKey) == "Apple Remote (6th Generation)")
+        #expect(store.text(unknownProfile.displayNameFallbackKey) == "Unrecognized Remote")
+    }
+
     @Test func statusItemActionResolverDecisionRules() {
         #expect(StatusItemActionResolver.shouldShowMenu(eventType: .rightMouseUp, modifierFlags: []))
         #expect(StatusItemActionResolver.shouldShowMenu(eventType: .rightMouseUp, modifierFlags: .control))

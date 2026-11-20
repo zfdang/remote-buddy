@@ -98,7 +98,7 @@ struct BluetoothVoiceStopDiagnosticTests {
         #expect(logs[1].contains("session=2 reason=remote_notification"))
     }
 
-    @Test func rejectUnsupportedAudioAndFailInitializationResetVoiceState() async {
+    @Test func rejectUnsupportedAudioResetsVoiceState() async {
         let suite = "voice-stop-reject-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
@@ -114,7 +114,6 @@ struct BluetoothVoiceStopDiagnosticTests {
             }
         }
 
-        // 1. Audio started, then rejectUnsupportedAudio called -> must notify delegate stop with .unsupportedAudio
         bridge.simulateControlPacketForTesting(Data([0x04, 0x03, 0x02, 0x01]))
         await flush()
         #expect(bridge.hasPendingVoiceWork)
@@ -122,15 +121,30 @@ struct BluetoothVoiceStopDiagnosticTests {
         await flush()
         #expect(delegate.reasons == [.unsupportedAudio])
         #expect(!bridge.hasPendingVoiceWork)
+    }
 
-        // 2. Audio started, then failInitialization called -> must notify delegate stop with .initializationFailed
+    @Test func failInitializationResetsVoiceState() async {
+        let suite = "voice-stop-fail-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let delegate = Delegate()
+        let queue = DispatchQueue(label: "voice-stop-fail")
+        let bridge = BluetoothRemoteBridge(settings: AppSettings(defaults: defaults), delegate: delegate,
+            allowsT1Remote: true, audioPipeline: BluetoothAudioPipeline(queue: queue))
+        defer { bridge.stop() }
         bridge.simulateT1ReadyStateForTesting()
+        func flush() async {
+            await withCheckedContinuation { continuation in
+                queue.async { DispatchQueue.main.async { continuation.resume() } }
+            }
+        }
+
         bridge.simulateControlPacketForTesting(Data([0x04, 0x03, 0x02, 0x02]))
         await flush()
         #expect(bridge.hasPendingVoiceWork)
         bridge.failInitialization(LocalizedMessage("test_failed"))
         await flush()
-        #expect(delegate.reasons == [.unsupportedAudio, .initializationFailed])
+        #expect(delegate.reasons == [.initializationFailed])
         #expect(!bridge.hasPendingVoiceWork)
     }
 }

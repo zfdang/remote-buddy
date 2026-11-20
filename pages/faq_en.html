@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Frequently Asked Questions (FAQ) · Remote Buddy</title>
+  <meta name="description" content="Frequently Asked Questions for Remote Buddy on macOS: remote buying recommendations, Hold-to-Talk vs Hands-Free Toggle, 60s hardware limit, Direct Passthrough mode, Common Phrases, Application Integration, input method Hold vs Tap bridging, Fn troubleshooting, and supported tools.">
+  <meta name="theme-color" content="#203a68">
+  <link rel="canonical" href="https://remote.zfdang.com/faq_en.html">
+  <link rel="alternate" hreflang="zh-CN" href="https://remote.zfdang.com/faq.html">
+  <link rel="alternate" hreflang="en" href="https://remote.zfdang.com/faq_en.html">
+  <link rel="alternate" hreflang="x-default" href="https://remote.zfdang.com/faq.html">
+  <link rel="icon" href="assets/app-icon.png">
+  <link rel="stylesheet" href="style.css?v=261120faq">
+</head>
+<body>
+<header class="nav wrap device-nav">
+  <a class="brand" href="index.en.html"><img src="assets/app-icon.png" alt="" width="38" height="38"><span>Remote Buddy<small>Voice within reach</small></span></a>
+  <nav aria-label="Page navigation">
+    <a href="#hardware">Hardware &amp; Buying</a>
+    <a href="#voice-buttons">Buttons &amp; Voice</a>
+    <a href="#integrations">Integration</a>
+    <a href="#input-methods">Input Tools</a>
+    <a href="#troubleshooting">Troubleshooting</a>
+    <a class="nav-home" href="index.en.html">Home</a>
+    <span class="language-switch" aria-label="Language"><a href="faq.html" hreflang="zh-CN" lang="zh-CN">中文</a><b aria-current="page">English</b></span>
+  </nav>
+</header>
+
+<main class="wrap downloads-wrap">
+  <div class="downloads-head">
+    <p class="eyebrow">GUIDE &amp; REFERENCES</p>
+    <h1 class="section-title">Frequently Asked Questions (FAQ)</h1>
+    <p class="lead-sub">Essential guides, hardware choices, voice trigger modes, Direct Passthrough, Common Phrases, Application Integration, input method bridging, and troubleshooting for Remote Buddy on macOS.</p>
+  </div>
+
+  <!-- 1. Hardware Support & Buying Recommendations -->
+  <section class="troubleshooting" id="hardware" aria-labelledby="cat-hardware-title">
+    <p class="eyebrow">COMPATIBILITY</p>
+    <h2 class="section-title" id="cat-hardware-title">1. Hardware Support &amp; Buying Recommendations</h2>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">Which remotes are currently supported by Remote Buddy?</span></summary>
+      <div class="troubleshooting-body">
+        <p>Remote Buddy is not a generic Bluetooth accessory wrapper; it implements specialized driver stacks for vendor-specific audio transfer protocols and HID input reports. Currently verified and supported models include:</p>
+        <p><strong>1. Google Chromecast Voice Remote (Model G9N9N): Fully Supported · Best Choice</strong><br>Features real-time voice decoding, automated keep-alive packets (~5-minute continuous recording limit), 14 fully customizable physical keys, and battery percentage reporting.</p>
+        <p><strong>2. Xiaomi Bluetooth Voice Remote 2 / 2 Pro (Models RC001 Battery / RC003 Rechargeable): Supported</strong><br>Standard Hold-to-Talk voice input (up to ~60s hardware limit) and customizable button mappings.</p>
+        <p><strong>3. T1 Air Mouse Keyboard Voice Remote (T1-Remote): Supported</strong><br>Connects directly via Bluetooth (not 2.4G dongle). Features Hands-Free Toggle, 7 customizable front buttons, plus a ~45-key QWERTY keyboard and 6-axis air mouse on the back.</p>
+        <p><strong>4. Planned for future updates:</strong> Google TV Streamer Voice Remote (GY3LE) and Apple Siri Remote (e.g. 3rd Gen A2854) are in active research and not yet production-ready.</p>
+        <p><strong>Important Note:</strong> Successful pairing in macOS System Settings does not imply audio or button compatibility. Remotes must use supported BLE audio profiles and HID report formats. For photos and purchasing links, see the <a class="text-link" href="device_en.html">Supported Devices &amp; Buying Guide ↗</a>.</p>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">Which remote should I buy?</span></summary>
+      <div class="troubleshooting-body">
+        <p>Depending on your budget and usage style, we recommend the following options:</p>
+        <p><strong>1. Top Pick &amp; Best Value: Google G9N9N (~$2–$5 / ~¥15)</strong><br>Available widely on online marketplaces at very low cost. The voice button sits right below the D-pad navigation ring, making blind thumb operation effortless. It natively supports Smart Toggle (both tap and hold gestures) and bypasses the 60s recording timeout for long dictation. Powered by two standard AAA batteries with excellent standby life.</p>
+        <p><strong>2. Premium Metal Finish &amp; Rechargeable: Xiaomi Remote 2 Pro (~$10–$15 / ~¥60–¥99)</strong><br>Crafted from brushed aluminum with USB Type-C charging. However, the voice button is located in the upper-right corner (requiring more thumb reach), and voice sessions are capped at 60 seconds by its hardware firmware.</p>
+        <p><strong>3. Big-Screen Control, Cursor Navigation &amp; Typing: T1 Air Mouse Remote (~$8 / ~¥50)</strong><br>Combines voice triggering with a full-fledged QWERTY keyboard and 6-axis gyroscope air mouse. Perfect for lounging on a sofa or controlling a presentation display from across the room.</p>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">Why do some remotes only support Hold-to-Talk and not Hands-Free Toggle?</span></summary>
+      <div class="troubleshooting-body">
+        <p><strong>The root cause lies in the hardware circuitry and Bluetooth audio firmware design:</strong></p>
+        <p><strong>Hardware-gated Microphone Power (e.g. Xiaomi):</strong> Most remotes manufactured for consumer streaming boxes strictly tie microphone power to the physical button depression. The microphone circuit is only powered on while the button is actively held down by your finger. The moment you release it, the onboard microcontroller immediately cuts microphone power and terminates the BLE audio stream. Because its firmware does not support host-initiated remote mic keep-awake commands, software on the Mac cannot force the remote to continue transmitting audio after release.</p>
+        <p><strong>Why changing input tool settings doesn't help:</strong> Some users try setting their input method (e.g. Apple Dictation or WeChat Keyboard) to "Tap to Start / Tap to Stop". While this changes the app's software expectation, it cannot change the physical power cut-off in the remote. Once released, the remote ceases transmitting audio packets, leaving the input tool with silence.</p>
+        <p><strong>Which remotes support true Hands-Free Toggle?</strong><br><strong>Google G9N9N:</strong> Implements advanced bidirectional commands. When tapped, Remote Buddy sends BLE control directives to keep the remote's microphone powered (indicated by the solid white LED) until tapped again.<br><strong>T1 Air Mouse Remote:</strong> The factory firmware natively follows a "press once to start streaming, press again to stop" toggle behavior without requiring continuous finger pressure.</p>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">Why do some remotes (like Xiaomi) have a 60-second hardware voice limit?</span></summary>
+      <div class="troubleshooting-body">
+        <p><strong>Firmware Mechanism:</strong> TV remotes manufactured for consumer set-top boxes are designed strictly for searching movies or issuing brief commands. To prevent battery drain when a button is accidentally compressed in couch cushions, the internal microcontroller firmware includes a hard-coded watchdog timer: <strong>audio streaming is forcibly terminated after approximately 60 seconds</strong>. Once this timeout triggers, the hardware stops transmitting packets regardless of host requests until the button is released and pressed again.</p>
+        <p><strong>Why G9N9N and T1 do not have this 60s restriction:</strong></p>
+        <p>G9N9N and T1 support bidirectional Bluetooth handshakes. Remote Buddy implements an <strong>automated keep-alive packet scheduler</strong> that periodically transmits heartbeat signals to the remote during recording sessions. This prevents firmware sleep triggers, enabling continuous dictation for up to ~5 minutes—ideal for meetings, writing drafts, and lengthy transcriptions.</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- 2. Voice Triggers & Button Modes -->
+  <section class="troubleshooting" id="voice-buttons" aria-labelledby="cat-voice-title">
+    <p class="eyebrow">INTERACTION MODES</p>
+    <h2 class="section-title" id="cat-voice-title">2. Voice Triggers &amp; Button Modes</h2>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">What is the difference between Hold-to-Talk and Hands-Free Toggle?</span></summary>
+      <div class="troubleshooting-body">
+        <p>Remote Buddy offers two foundational voice trigger paradigms, plus a hybrid Smart Toggle mode on G9N9N:</p>
+        <p><strong>1. Hold to Talk (Walkie-Talkie style):</strong><br>Press and hold the voice button while speaking; release it immediately when done. Audio streaming stops and text is inserted into the active text field. Best for quick chat replies, prompt queries, and fleeting thoughts.</p>
+        <p><strong>2. Hands-Free Toggle (Tap to Start / Tap to Stop):</strong><br>Press the button once to begin recording. You can set the remote down, reference notes, or type freely while speaking. Press the button a second time to conclude recording and commit the recognized text. Ideal for long-form dictation and conference remarks.</p>
+        <p><strong>3. Smart Toggle (G9N9N Default · Recommended):</strong><br>Intelligently arbitrates based on press duration: releases within 0.7 seconds are treated as Hands-Free Toggle (audio continues until the next tap); holding past 0.7 seconds automatically activates Hold-to-Talk (audio ends immediately upon release). You get both paradigms on a single physical key without configuration switches.</p>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">What is "Direct Passthrough" and when should I use it?</span></summary>
+      <div class="troubleshooting-body">
+        <p><strong>Background:</strong> Regular buttons in Remote Buddy support Single Tap, Double Tap, and Long Press gestures. To differentiate a single tap from a double tap, the software must wait a brief arbitration window before emitting keystrokes; furthermore, default long-press behaviors repeat single clicks every 0.35 seconds (software rapid-fire).</p>
+        <p><strong>How Direct Passthrough Works:</strong> Direct Passthrough <strong>bypasses all gesture delays, tap arbitrations, and repeat loops</strong>. When a direction key (Up, Down, Left, Right) is pressed, Remote Buddy dispatches an authentic KeyDown event to macOS with zero latency. When your finger releases the button, an authentic KeyUp event is dispatched immediately. It behaves exactly like a real physical keyboard arrow key.</p>
+        <p><strong>Primary Use Cases:</strong></p>
+        <ol>
+          <li><strong>Holding Right Arrow for 2x Video Speed:</strong> In Bilibili, YouTube, and desktop media players, holding down the keyboard right arrow (→) speeds up playback (e.g. 2x or 3x speed), returning to normal speed upon release. In Direct Passthrough mode, holding right direction key performs genuine speed-up seamlessly—eliminating the annoying 15-second skip repeats!</li>
+          <li><strong>Smooth Document Navigation &amp; Gaming:</strong> Fine cursor adjustments, continuous smooth page scrolling, and retro emulator direction controls.</li>
+          <li><strong>Built-in Safety Watchdog:</strong> Direct Passthrough includes a 30-second safety watchdog. Even in the event of extreme Bluetooth packet loss, it automatically releases stuck keys after timeout, preventing infinite keystroke repetition.</li>
+        </ol>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">What are "Common Phrases" and how do I set them up?</span></summary>
+      <div class="troubleshooting-body">
+        <p><strong>Purpose:</strong> Allows one-touch insertion of frequently used static snippets—such as email addresses, shipping coordinates, customer support templates, terminal commands, or code snippets—without typing or speaking them repeatedly.</p>
+        <p><strong>How to Configure:</strong></p>
+        <ol>
+          <li>Navigate to the <strong>Button Mapping</strong> tab in Remote Buddy, then click <strong>"Manage Phrases"</strong> in the bottom right corner.</li>
+          <li>Create new phrases, organize them into groups, and arrange their display order.</li>
+          <li>Assign any remote button gesture (e.g. Center OK or Menu) to trigger the <strong>"Phrases Panel"</strong>, or directly bind direction keys to specific quick phrases.</li>
+        </ol>
+        <p><strong>Radial Wheel HUD &amp; Exclusive Interception:</strong> When the Phrases Panel shortcut is pressed, a semi-transparent radial wheel appears at the center of your screen. Direction keys are <strong>exclusively captured by the phrases wheel</strong> to highlight selections, and pressing Confirm pastes the text directly into your cursor's target field. Once closed, the direction keys instantly revert to their normal Direct Passthrough or mapped keystrokes.</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- 3. Application Integration & Core Benefits -->
+  <section class="troubleshooting" id="integrations" aria-labelledby="cat-integrations-title">
+    <p class="eyebrow">AUTOMATION</p>
+    <h2 class="section-title" id="cat-integrations-title">3. Application Integration &amp; Core Benefits</h2>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">What is "Application Integration" and why is it useful?</span></summary>
+      <div class="troubleshooting-body">
+        <p>In standard desktop workflows, voice typing requires you to first reach for your mouse, locate WeChat, Slack, or Apple Notes, click the text box to reveal a blinking cursor, and only then speak. <strong>Application Integration eliminates this friction completely.</strong></p>
+        <p>Its primary capabilities include:</p>
+        <ol>
+          <li><strong>Instant App Foregrounding:</strong> Map any button to "Launch / Bring App to Front" under System &amp; Media. One click brings your communication or note-taking tool to the forefront.</li>
+          <li><strong>Intelligent Input Focus (Focus Target):</strong> Utilizing macOS Accessibility trees, Remote Buddy automatically searches the foreground window for its primary editable text element (e.g. WeChat's conversation composition box) and focuses the cursor, ensuring dictation lands exactly where intended.</li>
+          <li><strong>Input Method Passthrough (Bypass Input Source Switching):</strong> Modern voice tools (such as Doubao, WeChat Keyboard, or Voice Buddy) activate independently via global hotkeys. Remote Buddy provides an option to bypass legacy macOS input-source switching, preventing UI jitter and key-repeat delays.</li>
+        </ol>
+      </div>
+    </details>
+  </section>
+
+  <!-- 4. Supported Input Methods & Mode Bridging -->
+  <section class="troubleshooting" id="input-methods" aria-labelledby="cat-input-title">
+    <p class="eyebrow">INPUT TOOLS</p>
+    <h2 class="section-title" id="cat-input-title">4. Input Tools &amp; Mode Bridging</h2>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">Which input methods and voice tools are currently supported?</span></summary>
+      <div class="troubleshooting-body">
+        <p>Remote Buddy is inherently compatible with any macOS application that supports <strong>global shortcut triggering</strong> and allows selecting an audio input microphone. Popular options include:</p>
+        <p><strong>1. Apple System Dictation: Built-in &amp; Zero-Config</strong><br>Included natively with macOS. Default hotkey is pressing Fn twice. Runs on-device on Apple Silicon Macs without third-party installations.</p>
+        <p><strong>2. Voice Buddy: Recommended Offline Companion</strong><br>Native offline companion app powered by on-device large language and speech models. Runs 100% locally on the Apple Silicon Neural Engine with zero data transmission, millisecond latency, and intelligent punctuation.</p>
+        <p><strong>3. Doubao AI for macOS:</strong> ByteDance's AI voice input tool featuring high recognition accuracy and automatic spoken-to-written polish.</p>
+        <p><strong>4. WeChat Keyboard for macOS:</strong> Offers built-in voice-to-text hotkeys, great for everyday instant messaging.</p>
+        <p><strong>5. NetEase Bageshuo:</strong> Fast real-time voice typing with LLM text refining capabilities.</p>
+        <p><strong>6. Chatterfly:</strong> Professional voice productivity tool crafted for developers and power users.</p>
+        <p><strong>7. Typeless:</strong> Modern, clean, cross-platform voice typing companion.</p>
+        <p><strong>8. Sogou &amp; Baidu Input for Mac:</strong> Support customized voice trigger hotkeys out of the box.</p>
+        <p><strong>Universal Setup Rule:</strong> In your voice tool or macOS Sound settings, select <code>Remote Buddy Mic</code> as the input device, and set the tool's trigger hotkey in Remote Buddy's Input Method Integration pane!</p>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">What do "Hold" vs "Tap" mean in Input Tool Settings, and how do they differ from remote gestures?</span></summary>
+      <div class="troubleshooting-body">
+        <p>It is easy to conflate <strong>remote hardware gestures</strong> with <strong>input tool trigger modes</strong>. In reality, they are two completely decoupled layers, and <strong>Remote Buddy acts as an intelligent bidirectional translation bridge between them</strong>:</p>
+        <p><strong>The Core Difference:</strong><br>
+        1. <strong>Remote Hardware Gestures (Hold vs Tap):</strong> Describes how your fingers physically interact with the handheld remote (whether you prefer walkie-talkie style Hold-to-Talk, or hands-free Tap-to-Start / Tap-to-Stop).<br>
+        2. <strong>Input Tool Trigger Modes (Hold vs Tap):</strong> Refers strictly to the <strong>hotkey protocol expected by the dictation app itself</strong>.</p>
+        <p><strong>How Remote Buddy Performs Bidirectional Conversions (With Concrete Examples):</strong></p>
+        <ul>
+          <li><strong>Example 1: Remote is in Hands-Free Tap mode, but the input tool only supports Hold mode:</strong><br>
+          <em>Conversion mechanism:</em> When you tap the remote voice button once, Remote Buddy sends a synthetic hotkey <code>KeyDown</code> (hold down without releasing) to macOS. The input tool perceives a held shortcut and starts recording while your hands are completely free. When you finish speaking and tap the remote again, Remote Buddy sends a synthetic <code>KeyUp</code> (release). The input tool receives the release event, terminates recording, and inserts the transcribed text.</li>
+          <li><strong>Example 2: Remote only supports Hold mode (e.g. Xiaomi), but the input tool only supports Tap mode (e.g. Apple Dictation):</strong><br>
+          <em>Conversion mechanism:</em> When you press and hold the remote voice button, Remote Buddy sends a complete keystroke pulse (<code>KeyDown + KeyUp</code>) to start the input tool. When you release your finger from the remote, Remote Buddy detects the physical release and automatically sends a second complete keystroke pulse (<code>KeyDown + KeyUp</code>) to stop the input tool and finalize transcription.</li>
+        </ul>
+        <p><strong>Our Recommended Best Practice: Always set your input tool to "Hold Mode" (Hold to Talk)!</strong></p>
+        <p>In input tools that let you choose how hotkeys behave (such as Doubao, WeChat Keyboard, or Voice Buddy), <strong>we strongly recommend configuring the input tool to "Hold Mode"</strong>:</p>
+        <ol>
+          <li><strong>Rock-Solid State Certainty (Never Invert or De-sync):</strong> Tap mode relies on toggles—the exact same shortcut starts recording on one press and stops on the next. If the input tool ever lags or loses focus, a missed keystroke causes state inversion (starting when you intended to stop). In contrast, Hold mode uses deterministic levels: <code>KeyDown</code> unequivocally means "record now", and <code>KeyUp</code> unequivocally means "stop and commit". It is mathematically immune to toggle de-sync.</li>
+          <li><strong>Total Remote Freedom:</strong> With the input tool in Hold mode, you can use whatever remote gesture you prefer—Hold-to-Talk, Hands-Free Toggle, or G9N9N's Smart Toggle. Remote Buddy faithfully maintains the synthetic KeyDown/KeyUp state under the hood for maximum reliability.</li>
+        </ol>
+        <p><strong>Takeaway Tip:</strong> Set your input tool software to "Hold Mode", check "Hold Mode" in Remote Buddy's Input Method settings, and then hold or tap your remote however you please!</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- 5. Permissions, Security & Troubleshooting -->
+  <section class="troubleshooting" id="troubleshooting" aria-labelledby="cat-troubleshooting-title">
+    <p class="eyebrow">SECURITY &amp; HELP</p>
+    <h2 class="section-title" id="cat-troubleshooting-title">5. Permissions, Security &amp; Troubleshooting</h2>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">Why does the app require Accessibility, Input Monitoring, and Microphone Driver permissions?</span></summary>
+      <div class="troubleshooting-body">
+        <p><strong>Privacy Commitment: Remote Buddy operates 100% locally with zero telemetry, zero analytics, and zero audio archiving. Both the app and its driver are fully open-source under GPL-3.0-only on GitHub.</strong></p>
+        <p>Each system permission serves a dedicated purpose:</p>
+        <ul>
+          <li><strong>CoreAudio Driver (Remote Buddy Mic):</strong> A system-level virtual audio driver. When the remote sends raw compressed Bluetooth audio, Remote Buddy decodes it into 16kHz PCM audio and feeds it to this driver, presenting your remote as a standard studio microphone to macOS.</li>
+          <li><strong>Accessibility:</strong> Required to synthesize keypresses, render the floating phrases wheel, and inspect window accessibility trees for input focus.</li>
+          <li><strong>Input Monitoring:</strong> Allows the app to capture hardware HID events from backgrounded remotes reliably.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">Voice works, but buttons do not? Check device access in Karabiner-Elements and other key remappers.</span></summary>
+      <div class="troubleshooting-body">
+        <p>A remapper can take exclusive access to the remote, preventing Buddy from receiving its buttons. Ordinary buttons may stop performing their assigned actions while Bluetooth or voice input still works. For Xiaomi remotes, the defaults are: Home switches apps, TV plays or pauses media, Power sends Backspace, and Back sends Escape.</p>
+        <ol>
+          <li>Open <strong>Devices</strong> in Karabiner-Elements and find your remote, such as the Xiaomi Bluetooth Voice Remote.</li>
+          <li>Turn off <strong>Modify events for that remote</strong> so Buddy can handle it. Keep your other keyboard settings.</li>
+          <li>Reconnect the remote or restart Buddy, check its status in Button Mapping, and test the home, TV, power, and back buttons.</li>
+        </ol>
+        <p>If Buddy still reports that another input tool owns the device, restart Karabiner-Elements and try again. Also check Buddy’s Input Monitoring and Accessibility permissions.</p>
+        <a class="text-link" href="https://karabiner-elements.pqrs.org/docs/manual/configuration/configure-devices/">Karabiner’s official device settings guide ↗</a>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">Chose Fn as your voice shortcut, but WeChat hijacks it? Clear WeChat’s global Fn shortcut.</span></summary>
+      <div class="troubleshooting-body">
+        <p>The WeChat macOS desktop app can register <strong>Fn</strong> as a global shortcut (such as global voice input or another hotkey). While WeChat holds that global shortcut, pressing your remote’s voice button sends <strong>Fn</strong> to WeChat instead of your chosen input tool (Doubao, WeType, Tencent Chatterfly, Typeless, etc.).</p>
+        <ol>
+          <li>Open the <strong>WeChat desktop app → Settings → Shortcuts</strong>.</li>
+          <li>Check whether any global shortcut—especially a voice shortcut—is bound to <strong>Fn</strong> (or the <strong>🌐 Globe key</strong>).</li>
+          <li>If it conflicts, reassign or <strong>clear only the conflicting Fn shortcut</strong> (you can leave all other WeChat shortcuts as-is).</li>
+          <li>Return to your input tool or Buddy’s Voice Test step and press the remote voice button again.</li>
+        </ol>
+        <p>If you prefer to keep WeChat’s Fn binding, switch Buddy’s voice shortcut in <strong>Input Tools → Voice Shortcut</strong> to another combination such as <strong>Ctrl (⌃) + Option (⌥) + V</strong>.</p>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">Chose Fn as your voice shortcut, but macOS hasn’t set Fn to “Do Nothing”?</span></summary>
+      <div class="troubleshooting-body">
+        <p>When using <strong>Fn/Globe</strong> with a third-party voice tool, pressing the remote button may pop up the Emoji &amp; Symbols picker, switch keyboard layouts, or trigger system Dictation instead if macOS intercepts the Globe key at the system level.</p>
+        <ol>
+          <li>Open <strong>System Settings → Keyboard</strong> on your Mac.</li>
+          <li>Locate <strong>Press 🌐 key to</strong> and change it to <strong>Do Nothing</strong>.</li>
+          <li>Once set to Do Nothing, macOS passes Fn events cleanly to your third-party voice tool.</li>
+        </ol>
+        <p>Note: If you selected <strong>macOS Dictation</strong> as your input tool, keep the system 🌐 key active and set <strong>Dictation → Shortcut</strong> to <strong>Press 🌐 key twice</strong> as shown in the Setup Wizard.</p>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">Why do shortcuts or phrases fail to paste inside password fields or secure terminals?</span></summary>
+      <div class="troubleshooting-body">
+        <p><strong>This is standard macOS kernel-level protection, not a bug.</strong></p>
+        <p>macOS enforces <strong>Secure Input Mode</strong> whenever focus is positioned within password fields, Keychain prompts, credential vaults (such as 1Password or Bitwarden), or hardened terminal sessions. In this mode, macOS kernel blocks third-party background applications from monitoring keystrokes or automating synthetic keyboard inputs to protect passwords against keyloggers.</p>
+        <p>As soon as you tab away or switch to normal text fields, all shortcuts and phrase paste operations resume immediately.</p>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">How do I reset pairing or change remote batteries?</span></summary>
+      <div class="troubleshooting-body">
+        <p>To reconnect or re-pair remotes across different computers:</p>
+        <ol>
+          <li><strong>G9N9N:</strong> Press and hold the small circular pairing button on the back/inside until the bottom white indicator LED pulses slowly. Forget the remote in macOS Bluetooth settings and re-pair. Replace the two AAA batteries when the low-power indicator appears.</li>
+          <li><strong>Xiaomi Remote 2 / 2 Pro:</strong> Press and hold both "Home" and "Menu" buttons for 3–5 seconds until a beep or LED flashes. Connect a Type-C cable to recharge 2 Pro.</li>
+          <li><strong>T1 Air Mouse Remote:</strong> Press and hold Volume+ and Volume- (or the pairing key next to the power button) until the blue LED flashes rapidly.</li>
+        </ol>
+      </div>
+    </details>
+  </section>
+</main>
+
+<footer class="wrap">
+  <div><strong>Remote Buddy</strong><p>Voice input, at the press of a button.</p></div>
+  <div class="footer-links">
+    <a href="index.en.html">Home</a>
+    <a href="downloads/index.en.html">Website Download</a>
+    <a href="device_en.html">Supported Remotes</a>
+    <a href="faq_en.html">FAQ</a>
+    <a href="https://github.com/zfdang/remote-buddy/blob/main/README.en.md">GitHub Docs</a>
+    <a href="https://github.com/zfdang/remote-buddy/blob/main/LICENSE">GPL-3.0-only</a>
+  </div>
+</footer>
+</body>
+</html>

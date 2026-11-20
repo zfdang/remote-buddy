@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>常见问答 (FAQ) · Remote Buddy 遥控搭子</title>
+  <meta name="description" content="Remote Buddy（遥控搭子）使用常见问答：遥控器选购推荐、点按免提与按住说话区别、为什么有的遥控器只能长按、60秒录音物理上限原理解析、按键直通模式、常用语设置、应用集成、输入法长按点按转换、Fn热键排障与推荐配置。">
+  <meta name="theme-color" content="#203a68">
+  <link rel="canonical" href="https://remote.zfdang.com/faq.html">
+  <link rel="alternate" hreflang="zh-CN" href="https://remote.zfdang.com/faq.html">
+  <link rel="alternate" hreflang="en" href="https://remote.zfdang.com/faq_en.html">
+  <link rel="alternate" hreflang="x-default" href="https://remote.zfdang.com/faq.html">
+  <link rel="icon" href="assets/app-icon.png">
+  <link rel="stylesheet" href="style.css?v=261120faq">
+</head>
+<body>
+<header class="nav wrap device-nav">
+  <a class="brand" href="index.html"><img src="assets/app-icon.png" alt="" width="38" height="38"><span>Remote Buddy<small>遥控搭子</small></span></a>
+  <nav aria-label="页面导航">
+    <a href="#hardware">硬件选购</a>
+    <a href="#voice-buttons">按键与语音</a>
+    <a href="#integrations">应用集成</a>
+    <a href="#input-methods">输入法与转换</a>
+    <a href="#troubleshooting">排障与安全</a>
+    <a class="nav-home" href="index.html">返回首页</a>
+    <span class="language-switch" aria-label="语言"><b aria-current="page">中文</b><a href="faq_en.html" lang="en">English</a></span>
+  </nav>
+</header>
+
+<main class="wrap downloads-wrap">
+  <div class="downloads-head">
+    <p class="eyebrow">使用指南 · 常见问答</p>
+    <h1 class="section-title">常见问答 (FAQ)</h1>
+    <p class="lead-sub">汇总 Remote Buddy（遥控搭子）在硬件选购、语音触发、按键直通、常用语面板、应用集成、输入法生态与常见疑难排障方面的完整解答。</p>
+  </div>
+
+  <!-- 一、硬件支持与选购推荐 -->
+  <section class="troubleshooting" id="hardware" aria-labelledby="cat-hardware-title">
+    <p class="eyebrow">硬件兼容</p>
+    <h2 class="section-title" id="cat-hardware-title">一、硬件支持与选购推荐</h2>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">Remote Buddy 支持哪些遥控器？</span></summary>
+      <div class="troubleshooting-body">
+        <p>Remote Buddy 并非所有蓝牙遥控器都能通用，而是针对各厂商专有的蓝牙语音传输协议与 HID 报告格式做了深度驱动适配。目前支持情况如下：</p>
+        <p><strong>1. Google Chromecast Voice Remote（型号 G9N9N）：已全面支持 · 首选推荐</strong><br>支持实时语音解码、专属自动保活（最长约 5 分钟连续录音）、14 颗物理按键全功能自定义与电池电量显示。</p>
+        <p><strong>2. 小米蓝牙遥控器 2 / 2 Pro（型号 RC001 电池版 / RC003 充电版）：已支持</strong><br>支持按住说话与 60 秒录音，支持全按键自定义。</p>
+        <p><strong>3. T1 飞鼠键盘语音遥控器（T1-Remote）：已支持</strong><br>须通过蓝牙直连 Mac（非 2.4G 接收器）。支持点按免提、正面 7 颗常用键自定义，背面自带约 45 键迷你全键盘与空中飞鼠。</p>
+        <p><strong>4. 计划支持中：</strong>Google TV Streamer Voice Remote（型号 GY3LE）、Apple Siri Remote（如第 3 代 A2854）等已列入跟进规划，暂未开放生产使用。</p>
+        <p><strong>重要提示：</strong>能在 Mac 系统蓝牙设置中成功配对，并不代表能录音或映射按键。普通遥控器若使用非标准私有语音协议，系统无法抓取音频流。详细参数与实拍请参阅 <a class="text-link" href="device.html">支持设备与购买指南 ↗</a>。</p>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">推荐购买哪款遥控器？</span></summary>
+      <div class="troubleshooting-body">
+        <p>根据日常使用偏好与预算，我们推荐以下选购策略：</p>
+        <p><strong>1. 首选与性价比之王：Google G9N9N（约 ¥15）</strong><br>在电商平台（如拼多多、淘宝等）价格仅需 15 元左右。语音键正好位于方向圆环正下方，单手大拇指盲操极其舒适自然；原生支持“智能切换”（可点按也可长按），且支持突破 60 秒上限的长录音。使用两节普通 AAA 7号电池，续航持久。</p>
+        <p><strong>2. 偏好金属质感与内置充电：小米蓝牙遥控器 2 Pro（日常约 ¥60~¥99）</strong><br>铝合金拉丝机身，做工精致高档，底部带 Type-C 充电接口免换电池。缺点是语音键位于右上角，拇指需要向上伸够，且受限于硬件固件单次录音有 60 秒上限。</p>
+        <p><strong>3. 大屏操作、移动光标或补敲文字：T1 飞鼠遥控器（约 ¥50）</strong><br>正面具备遥控与语音功能，翻面即是全功能 QWERTY 键盘与 6 轴空鼠陀螺仪，特别适合躺椅或离开办公桌时远距离操作大屏。</p>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">为什么有的遥控器不支持点按免提模式，而只能按住说话？</span></summary>
+      <div class="troubleshooting-body">
+        <p><strong>根本原因在于遥控器内部的硬件电路与蓝牙音频传输协议设计：</strong></p>
+        <p><strong>硬件电平与麦克风供电紧耦合（如小米遥控器）：</strong>专为电视盒子设计的遥控器，为了最大程度省电，将麦克风供电与语音按键的物理按下深度绑定——只有当你的手指按住物理键时，硬件电路才给麦克风通电并建立蓝牙推流；一旦手指松开，遥控器硬件芯片会立刻切断麦克风供电并终止音频发送。由于其固件不支持通过电脑下发指令来“远程开启并维持麦克风”，因此无论软件如何控制，松手后遥控器都无法再采集到任何声音。</p>
+        <p><strong>为什么修改输入法设置也无效？</strong>不少用户尝试在微信键盘、搜狗或豆包输入法中将设置改为“点按开始 / 点按结束”，发现依然无法点按免提。这是因为输入法的设置仅改变了电脑软件自身的等待状态，无法改变蓝牙遥控器芯片的物理断电行为。遥控器松手即停止推流，输入法自然也就收不到声音。</p>
+        <p><strong>哪些遥控器能支持点按免提？</strong><br><strong>Google G9N9N：</strong>支持高级全双工双向控制指令。Remote Buddy 可以在你短按一下后，通过蓝牙指令让遥控器持续供电收音（底部白灯常亮），直到再次点按才发指令让其休眠。<br><strong>T1 飞鼠遥控器：</strong>出厂固件原生设计即为“按一下开麦推流、再按一下关麦断流”的免提逻辑，无需手指持续按压。</p>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">为什么某些遥控器（如小米）具有 60 秒的物理上限？</span></summary>
+      <div class="troubleshooting-body">
+        <p><strong>底层原因分析：</strong>小米等电视盒子遥控器的硬件出厂固件原本是为家庭电视设计的。为了极致省电以及防止遥控器掉进沙发缝误压语音键导致电量耗尽，遥控器主控芯片内部硬编码了硬件看门狗定时器：一旦开启录音，<strong>单次音频传输达到约 60 秒时，硬件会自动强行切断蓝牙音频流</strong>。无论电脑端软件如何请求，硬件均不会再吐出音频数据，必须松开按键后重新按下才能开启下一段录音。</p>
+        <p><strong>G9N9N 与 T1 为什么没有 60 秒断开限制？</strong></p>
+        <p>G9N9N 与 T1 支持全双工蓝牙双向通信与状态协商。Remote Buddy 为其专门设计了<strong>链路保活包与自动分段续流（Keep-Alive）调度引擎</strong>，在录音进行中定期主动向遥控器发送保活信号，从而彻底绕过了电视固件的超时熔断，单次最长可稳定连续收音约 5 分钟，非常适合会议发言、长篇听写与深度写作。</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- 二、语音触发与按键模式 -->
+  <section class="troubleshooting" id="voice-buttons" aria-labelledby="cat-voice-title">
+    <p class="eyebrow">操作逻辑</p>
+    <h2 class="section-title" id="cat-voice-title">二、语音触发与按键模式</h2>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">按键模式（点按免提）与长按模式（按住说话）的区别是什么？</span></summary>
+      <div class="troubleshooting-body">
+        <p>Remote Buddy 提供了两种核心的语音触发范式，并在 G9N9N 上实现了两者的智能融合：</p>
+        <p><strong>1. 长按模式（按住说话 / Hold to Talk）：</strong><br>按住语音键时麦克风开始收音并触发输入工具；松开按键时立即停止录音并触发文本上屏。适合微信回复短消息、单句搜索、灵感备忘录等日常高频片段输入，操作最符合对讲机直觉。</p>
+        <p><strong>2. 按键模式（点按免提 / Hands-Free Toggle）：</strong><br>按一下语音键开启收音，此时双手可以完全脱离遥控器自由打字或查阅资料；整段讲话完毕后，再按一下语音键结束并上屏。非常适合持续几分钟的会议发言、长文听写口述等场景。</p>
+        <p><strong>3. G9N9N 独有的“智能切换模式”（默认推荐）：</strong><br>系统会自动根据你的按压时长做出精准裁决：如果按下时间小于 0.7 秒松手，自动判定为点按免提（持续收音，直至下次点按结束）；如果按下超过 0.7 秒，则自动转为按住说话（松手立即结束）。无需进设置切换，兼得两家之长。</p>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">按键的“直通模式（Direct Passthrough）”是什么意思？用在什么场景下？</span></summary>
+      <div class="troubleshooting-body">
+        <p><strong>诞生背景：</strong>Remote Buddy 默认的普通按键支持“单击、双击、长按”三种手势。为了区分单击和双击，系统在用户按下按键后必须等待几十到几百毫秒的手势判定窗口；且默认的长按手势是以 0.35 秒为周期循环触发单击（连发快进）。</p>
+        <p><strong>直通模式的工作机制：</strong>按键直通完全<strong>跳过手势判定与连击等待</strong>。当按下方向键时，遥控搭子以 0ms 延迟如实向系统底层发送按键按下（KeyDown）事件；当手指松开时，立即如实发送按键抬起（KeyUp）事件。其行为与键盘上的物理真实方向键 100% 保持一致。</p>
+        <p><strong>典型应用场景：</strong></p>
+        <ol>
+          <li><strong>主流视频播放器长按倍速播放：</strong>在 Bilibili、YouTube、各类本地播放器中，长按方向右键（→）会自动开启 2 倍速或 3 倍速播放，松手立刻恢复常速。在直通模式下，按住方向右键即可顺畅倍速，彻底解决原先每隔 0.35 秒快进 15 秒的困扰！</li>
+          <li><strong>文档光标平滑移动与游戏微调：</strong>上下左右精准微调光标、持续按住滚动页面、复古模拟器方向控制等。</li>
+          <li><strong>安全防卡键看门狗：</strong>直通模式内置 30 秒安全定时器，即使遇到极端蓝牙丢包情况，也会在超时后自动补发 KeyUp 抬起事件，防止系统键盘按键被卡死。</li>
+        </ol>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">“常用语（Common Phrases）”有什么用处？如何设置和唤出？</span></summary>
+      <div class="troubleshooting-body">
+        <p><strong>功能定位：</strong>用于高频固定文本的一键快速粘贴。例如你的个人邮箱、收件地址、常用客服话术、终端长命令、代码 Snippet 等，无需每次重复打字或语音念出。</p>
+        <p><strong>设置与唤出方式：</strong></p>
+        <ol>
+          <li>打开 Remote Buddy「按键映射」界面，点击右下角的<strong>「调整常用语」</strong>按钮。</li>
+          <li>在弹出窗口中可以自由添加词条、设置分组、调整排序，或直接导入预设常用语列表。</li>
+          <li>在按键映射网格中，将任意按键的单击或长按设置为<strong>「常用语面板」</strong>唤出动作；也可以直接将上下左右方向键分别绑定为特定常用语的直接上屏。</li>
+        </ol>
+        <p><strong>使用与独占保护机制：</strong>按下常用语唤出键后，屏幕中央会浮现半透明的环形常用语面板（Wheel HUD）。此时遥控器的<strong>方向键会被常用语面板独占捕获</strong>，用于高亮选词，按确认键或松开即可将文本直接注入并粘贴至当前焦点光标处。常用语面板关闭后，方向键会自动恢复日常的直通或快捷键映射，互不干扰。</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- 三、应用集成与核心作用 -->
+  <section class="troubleshooting" id="integrations" aria-labelledby="cat-integrations-title">
+    <p class="eyebrow">高效协同</p>
+    <h2 class="section-title" id="cat-integrations-title">三、应用集成与核心作用</h2>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">“应用集成”是干什么用的？它有什么作用？</span></summary>
+      <div class="troubleshooting-body">
+        <p>在传统的电脑操作中，语音输入前你必须先拿起鼠标，在屏幕上找到微信、飞书或备忘录窗口，点击输入框确保光标闪烁，然后再说话。<strong>「应用集成」正是为了消灭这多余的鼠标操作而设计的自动化桥梁。</strong></p>
+        <p>其核心作用包括三点：</p>
+        <ol>
+          <li><strong>一键置顶与唤出目标应用：</strong>在按键映射中选择「系统与媒体 → 打开具体 APP」，按下遥控器按键即可将微信、备忘录、浏览器或指定软件瞬间拉到最前台。</li>
+          <li><strong>智能对焦输入框（Focus Target）：</strong>利用 macOS Accessibility 辅助功能树，应用集成在唤醒软件的同时，会自动寻找该应用主界面的核心文本输入区（例如微信当前聊天的打字框），主动置入闪烁光标，确保随后的语音和文字精准落位，绝不打在空气中。</li>
+          <li><strong>输入法直通（绕过输入源切换）：</strong>对于依靠全局快捷键独立唤醒的现代语音工具（如豆包、微信键盘、Voice Buddy），应用集成提供了「绕过输入源切换」选项。避免在按下语音键时 macOS 频繁在中文拼音与系统听写之间跳变，大幅提升响应速度并杜绝按键粘连。</li>
+        </ol>
+      </div>
+    </details>
+  </section>
+
+  <!-- 四、输入法生态与模式转换 -->
+  <section class="troubleshooting" id="input-methods" aria-labelledby="cat-input-title">
+    <p class="eyebrow">输入工具</p>
+    <h2 class="section-title" id="cat-input-title">四、输入法生态与模式转换</h2>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">目前为止支持哪些输入法和语音工具？</span></summary>
+      <div class="troubleshooting-body">
+        <p>Remote Buddy 原生兼容所有支持<strong>通过全局快捷键唤醒语音</strong>且支持<strong>选择系统麦克风输入</strong>的 macOS 软件。主流支持工具清单如下：</p>
+        <p><strong>1. macOS 系统自带听写（Apple Dictation）：免配置开箱即用</strong><br>系统原生自带，默认快捷键通常为连按两次 Fn（也可在键盘设置中修改）。无需安装任何第三方工具，在 Apple Silicon 设备上完全离线运行。</p>
+        <p><strong>2. Voice Buddy（语音搭子）：推荐离线搭配</strong><br>同门原生离线语音大模型软件，基于 Mac 神经引擎（NPU）实现 100% 本地端侧识别与标点润色，零隐私泄露风险，毫秒级响应，与 Remote Buddy 完美协同。</p>
+        <p><strong>3. 豆包（Doubao AI）macOS 版：</strong>字节跳动推出的 AI 语音输入利器，识别准确度极高，具备强大的口语自动转书面语润色能力。</p>
+        <p><strong>4. 微信键盘 macOS 版：</strong>微信官方输入法，支持快捷键触发语音转文字，适合日常高频聊天沟通。</p>
+        <p><strong>5. 网易叭哥说（Bageshuo）：</strong>主打极速语音上屏与大模型内容润色修正的语音输入工具。</p>
+        <p><strong>6. Chatterfly：</strong>面向开发者、极客与文字工作者的专业级语音辅助与转录工具。</p>
+        <p><strong>7. Typeless：</strong>新一代极简现代跨平台智能语音输入工具。</p>
+        <p><strong>8. 搜狗输入法 / 百度输入法 macOS 版：</strong>均支持在各自设置中分配语音快捷键并直接调用。</p>
+        <p><strong>通用配置原则：</strong>只需在对应工具或系统设置中，将默认音频输入麦克风选择为 <code>Remote Buddy Mic</code>，并将该工具的语音触发全局快捷键填入 Remote Buddy 的「输入法集成」设置页即可！</p>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">输入工具设置中的“长按”与“点按”是什么意思？它和遥控器的长按、点按有什么区别？</span></summary>
+      <div class="troubleshooting-body">
+        <p>很多用户容易将<strong>「遥控器的按键手势」</strong>与<strong>「输入工具的触发模式」</strong>混为一谈。实际上它们是完全独立的两个层级，<strong>彼此并没有直接绑定关系，Remote Buddy 在中间负责全自动转换与状态调度</strong>：</p>
+        <p><strong>两者的本质区别：</strong><br>
+        1. <strong>遥控器端的长按 / 点按：</strong>描述的是你的手指在遥控器实体硬件上的物理操作习惯（是喜欢按住说话、还是喜欢按一下松手免提说话）。<br>
+        2. <strong>输入工具端的长按 / 点按：</strong>描述的是你所使用的输入法软件（如系统听写、豆包、微信键盘等）<strong>自身接收快捷键的逻辑规则</strong>。</p>
+        <p><strong>Remote Buddy 是如何实现两端双向转换的？（转换原理与举例）</strong></p>
+        <ul>
+          <li><strong>例子 1：遥控器是点按免提，而输入工具只支持长按模式</strong><br>
+          <em>转换方法：</em>当你在遥控器上按一下语音键时，Remote Buddy 收到启动信号，立即在系统底层向输入工具发送快捷键的 <code>KeyDown</code>（持续按住不放），输入工具以为你一直按着键盘快捷键，开始持续收音；此时你双手脱离遥控器自由说话；说完后你再次按一下遥控器，Remote Buddy 收到结束信号，立即向系统底层发送快捷键的 <code>KeyUp</code>（松开按键），输入工具收到松开事件停止收音并上屏文字。</li>
+          <li><strong>例子 2：遥控器只支持长按（如小米），而输入工具只支持点按模式（如系统听写）</strong><br>
+          <em>转换方法：</em>当你按住遥控器语音键时，Remote Buddy 会向系统模拟发送一次完整的快捷键敲击（<code>KeyDown + KeyUp</code>）唤醒输入工具开始收音；当你说话完毕松开遥控器按键时，Remote Buddy 捕捉到物理抬起信号，自动再向系统模拟发送一次完整的快捷键敲击（<code>KeyDown + KeyUp</code>），通知输入工具结束录音并转录。</li>
+        </ul>
+        <p><strong>官方推荐配置：输入工具一律推荐设为「长按模式」！</strong></p>
+        <p>在支持自定义快捷键触发方式的输入工具（如豆包、微信键盘、Voice Buddy 等）中，<strong>我们强烈推荐将输入工具设置为「长按模式」（按住说话 / Hold to Talk）</strong>：</p>
+        <ol>
+          <li><strong>状态绝对确定，绝不串台翻转：</strong>点按模式是“开关翻转（Toggle）”，同一个快捷键按一下是开、再按一下是关。一旦输入工具偶发卡顿或丢焦，就可能出现“本该停止却重新开始”的状态颠倒；而长按模式是明确的“电平信号”——<code>KeyDown</code> 绝对代表正在录音，<code>KeyUp</code> 绝对代表结束上屏，逻辑最严密、容错率最高。</li>
+          <li><strong>遥控器端自由随心：</strong>只要输入工具设为长按模式，你在遥控器端可以根据个人喜好随意选择按住说话或免提点按（在 G9N9N 上还可以使用智能切换混合双打），Remote Buddy 都会精准保持快捷键的按住与释放，体验最为稳定顺畅！</li>
+        </ol>
+        <p><strong>一句话配置技巧：</strong>在输入工具软件里尽量设为「长按模式」，然后在 Remote Buddy 的「输入法集成」设置里勾选「长按模式」；而在物理遥控器上，你想按住说就按住说、想免提点按就免提点按，中间转换全由 Remote Buddy 搞定！</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- 五、权限、安全与疑难排障 -->
+  <section class="troubleshooting" id="troubleshooting" aria-labelledby="cat-troubleshooting-title">
+    <p class="eyebrow">疑难排障</p>
+    <h2 class="section-title" id="cat-troubleshooting-title">五、权限、安全与疑难排障</h2>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">为什么软件需要“辅助功能”、“输入监控”和“麦克风驱动”权限？会泄露隐私吗？</span></summary>
+      <div class="troubleshooting-body">
+        <p><strong>我们承诺：Remote Buddy 100% 纯本地运行、零遥测、不保存任何音频或文字，代码完全以 GPL-3.0-only 开源在 GitHub，绝不泄露隐私。</strong></p>
+        <p>各项权限的具体作用：</p>
+        <ul>
+          <li><strong>麦克风音频驱动（Remote Buddy Mic）：</strong>这是系统级的 CoreAudio HAL 虚拟驱动。遥控器传来的蓝牙原始压缩音频经本地解码后，送入该虚拟驱动，让 macOS 认为连接了一只真实的专业物理麦克风。驱动源码随主程序完全开源。</li>
+          <li><strong>辅助功能权限（Accessibility）：</strong>用于模拟键盘修饰键与快捷键、调度常用语面板以及智能探测聚焦目标窗口的输入框。</li>
+          <li><strong>输入监控权限（Input Monitoring）：</strong>用于直接捕获特定遥控器发出的 HID 物理按键事件，确保在后台时依然能稳定响应遥控器操作。</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">语音正常，按键却没反应？先检查 Karabiner-Elements 等按键工具的设备占用。</span></summary>
+      <div class="troubleshooting-body">
+        <p>这类工具可能独占遥控器，导致遥控搭子收不到按键。典型表现是普通按键无法执行已配置的动作，而蓝牙连接或语音仍然正常。小米遥控器的默认映射中，主页键切换应用、TV 键播放/暂停、电源键退格、返回键发送 Escape。</p>
+        <ol>
+          <li>在 Karabiner-Elements 中打开 <strong>Devices（设备）</strong>，找到你的遥控器，例如“小米蓝牙语音遥控器”。</li>
+          <li>关闭<strong>这只遥控器</strong>的 <strong>Modify events</strong>，把它交给遥控搭子处理。其他键盘的设置可以保留。</li>
+          <li>重新连接遥控器，或重启遥控搭子，再到“按键映射”检查连接状态，测试主页键、TV 键、电源键与返回键。</li>
+        </ol>
+        <p>若仍提示“设备被其他输入工具占用”，可重启 Karabiner-Elements 后再试；同时检查遥控搭子的输入监控与辅助功能权限。</p>
+        <a class="text-link" href="https://karabiner-elements.pqrs.org/docs/manual/configuration/configure-devices/">Karabiner 官方设备设置说明 ↗</a>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">选择 Fn 键触发语音，却没反应或被微信截获？检查微信全局快捷键占用。</span></summary>
+      <div class="troubleshooting-body">
+        <p>macOS 版微信（WeChat App）可能在后台注册了全局 <strong>Fn</strong> 快捷键（例如全局语音输入或其他功能热键）。一旦被微信占用，按下遥控器发送的 <strong>Fn</strong> 会先被微信拦截，导致你选择的第三方语音输入工具（如豆包、微信输入法、腾讯Chatterfly、Typeless 等）无法收到触发信号。</p>
+        <ol>
+          <li>打开桌面端<strong>微信 → 设置 → 快捷键</strong>（部分版本在聊天/通用设置内）。</li>
+          <li>检查是否存在占用 <strong>Fn</strong>（或 <strong>🌐 地球键</strong>）的全局快捷键，尤其是语音输入相关热键。</li>
+          <li>如有冲突，请更换或<strong>仅清除冲突的 Fn 快捷键</strong>（无需修改微信其他快捷键）。</li>
+          <li>返回目标输入工具或遥控搭子的向导测试页，重新按下遥控器语音键试说一句。</li>
+        </ol>
+        <p>如果无法取消微信对 Fn 的占用，也可以在“输入法集成 → 语音热键”中改用 <strong>Ctrl (⌃) + Option (⌥) + V</strong> 等其他组合快捷键。</p>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">选择 Fn 键作为语音热键，系统设置里务必设为“不执行任何操作（Do Nothing）”。</span></summary>
+      <div class="troubleshooting-body">
+        <p>若你在遥控搭子中选择 <strong>Fn/地球键</strong> 给第三方语音工具使用，但按下语音键时屏幕却弹出表情符号面板、切换系统输入法或触发系统听写，通常是因为 macOS 系统先行拦截并消费了 Fn 按键。</p>
+        <ol>
+          <li>打开 macOS <strong>系统设置（System Settings）→ 键盘（Keyboard）</strong>。</li>
+          <li>找到 <strong>按下 🌐 键时（Press 🌐 key to）</strong> 下拉菜单，将其设为 <strong>不执行任何操作（Do Nothing）</strong>。</li>
+          <li>如在其它软件中不希望按 Fn 弹出表情或切换输入法，改完后系统即会直接放行 Fn 给语音输入工具使用。</li>
+        </ol>
+        <p>注意：如果你选择的工具本身就是 <strong>macOS 听写</strong>，则<strong>不要</strong>禁用系统 🌐 键——请保留系统听写设置，并按向导说明在“听写 → 快捷键”中选择“按两下 🌐 键”。</p>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">为什么在密码框或安全终端（如 iTerm2、1Password）中按键或常用语无法粘贴？</span></summary>
+      <div class="troubleshooting-body">
+        <p><strong>这是完全正常的操作系统安全行为，而非软件故障。</strong></p>
+        <p>macOS 拥有一套内核级安全保护机制——<strong>安全输入模式（Secure Input Mode）</strong>。当光标停留在任何密码输入框、钥匙串授权窗口、锁定凭据管理器（如 1Password / Bitwarden）或开启了安全输入的终端窗口时，macOS 内核会强行阻断所有第三方软件的模拟按键、剪贴板自动化注入与键盘监听，防止恶意间谍软件窃取明文密码。</p>
+        <p>此时 Remote Buddy 的模拟按键与常用语粘贴会被系统静默保护拦截。只需将光标移出密码框或切回普通文本窗口，所有功能便会自动恢复正常。</p>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">遥控器如何重新配对或清除绑定？</span></summary>
+      <div class="troubleshooting-body">
+        <p>当需要更换电脑或遇到蓝牙连接状态异常时，可按各机型方法重置配对：</p>
+        <ol>
+          <li><strong>G9N9N：</strong>长按电池仓下方或背面的圆形物理配对按键，直到机身底部的白色指示灯开始慢闪，进入蓝牙广播配对状态；在 Mac「系统设置 → 蓝牙」中忽略并重新配对。</li>
+          <li><strong>小米蓝牙遥控器 2 / 2 Pro：</strong>同时长按「主页键」与「菜单键」约 3~5 秒，听到滴声或指示灯快闪即进入配对状态。</li>
+          <li><strong>T1 飞鼠遥控器：</strong>长按音量+与音量-组合键（或电源键旁边配对键），蓝灯快闪即进入广播模式。</li>
+        </ol>
+      </div>
+    </details>
+  </section>
+</main>
+
+<footer class="wrap">
+  <div><strong>Remote Buddy</strong><p>用遥控器，随手说。</p></div>
+  <div class="footer-links">
+    <a href="index.html">返回首页</a>
+    <a href="downloads/index.html">官网下载</a>
+    <a href="device.html">支持设备</a>
+    <a href="faq.html">常见问答 (FAQ)</a>
+    <a href="https://github.com/zfdang/remote-buddy/blob/main/README.md">GitHub 源码</a>
+    <a href="https://github.com/zfdang/remote-buddy/blob/main/LICENSE">GPL-3.0-only</a>
+  </div>
+</footer>
+</body>
+</html>

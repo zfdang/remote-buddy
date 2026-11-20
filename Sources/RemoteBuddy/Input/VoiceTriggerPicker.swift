@@ -3,7 +3,7 @@ import SwiftUI
 /// Trigger choices and the keyboard editor for the integration wizard.
 struct VoiceTriggerPicker: View {
     let selection: VoiceKeyMode
-    let onSelect: (VoiceKeyMode) -> Void
+    let onSelect: @MainActor @Sendable (VoiceKeyMode) -> Void
     @EnvironmentObject private var localization: LocalizationStore
     @State private var editing = false
 

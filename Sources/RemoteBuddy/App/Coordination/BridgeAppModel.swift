@@ -127,6 +127,9 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
         voiceTool: { [weak self] in
             self?.settings.onboardingVoiceTool ?? .unselected
         },
+        bypassInputSourceSwitching: { [weak self] in
+            self?.settings.bypassInputSourceSwitching ?? false
+        },
         onSourcePreparationFailure: { [weak self] tool, result in
             self?.handleInputSourcePreparationFailure(for: tool, result: result)
         }

@@ -758,4 +758,59 @@ struct VoiceInputActivationTests {
         #expect(openedSettings == 1)
         #expect(model.unavailableVoiceToolPrompt == nil)
     }
+
+    @Test func bypassInputSourceSwitchingSkipsPrepareAndActivation() throws {
+        let (model, defaults, suite) = try makeModel()
+        defer { defaults.removePersistentDomain(forName: suite) }
+        var source = "ABC"
+        var prepared = false
+        var activated = false
+        var logged: [String] = []
+
+        let monitor = PreferredInputSourceMonitor(
+            voiceTool: { .weixin },
+            bypassInputSourceSwitching: { true },
+            prepareInputSource: { _ in
+                prepared = true
+                return .selected
+            },
+            currentInputSourceID: { source },
+            restoreInputSource: { _ in .selected },
+            waitForInputSourceActivation: { _, _, _, done in
+                activated = true
+                done(true)
+            },
+            installMonitor: { _ in nil },
+            logger: { logged.append($0) }
+        )
+
+        var completed = false
+        monitor.beginVoiceSession { completed = $0 }
+        #expect(completed == true)
+        #expect(prepared == false)
+        #expect(activated == false)
+        #expect(source == "ABC")
+        #expect(logged.contains { $0.contains("result=bypassed managed=false") })
+    }
+
+    @Test func bypassInputSourceSwitchingSettingsLifecycle() throws {
+        let (model, defaults, suite) = try makeModel()
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        #expect(model.settings.bypassInputSourceSwitching == false)
+
+        model.settings.bypassInputSourceSwitching = true
+        #expect(model.settings.bypassInputSourceSwitching == true)
+
+        // Switching tool resets to false
+        model.settings.setOnboardingVoiceTool(.doubao)
+        #expect(model.settings.bypassInputSourceSwitching == false)
+
+        model.settings.bypassInputSourceSwitching = true
+        #expect(model.settings.bypassInputSourceSwitching == true)
+
+        // Completing onboarding resets to false
+        model.settings.completeOnboarding()
+        #expect(model.settings.bypassInputSourceSwitching == false)
+    }
 }

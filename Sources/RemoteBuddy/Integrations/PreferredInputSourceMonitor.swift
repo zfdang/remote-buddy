@@ -2,6 +2,7 @@ import AppKit
 
 final class PreferredInputSourceMonitor {
     typealias VoiceToolProvider = () -> OnboardingVoiceTool
+    typealias BypassSwitchingProvider = () -> Bool
     typealias InputSourcePreparer = (OnboardingVoiceTool) -> OnboardingInputSourceSwitchResult
     typealias CurrentInputSourceIDProvider = () -> String?
     typealias InputSourceRestorer = (String) -> OnboardingInputSourceSwitchResult
@@ -23,6 +24,7 @@ final class PreferredInputSourceMonitor {
     typealias SourcePreparationFailureHandler = (OnboardingVoiceTool, OnboardingInputSourceSwitchResult) -> Void
 
     private let voiceTool: VoiceToolProvider
+    private let bypassInputSourceSwitching: BypassSwitchingProvider
     private let prepareInputSource: InputSourcePreparer
     private let currentInputSourceID: CurrentInputSourceIDProvider
     private let restoreInputSource: InputSourceRestorer
@@ -64,6 +66,7 @@ final class PreferredInputSourceMonitor {
 
     init(
         voiceTool: @escaping VoiceToolProvider,
+        bypassInputSourceSwitching: @escaping BypassSwitchingProvider = { false },
         prepareInputSource: @escaping InputSourcePreparer = OnboardingInputSourceSwitcher.prepareForVoiceSession,
         currentInputSourceID: @escaping CurrentInputSourceIDProvider = OnboardingInputSourceSwitcher.currentInputSourceID,
         restoreInputSource: @escaping InputSourceRestorer = OnboardingInputSourceSwitcher.selectEnabledInputSource,
@@ -82,6 +85,7 @@ final class PreferredInputSourceMonitor {
         onSourcePreparationFailure: SourcePreparationFailureHandler? = nil
     ) {
         self.voiceTool = voiceTool
+        self.bypassInputSourceSwitching = bypassInputSourceSwitching
         self.prepareInputSource = prepareInputSource
         self.currentInputSourceID = currentInputSourceID
         self.restoreInputSource = restoreInputSource
@@ -271,6 +275,12 @@ final class PreferredInputSourceMonitor {
             )
         }
         guard let targetInputSourceID = selectedVoiceTool.preferredInputSourceID else { return true }
+        if bypassInputSourceSwitching() {
+            logger(
+                "VOICE INPUT source_prepare tool=\(selectedVoiceTool.rawValue) result=bypassed managed=false"
+            )
+            return true
+        }
         if var session = managedInputSourceSession {
             guard session.targetInputSourceID == targetInputSourceID else {
                 logger("VOICE INPUT session_rejected reason=target_changed")

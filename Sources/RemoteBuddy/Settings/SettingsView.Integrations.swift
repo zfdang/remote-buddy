@@ -25,6 +25,22 @@ extension SettingsView {
                         Text(localization.text("settings.integration.current")).font(.headline)
                         Text(localization.text(settings.onboardingVoiceTool.titleKey))
                             .font(.title3.weight(.medium))
+
+                        if settings.onboardingVoiceTool.preferredInputSourceID != nil {
+                            Divider()
+                                .padding(.vertical, 2)
+                            Toggle(isOn: $settings.bypassInputSourceSwitching) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(localization.text("settings.integration.bypass_switch_title"))
+                                        .font(.body)
+                                    Text(localization.text("settings.integration.bypass_switch_detail"))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                            .toggleStyle(.switch)
+                        }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }

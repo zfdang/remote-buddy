@@ -917,6 +917,8 @@
 "settings.integration.supported_tools" = "Supported Voice Tools";
 "settings.integration.active_badge" = "Current";
 "settings.integration.shortcut_title" = "Voice trigger";
+"settings.integration.bypass_switch_title" = "Input Method Global Shortcut Enabled";
+"settings.integration.bypass_switch_detail" = "Skip system input source switching to directly trigger voice input. Solves \"Press Command + V to paste\" in Antigravity and Chromium editors.";
 
 "remote.device.illustration" = "Remote control illustration";
 

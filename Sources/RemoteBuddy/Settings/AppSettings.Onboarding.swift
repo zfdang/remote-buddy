@@ -193,6 +193,7 @@ extension AppSettings {
         guard onboardingVoiceTool != voiceTool else { return }
         discardOnboardingVoiceTrial()
         onboardingVoiceTool = voiceTool
+        bypassInputSourceSwitching = false
         onboardingPreferredGesture = nil
         stagedVoiceToolBinding = nil
     }
@@ -265,6 +266,7 @@ extension AppSettings {
         voiceFnTapModeEnabled = verified.gestureMode == .toggle
         onboardingVoiceTrigger = nil
         verifiedVoiceToolBinding = verified
+        bypassInputSourceSwitching = false
         self.stagedVoiceToolBinding = nil
         defaults.removeObject(forKey: Keys.onboardingStagedVoiceBinding)
         AppLogger.shared.write(
@@ -307,6 +309,7 @@ extension AppSettings {
         recordFirstUseEvent(.completed, step: .complete)
         onboardingStep = .complete
         onboardingCompletedVersion = Self.currentOnboardingVersion
+        bypassInputSourceSwitching = false
     }
 
     func restartOnboarding() {
@@ -317,6 +320,7 @@ extension AppSettings {
         verifiedVoiceToolBinding = nil
         defaults.removeObject(forKey: Keys.firstUseEvents)
         onboardingVoiceTool = .unselected
+        bypassInputSourceSwitching = false
         onboardingRemoteAvailability = .unselected
         onboardingControlSource = .unselected
         onboardingDevice = nil

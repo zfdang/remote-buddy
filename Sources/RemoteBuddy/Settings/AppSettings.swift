@@ -32,6 +32,7 @@ final class AppSettings: ObservableObject {
         static let onboardingControlSource = "onboarding.controlSource"
         static let onboardingDevice = "onboarding.device"
         static let onboardingVoiceTool = "onboarding.voiceTool"
+        static let bypassInputSourceSwitching = "voiceTool.bypassInputSourceSwitching"
         static let onboardingPreferredGesture = "onboarding.preferredGesture"
         static let onboardingVerifiedVoiceBinding = "onboarding.verifiedVoiceBinding"
         static let onboardingStagedVoiceBinding = "onboarding.stagedVoiceBinding"
@@ -278,6 +279,10 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(onboardingVoiceTool.rawValue, forKey: Keys.onboardingVoiceTool) }
     }
 
+    @Published var bypassInputSourceSwitching: Bool {
+        didSet { defaults.set(bypassInputSourceSwitching, forKey: Keys.bypassInputSourceSwitching) }
+    }
+
     @Published var onboardingPreferredGesture: VoiceGestureMode? {
         didSet {
             defaults.set(onboardingPreferredGesture?.rawValue, forKey: Keys.onboardingPreferredGesture)
@@ -513,6 +518,7 @@ final class AppSettings: ObservableObject {
         onboardingRemoteAvailability = persistedControlSource == .unselected ? .unselected : .hasRemote
         onboardingVoiceTool = defaults.string(forKey: Keys.onboardingVoiceTool)
             .flatMap(OnboardingVoiceTool.init(rawValue:)) ?? .unselected
+        bypassInputSourceSwitching = defaults.bool(forKey: Keys.bypassInputSourceSwitching)
         onboardingPreferredGesture = defaults.string(forKey: Keys.onboardingPreferredGesture)
             .flatMap(VoiceGestureMode.init(rawValue:))
         verifiedVoiceToolBinding = Self.decodeSetting(

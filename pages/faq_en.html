@@ -113,14 +113,14 @@
     <details class="troubleshooting-card">
       <summary><span class="troubleshooting-question">What are "Common Phrases" and how do I set them up?</span></summary>
       <div class="troubleshooting-body">
-        <p><strong>Purpose:</strong> Allows one-touch insertion of frequently used static snippets—such as email addresses, shipping coordinates, customer support templates, terminal commands, or code snippets—without typing or speaking them repeatedly.</p>
+        <p><strong>Purpose:</strong> Allows one-touch insertion of frequently used static text—such as email addresses, shipping coordinates, customer support templates, terminal commands, or code snippets—without typing or speaking them repeatedly.</p>
         <p><strong>How to Configure:</strong></p>
         <ol>
-          <li>Navigate to the <strong>Button Mapping</strong> tab in Remote Buddy, then click <strong>"Manage Phrases"</strong> in the bottom right corner.</li>
-          <li>Create new phrases, organize them into groups, and arrange their display order.</li>
-          <li>Assign any remote button gesture (e.g. Center OK or Menu) to trigger the <strong>"Phrases Panel"</strong>, or directly bind direction keys to specific quick phrases.</li>
+          <li>Open the <strong>Button Mapping</strong> tab in Remote Buddy and click <strong>"Manage Phrases"</strong> in the bottom right corner (or select "Common Phrases" from the sidebar).</li>
+          <li>In the phrase manager, edit phrase text, assign concise labels, and map phrases directly to remote physical keys (directional arrows, OK, and available function keys).</li>
+          <li>In Button Mapping, assign any remote button gesture to the <strong>"Common Phrases"</strong> action.</li>
         </ol>
-        <p><strong>Radial Wheel HUD &amp; Exclusive Interception:</strong> When the Phrases Panel shortcut is pressed, a semi-transparent radial wheel appears at the center of your screen. Direction keys are <strong>exclusively captured by the phrases wheel</strong> to highlight selections, and pressing Confirm pastes the text directly into your cursor's target field. Once closed, the direction keys instantly revert to their normal Direct Passthrough or mapped keystrokes.</p>
+        <p><strong>Usage &amp; Exclusive Handling:</strong> When the phrases shortcut is pressed, a floating panel appears displaying bound phrases for each key. Remote buttons are exclusively captured by the panel—pressing any assigned button immediately inserts the phrase via simulated <code>Command+V</code> into the active text field. Once dismissed, all buttons instantly resume their standard mapping or passthrough actions.</p>
       </div>
     </details>
   </section>
@@ -139,7 +139,6 @@
           <li><strong>Solves Missing Focus Without Reaching for the Mouse:</strong> When using apps like WeChat, ChatGPT, Antigravity, Claude, DeepSeek, or WorkBuddy, you often scroll through conversation history or click elsewhere, leaving the text box unselected. Without App Integrations, speaking into your remote would fail to insert text because no text box has focus.</li>
           <li><strong>Automatic Intelligent Focusing:</strong> When integration is enabled for an app, pressing the remote voice button prompts Remote Buddy to inspect the window's Accessibility hierarchy and automatically focus its primary message input box. If a text field is already focused, Remote Buddy preserves your current selection.</li>
         </ul>
-        <p><strong>Important Clarification:</strong> App Integrations <strong>does not launch or foreground applications</strong> and has no passthrough functionality. It operates strictly when the application is <strong>already the active frontmost window</strong>, saving you from having to grab the mouse and click the text box before speaking.</p>
       </div>
     </details>
   </section>
@@ -192,7 +191,7 @@
     <details class="troubleshooting-card">
       <summary><span class="troubleshooting-question">What does the "\"Global Shortcut\" Enabled" toggle under WeChat or Doubao Input Method do?</span></summary>
       <div class="troubleshooting-body">
-        <p><strong>Background &amp; Default Behavior:</strong> Both WeChat Input Method and Doubao Input Method register as macOS Input Sources. By default, if you are currently using the default ABC (English) layout or another input method, Remote Buddy proactively calls the macOS Text Input Services (TIS) API to switch the active input source to WeChat/Doubao upon pressing the voice button, and restores your previous input source after dictation finishes.</p>
+        <p><strong>Background &amp; Default Behavior:</strong> Both WeChat Input Method and Doubao Input Method register as macOS Input Sources. By default, if you are currently using the default ABC (English) layout or another input method, Remote Buddy proactively calls the macOS Text Input Services (TIS) API to switch the active input source to WeChat/Doubao upon pressing the voice button to ensure dictation can be triggered.</p>
         <p><strong>Why Was This Option Introduced?</strong><br>
         In focus-sensitive applications—such as <strong>Antigravity, VS Code, terminal emulators, or code editors</strong>—system-level input source switching can occasionally cause the active text cursor to <strong>lose focus</strong> or introduce a brief UI stutter.<br>
         Fortunately, both modern input methods have their own native background daemon capable of intercepting hotkeys system-wide:
@@ -272,6 +271,21 @@
           <li>Once set to Do Nothing, macOS passes Fn events cleanly to your third-party voice tool.</li>
         </ol>
         <p>Note: If you selected <strong>macOS Dictation</strong> as your input tool, keep the system 🌐 key active and set <strong>Dictation → Shortcut</strong> to <strong>Press 🌐 key twice</strong> as shown in the Setup Wizard.</p>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">Why is using the Fn / Globe (🌐) key as a voice shortcut discouraged, and what is recommended instead?</span></summary>
+      <div class="troubleshooting-body">
+        <p><strong>Core Reason: The Fn / Globe (🌐) key is the single most conflict-prone hotkey across macOS and desktop applications.</strong></p>
+        <ul>
+          <li><strong>Frequent Third-Party App Hijacking:</strong> Popular applications—most notably the WeChat macOS desktop client—frequently register global listeners for the Fn key. When hijacked, pressing the remote voice button sends Fn directly to WeChat instead of your intended voice dictation tool.</li>
+          <li><strong>macOS System Interception:</strong> By default, macOS binds the 🌐 key to "Show Emoji &amp; Symbols" or "Change Input Source", causing unexpected popups or input layout switching.</li>
+          <li><strong>High Troubleshooting Burden:</strong> Single-key collisions can be subtle and frustrating to diagnose, forcing users to comb through multiple system panes and third-party app settings.</li>
+        </ul>
+        <p><strong>Strongly Recommended Best Practice:</strong></p>
+        <p>Configure both Remote Buddy and your voice input tool to use a <strong>custom multi-modifier shortcut (such as <code>Ctrl (⌃) + Option (⌥) + V</code>)</strong>:</p>
+        <p>Multi-modifier combinations provide exceptional global uniqueness and are virtually never claimed by system defaults or everyday software, ensuring reliable, maintenance-free triggering out of the box.</p>
       </div>
     </details>
 

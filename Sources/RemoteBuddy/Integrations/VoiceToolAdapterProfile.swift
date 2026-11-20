@@ -32,16 +32,31 @@ enum OnboardingVoiceTool: String, CaseIterable, Codable, Identifiable {
         }
     }
 
-    /// Input source selected automatically before each live voice session.
-    /// WeType listens for its global shortcut across active input sources; calling
-    /// `TISSelectInputSource` from a background helper before sending the trigger
-    /// can break direct text insertion in Electron/Chromium hosts (Command+V fallback).
+    /// Input source ID to target during a live voice session.
+    /// Both WeType and Doubao IME expose a "全局唤起" (global activation) option that
+    /// switches the input source themselves when their shortcut fires. Remote Buddy
+    /// observes the switch passively first; `TISSelectInputSource` is called only as
+    /// a fallback when the IME does not switch within the activation timeout, so that
+    /// the fix is transparent to users who have not enabled global activation.
     var automaticVoiceSessionInputSourceID: String? {
         switch self {
-        case .doubao:
+        case .doubao, .weixin:
             return preferredInputSourceID
-        case .weixin, .unselected, .chatterfly, .voiceBuddy, .bageshuo, .typeless, .macosDictation, .other:
+        case .unselected, .chatterfly, .voiceBuddy, .bageshuo, .typeless, .macosDictation, .other:
             return nil
+        }
+    }
+
+    /// When true, Remote Buddy skips the initial `TISSelectInputSource` and waits for
+    /// the IME to switch the input source via its own global-activation shortcut.
+    /// `TISSelectInputSource` is used only as a fallback when the IME does not switch
+    /// within the activation timeout (e.g. the user has not enabled global activation).
+    var passiveVoiceSessionActivation: Bool {
+        switch self {
+        case .weixin, .doubao:
+            return true
+        case .unselected, .chatterfly, .voiceBuddy, .bageshuo, .typeless, .macosDictation, .other:
+            return false
         }
     }
 

@@ -28,6 +28,26 @@ extension SettingsView {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                if settings.onboardingVoiceTool.passiveVoiceSessionActivation {
+                    GlassPanel {
+                        HStack(alignment: .top, spacing: 12) {
+                            Image(systemName: "exclamationmark.circle.fill")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundStyle(Color.accentColor)
+
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(localization.text("onboarding.voice_tool.global_shortcut.title"))
+                                    .font(.subheadline.weight(.semibold))
+
+                                Text(localization.text("onboarding.voice_tool.global_shortcut.\(settings.onboardingVoiceTool.rawValue)"))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
                 HStack(spacing: 20) {
                     Rectangle()
                         .fill(Color.primary.opacity(0.18))

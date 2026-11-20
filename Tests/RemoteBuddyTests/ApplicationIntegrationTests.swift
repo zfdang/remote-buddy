@@ -128,7 +128,7 @@ struct ApplicationIntegrationTests {
             events.append("focus_confirmed")
             let finishFocus = try #require(focusDone)
             finishFocus(.focused)
-            #expect(events == ["focus_requested", "focus_confirmed", "select_source", "source_ready", "voice_down"])
+            #expect(events == ["focus_requested", "focus_confirmed", "source_ready", "voice_down"])
             #expect(model.voiceSession.commandAudio.drain() == [1, 2, 3])
             #expect(model.applicationIntegrationStatus == .voiceTriggered)
             #expect(model.updateVoiceKeyState(streaming: false, forceSoftware: true, owner: .bluetooth,

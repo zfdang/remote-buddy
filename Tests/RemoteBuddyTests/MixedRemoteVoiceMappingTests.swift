@@ -53,8 +53,8 @@ struct MixedRemoteVoiceMappingTests {
             #expect(model.shouldNeutralizeNativeVoiceKey)
         }
         settings.setOnboardingVoiceTool(.weixin)
-        #expect(!model.requiresOrderedVoiceFn)
-        #expect(!model.shouldNeutralizeNativeVoiceKey)
+        #expect(model.requiresOrderedVoiceFn)
+        #expect(model.shouldNeutralizeNativeVoiceKey)
         settings.setOnboardingVoiceTool(.other)
         #expect(!model.shouldNeutralizeNativeVoiceKey)
     }

@@ -227,17 +227,44 @@ final class PreferredInputSourceMonitor {
             return
         }
         let tool = voiceTool()
-        waitForInputSourceActivation(session.targetInputSourceID, currentInputSourceID, continuing) { [weak self] activated in
-            guard let self else { completion(false); return }
-            let result = self.completeExplicitActivation(
-                activated: activated, targetInputSourceID: session.targetInputSourceID,
-                activationShouldContinue: continuing, selectedVoiceTool: tool)
-            if self.explicitActivationGeneration == generation {
-                self.explicitVoiceSessionActivationPending = false
-                if !result { self.explicitVoiceObservationActive = false }
+        // For tools that use passive activation, the first wait observes whether the IME
+        // switches the input source itself via its global-activation shortcut. If it does
+        // not switch within the timeout, prepareInputSource is called as a fallback and
+        // a second wait confirms the switch. Non-passive tools call prepareInputSource
+        // before entering the wait and do not need a fallback.
+        let passiveRetryAllowed = tool.passiveVoiceSessionActivation
+        func waitAndFallback(retryAllowed: Bool) {
+            waitForInputSourceActivation(session.targetInputSourceID, currentInputSourceID, continuing) { [weak self] activated in
+                guard let self else { completion(false); return }
+                // Passive timeout: IME did not switch on its own — try TISSelectInputSource now.
+                var fallbackFailed = false
+                if !activated && retryAllowed && continuing() {
+                    let fallbackResult = self.prepareInputSource(tool)
+                    self.logger(
+                        "VOICE INPUT source_prepare tool=\(tool.rawValue) " +
+                            "result=\(fallbackResult.rawValue) managed=fallback"
+                    )
+                    if fallbackResult == .selected {
+                        waitAndFallback(retryAllowed: false)
+                        return
+                    }
+                    // Fallback prepareInputSource failed; notify here with the actual result so
+                    // completeExplicitActivation's generic .failed callback is not also fired.
+                    self.onSourcePreparationFailure?(tool, fallbackResult)
+                    fallbackFailed = true
+                }
+                let result = self.completeExplicitActivation(
+                    activated: activated, targetInputSourceID: session.targetInputSourceID,
+                    activationShouldContinue: continuing, selectedVoiceTool: tool,
+                    suppressFailureCallback: fallbackFailed)
+                if self.explicitActivationGeneration == generation {
+                    self.explicitVoiceSessionActivationPending = false
+                    if !result { self.explicitVoiceObservationActive = false }
+                }
+                completion(result)
             }
-            completion(result)
         }
+        waitAndFallback(retryAllowed: passiveRetryAllowed)
     }
 
     /// Record successful key submission separately from source activation.
@@ -311,6 +338,24 @@ final class PreferredInputSourceMonitor {
             return true
         }
 
+        if selectedVoiceTool.passiveVoiceSessionActivation && owner == .explicitVoice {
+            // Skip TISSelectInputSource; the IME's global-activation shortcut is expected
+            // to switch the source itself. For explicit voice sessions, the public
+            // beginVoiceSession will call prepareInputSource as a fallback if the IME
+            // does not switch within the activation timeout.
+            logger(
+                "VOICE INPUT source_prepare tool=\(selectedVoiceTool.rawValue) result=passive_watch " +
+                    "managed=\(previousInputSourceID != nil)"
+            )
+            managedInputSourceSession = ManagedInputSourceSession(
+                previousInputSourceID: previousInputSourceID,
+                targetInputSourceID: targetInputSourceID,
+                owners: [owner],
+                activationPending: true
+            )
+            return true
+        }
+
         let result = prepareInputSource(selectedVoiceTool)
         logger(
             "VOICE INPUT source_prepare tool=\(selectedVoiceTool.rawValue) result=\(result.rawValue) " +
@@ -333,7 +378,8 @@ final class PreferredInputSourceMonitor {
         activated: Bool,
         targetInputSourceID: String,
         activationShouldContinue: () -> Bool,
-        selectedVoiceTool: OnboardingVoiceTool
+        selectedVoiceTool: OnboardingVoiceTool,
+        suppressFailureCallback: Bool = false
     ) -> Bool {
         guard activated, activationShouldContinue() else {
             let activationResult = activationShouldContinue()
@@ -354,7 +400,9 @@ final class PreferredInputSourceMonitor {
                 reason: activationResult,
                 owner: .explicitVoice
             )
-            onSourcePreparationFailure?(selectedVoiceTool, .failed)
+            if !suppressFailureCallback {
+                onSourcePreparationFailure?(selectedVoiceTool, .failed)
+            }
             return false
         }
         guard var session = managedInputSourceSession,

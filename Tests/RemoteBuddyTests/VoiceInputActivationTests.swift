@@ -43,6 +43,8 @@ struct VoiceInputActivationTests {
         model.preferredInputSourceMonitor = PreferredInputSourceMonitor(
             voiceTool: { tool }, prepareInputSource: { _ in source = target; return .selected },
             currentInputSourceID: { source }, restoreInputSource: { source = $0; return .selected },
+            // Passive path: the wait closure captures `activate`; the caller drives done().
+            // Source starts as "ABC" so the first wait simulates the IME not switching yet.
             waitForInputSourceActivation: { _, _, active, done in continuing = active; activate = done },
             installMonitor: { _ in nil }, logger: { _ in })
         let clock = ControlledTestScheduler()
@@ -54,8 +56,11 @@ struct VoiceInputActivationTests {
         #expect(continuing?() == false)
         activate?(true)
         #expect(results.isEmpty)
+        // source was never switched by prepareInputSource (passive skips it) or by the IME.
         #expect(source == "ABC")
+        // Second attempt: simulate IME switching the source before activate fires.
         let nextWait = model.prepareIntegratedVoiceInputDestination(completion: { results.append($0) }, schedule: clock.voiceSchedule)
+        source = target
         withExtendedLifetime(nextWait) { activate?(true) }
         #expect(results == [.ready])
         model.preferredInputSourceMonitor.markVoiceTriggerSubmitted()
@@ -74,7 +79,8 @@ struct VoiceInputActivationTests {
         model.preferredInputSourceMonitor = PreferredInputSourceMonitor(
             voiceTool: { .doubao }, prepareInputSource: { _ in source = target; return .selected },
             currentInputSourceID: { source }, restoreInputSource: { source = $0; return .selected },
-            waitForInputSourceActivation: { _, _, _, done in done(true) },
+            // Simulate the IME switching the source itself during the passive wait.
+            waitForInputSourceActivation: { requested, _, _, done in source = requested; done(true) },
             installMonitor: { _ in nil }, logger: { _ in })
         model.voiceTapTrigger = VoiceTapTrigger(selectedMode: { .rightOption }, setKey: { _, down in
             #expect(source == target)
@@ -102,6 +108,7 @@ struct VoiceInputActivationTests {
             currentInputSourceID: { source },
             restoreInputSource: { source = $0; events.append("restore"); return .selected },
             waitForInputSourceActivation: { requested, current, continuing, done in
+                // Passive path: IME switches source itself during the wait window.
                 #expect(current() == "previous")
                 source = requested
                 events.append("activated")
@@ -123,7 +130,9 @@ struct VoiceInputActivationTests {
             #expect(!model.voiceKeyLatch.isHeld)
             #expect(!model.preferredInputSourceMonitor.functionKeyIsPressedForDiagnostics)
         }
-        #expect(events == ["select", "activated", "fn_down", "fn_up", "fn_down", "fn_up"])
+        // "select" (prepareInputSource) is not called on the passive path; the IME
+        // switches the source itself, which is captured as "activated" in the wait callback.
+        #expect(events == ["activated", "fn_down", "fn_up", "fn_down", "fn_up"])
     }
 
     @Test func cancelledActivationCannotSendFnDownOrBlockTheNextSession() throws {
@@ -188,7 +197,8 @@ struct VoiceInputActivationTests {
         model.preferredInputSourceMonitor = PreferredInputSourceMonitor(
             voiceTool: { .doubao }, prepareInputSource: { tool in source = tool.automaticVoiceSessionInputSourceID!; return .selected },
             currentInputSourceID: { source }, restoreInputSource: { source = $0; return .selected },
-            waitForInputSourceActivation: { _, _, continuing, done in done(continuing()) }, installMonitor: { _ in nil }, logger: { _ in })
+            waitForInputSourceActivation: { requested, _, continuing, done in source = requested; done(continuing()) },
+            installMonitor: { _ in nil }, logger: { _ in })
         let started = model.updateVoiceKeyState(streaming: true, forceSoftware: true, owner: .bluetooth,
             keySetter: { _, _ in true })
         #expect(started)
@@ -245,7 +255,7 @@ struct VoiceInputActivationTests {
             prepareInputSource: { _ in source = target; return .selected },
             currentInputSourceID: { source },
             restoreInputSource: { source = $0; restores += 1; return .selected },
-            waitForInputSourceActivation: { _, _, continuing, done in done(continuing()) },
+            waitForInputSourceActivation: { requested, _, continuing, done in source = requested; done(continuing()) },
             installMonitor: { _ in nil }, logger: { _ in })
         #expect(model.updateVoiceKeyState(streaming: true, forceSoftware: true, owner: .bluetooth,
             keySetter: { _, _ in true }))
@@ -268,7 +278,7 @@ struct VoiceInputActivationTests {
                 prepareInputSource: { _ in source = target; return .selected },
                 currentInputSourceID: { source },
                 restoreInputSource: { source = $0; restores += 1; return .selected },
-                waitForInputSourceActivation: { _, _, continuing, done in done(continuing()) },
+                waitForInputSourceActivation: { requested, _, continuing, done in source = requested; done(continuing()) },
                 installMonitor: { _ in nil }, logger: { _ in })
             #expect(beginInlineSession(monitor))
             monitor.markVoiceTriggerSubmitted()
@@ -288,7 +298,7 @@ struct VoiceInputActivationTests {
             prepareInputSource: { _ in source = target; return .selected },
             currentInputSourceID: { source },
             restoreInputSource: { restored.append($0); source = $0; return .selected },
-            waitForInputSourceActivation: { _, _, continuing, done in done(continuing()) },
+            waitForInputSourceActivation: { requested, _, continuing, done in source = requested; done(continuing()) },
             installMonitor: { _ in nil }, logger: { _ in })
         #expect(beginInlineSession(monitor))
         monitor.endVoiceSession()
@@ -301,11 +311,11 @@ struct VoiceInputActivationTests {
         #expect(restored == ["previous"])
     }
 
-    @Test func globalShortcutAndStandaloneToolsNeverSelectWaitForOrRestoreAnInputSource() {
-        #expect(OnboardingVoiceTool.weixin.preferredInputSourceID == "com.tencent.inputmethod.wetype.pinyin")
-        #expect(OnboardingVoiceTool.weixin.requiresInputSourceSelection)
-        for tool in [OnboardingVoiceTool.weixin, .voiceBuddy, .chatterfly, .typeless, .bageshuo, .other] {
+    @Test func standaloneToolsNeverSelectWaitForOrRestoreAnInputSource() {
+        // Tools without automaticVoiceSessionInputSourceID bypass all input-source machinery.
+        for tool in [OnboardingVoiceTool.voiceBuddy, .chatterfly, .typeless, .bageshuo, .other] {
             #expect(tool.automaticVoiceSessionInputSourceID == nil)
+            #expect(!tool.passiveVoiceSessionActivation)
             var sourceOperations = 0
             let monitor = PreferredInputSourceMonitor(voiceTool: { tool },
                 prepareInputSource: { _ in sourceOperations += 1; return .failed },
@@ -323,6 +333,73 @@ struct VoiceInputActivationTests {
         }
     }
 
+    @Test func passiveToolsHaveExpectedInputSourceProperties() {
+        // WeChat IME and Doubao IME both expose a "全局唤起" global-activation option.
+        for tool in [OnboardingVoiceTool.weixin, .doubao] {
+            #expect(tool.automaticVoiceSessionInputSourceID != nil)
+            #expect(tool.passiveVoiceSessionActivation)
+        }
+        #expect(OnboardingVoiceTool.weixin.preferredInputSourceID == "com.tencent.inputmethod.wetype.pinyin")
+        #expect(OnboardingVoiceTool.weixin.requiresInputSourceSelection)
+    }
+
+    /// IME switches the input source itself via global activation — no TISSelectInputSource needed.
+    @Test func passiveToolSucceedsWhenIMESwitchesSourceWithoutFallback() throws {
+        for tool in [OnboardingVoiceTool.weixin, .doubao] {
+            let target = try #require(tool.automaticVoiceSessionInputSourceID)
+            var source = "previous"
+            var prepareCount = 0
+            var restored: [String] = []
+            let monitor = PreferredInputSourceMonitor(voiceTool: { tool },
+                prepareInputSource: { _ in prepareCount += 1; source = target; return .selected },
+                currentInputSourceID: { source },
+                restoreInputSource: { restored.append($0); source = $0; return .selected },
+                waitForInputSourceActivation: { _, _, continuing, done in
+                    // Simulate the IME switching the source itself before the timeout.
+                    source = target; done(continuing())
+                },
+                installMonitor: { _ in nil }, logger: { _ in })
+            #expect(beginInlineSession(monitor))
+            // prepareInputSource must NOT have been called (IME handled the switch).
+            #expect(prepareCount == 0)
+            monitor.markVoiceTriggerSubmitted()
+            monitor.endVoiceSession()
+            monitor.stop()
+            #expect(source == target)
+            #expect(restored.isEmpty)
+        }
+    }
+
+    /// IME did not switch on its own (global activation off) — fallback TISSelectInputSource is called.
+    @Test func passiveToolFallsBackToExplicitSwitchWhenIMEDoesNotSwitch() throws {
+        for tool in [OnboardingVoiceTool.weixin, .doubao] {
+            let target = try #require(tool.automaticVoiceSessionInputSourceID)
+            var source = "previous"
+            var prepareCount = 0
+            var restored: [String] = []
+            var waitCount = 0
+            let monitor = PreferredInputSourceMonitor(voiceTool: { tool },
+                prepareInputSource: { _ in prepareCount += 1; source = target; return .selected },
+                currentInputSourceID: { source },
+                restoreInputSource: { restored.append($0); source = $0; return .selected },
+                waitForInputSourceActivation: { _, current, continuing, done in
+                    waitCount += 1
+                    // First wait: IME did not switch (timeout). Second wait: source already set by fallback.
+                    done(current() == target && continuing())
+                },
+                installMonitor: { _ in nil }, logger: { _ in })
+            #expect(beginInlineSession(monitor))
+            // prepareInputSource must have been called exactly once as the fallback.
+            #expect(prepareCount == 1)
+            #expect(waitCount == 2)
+            monitor.markVoiceTriggerSubmitted()
+            monitor.endVoiceSession()
+            monitor.stop()
+            #expect(source == target)
+            #expect(restored.isEmpty)
+        }
+    }
+
     @Test func automaticInputSourceMethodRetainsSelectionAfterSuccessfulTrigger() throws {
         let tool = OnboardingVoiceTool.doubao
         let target = try #require(tool.automaticVoiceSessionInputSourceID)
@@ -332,7 +409,10 @@ struct VoiceInputActivationTests {
             prepareInputSource: { _ in source = target; return .selected },
             currentInputSourceID: { source },
             restoreInputSource: { restored.append($0); source = $0; return .selected },
-            waitForInputSourceActivation: { _, _, continuing, done in done(continuing()) },
+            waitForInputSourceActivation: { _, current, continuing, done in
+                // Simulate IME switching source passively before timeout.
+                source = target; done(current() == target && continuing())
+            },
             installMonitor: { _ in nil }, logger: { _ in })
         #expect(beginInlineSession(monitor))
         monitor.markVoiceTriggerSubmitted()
@@ -404,7 +484,9 @@ struct VoiceInputActivationTests {
                     if selection == .selected { source = tool.automaticVoiceSessionInputSourceID! }
                     return selection
                 }, currentInputSourceID: { source }, restoreInputSource: { source = $0; return .selected },
-                waitForInputSourceActivation: { _, _, continuing, done in done(continuing()) },
+                waitForInputSourceActivation: { target, current, continuing, done in
+                    done(current() == target && continuing())
+                },
                 installMonitor: { _ in nil }, logger: { _ in })
             let started = model.updateVoiceKeyState(streaming: true, forceSoftware: true, owner: .bluetooth,
                 keySetter: { _, _ in posts += 1; return false })
@@ -442,7 +524,8 @@ struct VoiceInputActivationTests {
         model.preferredInputSourceMonitor = PreferredInputSourceMonitor(
             voiceTool: { .doubao }, prepareInputSource: { tool in source = tool.automaticVoiceSessionInputSourceID!; return .selected },
             currentInputSourceID: { source }, restoreInputSource: { source = $0; return .selected },
-            waitForInputSourceActivation: { _, _, continuing, done in done(continuing()) }, installMonitor: { _ in nil }, logger: { _ in })
+            waitForInputSourceActivation: { requested, _, continuing, done in source = requested; done(continuing()) },
+            installMonitor: { _ in nil }, logger: { _ in })
         let setter: (VoiceKeyMode, Bool) -> Bool = { _, down in posts.append(down); return true }
         let first = model.updateVoiceKeyState(streaming: true, forceSoftware: true, owner: .bluetooth, keySetter: setter)
         let second = model.updateVoiceKeyState(streaming: true, forceSoftware: true, owner: .chromecast, keySetter: setter)
@@ -665,6 +748,11 @@ struct VoiceInputActivationTests {
 
         var readyResults: [Bool] = []
         monitor.beginVoiceSession { readyResults.append($0) }
+        // Passive path: first wait times out → fallback prepareInputSource → second wait registered.
+        // finishWait now points to the second wait's done callback.
+        finishWait?(false)
+        #expect(readyResults.isEmpty)   // second wait still pending
+        // Finish the second wait with failure — now the whole session fails.
         finishWait?(false)
         #expect(readyResults == [false])
         #expect(failures.count == 1 && failures[0].0 == .doubao && failures[0].1 == .failed)
@@ -676,6 +764,8 @@ struct VoiceInputActivationTests {
         finishWait = nil
         monitor.beginVoiceSession { readyResults.append($0) }
         monitor.endVoiceSession()
+        // After cancellation the first wait's done fires; the passive retry is suppressed
+        // because continuing() is false, so no second wait is started.
         finishWait?(false)
         #expect(readyResults == [false])
         #expect(failures.isEmpty)

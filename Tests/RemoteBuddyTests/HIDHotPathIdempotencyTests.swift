@@ -94,7 +94,7 @@ struct HIDHotPathIdempotencyTests {
     ) -> PreferredInputSourceMonitor {
         PreferredInputSourceMonitor(
             voiceTool: { [weak settings] in settings?.onboardingVoiceTool ?? .unselected },
-            prepareInputSource: { _ in .selected },
+            prepareInputSource: { _ in .failed },
             currentInputSourceID: { "test.input.source" },
             restoreInputSource: { _ in .selected },
             waitForInputSourceActivation: { _, _, _, done in

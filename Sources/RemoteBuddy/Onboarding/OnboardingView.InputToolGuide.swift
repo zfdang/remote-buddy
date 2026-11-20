@@ -84,6 +84,10 @@ extension OnboardingView {
                 inputSourceSwitchStatus(for: tool)
             }
 
+            if tool.passiveVoiceSessionActivation {
+                globalShortcutNotice(for: tool)
+            }
+
             LazyVGrid(
                 columns: [
                     GridItem(.flexible(), spacing: 8, alignment: .top),
@@ -237,6 +241,32 @@ extension OnboardingView {
         }
         .padding(12)
         .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func globalShortcutNotice(for tool: OnboardingVoiceTool) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "exclamationmark.circle.fill")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(Color.accentColor)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(localization.text("onboarding.voice_tool.global_shortcut.title"))
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.primary)
+
+                Text(localization.text("onboarding.voice_tool.global_shortcut.\(tool.rawValue)"))
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.accentColor.opacity(0.07), in: RoundedRectangle(cornerRadius: 10))
+        .overlay {
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color.accentColor.opacity(0.18), lineWidth: 1)
+        }
     }
 
     func onboardingGuideScreenshot(resourceName: String) -> some View {

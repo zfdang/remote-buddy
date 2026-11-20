@@ -188,6 +188,32 @@
         <p><strong>Takeaway Tip:</strong> Set your input tool software to "Hold Mode" (Hold to Talk), leave Remote Buddy's default setting as <strong>"Tap mode: Off"</strong> (do not enable the Tap mode toggle in the wizard), and then hold or tap your physical remote however you please—Remote Buddy handles the translation seamlessly!</p>
       </div>
     </details>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">What does the "\"Global Shortcut\" Enabled" toggle under WeChat or Doubao Input Method do?</span></summary>
+      <div class="troubleshooting-body">
+        <p><strong>Background &amp; Default Behavior:</strong> Both WeChat Input Method and Doubao Input Method register as macOS Input Sources. By default, if you are currently using the default ABC (English) layout or another input method, Remote Buddy proactively calls the macOS Text Input Services (TIS) API to switch the active input source to WeChat/Doubao upon pressing the voice button, and restores your previous input source after dictation finishes.</p>
+        <p><strong>Why Was This Option Introduced?</strong><br>
+        In focus-sensitive applications—such as <strong>Antigravity, VS Code, terminal emulators, or code editors</strong>—system-level input source switching can occasionally cause the active text cursor to <strong>lose focus</strong> or introduce a brief UI stutter.<br>
+        Fortunately, both modern input methods have their own native background daemon capable of intercepting hotkeys system-wide:
+        </p>
+        <ul>
+          <li><strong>WeChat Input Method:</strong> Supports "Global shortcut" (快捷键全局生效) in its preferences.</li>
+          <li><strong>Doubao Input Method:</strong> Supports "Global voice activation" (全局唤起语音) in its preferences.</li>
+        </ul>
+        <p><strong>What This Toggle Does:</strong></p>
+        <ol>
+          <li><strong>Bypasses Input Source Switching to Prevent Focus Loss:</strong> When enabled in Remote Buddy's "Input Tools" settings, Buddy <strong>completely skips proactive macOS input source switching</strong> and dispatches the voice hotkey directly. This permanently eliminates cursor focus loss in Antigravity, VS Code, and similar editors.</li>
+          <li><strong>Zero-Latency Instant Trigger:</strong> Removing the macOS input source switch reduces latency, making speech recognition start immediately without hitching.</li>
+        </ol>
+        <p><strong>Important Prerequisite:</strong><br>
+        Before enabling this option in Remote Buddy, <strong>make sure the corresponding global feature is enabled in your input tool's own preferences</strong>:<br>
+        • <strong>WeChat Input Method:</strong> Open WeChat Keyboard Preferences → Shortcuts → check <strong>"Global shortcut"</strong>.<br>
+        • <strong>Doubao Input Method:</strong> Open Doubao Preferences → Voice Input → enable <strong>"Global voice activation"</strong>.<br>
+        <em>Note: If the input method's internal global daemon is turned off, enabling this bypass toggle in Remote Buddy may prevent voice invocation when typing in an English (ABC) layout.</em>
+        </p>
+      </div>
+    </details>
   </section>
 
   <!-- 5. Permissions, Security & Troubleshooting -->

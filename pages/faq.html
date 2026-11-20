@@ -188,6 +188,32 @@
         <p><strong>一句话配置技巧：</strong>在第三方输入工具软件里尽量设为「长按模式（按住说话）」，而在 Remote Buddy 中保持默认的<strong>「点按模式：已关闭」</strong>（即向导中不要开启“点按触发模式”开关）；而在物理遥控器上，你想按住说就按住说、想免提点按就免提点按，中间转换全由 Remote Buddy 自动搞定！</p>
       </div>
     </details>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">微信输入法和豆包输入法下的「已开启“快捷键全局生效”」选项是干什么用的？</span></summary>
+      <div class="troubleshooting-body">
+        <p><strong>背景与默认行为：</strong>微信输入法和豆包输入法在 macOS 上属于系统输入源（Input Source）。在默认情况下，如果你当前处于系统自带英文（ABC）或其它输入法，按下遥控器语音键时，Remote Buddy 会先调用系统接口将输入法临时切换为微信输入法或豆包，触发语音输入，录音结束后再切回原输入法。</p>
+        <p><strong>为什么提供该选项？</strong><br>
+        在某些对焦点极其敏感的应用（例如 <strong>Antigravity、VS Code、终端（Terminal）或部分代码编辑器</strong>）中，系统层面的输入法切换（TIS 切换）可能导致正在编辑的输入框瞬间<strong>丢失光标焦点</strong>，或者引起轻微界面卡顿。<br>
+        而微信输入法和豆包输入法客户端自身都支持后台全局监听唤起：
+        </p>
+        <ul>
+          <li><strong>微信输入法：</strong>在设置中支持「快捷键全局生效」（无需切换输入法，按下快捷键全局弹出语音浮窗）。</li>
+          <li><strong>豆包输入法：</strong>在设置中支持「全局唤起语音」。</li>
+        </ul>
+        <p><strong>选项的作用与效果：</strong></p>
+        <ol>
+          <li><strong>跳过输入法切换，彻底杜绝丢焦：</strong>在 Remote Buddy 的「输入法集成」中开启该开关后，Remote Buddy 将<strong>完全不再主动切换 macOS 系统输入法</strong>，直接向系统派发语音快捷键。这彻底解决了 Antigravity、VS Code 等编辑器中的光标失焦问题。</li>
+          <li><strong>零延迟极速唤起：</strong>由于省去了系统输入法上下文切换的等待时间，语音唤起更灵敏、零卡顿。</li>
+        </ol>
+        <p><strong>重要使用前提：</strong><br>
+        开启此选项前，<strong>务必确保已在对应输入法客户端内部开启了全局快捷键</strong>：<br>
+        • <strong>微信输入法：</strong>打开微信键盘设置 → 快捷键 → 勾选<strong>「快捷键全局生效」</strong>。<br>
+        • <strong>豆包输入法：</strong>打开豆包输入法设置 → 语音输入 → 开启<strong>「全局唤起语音」</strong>。<br>
+        <em>注意：若输入法本身未开启全局功能，而在 Remote Buddy 中开启了此选项，当系统处于英文 ABC 时按遥控器可能无法呼出语音。</em>
+        </p>
+      </div>
+    </details>
   </section>
 
   <!-- 五、权限、安全与疑难排障 -->

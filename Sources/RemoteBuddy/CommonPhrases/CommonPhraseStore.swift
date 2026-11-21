@@ -2,20 +2,49 @@ import Combine
 import Foundation
 
 struct CommonPhrase: Codable, Equatable, Identifiable {
+    nonisolated static let maximumTextLength = 4_000
+    nonisolated static let maximumLabelLength = 80
+
     let id: String
     var text: String
     var label: String
 
+    /// The authored text to insert during pasteboard expansion.
+    /// Retained as a semantic alias for `text` to preserve insertion call-site contracts
+    /// without performing automatic boundary trimming.
     var insertionText: String { text }
     var isValid: Bool {
         !id.isEmpty && !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
         !label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-        text.count <= 4_000 && label.count <= 80
+        text.count <= Self.maximumTextLength && label.count <= Self.maximumLabelLength
+    }
+
+    enum BoundaryWhitespaceState: Equatable {
+        case none
+        case leadingOnly
+        case trailingOnly
+        case both
+    }
+
+    static func boundaryWhitespaceState(for text: String) -> BoundaryWhitespaceState {
+        let hasLeading = text.first?.isWhitespace == true
+        let hasTrailing = text.last?.isWhitespace == true
+        switch (hasLeading, hasTrailing) {
+        case (true, true): return .both
+        case (true, false): return .leadingOnly
+        case (false, true): return .trailingOnly
+        case (false, false): return .none
+        }
     }
 
     static func hasTrailingInvisibleCharacters(_ text: String) -> Bool {
         guard let last = text.last else { return false }
         return last.isWhitespace
+    }
+
+    static func hasLeadingInvisibleCharacters(_ text: String) -> Bool {
+        guard let first = text.first else { return false }
+        return first.isWhitespace
     }
 }
 

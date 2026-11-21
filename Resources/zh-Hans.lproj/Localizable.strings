@@ -1085,9 +1085,11 @@
 
 "button_mapping.action.clear" = "清除设置";
 
-"common_phrases.character_count" = "%d 个字符";
-"common_phrases.character_count_single" = "%d 个字符";
+"common_phrases.character_count" = "%d/%d 个字符";
+"common_phrases.character_count_single" = "%d/%d 个字符";
 "common_phrases.trailing_invisible_hint" = "末尾包含不可见字符（空格或制表符等，已保留原样输入）";
+"common_phrases.leading_invisible_hint" = "开头包含不可见字符（空格或制表符等，已保留原样输入）";
+"common_phrases.both_invisible_hint" = "首尾均包含不可见字符（空格或制表符等，已保留原样输入）";
 
 "connection.device.firmware" = "固件";
 "connection.device.model" = "型号";

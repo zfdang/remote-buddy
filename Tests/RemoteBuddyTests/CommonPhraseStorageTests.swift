@@ -22,15 +22,69 @@ struct CommonPhraseStorageTests {
         try body(store, defaults, data)
     }
 
-    @Test func phraseTextPreservesAuthoredContentAndDetectsTrailingInvisibleCharacters() {
+    @Test func phraseTextPreservesAuthoredContentAndDetectsBoundaryInvisibleCharacters() {
         let phrase = CommonPhrase(id: "user-trailing", text: "/handoff Q1方案 ", label: "标签")
         #expect(phrase.insertionText == "/handoff Q1方案 ")
+        #expect(CommonPhrase.boundaryWhitespaceState(for: phrase.text) == .trailingOnly)
+        #expect(CommonPhrase.boundaryWhitespaceState(for: " /handoff") == .leadingOnly)
+        #expect(CommonPhrase.boundaryWhitespaceState(for: " /handoff ") == .both)
+        #expect(CommonPhrase.boundaryWhitespaceState(for: "常规文本") == .none)
+        #expect(CommonPhrase.boundaryWhitespaceState(for: "") == .none)
+
+        // Unicode whitespace variants: tab, ideographic full-width space, non-breaking space, newline
+        #expect(CommonPhrase.boundaryWhitespaceState(for: "\t命令") == .leadingOnly)
+        #expect(CommonPhrase.boundaryWhitespaceState(for: "命令\u{3000}") == .trailingOnly)
+        #expect(CommonPhrase.boundaryWhitespaceState(for: "\u{00A0}命令\n") == .both)
+
         #expect(CommonPhrase.hasTrailingInvisibleCharacters(phrase.text))
-        #expect(CommonPhrase.hasTrailingInvisibleCharacters("文本\t"))
-        #expect(CommonPhrase.hasTrailingInvisibleCharacters("文本　"))
-        #expect(CommonPhrase.hasTrailingInvisibleCharacters("文本\n"))
-        #expect(!CommonPhrase.hasTrailingInvisibleCharacters("文本"))
-        #expect(!CommonPhrase.hasTrailingInvisibleCharacters(""))
+        #expect(CommonPhrase.hasLeadingInvisibleCharacters(" /handoff"))
+        #expect(!CommonPhrase.hasLeadingInvisibleCharacters("命令"))
+        #expect(!CommonPhrase.hasTrailingInvisibleCharacters("命令"))
+    }
+
+    @Test func phraseValidityEnforcesLengthBounds() {
+        let exactMaxText = String(repeating: "a", count: CommonPhrase.maximumTextLength)
+        let exactMaxLabel = String(repeating: "b", count: CommonPhrase.maximumLabelLength)
+        let validPhrase = CommonPhrase(id: "user-limit", text: exactMaxText, label: exactMaxLabel)
+        #expect(validPhrase.isValid)
+
+        let overLimitText = CommonPhrase(id: "user-over-text", text: exactMaxText + "x", label: "标签")
+        #expect(!overLimitText.isValid)
+
+        let overLimitLabel = CommonPhrase(id: "user-over-label", text: "有效文本", label: exactMaxLabel + "y")
+        #expect(!overLimitLabel.isValid)
+    }
+
+    @Test func characterCountAndBoundaryFeedbackLocalizationKeysResolveInBothLanguages() throws {
+        let name = "locale-phrase-feedback-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let store = LocalizationStore(settings: AppSettings(defaults: defaults))
+
+        for (lang, expectedCountSingular, expectedCountPlural, trailingKeySnippet, leadingKeySnippet, bothKeySnippet) in [
+            (AppLanguage.simplifiedChinese, "1/4,000 个字符", "10/4,000 个字符", "末尾包含不可见字符", "开头包含不可见字符", "首尾均包含不可见字符"),
+            (AppLanguage.english, "1/4,000 character", "10/4,000 characters", "Ends with invisible characters", "Starts with invisible characters", "Starts and ends with invisible characters")
+        ] {
+            store.select(lang)
+            let locale = store.locale
+
+            let countSingleFormat = store.text("common_phrases.character_count_single")
+            let countPluralFormat = store.text("common_phrases.character_count")
+            let trailingHint = store.text("common_phrases.trailing_invisible_hint")
+            let leadingHint = store.text("common_phrases.leading_invisible_hint")
+            let bothHint = store.text("common_phrases.both_invisible_hint")
+
+            #expect(countSingleFormat != "common_phrases.character_count_single")
+            #expect(countPluralFormat != "common_phrases.character_count")
+            #expect(trailingHint.contains(trailingKeySnippet))
+            #expect(leadingHint.contains(leadingKeySnippet))
+            #expect(bothHint.contains(bothKeySnippet))
+
+            let formattedSingle = String(format: countSingleFormat, locale: locale, 1, CommonPhrase.maximumTextLength)
+            let formattedPlural = String(format: countPluralFormat, locale: locale, 10, CommonPhrase.maximumTextLength)
+            #expect(formattedSingle == expectedCountSingular)
+            #expect(formattedPlural == expectedCountPlural)
+        }
     }
 
     @Test func savingPreservesAuthoredWhitespaceAndReloads() throws {

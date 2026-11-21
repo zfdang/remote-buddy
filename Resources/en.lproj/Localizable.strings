@@ -1083,9 +1083,11 @@
 
 "button_mapping.action.clear" = "Clear Assignment";
 
-"common_phrases.character_count" = "%d characters";
-"common_phrases.character_count_single" = "%d character";
-"common_phrases.trailing_invisible_hint" = "Ends with invisible characters (trailing space or tab, preserved as-is)";
+"common_phrases.character_count" = "%d/%d characters";
+"common_phrases.character_count_single" = "%d/%d character";
+"common_phrases.trailing_invisible_hint" = "Ends with invisible characters (trailing space, tab, etc., preserved as-is)";
+"common_phrases.leading_invisible_hint" = "Starts with invisible characters (leading space, tab, etc., preserved as-is)";
+"common_phrases.both_invisible_hint" = "Starts and ends with invisible characters (spaces, tabs, etc., preserved as-is)";
 
 "connection.device.firmware" = "Firmware";
 "connection.device.model" = "Model";

@@ -26,7 +26,10 @@ struct CommonPhraseSettingsView: View {
     @State private var selectionOperation: UInt64 = 0
     private var canSave: Bool {
         !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && !shortLabel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && store.isAvailable
+            && !shortLabel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && text.count <= CommonPhrase.maximumTextLength
+            && shortLabel.count <= CommonPhrase.maximumLabelLength
+            && store.isAvailable
     }
     private var filteredPhrases: [CommonPhrase] {
         store.archive.entries.filter {
@@ -282,24 +285,44 @@ struct CommonPhraseSettingsView: View {
             .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.primary.opacity(0.09)))
     }
 
-    private var characterCountText: String {
+    private func characterCountText(for text: String) -> String {
         let key = text.count == 1 ? "common_phrases.character_count_single" : "common_phrases.character_count"
-        return String(format: localization.text(key), text.count)
+        return String(format: localization.text(key), locale: localization.locale, text.count, CommonPhrase.maximumTextLength)
     }
 
     @ViewBuilder private func textFeedback(for text: String) -> some View {
+        let isOverLimit = text.count > CommonPhrase.maximumTextLength
+        let boundaryState = CommonPhrase.boundaryWhitespaceState(for: text)
+
         HStack(alignment: .center, spacing: 10) {
-            Text(characterCountText)
+            Text(characterCountText(for: text))
                 .font(.system(size: 12))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(isOverLimit ? Color.red : Color.secondary)
                 .accessibilityIdentifier("common-phrases-character-count")
-            if CommonPhrase.hasTrailingInvisibleCharacters(text) {
+
+            switch boundaryState {
+            case .trailingOnly:
                 Label(localization.text("common_phrases.trailing_invisible_hint"), systemImage: "info.circle")
                     .font(.system(size: 12))
                     .foregroundStyle(.orange)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("common-phrases-trailing-invisible-hint")
+            case .leadingOnly:
+                Label(localization.text("common_phrases.leading_invisible_hint"), systemImage: "info.circle")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("common-phrases-leading-invisible-hint")
+            case .both:
+                Label(localization.text("common_phrases.both_invisible_hint"), systemImage: "info.circle")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("common-phrases-both-invisible-hint")
+            case .none:
+                EmptyView()
             }
+
             Spacer(minLength: 0)
         }
     }

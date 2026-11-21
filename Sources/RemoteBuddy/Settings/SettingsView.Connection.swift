@@ -8,14 +8,12 @@ extension SettingsView {
     var connectionPage: some View {
         settingsPage {
             HStack(spacing: 16) {
-                HStack(alignment: .firstTextBaseline, spacing: 12) {
-                    PageHeader(title: localization.text("connection.page.title"))
-                    Link(destination: AppLinks.devices(for: localization.locale)) {
-                        Text(localization.text("connection.action.device_comparison"))
-                            .font(.system(size: 13))
-                    }
-                    .accessibilityIdentifier("connection.device-comparison-link")
-                }
+                PageHeader(
+                    title: localization.text("connection.page.title"),
+                    linkTitle: localization.text("connection.action.device_comparison"),
+                    linkDestination: AppLinks.devices(for: localization.locale),
+                    linkAccessibilityIdentifier: "connection.device-comparison-link"
+                )
                 Spacer()
                 Button {
                     SettingsPageBehavior.beginDeviceSetup(settings: settings)

@@ -956,7 +956,7 @@
 "settings.driver.missing" = "未检测到兼容麦克风";
 "settings.driver.reload_help" = "如果安装驱动后仍未检测到 Remote Buddy Mic，请重启 Mac，或查看安装说明。";
 "settings.integration.title" = "输入法与语音工具集成";
-"settings.integration.faq_link" = "语音触发与按键模式 (FAQ) ↗";
+"settings.integration.faq_link" = "输入法生态与模式转换 (FAQ) ↗";
 "settings.integration.introduction" = "查看当前生效的语音触发方式与输入工具；如需更换或测试，请通过向导完成。";
 "settings.integration.current" = "当前集成工具";
 "settings.integration.other_title" = "其他工具";
@@ -1163,6 +1163,7 @@
 
 // Foreground application integration at voice start
 "application_integration.title" = "应用集成";
+"application_integration.faq_link" = "应用集成与核心作用 (FAQ) ↗";
 "application_integration.introduction" = "开始语音输入时，优先使用你选中的输入框；如果还没选中，就帮你定位到当前应用的对话输入框。";
 "application_integration.supported" = "支持的应用";
 "application_integration.enable_all" = "全部开启";

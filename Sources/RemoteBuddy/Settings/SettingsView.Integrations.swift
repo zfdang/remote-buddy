@@ -7,14 +7,12 @@ import UniformTypeIdentifiers
 extension SettingsView {
     var integrationPage: some View {
         settingsPage {
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
-                PageHeader(title: localization.text("settings.integration.title"))
-                Link(destination: AppLinks.voiceButtonsFAQ(for: localization.locale)) {
-                    Text(localization.text("settings.integration.faq_link"))
-                        .font(.system(size: 13))
-                }
-                .accessibilityIdentifier("integration.faq-link")
-            }
+            PageHeader(
+                title: localization.text("settings.integration.title"),
+                linkTitle: localization.text("settings.integration.faq_link"),
+                linkDestination: AppLinks.inputMethodsFAQ(for: localization.locale),
+                linkAccessibilityIdentifier: "integration.faq-link"
+            )
         } content: {
             VStack(alignment: .leading, spacing: 14) {
                 Text(localization.text("settings.integration.introduction"))

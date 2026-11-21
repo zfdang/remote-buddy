@@ -3,7 +3,12 @@ import SwiftUI
 extension SettingsView {
     var applicationIntegrationPage: some View {
         settingsPage {
-            PageHeader(title: localization.text("application_integration.title"))
+            PageHeader(
+                title: localization.text("application_integration.title"),
+                linkTitle: localization.text("application_integration.faq_link"),
+                linkDestination: AppLinks.applicationIntegrationFAQ(for: localization.locale),
+                linkAccessibilityIdentifier: "application-integration.faq-link"
+            )
         } content: {
             VStack(alignment: .leading, spacing: 14) {
                 Text(localization.text("application_integration.introduction"))

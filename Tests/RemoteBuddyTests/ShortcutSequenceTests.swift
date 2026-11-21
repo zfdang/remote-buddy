@@ -39,7 +39,7 @@ struct ShortcutSequenceTests {
     }
 
     @Test(arguments: [ButtonAction.commandReturn, .shiftReturn, .commandCopy, .commandPaste,
-        .commandClose, .commandQuit, .commandCut, .commandSelectAll, .commandUndo,
+        .commandRefresh, .commandClose, .commandQuit, .commandCut, .commandSelectAll, .commandUndo,
         .commandRedo, .commandFind, .commandSave, .commandDelete, .showDesktop,
         .missionControl, .notificationCenter, .spotlight, .spaceLeft, .spaceRight,
         .lockScreen, .screenshot])
@@ -64,6 +64,7 @@ struct ShortcutSequenceTests {
             (.commandCut, 7, .maskCommand), (.commandSelectAll, 0, .maskCommand),
             (.commandUndo, 6, .maskCommand), (.commandRedo, 6, [.maskCommand, .maskShift]),
             (.commandFind, 3, .maskCommand), (.commandSave, 1, .maskCommand),
+            (.commandRefresh, 15, .maskCommand),
             (.commandDelete, 51, .maskCommand), (.showDesktop, 103, .maskSecondaryFn),
             (.missionControl, 126, .maskControl), (.notificationCenter, 45, .maskSecondaryFn),
             (.spotlight, 49, .maskCommand), (.spaceLeft, 123, .maskControl),

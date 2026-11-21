@@ -189,6 +189,7 @@
 "action.command_redo" = "重做";
 "action.command_find" = "查找";
 "action.command_save" = "保存";
+"action.command_refresh" = "刷新";
 "action.command_close" = "关闭窗口";
 "action.command_quit" = "退出应用";
 "action.app_switcher" = "切换应用";

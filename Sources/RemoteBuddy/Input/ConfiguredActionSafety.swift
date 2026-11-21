@@ -9,7 +9,7 @@ extension ButtonAction {
              .commandUndo, .commandRedo, .commandFind, .commandSave,
              .commandDelete, .deleteBackward, .customShortcut:
             return true
-        case .disabled, .escape, .commandClose, .commandQuit,
+        case .disabled, .escape, .commandRefresh, .commandClose, .commandQuit,
              .arrowUp, .arrowDown, .arrowLeft, .arrowRight, .directPassthrough, .scrollUp, .scrollDown,
              .appSwitcher, .missionControl, .showDesktop, .notificationCenter, .spotlight,
              .spaceLeft, .spaceRight, .lockScreen, .screenshot, .contextMenu, .focusInput,

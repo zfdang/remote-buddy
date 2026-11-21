@@ -51,6 +51,7 @@ struct ButtonActionCatalogTests {
         #expect(ButtonAction.lockScreen.detailedDisplayName(using: store) == "锁定屏幕 (⌃⌘Q)")
         #expect(ButtonAction.screenshot.detailedDisplayName(using: store) == "截屏 (⇧⌘5)")
         #expect(ButtonAction.commandCopy.detailedDisplayName(using: store) == "复制 (⌘C)")
+        #expect(ButtonAction.commandRefresh.detailedDisplayName(using: store) == "刷新 (⌘R)")
         #expect(ButtonAction.space.detailedDisplayName(using: store) == "空格 (Space)")
         #expect(ButtonAction.tab.detailedDisplayName(using: store) == "切换焦点 (⇥)")
 
@@ -59,6 +60,7 @@ struct ButtonActionCatalogTests {
         #expect(ButtonAction.missionControl.detailedDisplayName(using: store) == "Mission Control (⌃↑)")
         #expect(ButtonAction.notificationCenter.detailedDisplayName(using: store) == "Notification Center (fn N)")
         #expect(ButtonAction.commandCopy.detailedDisplayName(using: store) == "Copy (⌘C)")
+        #expect(ButtonAction.commandRefresh.detailedDisplayName(using: store) == "Reload (⌘R)")
 
         // Non-shortcut actions should not display a shortcut badge
         #expect(ButtonAction.scrollUp.shortcutDisplayLabel == nil)
@@ -89,7 +91,7 @@ struct ButtonActionCatalogTests {
         #expect(ButtonAction.space.requiresNonSecureInput == true)
         #expect(ButtonAction.tab.requiresNonSecureInput == true)
         for action: ButtonAction in [
-            .missionControl, .notificationCenter, .spotlight, .spaceLeft, .spaceRight,
+            .commandRefresh, .missionControl, .notificationCenter, .spotlight, .spaceLeft, .spaceRight,
             .lockScreen, .screenshot, .brightnessUp, .brightnessDown,
             .openDeepSeekHarness, .openWorkBuddy, .openChatGPT, .openVSCode,
             .openGhostty, .openITerm2, .openTerminal, .openFeishu, .openDingTalk,

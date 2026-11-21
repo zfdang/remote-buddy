@@ -43,6 +43,40 @@
   <div class="download-note" style="margin-top:20px">
     <strong>安装提示：</strong>不知道自己的 Mac 是哪种芯片？点击屏幕左上角  →“关于本机”：芯片显示 M1 / M2 / M3 / M4 等请选择 <strong>Apple Silicon (arm64)</strong>，处理器显示 Intel Core 请选择 <strong>Intel</strong>。当前安装包未经过 Apple 公证，如遇系统拦截可在“系统设置 → 隐私与安全性”中允许打开。
   </div>
+
+  <div class="downloads-head" style="margin-top:52px">
+    <p class="eyebrow">多平台支持 · 独立项目</p>
+    <h2 class="section-title">Remote Buddy for Windows（早期预览版）</h2>
+    <p class="lead-sub">基于原生 .NET 10 LTS (C# / WPF) 构建，免安装运行库，解压即用。</p>
+  </div>
+
+  <div class="downloads-grid">
+    <article class="download-card is-wide">
+      <div class="download-card-body">
+        <div class="companion-head">
+          <h2 style="margin:0">Windows 64 位绿色版</h2>
+          <span class="download-badge">早期预览 · 功能受限</span>
+        </div>
+        <p>通过 Windows 电脑内置蓝牙直连遥控器，按住说话触发输入法（微信输入法 Ctrl+F5）或系统语音听写（Win+H）。纯本地运行，不采集隐私。</p>
+        <div class="download-meta">
+          <span><code>Remote_Buddy_Windows_*_x64.zip</code></span>
+          <span>x64 免安装 Zip 压缩包 (~67 MB)</span>
+          <span>Windows 10 / 11 (64位)</span>
+        </div>
+        <div class="download-note" style="margin-top:12px; background:#fbfcfe; font-size:13px">
+          <strong>⚠️ 当前功能受限与配置须知：</strong>
+          <ul style="margin:6px 0 0; padding-left:18px">
+            <li><strong>需外置虚拟麦克风：</strong>Windows 版未内置内核声卡驱动，运行前请先前往官网安装微软认证的 <a class="text-link" href="https://vb-audio.com/Cable/" target="_blank" rel="noopener">VB-CABLE Driver ↗</a>。</li>
+            <li><strong>按键与型号支持：</strong>已实机验证小米蓝牙遥控器 2 Pro（RC003）的语音开麦与方向、确认、主页、菜单、电源键；<strong>返回键与音量加减在 Windows 标准通道下暂未支持</strong>。Chromecast G9N9N 等其他型号尚在适配中。</li>
+          </ul>
+        </div>
+      </div>
+      <div class="download-actions">
+        <a class="button primary" href="https://github.com/zfdang/remote-buddy-windows/releases/latest" target="_blank" rel="noopener">前往 GitHub Releases 下载 Windows 版 <span>↗</span></a>
+        <a class="button secondary" href="https://github.com/zfdang/remote-buddy-windows" target="_blank" rel="noopener">查看 Windows 源码仓库 ↗</a>
+      </div>
+    </article>
+  </div>
 </main>
 
 <footer class="wrap">
@@ -50,7 +84,8 @@
   <div class="footer-links">
     <a href="../index.html">返回首页</a>
     <a href="../device.html">支持设备</a>
-    <a href="https://github.com/zfdang/remote-buddy/releases">GitHub Releases</a>
+    <a href="https://github.com/zfdang/remote-buddy/releases">macOS Releases</a>
+    <a href="https://github.com/zfdang/remote-buddy-windows">Windows 预览版 ↗</a>
     <a href="https://github.com/zfdang/remote-buddy/blob/main/README.md">项目文档</a>
     <a href="https://github.com/zfdang/remote-buddy/issues">反馈</a>
     <a href="https://github.com/zfdang/remote-buddy/blob/main/LICENSE">GPL-3.0-only</a>

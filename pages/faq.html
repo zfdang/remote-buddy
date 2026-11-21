@@ -62,6 +62,21 @@
     </details>
 
     <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">Remote Buddy 有 Windows 版本吗？与 macOS 版有什么区别？</span></summary>
+      <div class="troubleshooting-body">
+        <p><strong>有。Remote Buddy 拥有独立的 Windows 开源版本，但目前处于早期预览阶段，功能相对受限。</strong></p>
+        <p>Windows 版本代码托管于独立的开源仓库：<a class="text-link" href="https://github.com/zfdang/remote-buddy-windows">zfdang/remote-buddy-windows ↗</a>。两个版本核心区别如下：</p>
+        <ol>
+          <li><strong>技术栈与架构：</strong>macOS 版使用原生 Swift / AppKit 开发，针对 CoreAudio 与 IOHID 系统深度优化；Windows 版采用原生 <strong>C# / .NET 10 LTS (WPF)</strong> 构建，单文件绿色免安装发布。</li>
+          <li><strong>麦克风驱动：</strong>macOS 版内嵌了自主研发的 <code>Remote Buddy Mic</code> 虚拟麦克风驱动，一键安装无需第三方工具；Windows 版因驱动签名机制，<strong>必须由用户独立安装微软 WHQL 认证的第三方虚拟声卡 <a class="text-link" href="https://vb-audio.com/Cable/" target="_blank" rel="noopener">VB-CABLE Driver ↗</a></strong>。</li>
+          <li><strong>按键与型号支持：</strong>macOS 版支持 G9N9N 14 键、小米 2 / 2 Pro 全按键及 T1 飞鼠多键自定义；Windows 版目前主要在<strong>小米蓝牙遥控器 2 Pro（RC003）</strong>上完成了基础开麦与方向、确认、主页、菜单、电源键的实机验证，<strong>返回键与音量加减在 Windows 标准通道下暂未支持</strong>；G9N9N 等其他型号尚在硬件验收中。</li>
+          <li><strong>输入法适配：</strong>Windows 版目前主要实机验证了微信输入法（配置快捷键 <code>Ctrl + F5</code>）与 Windows 11 自带语音听写（<code>Win + H</code>）。</li>
+        </ol>
+        <p>如果你使用的是 Windows 电脑且希望尝鲜通过遥控器进行语音输入，可前往 <a class="text-link" href="https://github.com/zfdang/remote-buddy-windows/releases/latest">Windows Releases 页面 ↗</a> 下载体验。</p>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
       <summary><span class="troubleshooting-question">为什么有的遥控器不支持点按免提模式，而只能按住说话？</span></summary>
       <div class="troubleshooting-body">
         <p><strong>根本原因在于遥控器内部的硬件电路与蓝牙音频传输协议设计：</strong></p>
@@ -334,6 +349,7 @@
     <a href="downloads/index.html">官网下载</a>
     <a href="device.html">支持设备</a>
     <a href="faq.html">常见问答 (FAQ)</a>
+    <a href="https://github.com/zfdang/remote-buddy-windows">Windows 预览版 ↗</a>
     <a href="https://github.com/zfdang/remote-buddy/blob/main/README.md">GitHub 源码</a>
     <a href="https://github.com/zfdang/remote-buddy/blob/main/LICENSE">GPL-3.0-only</a>
   </div>

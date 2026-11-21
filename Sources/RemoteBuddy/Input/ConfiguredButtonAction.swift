@@ -327,12 +327,8 @@ enum ButtonAction: String, CaseIterable, Codable, Identifiable {
             return .applications
         case .customShortcut, .repeatSingleClick:
             return .custom
-        case .openRemoteBuddy, .openCodex, .openClaude, .openChatGPT, .openDeepSeekHarness,
-             .openWorkBuddy, .openCmux, .openCursor, .openVSCode, .openXcode, .openZed,
-             .openGhostty, .openITerm2, .openTerminal, .openChrome, .openSafari, .openWeChat,
-             .openWeCom, .openFeishu, .openDingTalk, .openSlack, .openNeteaseMusic,
-             .openAppleMusic, .openSpotify, .openFinder:
-            return .applications
+        default:
+            preconditionFailure("Unhandled non-preset ButtonAction category: \(self)")
         }
     }
 

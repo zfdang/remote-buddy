@@ -10,21 +10,28 @@ extension KeyboardInjector {
         applicationOpener: ApplicationOpener,
         applicationFocuser: @escaping ApplicationFocuser
     ) {
-        guard let url = application.bundleIdentifiers.lazy.compactMap(applicationURL).first else {
+        var resolved: (bundleID: String, url: URL)?
+        for bundleID in application.bundleIdentifiers {
+            if let url = applicationURL(bundleID) {
+                resolved = (bundleID, url)
+                break
+            }
+        }
+        guard let resolved else {
             AppLogger.shared.write("APP ACTION unavailable bundle=\(application.bundleIdentifier)")
             return
         }
 
-        applicationOpener(url, application) { processIdentifier, error in
+        applicationOpener(resolved.url, application) { processIdentifier, error in
             if let error {
                 AppLogger.shared.write(
-                    "APP ACTION failed bundle=\(application.bundleIdentifier) " +
+                    "APP ACTION failed bundle=\(resolved.bundleID) " +
                         AppLogger.errorFields(error)
                 )
             } else {
-                AppLogger.shared.write("APP ACTION opened bundle=\(application.bundleIdentifier)")
+                AppLogger.shared.write("APP ACTION opened bundle=\(resolved.bundleID)")
                 if application.focusStrategy != nil, let processIdentifier {
-                    applicationFocuser(url, application, processIdentifier, focusRequestID)
+                    applicationFocuser(resolved.url, application, processIdentifier, focusRequestID)
                 }
             }
         }

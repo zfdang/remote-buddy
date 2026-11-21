@@ -86,7 +86,7 @@ extension SettingsView {
                     activeButtons: model.activeRemoteButtons,
                     voiceActive: model.isStreaming,
                     actionSummary: { button, trigger in mappingActionSummary(for: button, trigger: trigger) },
-                    actionHelpSummary: { button, trigger in mappingActionHelpSummary(for: button, trigger: trigger) },
+                    actionHelpSummary: { button, trigger in mappingActionSummary(for: button, trigger: trigger, detailed: true) },
                     onEdit: { button, trigger in
                         selectedRemoteButton = button
                         let current = settings.configuredAction(for: button, trigger: trigger).action

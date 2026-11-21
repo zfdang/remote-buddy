@@ -414,17 +414,10 @@ enum KeyboardInjector {
                         "modifier_flags=\(eventFlags.rawValue) standalone=false"
                 )
             }
-        case .focusInput:
+        case .focusInput, .openCustomApplication, .toggleLongRecording, .openCommonPhrases, .directPassthrough:
             break
-        case .openCustomApplication:
-            break
-        case .toggleLongRecording, .openCommonPhrases, .directPassthrough:
-            break
-        case .openRemoteBuddy, .openCodex, .openClaude, .openChatGPT, .openDeepSeekHarness,
-             .openWorkBuddy, .openCmux, .openCursor, .openVSCode, .openXcode, .openZed,
-             .openGhostty, .openITerm2, .openTerminal, .openChrome, .openSafari, .openWeChat,
-             .openWeCom, .openFeishu, .openDingTalk, .openSlack, .openNeteaseMusic,
-             .openAppleMusic, .openSpotify, .openFinder:
+        default:
+            // Preset applications are handled before this switch via action.presetApplication.
             break
         }
         return true

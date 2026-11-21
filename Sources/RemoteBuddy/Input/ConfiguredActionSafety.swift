@@ -2,6 +2,7 @@ extension ButtonAction {
     /// Actions capable of inserting or editing text require a non-secure target.
     /// Cleanup and navigation stay available; key-up recovery bypasses send().
     var requiresNonSecureInput: Bool {
+        if presetApplication != nil { return false }
         switch self {
         case .returnKey, .commandReturn, .shiftReturn, .space, .tab,
              .commandCopy, .commandPaste, .commandCut, .commandSelectAll,
@@ -14,16 +15,11 @@ extension ButtonAction {
              .spaceLeft, .spaceRight, .lockScreen, .screenshot, .contextMenu, .focusInput,
              .volumeUp, .volumeDown, .volumeMute, .brightnessUp, .brightnessDown,
              .playPause, .previousCommandLeft, .nextCommandRight,
-             .toggleLongRecording, .openCommonPhrases,
-             .openCustomApplication, .openRemoteBuddy, .openCodex, .openClaude,
-             .openChatGPT, .openDeepSeekHarness, .openWorkBuddy,
-             .openCmux, .openCursor, .openVSCode, .openXcode, .openZed,
-             .openGhostty, .openITerm2, .openTerminal,
-             .openChrome, .openSafari,
-             .openWeChat, .openWeCom, .openFeishu, .openDingTalk, .openSlack,
-             .openNeteaseMusic, .openAppleMusic, .openSpotify, .openFinder,
+             .toggleLongRecording, .openCommonPhrases, .openCustomApplication,
              .repeatSingleClick:
             return false
+        default:
+            preconditionFailure("Unhandled non-preset ButtonAction safety classification: \(self)")
         }
     }
 }

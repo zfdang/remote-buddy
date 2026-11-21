@@ -157,7 +157,8 @@ extension SettingsView {
     }
 
     func mappingActionSummary(for button: RemoteButton, trigger: ButtonTrigger,
-                                      configuredAction: ConfiguredButtonAction? = nil) -> String {
+                              configuredAction: ConfiguredButtonAction? = nil,
+                              detailed: Bool = false) -> String {
         if trigger != .singleClick && mappingConfiguration(for: button, trigger: .singleClick).action == .directPassthrough {
             return "-"
         }
@@ -182,6 +183,9 @@ extension SettingsView {
             return settings.customApplicationProfile(id: configured.applicationProfileID)?.displayName
                 ?? localization.text("custom_application.not_configured")
         }
+        if detailed {
+            return configured.action.detailedDisplayName(using: localization)
+        }
         switch configured.action {
         case .arrowUp: return "↑"
         case .arrowDown: return "↓"
@@ -196,27 +200,5 @@ extension SettingsView {
         default: break
         }
         return configured.action.displayName(using: localization)
-    }
-
-    func mappingActionHelpSummary(for button: RemoteButton, trigger: ButtonTrigger,
-                                  configuredAction: ConfiguredButtonAction? = nil) -> String {
-        if trigger != .singleClick && mappingConfiguration(for: button, trigger: .singleClick).action == .directPassthrough {
-            return "-"
-        }
-        let configured = configuredAction ?? mappingConfiguration(for: button, trigger: trigger)
-        guard configured.action != .disabled else {
-            return localization.text("button_mapping.action.not_set")
-        }
-        if configured.action == .directPassthrough {
-            return mappingActionSummary(for: button, trigger: trigger, configuredAction: configured)
-        }
-        if configured.action == .customShortcut, let shortcut = configured.shortcut {
-            return shortcut.visualDisplayName(using: localization)
-        }
-        if configured.action == .openCustomApplication {
-            return settings.customApplicationProfile(id: configured.applicationProfileID)?.displayName
-                ?? localization.text("custom_application.not_configured")
-        }
-        return configured.action.detailedDisplayName(using: localization)
     }
 }

@@ -163,6 +163,8 @@ enum PresetApplication: String, CaseIterable, Identifiable {
 
     var bundleIdentifiers: [String] {
         switch self {
+        case .workBuddy:
+            return ["com.tencent.workbuddy.mac", "com.workbuddy.workbuddy", "com.workbuddy.workbuddy-ai"]
         case .feishu:
             return ["com.electron.lark", "com.bytedance.macos.feishu"]
         case .dingTalk:

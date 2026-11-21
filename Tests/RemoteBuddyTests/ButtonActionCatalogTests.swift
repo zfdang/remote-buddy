@@ -97,11 +97,22 @@ struct ButtonActionCatalogTests {
         ] {
             #expect(action.requiresNonSecureInput == false, "\(action) should not require non-secure input")
         }
+        for action in ButtonAction.allCases {
+            if action.presetApplication != nil {
+                #expect(action.category == .applications)
+                #expect(action.requiresNonSecureInput == false)
+            } else {
+                _ = action.category
+            }
+        }
     }
 
     @Test func presetApplicationsSupportAlternateBundleIdentifiersAndNewEntries() {
         #expect(PresetApplication.deepSeekHarness.bundleIdentifier == "com.deepseek.dsh")
         #expect(PresetApplication.workBuddy.bundleIdentifier == "com.tencent.workbuddy.mac")
+        #expect(PresetApplication.workBuddy.isInstalled(in: ["com.tencent.workbuddy.mac"]))
+        #expect(PresetApplication.workBuddy.isInstalled(in: ["com.workbuddy.workbuddy"]))
+        #expect(PresetApplication.workBuddy.isInstalled(in: ["com.workbuddy.workbuddy-ai"]))
         #expect(PresetApplication.feishu.isInstalled(in: ["com.bytedance.macos.feishu"]))
         #expect(PresetApplication.feishu.isInstalled(in: ["com.electron.lark"]))
         #expect(PresetApplication.dingTalk.isInstalled(in: ["5ZSL2CJU2T.com.dingtalk.mac"]))
@@ -109,7 +120,7 @@ struct ButtonActionCatalogTests {
 
         let installed: Set<String> = [
             "com.deepseek.dsh",
-            "com.tencent.workbuddy.mac",
+            "com.workbuddy.workbuddy-ai",
             "com.bytedance.macos.feishu",
         ]
         let picker = ButtonAction.pickerActions(installedBundleIdentifiers: installed, current: .disabled)
@@ -118,12 +129,12 @@ struct ButtonActionCatalogTests {
         #expect(picker.contains(.openFeishu))
         #expect(!picker.contains(.openSpotify))
 
-        var openedURL: URL?
+        nonisolated(unsafe) var openedURL: URL?
         KeyboardInjector.open(
-            .feishu,
+            .workBuddy,
             focusRequestID: 1,
             applicationURL: { bundleID in
-                bundleID == "com.bytedance.macos.feishu" ? URL(fileURLWithPath: "/Applications/Feishu.app") : nil
+                bundleID == "com.workbuddy.workbuddy-ai" ? URL(fileURLWithPath: "/Applications/WorkBuddy AI.app") : nil
             },
             applicationOpener: { url, _, completion in
                 openedURL = url
@@ -131,6 +142,6 @@ struct ButtonActionCatalogTests {
             },
             applicationFocuser: { _, _, _, _ in }
         )
-        #expect(openedURL == URL(fileURLWithPath: "/Applications/Feishu.app"))
+        #expect(openedURL == URL(fileURLWithPath: "/Applications/WorkBuddy AI.app"))
     }
 }

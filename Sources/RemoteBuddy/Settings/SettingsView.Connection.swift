@@ -338,8 +338,8 @@ extension SettingsView {
 
     @ViewBuilder
     private func connectionDeviceActions(_ profile: RemoteDeviceProfile) -> some View {
-        HStack(spacing: 8) {
-            if profile.bluetoothIdentifier != nil {
+        VStack(spacing: 8) {
+            if SettingsPageBehavior.showsReconnectAction(for: profile) {
                 ConnectionActionChipButton(
                     title: localization.text("connection.action.reconnect"),
                     systemImage: "arrow.clockwise",
@@ -350,11 +350,9 @@ extension SettingsView {
                     model.reconnect()
                 }
             }
-            ConnectionActionChipButton(
+            ConnectionSubtleDestructiveButton(
                 title: localization.text("remote.remove.action"),
                 systemImage: "trash",
-                tint: .red,
-                role: .destructive,
                 isDisabled: model.isVoiceConfigurationBusy
             ) {
                 remoteRemovalProfile = profile
@@ -379,7 +377,6 @@ private struct ConnectionActionChipButton: View {
     let title: String
     let systemImage: String
     let tint: Color
-    var role: ButtonRole? = nil
     let isDisabled: Bool
     let action: () -> Void
 
@@ -387,7 +384,7 @@ private struct ConnectionActionChipButton: View {
 
     var body: some View {
         let activeHover = isHovered && !isDisabled
-        Button(role: role, action: action) {
+        Button(action: action) {
             HStack(spacing: 5) {
                 Image(systemName: systemImage)
                     .font(.system(size: 11, weight: .semibold))
@@ -409,6 +406,40 @@ private struct ConnectionActionChipButton: View {
                     .stroke(tint.opacity(activeHover ? 0.42 : 0.24), lineWidth: 1)
             }
             .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .opacity(isDisabled ? 0.45 : 1)
+        .disabled(isDisabled)
+        .onHover { isHovered = $0 }
+    }
+}
+
+private struct ConnectionSubtleDestructiveButton: View {
+    let title: String
+    let systemImage: String
+    let isDisabled: Bool
+    let action: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        let activeHover = isHovered && !isDisabled
+        Button(role: .destructive, action: action) {
+            HStack(spacing: 4) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 11))
+                Text(title)
+                    .font(.system(size: 12))
+                    .lineLimit(1)
+            }
+            .foregroundStyle(activeHover ? Color.red : Color.secondary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(
+                activeHover ? Color.red.opacity(0.08) : Color.clear,
+                in: RoundedRectangle(cornerRadius: 6, style: .continuous)
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
         }
         .buttonStyle(.plain)
         .opacity(isDisabled ? 0.45 : 1)

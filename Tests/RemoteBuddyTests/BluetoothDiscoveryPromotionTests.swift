@@ -154,4 +154,56 @@ struct BluetoothDiscoveryPromotionTests {
             targetIdentifier: registered.targetIdentifier, advertisesVoiceService: true,
             name: "Chromecast Remote", advertisedName: nil).isAdopted)
     }
+
+    @Test func removeAndAddReplacementEnablesDiscoveryStartsFreshAndReconnectMatchesBluetoothProfile() throws {
+        let suite = "bluetooth-remove-add-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = AppSettings(defaults: defaults)
+        let firstID = UUID()
+        let keptID = UUID()
+        let firstProfile = settings.registerBluetoothRemote(identifier: firstID, model: .rc003)
+        let keptProfile = settings.registerBluetoothRemote(identifier: keptID, model: .chromecastVoiceRemote)
+        settings.selectRemoteProfile(firstProfile)
+        settings.setGainDB(18, for: firstProfile)
+        settings.setBaseBinding(.init(action: .commandCopy, shortcut: nil), for: .ok, trigger: .singleClick, profileID: firstProfile)
+        settings.completeOnboarding()
+
+        let model = BridgeAppModel(settings: settings, initialAudioDevices: [])
+        #expect(!model.shouldDiscoverNewBluetoothRemotes)
+
+        // Removing one device while another remains keeps background discovery off until user clicks Add Device.
+        #expect(model.removeRemoteDevice(firstProfile))
+        #expect(!model.shouldDiscoverNewBluetoothRemotes)
+        SettingsPageBehavior.beginDeviceSetup(settings: settings)
+        #expect(model.shouldDiscoverNewBluetoothRemotes)
+
+        // Adding a replacement remote creates a clean profile with default mappings and gain.
+        let replacementID = UUID()
+        let replacementProfile = settings.registerBluetoothRemote(identifier: replacementID, model: .rc003)
+        #expect(replacementProfile != firstProfile)
+        #expect(settings.gainDB(for: replacementProfile) != 18)
+        #expect(settings.configuredAction(for: .ok, trigger: .singleClick, profileID: replacementProfile).action != .commandCopy)
+        settings.completeOnboarding()
+        #expect(!model.shouldDiscoverNewBluetoothRemotes)
+
+        // Removing the final remaining profiles re-enables discovery automatically.
+        #expect(model.removeRemoteDevice(replacementProfile))
+        #expect(model.removeRemoteDevice(keptProfile))
+        #expect(model.shouldDiscoverNewBluetoothRemotes)
+
+        // Reconnect action appears only for profiles backed by a Bluetooth identifier.
+        let bluetoothProfile = RemoteDeviceProfile(
+            model: .rc003,
+            bluetoothIdentifier: UUID(),
+            mappings: RemoteDeviceMappings(buttonBindings: [:], buttonShortcuts: [:], secondaryButtonBindings: [:])
+        )
+        let hidOnlyProfile = RemoteDeviceProfile(
+            model: .rc003,
+            bluetoothIdentifier: nil,
+            mappings: RemoteDeviceMappings(buttonBindings: [:], buttonShortcuts: [:], secondaryButtonBindings: [:])
+        )
+        #expect(SettingsPageBehavior.showsReconnectAction(for: bluetoothProfile))
+        #expect(!SettingsPageBehavior.showsReconnectAction(for: hidOnlyProfile))
+    }
 }

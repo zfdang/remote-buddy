@@ -305,6 +305,10 @@ enum SettingsPageBehavior {
         settings.setOnboardingStep(start)
     }
 
+    static func showsReconnectAction(for profile: RemoteDeviceProfile) -> Bool {
+        profile.bluetoothIdentifier != nil
+    }
+
     static func visibleSection(for requestedSection: SettingsSection) -> SettingsSection {
         requestedSection
     }

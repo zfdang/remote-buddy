@@ -33,19 +33,9 @@ extension BridgeAppModel {
     }
 
     var shouldDiscoverNewBluetoothRemotes: Bool {
-        settings.remoteDeviceProfiles.isEmpty || !remoteDiscoveryRequests.isEmpty ||
+        settings.remoteDeviceProfiles.isEmpty ||
             (!settings.isOnboardingComplete &&
                 [.remoteAvailability, .remote, .controls].contains(settings.onboardingStep))
-    }
-
-    func beginRemoteDiscovery(requestID: UUID) {
-        remoteDiscoveryRequests.insert(requestID)
-        synchronizeBluetoothDiscovery()
-    }
-
-    func endRemoteDiscovery(requestID: UUID) {
-        remoteDiscoveryRequests.remove(requestID)
-        synchronizeBluetoothDiscovery()
     }
 
     func synchronizeBluetoothDiscovery() {

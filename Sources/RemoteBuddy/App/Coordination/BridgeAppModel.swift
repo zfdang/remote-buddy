@@ -199,7 +199,6 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
     private var voiceToolCancellable: AnyCancellable?
     private var applicationIntegrationCancellable: AnyCancellable?
     private var remoteDiscoverySettingsCancellable: AnyCancellable?
-    var remoteDiscoveryRequests = Set<UUID>()
     var voiceKeyLatch = VoiceKeyLatch()
     var voiceKeyReleaseRetry: ScheduledOperation?
     var voiceKeyReleaseRetryGeneration: UInt64 = 0

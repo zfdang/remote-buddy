@@ -30,7 +30,7 @@ struct BluetoothDiscoveryPromotionTests {
         #expect(model.connections.discoveryBridge == nil)
     }
 
-    @Test func discoveryRemainsAvailableForFirstDeviceSetupAndOverlappingRebindingRequests() throws {
+    @Test func discoveryRemainsAvailableForFirstDeviceSetupAndOnboardingSteps() throws {
         let suite = UUID().uuidString
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
@@ -39,14 +39,6 @@ struct BluetoothDiscoveryPromotionTests {
         let model = BridgeAppModel(settings: settings)
         #expect(model.shouldDiscoverNewBluetoothRemotes)
         _ = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
-        #expect(!model.shouldDiscoverNewBluetoothRemotes)
-        let first = UUID(), second = UUID()
-        model.beginRemoteDiscovery(requestID: first)
-        model.beginRemoteDiscovery(requestID: second)
-        #expect(model.shouldDiscoverNewBluetoothRemotes)
-        model.endRemoteDiscovery(requestID: first)
-        #expect(model.shouldDiscoverNewBluetoothRemotes)
-        model.endRemoteDiscovery(requestID: second)
         #expect(!model.shouldDiscoverNewBluetoothRemotes)
         settings.onboardingCompletedVersion = 0
         for step: OnboardingStep in [.remoteAvailability, .remote, .controls] {

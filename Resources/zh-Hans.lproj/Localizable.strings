@@ -1148,11 +1148,6 @@
 "remote.remove.action" = "删除设备";
 "remote.remove.confirm_title" = "删除此设备？";
 "remote.remove.confirm_detail" = "将删除“%@”及其在遥控搭子中的按键设置和增益，并停止自动连接。不会删除 macOS 蓝牙配对；使用“添加设备”时，之前删除的设备可能再次被发现。";
-"remote.rebind.title" = "重新绑定遥控器";
-"remote.rebind.help" = "请先在 macOS 蓝牙设置中重新配对遥控器，再在下方选择它的新连接条目。原有的按键映射和音量增益会保留，并直接应用到新绑定的遥控器上。";
-"remote.rebind.empty" = "暂无可用的同型号已连接遥控器。";
-"remote.rebind.failed" = "无法重新绑定。请先停止语音输入，并确认替代设备仍然连接。";
-"remote.rebind.confirm" = "重新绑定并保留设置";
 
 "onboarding.action.pause" = "稍后设置";
 

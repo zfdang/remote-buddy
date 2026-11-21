@@ -20,7 +20,6 @@ struct SettingsView: View {
     private let minimumContentSize: CGSize
     let permissionOverrides: SystemPermissionOverrides?
 
-    @State var remoteRebindingProfile: RemoteDeviceProfile?
     @State var remoteRemovalProfile: RemoteDeviceProfile?
     @State var isRemoteRemovalPresented = false
     @State var selectedSection: SettingsSection

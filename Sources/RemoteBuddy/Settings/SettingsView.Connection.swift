@@ -51,9 +51,6 @@ extension SettingsView {
                 }
             }
         }
-        .sheet(item: $remoteRebindingProfile) { profile in
-            RemoteRebindingPicker(model: model, profile: profile).environmentObject(localization)
-        }
         .confirmationDialog(localization.text("remote.remove.confirm_title"),
                             isPresented: $isRemoteRemovalPresented,
                             presenting: remoteRemovalProfile) { profile in
@@ -341,39 +338,27 @@ extension SettingsView {
 
     @ViewBuilder
     private func connectionDeviceActions(_ profile: RemoteDeviceProfile) -> some View {
-        VStack(spacing: 8) {
-            if profile.bluetoothIdentifier != nil, !model.isRemoteConnected(profile.id) {
+        HStack(spacing: 8) {
+            if profile.bluetoothIdentifier != nil {
                 ConnectionActionChipButton(
-                    title: localization.text("remote.rebind.title"),
-                    systemImage: "arrow.left.arrow.right",
-                    tint: .primary,
+                    title: localization.text("connection.action.reconnect"),
+                    systemImage: "arrow.clockwise",
+                    tint: .accentColor,
                     isDisabled: model.isStreaming
                 ) {
-                    remoteRebindingProfile = profile
+                    model.selectRemoteProfile(profile.id)
+                    model.reconnect()
                 }
             }
-            HStack(spacing: 8) {
-                if profile.bluetoothIdentifier != nil {
-                    ConnectionActionChipButton(
-                        title: localization.text("connection.action.reconnect"),
-                        systemImage: "arrow.clockwise",
-                        tint: .accentColor,
-                        isDisabled: model.isStreaming
-                    ) {
-                        model.selectRemoteProfile(profile.id)
-                        model.reconnect()
-                    }
-                }
-                ConnectionActionChipButton(
-                    title: localization.text("remote.remove.action"),
-                    systemImage: "trash",
-                    tint: .red,
-                    role: .destructive,
-                    isDisabled: model.isVoiceConfigurationBusy
-                ) {
-                    remoteRemovalProfile = profile
-                    isRemoteRemovalPresented = true
-                }
+            ConnectionActionChipButton(
+                title: localization.text("remote.remove.action"),
+                systemImage: "trash",
+                tint: .red,
+                role: .destructive,
+                isDisabled: model.isVoiceConfigurationBusy
+            ) {
+                remoteRemovalProfile = profile
+                isRemoteRemovalPresented = true
             }
         }
         .frame(maxWidth: .infinity)

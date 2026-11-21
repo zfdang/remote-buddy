@@ -304,6 +304,25 @@
       </div>
     </details>
 
+    <details class="troubleshooting-card" id="system-shortcuts">
+      <summary><span class="troubleshooting-question">为什么设置“调度中心”、“通知中心”、“显示桌面”或“聚焦搜索”等系统动作后不生效？</span></summary>
+      <div class="troubleshooting-body">
+        <p><strong>核心原理：</strong>Remote Buddy 内置的「调度中心 (<code>⌃↑</code>)」「通知中心 (<code>fn N</code>)」「显示桌面 (<code>fn F11</code>)」「上一/下一桌面 (<code>⌃←</code> / <code>⌃→</code>)」「聚焦搜索 (<code>⌘Space</code>)」「截屏 (<code>⇧⌘5</code>)」等系统与媒体动作，以及通过「自定义快捷键」配置的组合键，<strong>本质上只是向 macOS 发送对应的系统默认快捷键，并不直接绕过系统设置去调用私有内部接口</strong>。</p>
+        <p>因此，这些映射能否触发，完全取决于你的 Mac 是否已开启并保留了对应的系统快捷键：</p>
+        <ol>
+          <li><strong>前往正确的系统快捷键设置位置核对：</strong><br>
+          打开 <strong>系统设置（System Settings）→ 键盘（Keyboard）→ 键盘快捷键…（Keyboard Shortcuts…）→ 调度中心（Mission Control）</strong>（或其他对应分类），确认相关快捷键处于<strong>勾选启用</strong>状态，且与发送的按键一致（例如：<code>调度中心 → ⌃↑</code>、<code>应用程序窗口 → ⌃↓</code>、<code>显示桌面 → F11</code> 等）。</li>
+          <li><strong>注意区分容易混淆的设置路径：</strong><br>
+          在较新的 macOS 中，<strong>系统设置 → 桌面与程序坞 → 调度中心</strong> 仅控制窗口分组、显示器独立空间等行为偏好，<strong>并不包含快捷键开关或键位设置</strong>；修改快捷键必须进入上一条的「键盘 → 键盘快捷键」。</li>
+          <li><strong>关于“聚焦搜索 (⌘Space)”与输入法冲突：</strong><br>
+          部分多输入法用户可能会把 <code>⌘Space</code> 分配给「选择上一个输入源」而非「显示“聚焦”搜索」。如需使用聚焦搜索，请同步在「键盘快捷键 → 聚焦 / 输入法」中确认键位。</li>
+          <li><strong>不想改回系统默认键位？</strong><br>
+          如果在 macOS 中习惯使用其他自定义热键触发这些功能，只需在 Remote Buddy 按键映射中改选<strong>「自定义快捷键」</strong>，并通过内置虚拟键盘录入你自己在系统设置里绑定的按键组合即可。</li>
+        </ol>
+        <a class="text-link" href="https://support.apple.com/zh-cn/102650">Apple 官方 Mac 键盘快捷键说明 ↗</a>
+      </div>
+    </details>
+
     <details class="troubleshooting-card">
       <summary><span class="troubleshooting-question">为什么在密码框或安全终端（如 iTerm2、1Password）中按键或常用语无法粘贴？</span></summary>
       <div class="troubleshooting-body">

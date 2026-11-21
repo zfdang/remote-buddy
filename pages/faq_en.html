@@ -304,6 +304,25 @@
       </div>
     </details>
 
+    <details class="troubleshooting-card" id="system-shortcuts">
+      <summary><span class="troubleshooting-question">Why don’t system shortcut actions like Mission Control, Notification Center, Show Desktop, or Spotlight trigger?</span></summary>
+      <div class="troubleshooting-body">
+        <p><strong>How It Works:</strong> System &amp; Media presets in Remote Buddy—such as Mission Control (<code>⌃↑</code>), Notification Center (<code>fn N</code>), Show Desktop (<code>fn F11</code>), Previous/Next Space (<code>⌃←</code> / <code>⌃→</code>), Spotlight (<code>⌘Space</code>), Screenshot (<code>⇧⌘5</code>)—as well as chords added via Custom Shortcut, <strong>simply synthesize standard macOS keyboard shortcuts rather than calling private system APIs</strong>.</p>
+        <p>Because of this, whether an action triggers depends directly on your macOS Keyboard Shortcuts configuration:</p>
+        <ol>
+          <li><strong>Check the actual shortcut toggles in macOS:</strong><br>
+          Open <strong>System Settings → Keyboard → Keyboard Shortcuts… → Mission Control</strong> (and related categories such as Spotlight or Screenshots). Verify that the corresponding shortcut is <strong>checked/enabled</strong> and still matches the key combination (for example, <code>Mission Control → ⌃↑</code>, <code>Application windows → ⌃↓</code>, <code>Show Desktop → F11</code>).</li>
+          <li><strong>Do not confuse behavior settings with shortcut settings:</strong><br>
+          In modern macOS, <strong>System Settings → Desktop &amp; Dock → Mission Control</strong> only controls window grouping and Spaces behavior—it does <strong>not</strong> enable or configure keyboard shortcuts. Shortcut bindings are managed exclusively under <strong>Keyboard → Keyboard Shortcuts…</strong>.</li>
+          <li><strong>Multi-input-source conflict on Spotlight (⌘Space):</strong><br>
+          On Macs with multiple input sources enabled, <code>⌘Space</code> may be assigned to “Select the previous input source” instead of Spotlight. Verify or adjust the assignment under Keyboard Shortcuts → Spotlight / Input Sources.</li>
+          <li><strong>Using custom macOS shortcuts instead of defaults?</strong><br>
+          If you prefer non-default system shortcuts, select <strong>Custom Shortcut</strong> in Remote Buddy’s Button Mapping editor and pick your exact system key combination using the built-in virtual keyboard.</li>
+        </ol>
+        <a class="text-link" href="https://support.apple.com/en-us/102650">Apple Mac Keyboard Shortcuts Reference ↗</a>
+      </div>
+    </details>
+
     <details class="troubleshooting-card">
       <summary><span class="troubleshooting-question">Why do shortcuts or phrases fail to paste inside password fields or secure terminals?</span></summary>
       <div class="troubleshooting-body">

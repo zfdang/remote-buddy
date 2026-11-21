@@ -37,12 +37,19 @@ def center(d, x, y, value, size=36, color=INK):
 
 def wrap(d, value, size, max_width):
     lines, line = [], ""
-    for char in value:
-        if line and d.textlength(line+char, font=get_font(size)) > max_width:
-            lines.append(line)
-            line = char
+    for token in re.findall(r"[A-Za-z0-9_.+-]+|.", value):
+        if line and d.textlength(line+token, font=get_font(size)) > max_width:
+            lines.append(line.rstrip())
+            line = token.lstrip()
+            while line and d.textlength(line, font=get_font(size)) > max_width:
+                # Fallback to character splitting only if a single token exceeds max_width.
+                cut = len(line)
+                while cut > 1 and d.textlength(line[:cut], font=get_font(size)) > max_width:
+                    cut -= 1
+                lines.append(line[:cut])
+                line = line[cut:]
         else:
-            line += char
+            line += token
     if line:
         lines.append(line)
     return lines
@@ -89,9 +96,9 @@ screenshots = {}
 def screenshot(im, d, filename, label):
     if filename not in screenshots:
         shot = Image.open(ROOT / "pages/assets/screenshots" / filename).convert("RGB")
-        # Focus on the current content area; omit the narrow navigation column.
+        # Focus on the current content area; omit the 108pt navigation column (divider at x=146).
         # The full-size examples remain available in the webpage gallery.
-        shot = shot.crop((216, 0, shot.width, min(shot.height, 1120)))
+        shot = shot.crop((148, 0, shot.width, min(shot.height, 1120)))
         screenshots[filename] = ImageOps.contain(shot, (950, 530), Image.Resampling.LANCZOS)
     shot = screenshots[filename]
     rr(d, (830, 290, 1840, 860), "white", 24, LINE)
@@ -153,13 +160,30 @@ def frame(index, progress, total, duration, subtitle=""):
         card(d, 645, "在输入工具中选择麦克风", "麦克风：Remote Buddy Mic", GREEN)
     elif kind == "devices":
         rows = [
-            ("小米 2 Pro · RC003", "语音与按键已验证；2 代 RC001 完整音频待验收", GREEN),
-            ("T1 飞鼠键盘遥控器", "已测蓝牙样机支持；兼容批次需单独验证", GREEN),
-            ("Chromecast · G9N9N", "已验证版本支持语音与按键", GREEN),
+            ("Chromecast · G9N9N", "已验证版本支持智能切换免提、约 5 分钟收音、14 键自定义与电量", GREEN),
+            ("小米 2 / 2 Pro · RC001 / RC003", "全控制键自定义；2 Pro 已验证，按住说话单次上限约 60 秒", GREEN),
+            ("T1 飞鼠键盘语音遥控器", "蓝牙直连；正面 7 键自定义，背面全键盘与飞鼠直通", GREEN),
         ]
         for j, row in enumerate(rows):
             card(d, 305+j*153, *row)
         center(d, 1335, 800, "GY3LE / Siri Remote：计划支持，尚未完成适配", 25, "#68758A")
+    elif kind == "g9n9n":
+        start, stop = actions.get("start", 4), actions.get("stop", 10)
+        recording = start <= local < stop
+        held = (start <= local < start+.35) or (stop <= local < stop+.35)
+        center(d, 1465, 325, "Chromecast G9N9N · 智能切换示意", 32, BLUE)
+        phase = 0 if local < start else 1 if local < stop else 2
+        steps = ["准备输入", "短按已松手，免提持续收音", "再次点按结束 · 长按超 0.7 秒松手即停"]
+        rr(d, (1120, 395, 1810, 565), "white", 22, LINE)
+        center(d, 1465, 425, steps[phase], 30 if phase == 2 else 32, GREEN if recording else BLUE)
+        center(d, 1465, 500, "声音送入 Remote Buddy Mic · 底部白灯常亮", 24, "#68758A")
+        remote(d, 884, 414, t, held, 1.05)
+        for j in range(32):
+            amplitude = 8+24*abs(math.sin(j*0.7+t*3)) if recording else 3
+            x = 1160+j*18
+            d.line((x, 652-amplitude, x, 652+amplitude), fill=GREEN, width=7)
+        center(d, 1460, 727, "默认智能切换 ｜ 可随时切回纯按住模式", 28)
+        center(d, 1460, 788, "自动保活突破 60 秒，单次最长约 5 分钟", 25, "#68758A")
     elif kind in ("xiaomi", "t1"):
         is_t1 = kind == "t1"
         start, stop = actions.get("start", 4), actions.get("stop", 8)
@@ -179,11 +203,21 @@ def frame(index, progress, total, duration, subtitle=""):
             d.line((x, 652-amplitude, x, 652+amplitude), fill=GREEN, width=7)
         center(d, 1460, 727, "T1：点按开始 / 再按结束" if is_t1 else "小米：按住开始 / 松手结束", 29)
         center(d, 1460, 788, "结束后等待尾音和输入工具处理", 25, "#68758A")
-    elif kind in ("permissions", "tools", "mapping"):
+    elif kind in ("permissions", "tools", "mapping", "app_integration"):
         filename = scene["screenshot"]
         if kind == "mapping" and progress > 0.55:
             filename = "phrases-zh.jpg"
-        screenshot(im, d, filename, {"permissions": "权限与麦克风", "tools": "输入法集成", "mapping": "按键映射 / 常用语"}[kind])
+        screenshot(
+            im,
+            d,
+            filename,
+            {
+                "permissions": "权限与麦克风",
+                "tools": "输入法集成",
+                "mapping": "按键映射 / 常用语",
+                "app_integration": "应用集成",
+            }[kind],
+        )
     elif kind == "privacy":
         card(d, 325, "遥控搭子", "不保存录音或转写历史，不采集使用统计", GREEN)
         card(d, 485, "本地运行日志", "不上传日志，可由用户在本机查看", GREEN)

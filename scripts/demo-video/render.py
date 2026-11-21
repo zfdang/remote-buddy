@@ -127,10 +127,11 @@ for index, length in enumerate(lengths):
     path = BASE / f'preview-{index+1:02}.png'
     v.frame(index, .5, boundaries[index]+local, total, subtitle).save(path)
     preview_paths.append(path)
-contact = Image.new('RGB', (1920, 1440), '#FFFFFF')
+rows = math.ceil(len(preview_paths) / 3)
+contact = Image.new('RGB', (1920, rows * 360), '#FFFFFF')
 for index, path in enumerate(preview_paths):
     thumb = Image.open(path).resize((640, 360))
-    # Three columns and four rows, each preview retaining its 16:9 proportions.
+    # Three columns across dynamic rows, each preview retaining its 16:9 proportions.
     contact.paste(thumb, ((index % 3)*640, (index//3)*360))
 contact.save(BASE / 'contact-sheet.jpg', quality=92)
 if args.prepare_only:

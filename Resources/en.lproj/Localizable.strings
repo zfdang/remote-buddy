@@ -189,6 +189,7 @@
 "action.command_redo" = "Redo";
 "action.command_find" = "Find";
 "action.command_save" = "Save";
+"action.command_refresh" = "Reload";
 "action.command_close" = "Close Window";
 "action.command_quit" = "Quit App";
 "action.app_switcher" = "App Switcher";
@@ -984,6 +985,7 @@
 "settings.driver.missing" = "Compatible microphone not detected";
 "settings.driver.reload_help" = "If Remote Buddy Mic is still missing after installation, restart your Mac or follow the installation guide.";
 "settings.integration.title" = "Input Method & Voice Tool Integration";
+"settings.integration.faq_link" = "Input Tools & Modes FAQ ↗";
 "settings.integration.introduction" = "View your active voice trigger and input tool. Use the guide to switch tools or test voice input.";
 "settings.integration.current" = "Current Input Tool";
 "settings.integration.other_title" = "Other Tools";
@@ -1185,6 +1187,7 @@
 
 // Foreground application integration at voice start
 "application_integration.title" = "App Integrations";
+"application_integration.faq_link" = "Integration & Benefits FAQ ↗";
 "application_integration.introduction" = "Voice input uses the text box you have selected. If none is selected, it helps you find the conversation input in the current app.";
 "application_integration.supported" = "Supported apps";
 "application_integration.enable_all" = "Enable All";

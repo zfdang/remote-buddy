@@ -471,6 +471,14 @@ struct ProductBoundaryTests {
             == "https://remote.zfdang.com/device.html")
         #expect(AppLinks.devices(for: Locale(identifier: "en_US")).absoluteString
             == "https://remote.zfdang.com/device_en.html")
+        #expect(AppLinks.inputMethodsFAQ(for: Locale(identifier: "zh_CN")).absoluteString
+            == "https://remote.zfdang.com/faq.html#input-methods")
+        #expect(AppLinks.inputMethodsFAQ(for: Locale(identifier: "en_US")).absoluteString
+            == "https://remote.zfdang.com/faq_en.html#input-methods")
+        #expect(AppLinks.applicationIntegrationFAQ(for: Locale(identifier: "zh_CN")).absoluteString
+            == "https://remote.zfdang.com/faq.html#integrations")
+        #expect(AppLinks.applicationIntegrationFAQ(for: Locale(identifier: "en_US")).absoluteString
+            == "https://remote.zfdang.com/faq_en.html#integrations")
     }
 
     @Test func wizardRequiresEachPermissionAndKeepsRemoteControl() {

@@ -6,10 +6,29 @@ import UniformTypeIdentifiers
 
 struct PageHeader: View {
     let title: String
+    var linkTitle: String? = nil
+    var linkDestination: URL? = nil
+    var linkAccessibilityIdentifier: String? = nil
 
     var body: some View {
-        Text(title)
-            .font(.system(size: 22, weight: .semibold))
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Text(title)
+                .font(.system(size: 22, weight: .semibold))
+            if let linkTitle, let linkDestination {
+                if let linkAccessibilityIdentifier {
+                    Link(destination: linkDestination) {
+                        Text(linkTitle)
+                            .font(.system(size: 13))
+                    }
+                    .accessibilityIdentifier(linkAccessibilityIdentifier)
+                } else {
+                    Link(destination: linkDestination) {
+                        Text(linkTitle)
+                            .font(.system(size: 13))
+                    }
+                }
+            }
+        }
     }
 }
 

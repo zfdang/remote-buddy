@@ -41,6 +41,21 @@ enum AppLinks {
             : "https://remote.zfdang.com/g9n9n-compatibility_en.html")!
     }
 
+    private static func faqSection(_ anchor: String, for locale: Locale) -> URL {
+        let base = locale.identifier.lowercased().hasPrefix("zh")
+            ? "https://remote.zfdang.com/faq.html"
+            : "https://remote.zfdang.com/faq_en.html"
+        return URL(string: "\(base)#\(anchor)")!
+    }
+
+    static func inputMethodsFAQ(for locale: Locale) -> URL {
+        faqSection("input-methods", for: locale)
+    }
+
+    static func applicationIntegrationFAQ(for locale: Locale) -> URL {
+        faqSection("integrations", for: locale)
+    }
+
     static func website(for locale: Locale) -> URL {
         locale.identifier.lowercased().hasPrefix("zh")
             ? chineseWebsite

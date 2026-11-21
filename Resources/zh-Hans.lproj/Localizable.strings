@@ -956,6 +956,7 @@
 "settings.driver.missing" = "未检测到兼容麦克风";
 "settings.driver.reload_help" = "如果安装驱动后仍未检测到 Remote Buddy Mic，请重启 Mac，或查看安装说明。";
 "settings.integration.title" = "输入法与语音工具集成";
+"settings.integration.faq_link" = "语音触发与按键模式 (FAQ) ↗";
 "settings.integration.introduction" = "查看当前生效的语音触发方式与输入工具；如需更换或测试，请通过向导完成。";
 "settings.integration.current" = "当前集成工具";
 "settings.integration.other_title" = "其他工具";

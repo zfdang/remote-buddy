@@ -41,6 +41,12 @@ enum AppLinks {
             : "https://remote.zfdang.com/g9n9n-compatibility_en.html")!
     }
 
+    static func voiceButtonsFAQ(for locale: Locale) -> URL {
+        URL(string: locale.identifier.lowercased().hasPrefix("zh")
+            ? "https://remote.zfdang.com/faq.html#voice-buttons"
+            : "https://remote.zfdang.com/faq_en.html#voice-buttons")!
+    }
+
     static func website(for locale: Locale) -> URL {
         locale.identifier.lowercased().hasPrefix("zh")
             ? chineseWebsite

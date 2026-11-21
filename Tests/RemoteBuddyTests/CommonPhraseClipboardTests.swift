@@ -305,7 +305,7 @@ struct CommonPhraseClipboardTests {
         #expect(board.string(forType: .string) == "original")
     }
 
-    @Test func consecutivePhrasesDoNotLeaveTabsBeforeTheNextInsertion() {
+    @Test func consecutivePhrasesPreserveAuthoredContentDuringPaste() {
         let board = NSPasteboard.withUniqueName()
         defer { board.releaseGlobally() }
         board.setString("original clipboard", forType: .string)
@@ -316,7 +316,7 @@ struct CommonPhraseClipboardTests {
                 editor += board.string(forType: .string) ?? ""
                 return true
             })
-        for body in ["第一条\t", "\t 第二条 \t"] {
+        for body in ["第一条 ", "第二条\t"] {
             let phrase = CommonPhrase(id: "user-test", text: body,
                 label: "标签")
             writer.paste(phrase.insertionText, validate: { $0(nil) }, canSubmit: { true }) {
@@ -325,7 +325,7 @@ struct CommonPhraseClipboardTests {
             clock.runAll()
         }
         #expect(writer.restorePreviousClipboard())
-        #expect(editor == "已有文本：第一条第二条")
+        #expect(editor == "已有文本：第一条 第二条\t")
         #expect(board.string(forType: .string) == "original clipboard")
     }
 

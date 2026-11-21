@@ -1083,7 +1083,9 @@
 
 "button_mapping.action.clear" = "Clear Assignment";
 
-"common_phrases.boundary_padding_hint" = "Leading or trailing spaces and tabs will be removed when saving or inserting. Whitespace within the text and line breaks are preserved.";
+"common_phrases.character_count" = "%d characters";
+"common_phrases.character_count_single" = "%d character";
+"common_phrases.trailing_invisible_hint" = "Ends with invisible characters (trailing space or tab, preserved as-is)";
 
 "connection.device.firmware" = "Firmware";
 "connection.device.model" = "Model";

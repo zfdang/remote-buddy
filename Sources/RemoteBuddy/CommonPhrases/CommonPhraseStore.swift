@@ -6,17 +6,16 @@ struct CommonPhrase: Codable, Equatable, Identifiable {
     var text: String
     var label: String
 
-    /// Boundary spaces and tabs are easy to enter accidentally in the editor.
-    /// Keep interior whitespace and all authored line breaks unchanged.
-    static func removingBoundaryPadding(_ text: String) -> String {
-        text.trimmingCharacters(in: CharacterSet(charactersIn: " \t"))
-    }
-
-    var insertionText: String { Self.removingBoundaryPadding(text) }
+    var insertionText: String { text }
     var isValid: Bool {
         !id.isEmpty && !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
         !label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
         text.count <= 4_000 && label.count <= 80
+    }
+
+    static func hasTrailingInvisibleCharacters(_ text: String) -> Bool {
+        guard let last = text.last else { return false }
+        return last.isWhitespace
     }
 }
 
@@ -174,7 +173,6 @@ final class CommonPhraseStore: ObservableObject {
     func save(_ phrase: CommonPhrase, replacing id: String?) throws -> String {
         var candidate = archive
         var saved = phrase
-        saved.text = saved.insertionText
         if let id, let index = candidate.entries.firstIndex(where: { $0.id == id }) {
             if id.hasPrefix("builtin-") {
                 saved = CommonPhrase(id: "user-" + UUID().uuidString,

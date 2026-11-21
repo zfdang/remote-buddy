@@ -1085,7 +1085,9 @@
 
 "button_mapping.action.clear" = "清除设置";
 
-"common_phrases.boundary_padding_hint" = "文本首尾含空格或 Tab，保存和输入时会自动移除。正文中间的空白和换行会保留。";
+"common_phrases.character_count" = "%d 个字符";
+"common_phrases.character_count_single" = "%d 个字符";
+"common_phrases.trailing_invisible_hint" = "末尾包含不可见字符（空格或制表符等，已保留原样输入）";
 
 "connection.device.firmware" = "固件";
 "connection.device.model" = "型号";

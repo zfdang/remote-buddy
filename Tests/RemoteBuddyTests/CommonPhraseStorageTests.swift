@@ -22,22 +22,27 @@ struct CommonPhraseStorageTests {
         try body(store, defaults, data)
     }
 
-    @Test func phraseTextRemovesOnlyBoundarySpacesAndTabs() {
-        let phrase = CommonPhrase(id: "user-padding", text: " \t原始 文本\t内容\t ",
-            label: "标签")
-        #expect(phrase.insertionText == "原始 文本\t内容")
-        #expect(CommonPhrase.removingBoundaryPadding("\n  第一行\n\t第二行\n") == "\n  第一行\n\t第二行\n")
+    @Test func phraseTextPreservesAuthoredContentAndDetectsTrailingInvisibleCharacters() {
+        let phrase = CommonPhrase(id: "user-trailing", text: "/handoff Q1方案 ", label: "标签")
+        #expect(phrase.insertionText == "/handoff Q1方案 ")
+        #expect(CommonPhrase.hasTrailingInvisibleCharacters(phrase.text))
+        #expect(CommonPhrase.hasTrailingInvisibleCharacters("文本\t"))
+        #expect(CommonPhrase.hasTrailingInvisibleCharacters("文本　"))
+        #expect(CommonPhrase.hasTrailingInvisibleCharacters("文本\n"))
+        #expect(!CommonPhrase.hasTrailingInvisibleCharacters("文本"))
+        #expect(!CommonPhrase.hasTrailingInvisibleCharacters(""))
     }
 
-    @Test func savingRemovesInvisibleBoundaryPaddingAndPreservesBodyOnReload() throws {
+    @Test func savingPreservesAuthoredWhitespaceAndReloads() throws {
         try run { store, defaults, data in
-            let phrase = CommonPhrase(id: "user-padding", text: "\t 正文 空格\t正文\n下一行 \t",
+            let phrase = CommonPhrase(id: "user-cmd", text: "/handoff Q1按默认方案 ",
                 label: "标签")
             let id = try store.save(phrase, replacing: nil)
             try store.assign(.right, to: id)
             let reopened = CommonPhraseStore(defaults: defaults, builtInData: data)
             let saved = try #require(reopened.phrase(for: .right))
-            #expect(saved.text == "正文 空格\t正文\n下一行")
+            #expect(saved.text == "/handoff Q1按默认方案 ")
+            #expect(saved.insertionText == "/handoff Q1按默认方案 ")
             let builtinID = try store.save(phrase, replacing: "builtin-one")
             #expect(store.archive.entries.first { $0.id == builtinID }?.text == saved.text)
         }

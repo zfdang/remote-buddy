@@ -263,7 +263,7 @@ struct CommonPhraseSettingsView: View {
                         .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.primary.opacity(0.12)))
                         .accessibilityLabel(localization.text("common_phrases.full_text"))
                         .accessibilityIdentifier("common-phrases-text")
-                    boundaryPaddingHint(for: text)
+                    textFeedback(for: text)
                 }
                 ViewThatFits(in: .horizontal) {
                     HStack { editButtons }
@@ -282,12 +282,25 @@ struct CommonPhraseSettingsView: View {
             .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.primary.opacity(0.09)))
     }
 
-    @ViewBuilder private func boundaryPaddingHint(for text: String) -> some View {
-        if CommonPhrase.removingBoundaryPadding(text) != text {
-            Label(localization.text("common_phrases.boundary_padding_hint"), systemImage: "textformat")
+    private var characterCountText: String {
+        let key = text.count == 1 ? "common_phrases.character_count_single" : "common_phrases.character_count"
+        return String(format: localization.text(key), text.count)
+    }
+
+    @ViewBuilder private func textFeedback(for text: String) -> some View {
+        HStack(alignment: .center, spacing: 10) {
+            Text(characterCountText)
                 .font(.system(size: 12))
-                .foregroundStyle(.orange)
-                .fixedSize(horizontal: false, vertical: true)
+                .foregroundStyle(.secondary)
+                .accessibilityIdentifier("common-phrases-character-count")
+            if CommonPhrase.hasTrailingInvisibleCharacters(text) {
+                Label(localization.text("common_phrases.trailing_invisible_hint"), systemImage: "info.circle")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("common-phrases-trailing-invisible-hint")
+            }
+            Spacer(minLength: 0)
         }
     }
 

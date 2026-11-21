@@ -29,6 +29,17 @@ enum SettingsBackupMessage {
                 ))
             }
         }
+        if !report.sharedRemoteModels.isEmpty {
+            lines.append("")
+            let models = report.sharedRemoteModels
+                .map { localization.text($0.localizationKey) }
+                .joined(separator: ", ")
+            lines.append(String(
+                format: localization.text("settings.backup.import.shared_remotes"),
+                locale: localization.locale,
+                models
+            ))
+        }
         if !report.missingApplications.isEmpty {
             lines.append("")
             lines.append(String(
@@ -53,6 +64,9 @@ enum SettingsBackupMessage {
             }
             if index == 0, segment == "general" {
                 return localization.text(SettingsSection.general.titleKey)
+            }
+            if index == 0, segment == "customApplications" {
+                return localization.text("settings.backup.import.location.custom_applications")
             }
             if let button = RemoteButton(rawValue: segment) { return button.displayName(using: localization) }
             if let trigger = ButtonTrigger(rawValue: segment) { return trigger.displayName(using: localization) }
@@ -82,6 +96,7 @@ enum SettingsBackupMessage {
 struct SettingsBackupSection: View {
     let settings: AppSettings
     let localization: LocalizationStore
+    let availableAppIcons: Set<AppIconIdentifier>
     /// Applies the imported preferences that live outside `AppSettings`, such as the Dock icon.
     let onImported: () -> Void
 
@@ -190,7 +205,7 @@ struct SettingsBackupSection: View {
             return
         }
         do {
-            let report = try settings.importSettingsBackup(from: data)
+            let report = try settings.importSettingsBackup(from: data, availableAppIcons: availableAppIcons)
             onImported()
             result = ResultAlert(titleKey: "settings.backup.import.result_title",
                                  message: SettingsBackupMessage.summary(for: report, using: localization))

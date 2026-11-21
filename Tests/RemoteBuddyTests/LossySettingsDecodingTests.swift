@@ -67,7 +67,13 @@ struct LossySettingsDecodingTests {
         let reloaded = AppSettings(defaults: values)
         #expect(reloaded.remoteDeviceProfiles.count == 1)
         #expect(reloaded.remoteDeviceProfiles.first?.model == .chromecastVoiceRemote)
-        #expect(reloaded.corruptedSettingKeys.contains("remoteDeviceProfiles"))
+        #expect(reloaded.corruptedSettingKeys.isEmpty)
+        #expect(reloaded.partiallyLoadedSettingKeys.contains("remoteDeviceProfiles"))
+        #expect(values.data(forKey: "remoteDeviceProfiles.corrupt") == rewritten)
+
+        let secondLaunch = AppSettings(defaults: values)
+        #expect(secondLaunch.partiallyLoadedSettingKeys.isEmpty)
+        #expect(secondLaunch.corruptedSettingKeys.isEmpty)
         #expect(values.data(forKey: "remoteDeviceProfiles.corrupt") == rewritten)
     }
 
@@ -94,41 +100,66 @@ struct LossySettingsDecodingTests {
         #expect(reloaded.remoteDeviceProfiles.contains { $0.id == google })
         #expect(reloaded.action(for: .youtube, profileID: google) == .escape)
         #expect(reloaded.action(for: .home, profileID: google) == .appSwitcher)
-        #expect(reloaded.corruptedSettingKeys.contains("remoteDeviceProfiles"))
+        #expect(reloaded.corruptedSettingKeys.isEmpty)
+        #expect(reloaded.partiallyLoadedSettingKeys.contains("remoteDeviceProfiles"))
+
+        let secondLaunch = AppSettings(defaults: values)
+        #expect(secondLaunch.partiallyLoadedSettingKeys.isEmpty)
+        #expect(values.data(forKey: "remoteDeviceProfiles.corrupt") != nil)
     }
 
-    @Test func unknownButtonAndGestureKeysAreReportedButKept() throws {
+    @Test func unknownButtonAndGestureKeysAreKeptAndListedWithoutTriggeringLossyLog() throws {
         let json = """
         {"buttonBindings":{"home":"showDesktop","future_button":"escape"},"buttonShortcuts":{},
         "secondaryButtonBindings":{"ok":{"tripleClick":{"action":"escape"}},"future_button":{"longPress":{"action":"escape"}}}}
         """
         let log = LossyDecodingLog()
         let mappings = try JSONDecoder.lossy(log: log).decode(RemoteDeviceMappings.self, from: Data(json.utf8))
+        #expect(log.droppedPaths.isEmpty)
         #expect(mappings.buttonBindings["future_button"] == .escape)
         #expect(mappings.parsedButtonBindings[.home] == .showDesktop)
-        #expect(log.droppedPaths.contains(["buttonBindings", "future_button"]))
-        #expect(log.droppedPaths.contains(["secondaryButtonBindings", "ok", "tripleClick"]))
-        #expect(log.droppedPaths.contains(["secondaryButtonBindings", "future_button"]))
-        #expect(log.droppedPaths.count == 3)
+        #expect(mappings.unknownKeyPaths == [["future_button"], ["ok", "tripleClick"]])
     }
 
-    @Test func profileWithUnknownButtonKeepsRawBytes() throws {
+    @Test func unknownButtonAndGestureKeysSurviveLaunchAndSubsequentEdits() throws {
         let (values, name) = try values()
         defer { values.removePersistentDomain(forName: name) }
         let settings = AppSettings(defaults: values)
-        settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
-        let rewritten = try rewriteStoredProfile(at: 0, in: values) { profile in
-            var mappings = profile["mappings"] as? [String: Any] ?? [:]
-            var bindings = mappings["buttonBindings"] as? [String: Any] ?? [:]
-            bindings["future_button"] = "escape"
-            mappings["buttonBindings"] = bindings
-            profile["mappings"] = mappings
+        let selected = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+        let background = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
+
+        for index in settings.remoteDeviceProfiles.indices {
+            _ = try rewriteStoredProfile(at: index, in: values) { profile in
+                var mappings = profile["mappings"] as? [String: Any] ?? [:]
+                var bindings = mappings["buttonBindings"] as? [String: Any] ?? [:]
+                bindings["future_button"] = "escape"
+                mappings["buttonBindings"] = bindings
+                var secondary = mappings["secondaryButtonBindings"] as? [String: Any] ?? [:]
+                var okTriggers = secondary["ok"] as? [String: Any] ?? [:]
+                okTriggers["tripleClick"] = ["action": "showDesktop"]
+                secondary["ok"] = okTriggers
+                mappings["secondaryButtonBindings"] = secondary
+                profile["mappings"] = mappings
+            }
         }
 
         let reloaded = AppSettings(defaults: values)
-        #expect(reloaded.remoteDeviceProfiles.count == 1)
-        #expect(reloaded.corruptedSettingKeys.contains("remoteDeviceProfiles"))
-        #expect(values.data(forKey: "remoteDeviceProfiles.corrupt") == rewritten)
+        #expect(reloaded.corruptedSettingKeys.isEmpty)
+        #expect(reloaded.partiallyLoadedSettingKeys.isEmpty)
+        #expect(values.data(forKey: "remoteDeviceProfiles.corrupt") == nil)
+
+        reloaded.selectRemoteProfile(selected)
+        reloaded.setAction(.commandCopy, for: .home)
+        reloaded.setBaseBinding(.init(action: .commandPaste, shortcut: nil), for: .home,
+            trigger: .singleClick, profileID: background)
+
+        let afterEdits = AppSettings(defaults: values)
+        for profile in afterEdits.remoteDeviceProfiles {
+            #expect(profile.mappings.buttonBindings["future_button"] == .escape)
+            #expect(profile.mappings.secondaryButtonBindings["ok"]?["tripleClick"]?.action == .showDesktop)
+        }
+        #expect(afterEdits.action(for: .home, profileID: selected) == .commandCopy)
+        #expect(afterEdits.action(for: .home, profileID: background) == .commandPaste)
     }
 
     @Test func nullProfileEntryIsSkipped() throws {
@@ -143,7 +174,57 @@ struct LossySettingsDecodingTests {
 
         let reloaded = AppSettings(defaults: values)
         #expect(reloaded.remoteDeviceProfiles.map(\.model) == [.rc003])
+        #expect(reloaded.corruptedSettingKeys.isEmpty)
+        #expect(reloaded.partiallyLoadedSettingKeys.contains("remoteDeviceProfiles"))
+    }
+
+    @Test func malformedProfileObjectIsSkippedWhileValidLoads() throws {
+        let (values, name) = try values()
+        defer { values.removePersistentDomain(forName: name) }
+        let settings = AppSettings(defaults: values)
+        settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
+        let stored = try #require(values.data(forKey: "remoteDeviceProfiles"))
+        var profiles = try #require(try JSONSerialization.jsonObject(with: stored) as? [Any])
+        profiles.insert(["id": 123, "model": "rc003"], at: 0)
+        values.set(try JSONSerialization.data(withJSONObject: profiles), forKey: "remoteDeviceProfiles")
+
+        let reloaded = AppSettings(defaults: values)
+        #expect(reloaded.remoteDeviceProfiles.map(\.model) == [.rc003])
+        #expect(reloaded.corruptedSettingKeys.isEmpty)
+        #expect(reloaded.partiallyLoadedSettingKeys.contains("remoteDeviceProfiles"))
+        #expect(values.data(forKey: "remoteDeviceProfiles.corrupt") != nil)
+    }
+
+    @Test func tableLevelTypeErrorInMappingsDropsOnlyThatTable() throws {
+        let json = """
+        {"buttonBindings":{"home":"showDesktop"},"buttonShortcuts":"oops","secondaryButtonBindings":[]}
+        """
+        let log = LossyDecodingLog()
+        let mappings = try JSONDecoder.lossy(log: log).decode(RemoteDeviceMappings.self, from: Data(json.utf8))
+        #expect(mappings.parsedButtonBindings[.home] == .showDesktop)
+        #expect(mappings.parsedButtonShortcuts.isEmpty)
+        #expect(mappings.parsedSecondaryButtonBindings.isEmpty)
+        #expect(log.droppedPaths.contains(["buttonShortcuts"]))
+        #expect(log.droppedPaths.contains(["secondaryButtonBindings"]))
+    }
+
+    @Test func allProfilesUndecodableReportsCorruptedAndClearsMainKey() throws {
+        let (values, name) = try values()
+        defer { values.removePersistentDomain(forName: name) }
+        let settings = AppSettings(defaults: values)
+        settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
+        let rewritten = try rewriteStoredProfile(at: 0, in: values) { $0["model"] = "future_remote" }
+
+        let reloaded = AppSettings(defaults: values)
+        #expect(reloaded.remoteDeviceProfiles.isEmpty)
         #expect(reloaded.corruptedSettingKeys.contains("remoteDeviceProfiles"))
+        #expect(reloaded.partiallyLoadedSettingKeys.isEmpty)
+        #expect(values.data(forKey: "remoteDeviceProfiles") == nil)
+        #expect(values.data(forKey: "remoteDeviceProfiles.corrupt") == rewritten)
+
+        let secondLaunch = AppSettings(defaults: values)
+        #expect(secondLaunch.corruptedSettingKeys.isEmpty)
+        #expect(values.data(forKey: "remoteDeviceProfiles.corrupt") == rewritten)
     }
 
     @Test func cleanProfilesReportNothing() throws {
@@ -156,6 +237,7 @@ struct LossySettingsDecodingTests {
         let reloaded = AppSettings(defaults: values)
         #expect(reloaded.remoteDeviceProfiles.count == 2)
         #expect(reloaded.corruptedSettingKeys.isEmpty)
+        #expect(reloaded.partiallyLoadedSettingKeys.isEmpty)
         #expect(values.data(forKey: "remoteDeviceProfiles.corrupt") == nil)
     }
 }

@@ -50,46 +50,108 @@ struct RemoteDeviceMappings: Codable, Equatable {
     }
 
     /// Reads entry by entry: one action, shortcut or gesture this build does not know is
-    /// dropped on its own instead of discarding the remote's whole mapping.
+    /// dropped on its own instead of discarding the remote's whole mapping. Unknown button and
+    /// gesture keys still decode as strings and stay untouched until the user or a backup
+    /// intentionally inspects or replaces them.
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        buttonBindings = try container.decodeLossyDictionary(ButtonAction.self, forKey: .buttonBindings)
-        buttonShortcuts = try container.decodeLossyDictionary(CustomKeyboardShortcut.self, forKey: .buttonShortcuts)
-        buttonApplicationProfileIDs = try container.decodeIfPresent(
+        buttonBindings = container.decodeLossyDictionary(ButtonAction.self, forKey: .buttonBindings)
+        buttonShortcuts = container.decodeLossyDictionary(CustomKeyboardShortcut.self, forKey: .buttonShortcuts)
+        buttonApplicationProfileIDs = container.decodeLossyIfPresent(
             LossyDictionary<UUID>.self, forKey: .buttonApplicationProfileIDs
         )?.entries
-        secondaryButtonBindings = try container.decodeLossyDictionary(
+        secondaryButtonBindings = container.decodeLossyDictionary(
             LossyDictionary<ConfiguredButtonAction>.self, forKey: .secondaryButtonBindings
         ).mapValues(\.entries)
-        if let log = decoder.lossyDecodingLog { recordUnknownKeys(at: decoder.codingPath, in: log) }
     }
 
-    /// Button and gesture keys this build has no case for still decode as strings and are kept,
-    /// but nothing reads them, so they are reported: the raw bytes are then preserved before the
-    /// next save rebuilds the mapping from the known keys only.
-    private func recordUnknownKeys(at path: [any CodingKey], in log: LossyDecodingLog) {
-        let tables: [(CodingKeys, [String])] = [
-            (.buttonBindings, Array(buttonBindings.keys)),
-            (.buttonShortcuts, Array(buttonShortcuts.keys)),
-            (.buttonApplicationProfileIDs, Array((buttonApplicationProfileIDs ?? [:]).keys)),
-        ]
-        for (table, keys) in tables {
-            for key in keys.sorted() where RemoteButton(rawValue: key) == nil {
-                log.record(path + [table as any CodingKey, LossyCodingKey(stringValue: key)])
+    private init(
+        rawButtonBindings: [String: ButtonAction],
+        rawButtonShortcuts: [String: CustomKeyboardShortcut],
+        rawButtonApplicationProfileIDs: [String: UUID]?,
+        rawSecondaryButtonBindings: [String: [String: ConfiguredButtonAction]]
+    ) {
+        buttonBindings = rawButtonBindings
+        buttonShortcuts = rawButtonShortcuts
+        buttonApplicationProfileIDs = rawButtonApplicationProfileIDs
+        secondaryButtonBindings = rawSecondaryButtonBindings
+    }
+
+    /// Relative `[button]` and `[button, trigger]` paths for keys this build has no case for.
+    var unknownKeyPaths: [[String]] {
+        var paths: [[String]] = []
+        let allButtonKeys = Set(buttonBindings.keys)
+            .union(buttonShortcuts.keys)
+            .union((buttonApplicationProfileIDs ?? [:]).keys)
+            .union(secondaryButtonBindings.keys)
+        for buttonKey in allButtonKeys.sorted() where RemoteButton(rawValue: buttonKey) == nil {
+            paths.append([buttonKey])
+        }
+        for buttonKey in secondaryButtonBindings.keys.sorted() where RemoteButton(rawValue: buttonKey) != nil {
+            let triggers = secondaryButtonBindings[buttonKey] ?? [:]
+            for triggerKey in triggers.keys.sorted() where ButtonTrigger(rawValue: triggerKey) == nil {
+                paths.append([buttonKey, triggerKey])
             }
         }
-        for (button, bindings) in secondaryButtonBindings.sorted(by: { $0.key < $1.key }) {
-            let buttonPath: [any CodingKey] = path + [
-                CodingKeys.secondaryButtonBindings as any CodingKey, LossyCodingKey(stringValue: button),
-            ]
-            guard RemoteButton(rawValue: button) != nil else {
-                log.record(buttonPath)
-                continue
+        return paths
+    }
+
+    func strippingUnknownKeys() -> RemoteDeviceMappings {
+        RemoteDeviceMappings(
+            buttonBindings: parsedButtonBindings,
+            buttonShortcuts: parsedButtonShortcuts,
+            buttonApplicationProfileIDs: parsedButtonApplicationProfileIDs,
+            secondaryButtonBindings: parsedSecondaryButtonBindings
+        )
+    }
+
+    /// Replaces known button and gesture entries while retaining keys from newer versions that
+    /// this build does not recognize yet.
+    func updatingKnownMappings(
+        buttonBindings: [RemoteButton: ButtonAction],
+        buttonShortcuts: [RemoteButton: CustomKeyboardShortcut],
+        buttonApplicationProfileIDs: [RemoteButton: UUID] = [:],
+        secondaryButtonBindings: [RemoteButton: [ButtonTrigger: ConfiguredButtonAction]]
+    ) -> RemoteDeviceMappings {
+        var nextButtonBindings = self.buttonBindings.filter { RemoteButton(rawValue: $0.key) == nil }
+        for (button, action) in buttonBindings {
+            nextButtonBindings[button.rawValue] = action
+        }
+
+        var nextButtonShortcuts = self.buttonShortcuts.filter { RemoteButton(rawValue: $0.key) == nil }
+        for (button, shortcut) in buttonShortcuts {
+            nextButtonShortcuts[button.rawValue] = shortcut
+        }
+
+        var nextAppIDs = (self.buttonApplicationProfileIDs ?? [:]).filter { RemoteButton(rawValue: $0.key) == nil }
+        for (button, appID) in buttonApplicationProfileIDs {
+            nextAppIDs[button.rawValue] = appID
+        }
+
+        var nextSecondary = self.secondaryButtonBindings.filter { RemoteButton(rawValue: $0.key) == nil }
+        let knownSecondaryKeys = Set(self.secondaryButtonBindings.keys.filter { RemoteButton(rawValue: $0) != nil })
+        let updatedKnownKeys = Set(secondaryButtonBindings.keys.map(\.rawValue))
+        for buttonKey in knownSecondaryKeys.union(updatedKnownKeys) {
+            var mergedTriggers = (self.secondaryButtonBindings[buttonKey] ?? [:]).filter {
+                ButtonTrigger(rawValue: $0.key) == nil
             }
-            for trigger in bindings.keys.sorted() where ButtonTrigger(rawValue: trigger) == nil {
-                log.record(buttonPath + [LossyCodingKey(stringValue: trigger)])
+            if let button = RemoteButton(rawValue: buttonKey),
+               let knownTriggers = secondaryButtonBindings[button] {
+                for (trigger, configured) in knownTriggers {
+                    mergedTriggers[trigger.rawValue] = configured
+                }
+            }
+            if !mergedTriggers.isEmpty {
+                nextSecondary[buttonKey] = mergedTriggers
             }
         }
+
+        return RemoteDeviceMappings(
+            rawButtonBindings: nextButtonBindings,
+            rawButtonShortcuts: nextButtonShortcuts,
+            rawButtonApplicationProfileIDs: nextAppIDs.isEmpty ? nil : nextAppIDs,
+            rawSecondaryButtonBindings: nextSecondary
+        )
     }
 
     init(

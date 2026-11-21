@@ -81,8 +81,16 @@ struct SettingsBackupTests {
         return try encoder.encode(document)
     }
 
-    private func importBackup(_ data: Data, into settings: AppSettings) throws -> SettingsBackupImportReport {
-        try settings.importSettingsBackup(from: data, isApplicationInstalled: { _ in true })
+    private func importBackup(
+        _ data: Data,
+        into settings: AppSettings,
+        availableAppIcons: Set<AppIconIdentifier> = [.standard]
+    ) throws -> SettingsBackupImportReport {
+        try settings.importSettingsBackup(
+            from: data,
+            availableAppIcons: availableAppIcons,
+            isApplicationInstalled: { _ in true }
+        )
     }
 
     @Test func roundTripRestoresMappingsGainAndVoiceButtonMode() throws {
@@ -243,6 +251,13 @@ struct SettingsBackupTests {
         #expect(settings.action(for: .home, profileID: fixture.google) == .showDesktop)
         #expect(settings.action(for: .home, profileID: second) == .showDesktop)
         #expect(report.importedRemoteCount == 2)
+        #expect(report.sharedRemoteModels == [.chromecastVoiceRemote])
+        #expect(!report.isClean)
+
+        let localization = LocalizationStore(settings: settings)
+        localization.select(.english)
+        let summary = SettingsBackupMessage.summary(for: report, using: localization)
+        #expect(summary.contains(localization.text(RemoteModel.chromecastVoiceRemote.localizationKey)))
     }
 
     @Test func unknownActionSkipsOnlyThatEntry() throws {
@@ -265,14 +280,35 @@ struct SettingsBackupTests {
         #expect(report.importedRemoteCount == 1)
     }
 
-    @Test func applicationReferencesAreRemappedToLocalIDs() throws {
+    @Test func applicationReferencesAreRemappedToLocalIDsWithoutOverwritingLocalProfiles() throws {
         let fixture = try fixture()
         defer { fixture.tearDown() }
         let settings = fixture.settings
+        let localTarget = AccessibilityFocusTarget(
+            role: "AXTextArea",
+            identifier: "local-composer",
+            title: "Message",
+            description: "",
+            help: "",
+            placeholder: "",
+            context: "",
+            windowTitle: "Main",
+            normalizedFrame: nil
+        )
         let localID = settings.addCustomApplicationProfile(.init(
-            displayName: "Example", bundleIdentifier: "com.example.app", applicationPath: "/Applications/Example.app"))
+            displayName: "Local Example",
+            bundleIdentifier: "com.example.app",
+            applicationPath: "/Applications/Local.app",
+            focusStrategy: .recordedAccessibility,
+            accessibilityTarget: localTarget
+        ))
         let fileApplication = CustomApplicationProfile(
-            displayName: "Example 2", bundleIdentifier: "com.example.app", applicationPath: "/Applications/Example.app")
+            displayName: "Backup Example",
+            bundleIdentifier: "com.example.app",
+            applicationPath: "/Applications/Backup.app",
+            focusStrategy: .keyboardShortcut,
+            focusShortcut: CustomKeyboardShortcut(keyCode: 49, modifierFlags: [.command], keyLabel: "Space")
+        )
         let data = try backup([remote(.chromecastVoiceRemote) {
             $0.buttonBindings["home"] = .openCustomApplication
             $0.buttonApplicationProfileIDs = ["home": fileApplication.id]
@@ -280,8 +316,13 @@ struct SettingsBackupTests {
 
         let report = try importBackup(data, into: settings)
         #expect(settings.customApplicationProfiles.count == 1)
-        #expect(settings.customApplicationProfiles.first?.id == localID)
-        #expect(settings.customApplicationProfiles.first?.displayName == "Example 2")
+        let preserved = try #require(settings.customApplicationProfiles.first)
+        #expect(preserved.id == localID)
+        #expect(preserved.displayName == "Local Example")
+        #expect(preserved.applicationPath == "/Applications/Local.app")
+        #expect(preserved.focusStrategy == .recordedAccessibility)
+        #expect(preserved.accessibilityTarget == localTarget)
+        #expect(preserved.focusShortcut == nil)
         #expect(settings.applicationProfileID(for: .home, profileID: fixture.google) == localID)
         #expect(report.isClean)
     }
@@ -395,9 +436,11 @@ struct SettingsBackupTests {
         "settings.backup.import.done", "settings.backup.import.skipped_header", "settings.backup.import.item",
         "settings.backup.import.reason.unrecognized_value", "settings.backup.import.reason.model_not_on_this_mac",
         "settings.backup.import.reason.unknown_application", "settings.backup.import.reason.compatibility_mode",
+        "settings.backup.import.location.custom_applications", "settings.backup.import.shared_remotes",
         "settings.backup.import.missing_apps", "settings.backup.import.newer_version", "settings.backup.import.more",
         "settings.backup.import.not_settings_file", "settings.backup.import.too_large",
         "settings.backup.import.read_failed", "settings.backup.import.result_title", "settings.backup.error.title",
+        "settings.partially_loaded.title", "settings.partially_loaded.detail",
     ]
 
     @Test func summaryListsSkippedItemsWithReasons() throws {
@@ -445,11 +488,233 @@ struct SettingsBackupTests {
         }
     }
 
-    @Test func documentWithoutFormatIsRejected() {
-        for json in [#"{"formatVersion":1}"#, #"{"format":"other","formatVersion":1}"#, "[]"] {
+    @Test func documentWithoutFormatOrVersionIsRejected() {
+        for json in [
+            #"{"formatVersion":1}"#,
+            #"{"format":"remote-buddy-settings"}"#,
+            #"{"format":"remote-buddy-settings","formatVersion":"1"}"#,
+            #"{"format":"other","formatVersion":1}"#,
+            "[]",
+        ] {
             #expect(throws: SettingsBackupError.notASettingsFile) {
                 try JSONDecoder().decode(SettingsBackupDocument.self, from: Data(json.utf8))
             }
         }
+    }
+
+    @Test func nilGainExportsWithoutSolidifyingAndPreservesGlobalFallback() throws {
+        let name = "settings-backup-nil-gain-" + UUID().uuidString
+        let values = try #require(UserDefaults(suiteName: name))
+        defer { values.removePersistentDomain(forName: name) }
+        let settings = AppSettings(defaults: values)
+        settings.gainDB = 7
+        let xiaomi = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
+        let google = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+        settings.selectRemoteProfile(xiaomi)
+        settings.setGainDB(5, for: google)
+        #expect(settings.gainDB(for: xiaomi) == 7)
+        #expect(settings.remoteDeviceProfiles.first { $0.id == xiaomi }?.gainDB == nil)
+        let exported = try settings.settingsBackupData(appVersion: "1.0")
+
+        let object = try jsonObject(exported)
+        let remotes = try #require(object["remotes"] as? [[String: Any]])
+        let xiaomiRemote = try #require(remotes.first { ($0["model"] as? String) == RemoteModel.rc003.rawValue })
+        let googleRemote = try #require(
+            remotes.first { ($0["model"] as? String) == RemoteModel.chromecastVoiceRemote.rawValue }
+        )
+        #expect(xiaomiRemote["gainDB"] == nil)
+        #expect(googleRemote["gainDB"] as? Double == 5)
+
+        // Target Mac: xiaomi has no explicit gain (follows global), google has explicit 3 dB.
+        let targetName = "settings-backup-target-" + UUID().uuidString
+        let targetValues = try #require(UserDefaults(suiteName: targetName))
+        defer { targetValues.removePersistentDomain(forName: targetName) }
+        let target = AppSettings(defaults: targetValues)
+        target.gainDB = 14
+        let targetXiaomi = target.registerBluetoothRemote(identifier: UUID(), model: .rc003)
+        let targetGoogle = target.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+        target.setGainDB(3, for: targetGoogle)
+
+        _ = try importBackup(try backup([remote(.rc003, gainDB: nil)]), into: target)
+        #expect(target.remoteDeviceProfiles.first { $0.id == targetXiaomi }?.gainDB == nil)
+        target.selectRemoteProfile(targetXiaomi)
+        #expect(target.gainDB(for: targetXiaomi) == 14)
+
+        // Importing nil gain into a profile that already has an explicit gain keeps its explicit value.
+        _ = try importBackup(try backup([remote(.chromecastVoiceRemote, gainDB: nil)]), into: target)
+        #expect(target.gainDB(for: targetGoogle) == 3)
+    }
+
+    @Test func unnamedRemotesOfSameModelMatchOneToOneWithoutSharing() throws {
+        let fixture = try fixture()
+        defer { fixture.tearDown() }
+        let settings = fixture.settings
+        let secondGoogle = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+        let data = try backup([
+            remote(.chromecastVoiceRemote) { $0.buttonBindings["home"] = .showDesktop },
+            remote(.chromecastVoiceRemote) { $0.buttonBindings["home"] = .escape },
+        ])
+
+        let report = try importBackup(data, into: settings)
+        #expect(settings.action(for: .home, profileID: fixture.google) == .showDesktop)
+        #expect(settings.action(for: .home, profileID: secondGoogle) == .escape)
+        #expect(report.sharedRemoteModels.isEmpty)
+        #expect(report.isClean)
+    }
+
+    @Test func namedMatchBeatsUnnamedProfileForSameModel() throws {
+        let fixture = try fixture()
+        defer { fixture.tearDown() }
+        let settings = fixture.settings
+        let named = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+        settings.updateRemoteProfile(named, model: .chromecastVoiceRemote, customName: "Living room")
+        let data = try backup([
+            remote(.chromecastVoiceRemote, name: "Living room") { $0.buttonBindings["home"] = .escape },
+            remote(.chromecastVoiceRemote, name: "") { $0.buttonBindings["home"] = .showDesktop },
+        ])
+
+        let report = try importBackup(data, into: settings)
+        #expect(settings.action(for: .home, profileID: fixture.google) == .showDesktop)
+        #expect(settings.action(for: .home, profileID: named) == .escape)
+        #expect(report.sharedRemoteModels.isEmpty)
+        #expect(report.isClean)
+    }
+
+    @Test func unknownAppIconIdentifierIsSkippedWithoutChangingSetting() throws {
+        let fixture = try fixture()
+        defer { fixture.tearDown() }
+        let data = Data(#"{"format":"remote-buddy-settings","formatVersion":1,"general":{"appIconIdentifier":"future_icon"}}"#.utf8)
+        let report = try importBackup(data, into: fixture.settings, availableAppIcons: [.standard])
+        #expect(fixture.settings.appIconIdentifier == .standard)
+        #expect(report.skippedItems.contains(.init(location: ["general", "appIconIdentifier"], reason: .unrecognizedValue)))
+    }
+
+    @Test func unknownDisabledIntegrationIsSkippedWhileKnownApplies() throws {
+        let fixture = try fixture()
+        defer { fixture.tearDown() }
+        let known = try #require(ApplicationIntegration.allCases.first).rawValue
+        let json = """
+        {"format":"remote-buddy-settings","formatVersion":1,
+        "general":{"disabledApplicationIntegrations":["future_integration","\(known)"]}}
+        """
+        let report = try importBackup(Data(json.utf8), into: fixture.settings)
+        #expect(!fixture.settings.enabledApplicationIntegrations.contains(known))
+        #expect(report.skippedItems.contains(
+            .init(location: ["general", "disabledApplicationIntegrations", "future_integration"],
+                  reason: .unrecognizedValue)))
+    }
+
+    @Test func mixedValidAndInvalidApplicationReferencesKeepValidAndDropInvalid() throws {
+        let fixture = try fixture()
+        defer { fixture.tearDown() }
+        let fileApplication = CustomApplicationProfile(
+            displayName: "Example", bundleIdentifier: "com.example.app", applicationPath: "/Applications/Example.app")
+        let missingID = UUID()
+        let data = try backup([remote(.chromecastVoiceRemote) {
+            $0.buttonBindings["home"] = .openCustomApplication
+            $0.buttonBindings["youtube"] = .openCustomApplication
+            $0.buttonApplicationProfileIDs = ["home": fileApplication.id, "youtube": missingID]
+        }], applications: [fileApplication])
+
+        let report = try importBackup(data, into: fixture.settings)
+        let localID = try #require(fixture.settings.customApplicationProfiles.first?.id)
+        #expect(fixture.settings.applicationProfileID(for: .home, profileID: fixture.google) == localID)
+        #expect(fixture.settings.applicationProfileID(for: .youtube, profileID: fixture.google) == nil)
+        #expect(fixture.settings.action(for: .youtube, profileID: fixture.google) == .previousCommandLeft)
+        #expect(report.skippedItems.contains(
+            .init(location: ["chromecast_voice_remote", "youtube"], reason: .unknownApplicationReference)))
+    }
+
+    @Test func malformedCustomApplicationIsSkippedAndLocalizedInSummary() throws {
+        let fixture = try fixture()
+        defer { fixture.tearDown() }
+        let json = """
+        {"format":"remote-buddy-settings","formatVersion":1,"customApplications":[
+          {"id":"\(UUID().uuidString)","displayName":"Valid App","bundleIdentifier":"com.example.valid","applicationPath":"/Applications/Valid.app","focusStrategy":"none"},
+          {"displayName":"Broken App","bundleIdentifier":"com.example.broken"},
+          {"bundleIdentifier":"com.example.nameless"}
+        ],"remotes":[]}
+        """
+        let report = try importBackup(Data(json.utf8), into: fixture.settings)
+        #expect(fixture.settings.customApplicationProfiles.map(\.displayName) == ["Valid App"])
+        #expect(report.skippedItems.contains(
+            .init(location: ["customApplications", "Broken App"], reason: .unrecognizedValue)))
+        #expect(report.skippedItems.contains(
+            .init(location: ["customApplications", "#3"], reason: .unrecognizedValue)))
+
+        let localization = LocalizationStore(settings: fixture.settings)
+        localization.select(.english)
+        let english = SettingsBackupMessage.summary(for: report, using: localization)
+        #expect(english.contains("Custom Applications › Broken App"))
+        #expect(english.contains("Custom Applications › #3"))
+
+        localization.select(.simplifiedChinese)
+        let chinese = SettingsBackupMessage.summary(for: report, using: localization)
+        #expect(chinese.contains("自定义应用 › Broken App"))
+        #expect(chinese.contains("自定义应用 › #3"))
+    }
+
+    @Test func tableLevelTypeErrorInBackupMappingsKeepsValidBindingsAndReportsTable() throws {
+        let fixture = try fixture()
+        defer { fixture.tearDown() }
+        let data = try rewritingFirstRemote(of: try backup([remote(.chromecastVoiceRemote) {
+            $0.buttonBindings["home"] = .showDesktop
+        }])) { remote in
+            var mappings = remote["mappings"] as? [String: Any] ?? [:]
+            mappings["buttonShortcuts"] = "oops"
+            remote["mappings"] = mappings
+        }
+
+        let report = try importBackup(data, into: fixture.settings)
+        #expect(fixture.settings.action(for: .home, profileID: fixture.google) == .showDesktop)
+        #expect(report.skippedItems.contains(
+            .init(location: ["chromecast_voice_remote", "buttonShortcuts"], reason: .unrecognizedValue)))
+    }
+
+    @Test func repeatedImportIsIdempotent() throws {
+        let fixture = try fixture()
+        defer { fixture.tearDown() }
+        let settings = fixture.settings
+        settings.setAction(.showDesktop, for: .home)
+        settings.addCustomApplicationProfile(.init(
+            displayName: "Example", bundleIdentifier: "com.example.app", applicationPath: "/Applications/Example.app"))
+        let exported = try settings.settingsBackupData(appVersion: "1.0")
+
+        let first = try importBackup(exported, into: settings)
+        let second = try importBackup(exported, into: settings)
+        #expect(first.isClean)
+        #expect(second.isClean)
+        #expect(first.importedRemoteCount == 2)
+        #expect(second.importedRemoteCount == 2)
+        #expect(settings.customApplicationProfiles.count == 1)
+    }
+
+    @Test func freshInstallWithoutRemotesImportsGeneralAndSkipsRemotes() throws {
+        let name = "settings-backup-fresh-" + UUID().uuidString
+        let values = try #require(UserDefaults(suiteName: name))
+        defer { values.removePersistentDomain(forName: name) }
+        let fresh = AppSettings(defaults: values)
+        let fileApplication = CustomApplicationProfile(
+            displayName: "Example", bundleIdentifier: "com.example.app", applicationPath: "/Applications/Example.app")
+        var document = SettingsBackupDocument(
+            exportedAt: Date(),
+            appVersion: "1.0",
+            general: .init(showDockIcon: true, customMappingEnabled: true),
+            customApplications: [fileApplication],
+            remotes: [remote(.rc003), remote(.chromecastVoiceRemote)]
+        )
+        document.formatVersion = SettingsBackupDocument.currentFormatVersion
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let data = try encoder.encode(document)
+
+        let report = try importBackup(data, into: fresh)
+        #expect(fresh.showDockIcon)
+        #expect(fresh.customMappingEnabled)
+        #expect(fresh.customApplicationProfiles.count == 1)
+        #expect(report.importedRemoteCount == 0)
+        #expect(report.skippedItems.contains(.init(location: ["rc003"], reason: .remoteModelNotOnThisMac)))
+        #expect(report.skippedItems.contains(
+            .init(location: ["chromecast_voice_remote"], reason: .remoteModelNotOnThisMac)))
     }
 }

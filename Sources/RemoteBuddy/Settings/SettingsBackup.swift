@@ -23,10 +23,11 @@ struct SettingsBackupImportReport: Equatable {
     var importedRemoteCount = 0
     var skippedItems: [SkippedItem] = []
     var missingApplications: [String] = []
+    var sharedRemoteModels: [RemoteModel] = []
     var isFromNewerVersion = false
 
     var isClean: Bool {
-        skippedItems.isEmpty && missingApplications.isEmpty && !isFromNewerVersion
+        skippedItems.isEmpty && missingApplications.isEmpty && sharedRemoteModels.isEmpty && !isFromNewerVersion
     }
 
     mutating func skip(_ location: [String], _ reason: SkippedItem.Reason) {

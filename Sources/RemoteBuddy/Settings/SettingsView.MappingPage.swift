@@ -198,27 +198,47 @@ extension SettingsView {
             for: settings.corruptedSettingKeys,
             localize: localization.text
         ) {
-            GlassPanel {
-                HStack(alignment: .top, spacing: 11) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(.orange)
-                        .frame(width: 22)
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text(localization.text(CorruptedSettingsNotice.titleKey))
-                            .font(.system(size: 12, weight: .semibold))
-                        Text(summary)
+            settingsNoticePanel(
+                titleKey: CorruptedSettingsNotice.titleKey,
+                lines: [
+                    (summary, false),
+                    (localization.text(CorruptedSettingsNotice.recoveryKey), true),
+                    (localization.text(CorruptedSettingsNotice.nextStepKey), true),
+                ]
+            )
+        }
+        if let partialSummary = CorruptedSettingsNotice.summary(
+            for: settings.partiallyLoadedSettingKeys,
+            localize: localization.text
+        ) {
+            settingsNoticePanel(
+                titleKey: CorruptedSettingsNotice.partialTitleKey,
+                lines: [
+                    (partialSummary, false),
+                    (localization.text(CorruptedSettingsNotice.partialDetailKey), true),
+                ]
+            )
+        }
+    }
+
+    private func settingsNoticePanel(titleKey: String, lines: [(text: String, secondary: Bool)]) -> some View {
+        GlassPanel {
+            HStack(alignment: .top, spacing: 11) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.orange)
+                    .frame(width: 22)
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(localization.text(titleKey))
+                        .font(.system(size: 12, weight: .semibold))
+                    ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
+                        Text(line.text)
                             .font(.system(size: 12))
-                        Text(localization.text(CorruptedSettingsNotice.recoveryKey))
-                            .font(.system(size: 12))
-                            .foregroundStyle(.secondary)
-                        Text(localization.text(CorruptedSettingsNotice.nextStepKey))
-                            .font(.system(size: 12))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(line.secondary ? .secondary : .primary)
                     }
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }

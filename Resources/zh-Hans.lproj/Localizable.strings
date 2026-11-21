@@ -491,7 +491,7 @@
 "settings.backup.import.help" = "从备份文件恢复设置，按遥控器型号对应；本机没有的型号会跳过。";
 "settings.backup.import.action" = "导入…";
 "settings.backup.import.confirm_title" = "导入设置？";
-"settings.backup.import.confirm_message" = "导入会覆盖当前的按键映射和设置，建议先导出一份备份。";
+"settings.backup.import.confirm_message" = "导入会覆盖当前的按键映射和设置，无法识别的文件会被直接拒绝且不会修改任何内容。建议先导出一份备份。";
 "settings.backup.import.result_title" = "导入完成";
 "settings.backup.import.done" = "已导入 %d 个遥控器的设置。";
 "settings.backup.import.skipped_header" = "以下项目已跳过：";
@@ -500,6 +500,8 @@
 "settings.backup.import.reason.model_not_on_this_mac" = "本机没有这个型号";
 "settings.backup.import.reason.unknown_application" = "找不到对应的 App";
 "settings.backup.import.reason.compatibility_mode" = "兼容模式下不能改映射";
+"settings.backup.import.location.custom_applications" = "自定义应用";
+"settings.backup.import.shared_remotes" = "以下型号的多台遥控器套用了同一份备份映射：%@。";
 "settings.backup.import.missing_apps" = "本机未安装：%@";
 "settings.backup.import.newer_version" = "文件来自更新的版本，部分设置可能没有导入。";
 "settings.backup.import.more" = "另有 %d 项。";
@@ -879,6 +881,8 @@
 "settings.corrupted.item.custom_application" = "自定义应用动作";
 "settings.corrupted.item.remote_device" = "遥控器设备配置";
 "settings.corrupted.item.other" = "其他设置";
+"settings.partially_loaded.title" = "部分设置无法被当前版本识别，已跳过";
+"settings.partially_loaded.detail" = "其余设置已保留，原始数据也已备份在设置文件中。";
 
 "action.combination_action" = "组合动作";
 

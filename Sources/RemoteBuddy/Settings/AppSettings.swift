@@ -105,7 +105,7 @@ final class AppSettings: ObservableObject {
                     secondary[trigger] = configured
                     parsedSecondary[button] = secondary
                 }
-                remoteDeviceProfiles[index].mappings = RemoteDeviceMappings(
+                remoteDeviceProfiles[index].mappings = mappings.updatingKnownMappings(
                     buttonBindings: parsedBindings,
                     buttonShortcuts: parsedShortcuts,
                     buttonApplicationProfileIDs: parsedAppIDs,
@@ -338,6 +338,9 @@ final class AppSettings: ObservableObject {
     /// bytes are preserved under "<key>.corrupt" so a reset is recoverable and visible
     /// instead of looking like a first run.
     @Published private(set) var corruptedSettingKeys: [String] = []
+    /// Keys whose stored array loaded with some unrecognized entries skipped; the original
+    /// bytes were preserved under "<key>.corrupt" and the surviving entries remain active.
+    @Published private(set) var partiallyLoadedSettingKeys: [String] = []
 
     /// Splits "never saved" from "saved but unreadable". Only the latter is a fault, and
     /// silently treating it as a first run is what let user configuration disappear.
@@ -367,30 +370,39 @@ final class AppSettings: ObservableObject {
         }
     }
 
-    /// Like `decodeSetting`, but entries this build cannot read are skipped one by one. A
-    /// partial load still preserves the raw bytes, because the next save overwrites the key
-    /// with only what was readable.
-    private static func decodeLossySetting<T: Decodable>(
-        _ type: T.Type,
+    /// Like `decodeSetting`, but skips unreadable entries one by one inside a stored array.
+    /// When anything is dropped, the original bytes are saved to "<key>.corrupt" and the
+    /// surviving entries are written back so subsequent launches do not repeat the notice.
+    private static func decodeLossyArray<Element: Codable>(
+        _ elementType: Element.Type,
         forKey key: String,
         from defaults: UserDefaults,
-        corrupted: inout [String]
-    ) -> T? {
+        corrupted: inout [String],
+        partiallyLoaded: inout [String]
+    ) -> [Element]? {
         guard let data = defaults.data(forKey: key) else { return nil }
         let log = LossyDecodingLog()
         do {
-            let value = try JSONDecoder.lossy(log: log).decode(type, from: data)
+            let decoded = try JSONDecoder.lossy(log: log).decode(LossyArray<Element>.self, from: data)
             let dropped = log.droppedPaths.count
             if dropped > 0 {
                 defaults.set(data, forKey: "\(key).corrupt")
-                corrupted.append(key)
                 AppLogger.shared.write(
                     "SETTINGS decode_partial category=\(diagnosticSettingCategory(key)) dropped=\(dropped)"
                 )
+                if decoded.elements.isEmpty {
+                    defaults.removeObject(forKey: key)
+                    corrupted.append(key)
+                } else {
+                    if let cleaned = try? JSONEncoder().encode(decoded.elements) {
+                        defaults.set(cleaned, forKey: key)
+                    }
+                    partiallyLoaded.append(key)
+                }
             }
-            return value
+            return decoded.elements
         } catch {
-            return decodeSetting(type, forKey: key, from: defaults, corrupted: &corrupted)
+            return decodeSetting([Element].self, forKey: key, from: defaults, corrupted: &corrupted)
         }
     }
 
@@ -425,6 +437,7 @@ final class AppSettings: ObservableObject {
             .intersection(Self.allApplicationIntegrationIdentifiers)
         enabledApplicationIntegrations = Self.allApplicationIntegrationIdentifiers.subtracting(disabled)
         var corruptedKeys: [String] = []
+        var partiallyLoadedKeys: [String] = []
         self.defaults = defaults
         Self.discardInterruptedOnboardingTrial(in: defaults)
         remoteDeviceProfiles = []
@@ -564,12 +577,13 @@ final class AppSettings: ObservableObject {
             corrupted: &corruptedKeys
         )
         if
-            let decoded = Self.decodeLossySetting(
-                LossyArray<RemoteDeviceProfile>.self,
+            let decoded = Self.decodeLossyArray(
+                RemoteDeviceProfile.self,
                 forKey: Keys.remoteDeviceProfiles,
                 from: defaults,
-                corrupted: &corruptedKeys
-            )?.elements,
+                corrupted: &corruptedKeys,
+                partiallyLoaded: &partiallyLoadedKeys
+            ),
             !decoded.isEmpty
         {
             remoteDeviceProfiles = decoded
@@ -593,6 +607,7 @@ final class AppSettings: ObservableObject {
             }
         }
         corruptedSettingKeys = corruptedKeys
+        partiallyLoadedSettingKeys = partiallyLoadedKeys
         if shouldSeedSecondaryBindings { saveSecondaryBindings() }
     }
 }

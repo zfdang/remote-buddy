@@ -111,9 +111,9 @@ private struct LossyValue<Value: Decodable>: Decodable {
 }
 
 extension KeyedDecodingContainer {
-    /// A missing key reads as empty; a value that is not an object still throws.
-    func decodeLossyDictionary<Value: Decodable>(_ type: Value.Type, forKey key: Key) throws -> [String: Value] {
-        try decodeIfPresent(LossyDictionary<Value>.self, forKey: key)?.entries ?? [:]
+    /// A missing or null key reads as empty; a value that is not an object is logged and reads as empty.
+    func decodeLossyDictionary<Value: Decodable>(_ type: Value.Type, forKey key: Key) -> [String: Value] {
+        decodeLossyIfPresent(LossyDictionary<Value>.self, forKey: key)?.entries ?? [:]
     }
 
     func decodeLossyIfPresent<Value: Decodable>(_ type: Value.Type, forKey key: Key) -> Value? {

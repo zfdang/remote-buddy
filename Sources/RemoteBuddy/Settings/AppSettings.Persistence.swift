@@ -53,7 +53,7 @@ extension AppSettings {
               let selectedRemoteProfileID,
               let index = remoteDeviceProfiles.firstIndex(where: { $0.id == selectedRemoteProfileID })
         else { return }
-        remoteDeviceProfiles[index].mappings = RemoteDeviceMappings(
+        remoteDeviceProfiles[index].mappings = remoteDeviceProfiles[index].mappings.updatingKnownMappings(
             buttonBindings: buttonBindings,
             buttonShortcuts: buttonShortcuts,
             buttonApplicationProfileIDs: buttonApplicationProfileIDs,

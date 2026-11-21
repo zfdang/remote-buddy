@@ -124,7 +124,11 @@ extension SettingsView {
                 }
 
                 aboutSection(titleKey: "settings.general.backup_group") {
-                    SettingsBackupSection(settings: settings, localization: localization) {
+                    SettingsBackupSection(
+                        settings: settings,
+                        localization: localization,
+                        availableAppIcons: Set(appIconCatalog.options.map(\.id))
+                    ) {
                         localization.select(settings.applicationLanguage)
                         setDockIconVisible(settings.showDockIcon)
                         setStatusBarIconVisible(settings.showStatusBarIcon)

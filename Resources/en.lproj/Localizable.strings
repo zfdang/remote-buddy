@@ -491,7 +491,7 @@
 "settings.backup.import.help" = "Restores settings from a backup file, matched by remote model. Models this Mac does not have are skipped.";
 "settings.backup.import.action" = "Import…";
 "settings.backup.import.confirm_title" = "Import Settings?";
-"settings.backup.import.confirm_message" = "Importing replaces the current button mappings and settings. Consider exporting a backup first.";
+"settings.backup.import.confirm_message" = "Importing replaces the current button mappings and settings. Unrecognized files are rejected without making changes. Consider exporting a backup first.";
 "settings.backup.import.result_title" = "Import Finished";
 "settings.backup.import.done" = "Settings imported. Remotes updated: %d.";
 "settings.backup.import.skipped_header" = "These items were skipped:";
@@ -500,6 +500,8 @@
 "settings.backup.import.reason.model_not_on_this_mac" = "this Mac has no remote of this model";
 "settings.backup.import.reason.unknown_application" = "the app it opens was not found";
 "settings.backup.import.reason.compatibility_mode" = "mappings cannot change in compatibility mode";
+"settings.backup.import.location.custom_applications" = "Custom Applications";
+"settings.backup.import.shared_remotes" = "Multiple remotes received the same backup mapping: %@.";
 "settings.backup.import.missing_apps" = "Not installed on this Mac: %@";
 "settings.backup.import.newer_version" = "The file comes from a newer version, so some settings may not have been imported.";
 "settings.backup.import.more" = "%d more items.";
@@ -882,6 +884,8 @@
 "settings.corrupted.item.custom_application" = "custom application actions";
 "settings.corrupted.item.remote_device" = "remote device profiles";
 "settings.corrupted.item.other" = "other settings";
+"settings.partially_loaded.title" = "Some settings were not recognized by this version and were skipped";
+"settings.partially_loaded.detail" = "Your other settings were kept, and the original data was backed up in the settings file.";
 
 "action.combination_action" = "Action Sequence";
 

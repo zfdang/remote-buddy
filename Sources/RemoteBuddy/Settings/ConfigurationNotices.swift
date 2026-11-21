@@ -9,6 +9,8 @@ enum CorruptedSettingsNotice {
     static let summaryKey = "settings.corrupted.summary"
     static let recoveryKey = "settings.corrupted.recovery"
     static let nextStepKey = "settings.corrupted.next_step"
+    static let partialTitleKey = "settings.partially_loaded.title"
+    static let partialDetailKey = "settings.partially_loaded.detail"
     static let separatorKey = "settings.corrupted.separator"
     static let buttonMappingItemKey = "settings.corrupted.item.button_mapping"
     static let customApplicationItemKey = "settings.corrupted.item.custom_application"

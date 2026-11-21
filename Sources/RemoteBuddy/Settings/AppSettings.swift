@@ -367,6 +367,33 @@ final class AppSettings: ObservableObject {
         }
     }
 
+    /// Like `decodeSetting`, but entries this build cannot read are skipped one by one. A
+    /// partial load still preserves the raw bytes, because the next save overwrites the key
+    /// with only what was readable.
+    private static func decodeLossySetting<T: Decodable>(
+        _ type: T.Type,
+        forKey key: String,
+        from defaults: UserDefaults,
+        corrupted: inout [String]
+    ) -> T? {
+        guard let data = defaults.data(forKey: key) else { return nil }
+        let log = LossyDecodingLog()
+        do {
+            let value = try JSONDecoder.lossy(log: log).decode(type, from: data)
+            let dropped = log.droppedPaths.count
+            if dropped > 0 {
+                defaults.set(data, forKey: "\(key).corrupt")
+                corrupted.append(key)
+                AppLogger.shared.write(
+                    "SETTINGS decode_partial category=\(diagnosticSettingCategory(key)) dropped=\(dropped)"
+                )
+            }
+            return value
+        } catch {
+            return decodeSetting(type, forKey: key, from: defaults, corrupted: &corrupted)
+        }
+    }
+
     static func diagnosticSettingCategory(_ key: String) -> String {
         switch key {
         case "remoteDeviceProfiles": "remote_profiles"
@@ -537,12 +564,12 @@ final class AppSettings: ObservableObject {
             corrupted: &corruptedKeys
         )
         if
-            let decoded = Self.decodeSetting(
-                [RemoteDeviceProfile].self,
+            let decoded = Self.decodeLossySetting(
+                LossyArray<RemoteDeviceProfile>.self,
                 forKey: Keys.remoteDeviceProfiles,
                 from: defaults,
                 corrupted: &corruptedKeys
-            ),
+            )?.elements,
             !decoded.isEmpty
         {
             remoteDeviceProfiles = decoded

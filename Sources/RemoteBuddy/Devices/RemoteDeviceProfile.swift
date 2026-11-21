@@ -45,6 +45,53 @@ struct RemoteDeviceMappings: Codable, Equatable {
     var buttonApplicationProfileIDs: [String: UUID]?
     var secondaryButtonBindings: [String: [String: ConfiguredButtonAction]]
 
+    private enum CodingKeys: String, CodingKey {
+        case buttonBindings, buttonShortcuts, buttonApplicationProfileIDs, secondaryButtonBindings
+    }
+
+    /// Reads entry by entry: one action, shortcut or gesture this build does not know is
+    /// dropped on its own instead of discarding the remote's whole mapping.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        buttonBindings = try container.decodeLossyDictionary(ButtonAction.self, forKey: .buttonBindings)
+        buttonShortcuts = try container.decodeLossyDictionary(CustomKeyboardShortcut.self, forKey: .buttonShortcuts)
+        buttonApplicationProfileIDs = try container.decodeIfPresent(
+            LossyDictionary<UUID>.self, forKey: .buttonApplicationProfileIDs
+        )?.entries
+        secondaryButtonBindings = try container.decodeLossyDictionary(
+            LossyDictionary<ConfiguredButtonAction>.self, forKey: .secondaryButtonBindings
+        ).mapValues(\.entries)
+        if let log = decoder.lossyDecodingLog { recordUnknownKeys(at: decoder.codingPath, in: log) }
+    }
+
+    /// Button and gesture keys this build has no case for still decode as strings and are kept,
+    /// but nothing reads them, so they are reported: the raw bytes are then preserved before the
+    /// next save rebuilds the mapping from the known keys only.
+    private func recordUnknownKeys(at path: [any CodingKey], in log: LossyDecodingLog) {
+        let tables: [(CodingKeys, [String])] = [
+            (.buttonBindings, Array(buttonBindings.keys)),
+            (.buttonShortcuts, Array(buttonShortcuts.keys)),
+            (.buttonApplicationProfileIDs, Array((buttonApplicationProfileIDs ?? [:]).keys)),
+        ]
+        for (table, keys) in tables {
+            for key in keys.sorted() where RemoteButton(rawValue: key) == nil {
+                log.record(path + [table as any CodingKey, LossyCodingKey(stringValue: key)])
+            }
+        }
+        for (button, bindings) in secondaryButtonBindings.sorted(by: { $0.key < $1.key }) {
+            let buttonPath: [any CodingKey] = path + [
+                CodingKeys.secondaryButtonBindings as any CodingKey, LossyCodingKey(stringValue: button),
+            ]
+            guard RemoteButton(rawValue: button) != nil else {
+                log.record(buttonPath)
+                continue
+            }
+            for trigger in bindings.keys.sorted() where ButtonTrigger(rawValue: trigger) == nil {
+                log.record(buttonPath + [LossyCodingKey(stringValue: trigger)])
+            }
+        }
+    }
+
     init(
         buttonBindings: [RemoteButton: ButtonAction],
         buttonShortcuts: [RemoteButton: CustomKeyboardShortcut],

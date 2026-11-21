@@ -10,7 +10,7 @@ extension KeyboardInjector {
         applicationOpener: ApplicationOpener,
         applicationFocuser: @escaping ApplicationFocuser
     ) {
-        guard let url = applicationURL(application.bundleIdentifier) else {
+        guard let url = application.bundleIdentifiers.lazy.compactMap(applicationURL).first else {
             AppLogger.shared.write("APP ACTION unavailable bundle=\(application.bundleIdentifier)")
             return
         }

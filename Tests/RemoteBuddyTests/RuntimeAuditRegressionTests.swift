@@ -246,9 +246,10 @@ struct RuntimeAuditRegressionTests {
 
     @Test func configuredActionSafetyCoversAllActionsForSecureInput() {
         let blocked: Set<ButtonAction> = [
-            .returnKey, .commandReturn, .shiftReturn, .commandCopy, .commandPaste,
-            .commandCut, .commandSelectAll, .commandUndo, .commandRedo, .commandFind,
-            .commandSave, .commandDelete, .deleteBackward, .customShortcut,
+            .returnKey, .commandReturn, .shiftReturn, .space, .tab,
+            .commandCopy, .commandPaste, .commandCut, .commandSelectAll,
+            .commandUndo, .commandRedo, .commandFind, .commandSave,
+            .commandDelete, .deleteBackward, .customShortcut,
         ]
         for action in ButtonAction.allCases {
             #expect(action.requiresNonSecureInput == blocked.contains(action))

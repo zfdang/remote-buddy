@@ -200,13 +200,13 @@ extension SettingsView {
     ) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: 148), spacing: 8)],
+                columns: [GridItem(.adaptive(minimum: 164), spacing: 8)],
                 alignment: .leading,
                 spacing: 8
             ) {
                 ForEach(actions) { action in
                     let unavailableApplication = action.presetApplication.map {
-                        !installedBundleIdentifiers.contains($0.bundleIdentifier)
+                        !$0.isInstalled(in: installedBundleIdentifiers)
                     } ?? false
                     Button {
                         onSelect(action)
@@ -216,6 +216,7 @@ extension SettingsView {
                                 (unavailableApplication
                                     ? localization.text("common.suffix.not_installed")
                                     : ""),
+                            shortcutLabel: action.shortcutDisplayLabel,
                             isSelected: selectedAction == action,
                             systemImage: selectedAction == action ? "checkmark.circle.fill" : "circle"
                         )
@@ -241,12 +242,29 @@ extension SettingsView {
         }
     }
 
-    private func mappingActionLabel(title: String, isSelected: Bool, systemImage: String) -> some View {
+    private func mappingActionLabel(
+        title: String,
+        shortcutLabel: String? = nil,
+        isSelected: Bool,
+        systemImage: String
+    ) -> some View {
         HStack(spacing: 7) {
             Image(systemName: systemImage)
                 .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
             Text(title).lineLimit(2).truncationMode(.tail)
-            Spacer(minLength: 0)
+            Spacer(minLength: 4)
+            if let shortcutLabel {
+                Text(shortcutLabel)
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(
+                        isSelected ? Color.accentColor.opacity(0.14) : Color.primary.opacity(0.06),
+                        in: RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    )
+                    .fixedSize()
+            }
         }
         .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
         .padding(.horizontal, 10)

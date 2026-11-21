@@ -40,7 +40,9 @@ struct ShortcutSequenceTests {
 
     @Test(arguments: [ButtonAction.commandReturn, .shiftReturn, .commandCopy, .commandPaste,
         .commandClose, .commandQuit, .commandCut, .commandSelectAll, .commandUndo,
-        .commandRedo, .commandFind, .commandSave, .commandDelete, .showDesktop])
+        .commandRedo, .commandFind, .commandSave, .commandDelete, .showDesktop,
+        .missionControl, .notificationCenter, .spotlight, .spaceLeft, .spaceRight,
+        .lockScreen, .screenshot])
     func builtInShortcutsUseModifierEdgesAndPropagateSubmissionFailure(action: ButtonAction) {
         var posted: [Posted] = []
         #expect(KeyboardInjector.send(action, accessibilityTrusted: { true }, secureInputEnabled: { false },
@@ -63,6 +65,10 @@ struct ShortcutSequenceTests {
             (.commandUndo, 6, .maskCommand), (.commandRedo, 6, [.maskCommand, .maskShift]),
             (.commandFind, 3, .maskCommand), (.commandSave, 1, .maskCommand),
             (.commandDelete, 51, .maskCommand), (.showDesktop, 103, .maskSecondaryFn),
+            (.missionControl, 126, .maskControl), (.notificationCenter, 45, .maskSecondaryFn),
+            (.spotlight, 49, .maskCommand), (.spaceLeft, 123, .maskControl),
+            (.spaceRight, 124, .maskControl), (.lockScreen, 12, [.maskControl, .maskCommand]),
+            (.screenshot, 23, [.maskCommand, .maskShift]),
         ]
         for (action, code, flags) in shortcuts {
             var posted: [Posted] = []

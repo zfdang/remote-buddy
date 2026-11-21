@@ -75,16 +75,28 @@ enum PresetApplication: String, CaseIterable, Identifiable {
     case remoteMic
     case codex
     case claude
+    case chatGPT
+    case deepSeekHarness
+    case workBuddy
     case cmux
-    case weChat
     case cursor
+    case vsCode
     case xcode
-    case slack
-    case weCom
-    case neteaseMusic
+    case zed
+    case ghostty
+    case iTerm2
+    case terminal
     case chrome
     case safari
-    case zed
+    case weChat
+    case weCom
+    case feishu
+    case dingTalk
+    case slack
+    case neteaseMusic
+    case appleMusic
+    case spotify
+    case finder
 
     var id: String { rawValue }
 
@@ -94,16 +106,28 @@ enum PresetApplication: String, CaseIterable, Identifiable {
         case .remoteMic: return localization.text("app.name")
         case .codex: return "Codex"
         case .claude: return "Claude"
+        case .chatGPT: return "ChatGPT"
+        case .deepSeekHarness: return "DeepSeek Harness"
+        case .workBuddy: return "WorkBuddy"
         case .cmux: return "cmux"
-        case .weChat: return localization.text("application.wechat")
         case .cursor: return "Cursor"
+        case .vsCode: return "VS Code"
         case .xcode: return "Xcode"
-        case .slack: return "Slack"
-        case .weCom: return localization.text("application.wecom")
-        case .neteaseMusic: return localization.text("application.netease_music")
+        case .zed: return "Zed"
+        case .ghostty: return "Ghostty"
+        case .iTerm2: return "iTerm2"
+        case .terminal: return localization.text("application.terminal")
         case .chrome: return "Chrome"
         case .safari: return "Safari"
-        case .zed: return "Zed"
+        case .weChat: return localization.text("application.wechat")
+        case .weCom: return localization.text("application.wecom")
+        case .feishu: return localization.text("application.feishu")
+        case .dingTalk: return localization.text("application.dingtalk")
+        case .slack: return "Slack"
+        case .neteaseMusic: return localization.text("application.netease_music")
+        case .appleMusic: return localization.text("application.apple_music")
+        case .spotify: return "Spotify"
+        case .finder: return localization.text("application.finder")
         }
     }
 
@@ -112,17 +136,44 @@ enum PresetApplication: String, CaseIterable, Identifiable {
         case .remoteMic: return "com.zfdang.remote-buddy"
         case .codex: return "com.openai.codex"
         case .claude: return "com.anthropic.claudefordesktop"
+        case .chatGPT: return "com.openai.chat"
+        case .deepSeekHarness: return "com.deepseek.dsh"
+        case .workBuddy: return "com.tencent.workbuddy.mac"
         case .cmux: return "com.cmuxterm.app"
-        case .weChat: return "com.tencent.xinWeChat"
         case .cursor: return "com.todesktop.230313mzl4w4u92"
+        case .vsCode: return "com.microsoft.VSCode"
         case .xcode: return "com.apple.dt.Xcode"
-        case .slack: return "com.tinyspeck.slackmacgap"
-        case .weCom: return "com.tencent.WeWorkMac"
-        case .neteaseMusic: return "com.netease.163music"
+        case .zed: return "dev.zed.Zed"
+        case .ghostty: return "com.mitchellh.ghostty"
+        case .iTerm2: return "com.googlecode.iterm2"
+        case .terminal: return "com.apple.Terminal"
         case .chrome: return "com.google.Chrome"
         case .safari: return "com.apple.Safari"
-        case .zed: return "dev.zed.Zed"
+        case .weChat: return "com.tencent.xinWeChat"
+        case .weCom: return "com.tencent.WeWorkMac"
+        case .feishu: return "com.electron.lark"
+        case .dingTalk: return "5ZSL2CJU2T.com.dingtalk.mac"
+        case .slack: return "com.tinyspeck.slackmacgap"
+        case .neteaseMusic: return "com.netease.163music"
+        case .appleMusic: return "com.apple.Music"
+        case .spotify: return "com.spotify.client"
+        case .finder: return "com.apple.finder"
         }
+    }
+
+    var bundleIdentifiers: [String] {
+        switch self {
+        case .feishu:
+            return ["com.electron.lark", "com.bytedance.macos.feishu"]
+        case .dingTalk:
+            return ["5ZSL2CJU2T.com.dingtalk.mac", "com.alibaba.DingTalkMac"]
+        default:
+            return [bundleIdentifier]
+        }
+    }
+
+    func isInstalled(in installedBundleIdentifiers: Set<String>) -> Bool {
+        bundleIdentifiers.contains { installedBundleIdentifiers.contains($0) }
     }
 
     var focusStrategy: ApplicationFocusStrategy? {
@@ -135,10 +186,13 @@ enum PresetApplication: String, CaseIterable, Identifiable {
 
     static var installedBundleIdentifiers: Set<String> {
         var identifiers: Set<String> = [remoteMic.bundleIdentifier]
-        identifiers.formUnion(allCases.compactMap { application in
-            NSWorkspace.shared.urlForApplication(withBundleIdentifier: application.bundleIdentifier)
-                .map { _ in application.bundleIdentifier }
-        })
+        for application in allCases {
+            for bundleID in application.bundleIdentifiers {
+                if NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) != nil {
+                    identifiers.insert(bundleID)
+                }
+            }
+        }
         return identifiers
     }
 }

@@ -273,6 +273,10 @@ enum KeyboardInjector {
             keyPoster(53, [])
         case .returnKey:
             keyPoster(36, [])
+        case .space:
+            keyPoster(49, [])
+        case .tab:
+            keyPoster(48, [])
         case .commandReturn:
             return ShortcutEventSequence.send(keyCode: 36, modifiers: .maskCommand,
                 hardwareFlags: shortcutHardwareFlags, eventPoster: shortcutEventPoster)
@@ -326,8 +330,29 @@ enum KeyboardInjector {
             scrollPoster(-scrollLineCount)
         case .deleteBackward:
             keyPoster(51, [])
+        case .missionControl:
+            return ShortcutEventSequence.send(keyCode: 126, modifiers: .maskControl,
+                hardwareFlags: shortcutHardwareFlags, eventPoster: shortcutEventPoster)
         case .showDesktop:
             return ShortcutEventSequence.send(keyCode: 103, modifiers: .maskSecondaryFn,
+                hardwareFlags: shortcutHardwareFlags, eventPoster: shortcutEventPoster)
+        case .notificationCenter:
+            return ShortcutEventSequence.send(keyCode: 45, modifiers: .maskSecondaryFn,
+                hardwareFlags: shortcutHardwareFlags, eventPoster: shortcutEventPoster)
+        case .spotlight:
+            return ShortcutEventSequence.send(keyCode: 49, modifiers: .maskCommand,
+                hardwareFlags: shortcutHardwareFlags, eventPoster: shortcutEventPoster)
+        case .spaceLeft:
+            return ShortcutEventSequence.send(keyCode: 123, modifiers: .maskControl,
+                hardwareFlags: shortcutHardwareFlags, eventPoster: shortcutEventPoster)
+        case .spaceRight:
+            return ShortcutEventSequence.send(keyCode: 124, modifiers: .maskControl,
+                hardwareFlags: shortcutHardwareFlags, eventPoster: shortcutEventPoster)
+        case .lockScreen:
+            return ShortcutEventSequence.send(keyCode: 12, modifiers: [.maskControl, .maskCommand],
+                hardwareFlags: shortcutHardwareFlags, eventPoster: shortcutEventPoster)
+        case .screenshot:
+            return ShortcutEventSequence.send(keyCode: 23, modifiers: [.maskCommand, .maskShift],
                 hardwareFlags: shortcutHardwareFlags, eventPoster: shortcutEventPoster)
         case .contextMenu:
             keyPoster(contextualMenuKeyCode, [])
@@ -339,6 +364,10 @@ enum KeyboardInjector {
             systemKeyPoster(1)
         case .volumeMute:
             systemKeyPoster(7)
+        case .brightnessUp:
+            systemKeyPoster(2)
+        case .brightnessDown:
+            systemKeyPoster(3)
         case .playPause:
             systemKeyPoster(16)
         case .previousCommandLeft:
@@ -391,8 +420,11 @@ enum KeyboardInjector {
             break
         case .toggleLongRecording, .openCommonPhrases, .directPassthrough:
             break
-        case .openRemoteBuddy, .openCodex, .openClaude, .openCmux, .openWeChat, .openCursor, .openXcode,
-             .openSlack, .openWeCom, .openNeteaseMusic, .openChrome, .openSafari, .openZed:
+        case .openRemoteBuddy, .openCodex, .openClaude, .openChatGPT, .openDeepSeekHarness,
+             .openWorkBuddy, .openCmux, .openCursor, .openVSCode, .openXcode, .openZed,
+             .openGhostty, .openITerm2, .openTerminal, .openChrome, .openSafari, .openWeChat,
+             .openWeCom, .openFeishu, .openDingTalk, .openSlack, .openNeteaseMusic,
+             .openAppleMusic, .openSpotify, .openFinder:
             break
         }
         return true

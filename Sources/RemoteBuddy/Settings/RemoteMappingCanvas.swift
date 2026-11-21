@@ -142,6 +142,7 @@ struct RemoteMappingCanvas: View {
     let activeButtons: Set<RemoteButton>
     let voiceActive: Bool
     let actionSummary: (RemoteButton, ButtonTrigger) -> String
+    var actionHelpSummary: ((RemoteButton, ButtonTrigger) -> String)? = nil
     let onEdit: (RemoteButton, ButtonTrigger) -> Void
     var onVoiceSettings: () -> Void = {}
     var remoteModel: RemoteModel = .rc003
@@ -312,7 +313,7 @@ struct RemoteMappingCanvas: View {
                     }
                     .buttonStyle(.plain)
                     .help(
-                        "\(button.displayName(using: localization)) · \(trigger.displayName(using: localization))\n\(actionSummary(button, trigger))"
+                        "\(button.displayName(using: localization)) · \(trigger.displayName(using: localization))\n\(actionHelpSummary?(button, trigger) ?? actionSummary(button, trigger))"
                     )
                 }
             }

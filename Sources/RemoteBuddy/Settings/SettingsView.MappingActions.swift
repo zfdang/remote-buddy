@@ -191,8 +191,32 @@ extension SettingsView {
         case .volumeUp: return localization.text("action.system_volume_up_short")
         case .volumeDown: return localization.text("action.system_volume_down_short")
         case .volumeMute: return localization.text("action.system_volume_mute_short")
+        case .brightnessUp: return localization.text("action.brightness_up_short")
+        case .brightnessDown: return localization.text("action.brightness_down_short")
         default: break
         }
         return configured.action.displayName(using: localization)
+    }
+
+    func mappingActionHelpSummary(for button: RemoteButton, trigger: ButtonTrigger,
+                                  configuredAction: ConfiguredButtonAction? = nil) -> String {
+        if trigger != .singleClick && mappingConfiguration(for: button, trigger: .singleClick).action == .directPassthrough {
+            return "-"
+        }
+        let configured = configuredAction ?? mappingConfiguration(for: button, trigger: trigger)
+        guard configured.action != .disabled else {
+            return localization.text("button_mapping.action.not_set")
+        }
+        if configured.action == .directPassthrough {
+            return mappingActionSummary(for: button, trigger: trigger, configuredAction: configured)
+        }
+        if configured.action == .customShortcut, let shortcut = configured.shortcut {
+            return shortcut.visualDisplayName(using: localization)
+        }
+        if configured.action == .openCustomApplication {
+            return settings.customApplicationProfile(id: configured.applicationProfileID)?.displayName
+                ?? localization.text("custom_application.not_configured")
+        }
+        return configured.action.detailedDisplayName(using: localization)
     }
 }

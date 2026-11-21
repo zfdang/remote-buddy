@@ -62,54 +62,87 @@ enum ButtonActionCategory: String, CaseIterable, Identifiable {
 
 enum ButtonAction: String, CaseIterable, Codable, Identifiable {
     case disabled
-    case escape
+    // Basic keys: confirmation, navigation & deletion
     case returnKey
-    case commandReturn
     case shiftReturn
+    case commandReturn
+    case escape
+    case space
+    case tab
+    case deleteBackward
+    case commandDelete
+    // Basic keys: editing & clipboard
     case commandCopy
     case commandPaste
-    case commandClose
-    case commandQuit
     case commandCut
     case commandSelectAll
     case commandUndo
     case commandRedo
     case commandFind
     case commandSave
-    case commandDelete
+    // Basic keys: window & app lifecycle
+    case commandClose
+    case commandQuit
+    // Basic keys: arrows & scrolling
     case arrowUp
     case arrowDown
     case arrowLeft
     case arrowRight
     case scrollUp
     case scrollDown
-    case deleteBackward
-    case showDesktop
-    case contextMenu
+    // System & Media: macOS desktop & system navigation
     case appSwitcher
+    case missionControl
+    case showDesktop
+    case notificationCenter
+    case spotlight
+    case spaceLeft
+    case spaceRight
+    case lockScreen
+    case screenshot
+    // System & Media: assistive & voice
     case focusInput
-    case volumeUp
-    case volumeDown
-    case volumeMute
+    case contextMenu
+    case toggleLongRecording
+    // System & Media: media, audio & display
     case playPause
     case previousCommandLeft
     case nextCommandRight
-    case toggleLongRecording
+    case volumeUp
+    case volumeDown
+    case volumeMute
+    case brightnessUp
+    case brightnessDown
+    // Common phrases
     case openCommonPhrases
-    case openCustomApplication
+    // Applications
     case openRemoteBuddy
     case openCodex
     case openClaude
+    case openChatGPT
+    case openDeepSeekHarness
+    case openWorkBuddy
     case openCmux
-    case openWeChat
     case openCursor
+    case openVSCode
     case openXcode
-    case openSlack
-    case openWeCom
-    case openNeteaseMusic
+    case openZed
+    case openGhostty
+    case openITerm2
+    case openTerminal
     case openChrome
     case openSafari
-    case openZed
+    case openWeChat
+    case openWeCom
+    case openFeishu
+    case openDingTalk
+    case openSlack
+    case openNeteaseMusic
+    case openAppleMusic
+    case openSpotify
+    case openFinder
+    case openCustomApplication
+    // Custom & passthrough
     case customShortcut
     case repeatSingleClick
     case directPassthrough = "direct_passthrough"
@@ -121,21 +154,24 @@ enum ButtonAction: String, CaseIterable, Codable, Identifiable {
         switch self {
         case .disabled: return localization.text("action.disabled")
         case .repeatSingleClick: return localization.text("action.repeat_single_click")
-        case .escape: return "Escape"
-        case .returnKey: return "Return"
-        case .commandReturn: return "Command-Return"
-        case .shiftReturn: return "Shift-Return"
-        case .commandCopy: return "Command-C"
-        case .commandPaste: return "Command-V"
-        case .commandClose: return "Command-W"
-        case .commandQuit: return "Command-Q"
-        case .commandCut: return "Command-X"
-        case .commandSelectAll: return "Command-A"
-        case .commandUndo: return "Command-Z"
-        case .commandRedo: return "Command-Shift-Z"
-        case .commandFind: return "Command-F"
-        case .commandSave: return "Command-S"
+        case .returnKey: return localization.text("action.return_key")
+        case .shiftReturn: return localization.text("action.shift_return")
+        case .commandReturn: return localization.text("action.command_return")
+        case .escape: return localization.text("action.escape")
+        case .space: return localization.text("action.space")
+        case .tab: return localization.text("action.tab")
+        case .deleteBackward: return localization.text("action.delete_backspace")
         case .commandDelete: return localization.text("action.command_delete")
+        case .commandCopy: return localization.text("action.command_copy")
+        case .commandPaste: return localization.text("action.command_paste")
+        case .commandCut: return localization.text("action.command_cut")
+        case .commandSelectAll: return localization.text("action.command_select_all")
+        case .commandUndo: return localization.text("action.command_undo")
+        case .commandRedo: return localization.text("action.command_redo")
+        case .commandFind: return localization.text("action.command_find")
+        case .commandSave: return localization.text("action.command_save")
+        case .commandClose: return localization.text("action.command_close")
+        case .commandQuit: return localization.text("action.command_quit")
         case .arrowUp: return localization.text("action.arrow_up")
         case .arrowDown: return localization.text("action.arrow_down")
         case .arrowLeft: return localization.text("action.arrow_left")
@@ -143,35 +179,99 @@ enum ButtonAction: String, CaseIterable, Codable, Identifiable {
         case .directPassthrough: return localization.text("action.direct_passthrough")
         case .scrollUp: return localization.text("action.scroll_up")
         case .scrollDown: return localization.text("action.scroll_down")
-        case .deleteBackward: return localization.text("action.delete_backspace")
+        case .appSwitcher: return localization.text("action.app_switcher")
+        case .missionControl: return localization.text("action.mission_control")
         case .showDesktop: return localization.text("action.show_desktop")
+        case .notificationCenter: return localization.text("action.notification_center")
+        case .spotlight: return localization.text("action.spotlight")
+        case .spaceLeft: return localization.text("action.space_left")
+        case .spaceRight: return localization.text("action.space_right")
+        case .lockScreen: return localization.text("action.lock_screen")
+        case .screenshot: return localization.text("action.screenshot")
         case .contextMenu: return localization.text("action.context_menu")
-        case .appSwitcher: return "Command-Tab"
-        case .volumeUp: return localization.text("action.system_volume_up")
-        case .volumeDown: return localization.text("action.system_volume_down")
-        case .volumeMute: return localization.text("action.system_mute")
+        case .focusInput: return localization.text("action.focus_input")
+        case .toggleLongRecording: return localization.text("action.toggle_long_recording")
         case .playPause: return localization.text("action.play_pause")
         case .previousCommandLeft: return localization.text("action.previous_command_left")
         case .nextCommandRight: return localization.text("action.next_command_right")
+        case .volumeUp: return localization.text("action.system_volume_up")
+        case .volumeDown: return localization.text("action.system_volume_down")
+        case .volumeMute: return localization.text("action.system_mute")
+        case .brightnessUp: return localization.text("action.brightness_up")
+        case .brightnessDown: return localization.text("action.brightness_down")
         case .customShortcut: return localization.text("action.custom_shortcut")
-        case .focusInput: return localization.text("action.focus_input")
         case .openCustomApplication: return localization.text("action.open_custom_application")
         case .openCommonPhrases: return localization.text("action.open_common_phrases")
-        case .toggleLongRecording: return localization.text("action.toggle_long_recording")
         case .openRemoteBuddy: return localization.text("action.open_remote_mic")
         case .openCodex: return localization.text("action.open_codex")
         case .openClaude: return localization.text("action.open_claude")
+        case .openChatGPT: return localization.text("action.open_chatgpt")
+        case .openDeepSeekHarness: return localization.text("action.open_deepseek_harness")
+        case .openWorkBuddy: return localization.text("action.open_workbuddy")
         case .openCmux: return localization.text("action.open_cmux")
-        case .openWeChat: return localization.text("action.open_wechat")
         case .openCursor: return localization.text("action.open_cursor")
+        case .openVSCode: return localization.text("action.open_vscode")
         case .openXcode: return localization.text("action.open_xcode")
-        case .openSlack: return localization.text("action.open_slack")
-        case .openWeCom: return localization.text("action.open_wecom")
-        case .openNeteaseMusic: return localization.text("action.open_netease_music")
+        case .openZed: return localization.text("action.open_zed")
+        case .openGhostty: return localization.text("action.open_ghostty")
+        case .openITerm2: return localization.text("action.open_iterm2")
+        case .openTerminal: return localization.text("action.open_terminal")
         case .openChrome: return localization.text("action.open_chrome")
         case .openSafari: return localization.text("action.open_safari")
-        case .openZed: return localization.text("action.open_zed")
+        case .openWeChat: return localization.text("action.open_wechat")
+        case .openWeCom: return localization.text("action.open_wecom")
+        case .openFeishu: return localization.text("action.open_feishu")
+        case .openDingTalk: return localization.text("action.open_dingtalk")
+        case .openSlack: return localization.text("action.open_slack")
+        case .openNeteaseMusic: return localization.text("action.open_netease_music")
+        case .openAppleMusic: return localization.text("action.open_apple_music")
+        case .openSpotify: return localization.text("action.open_spotify")
+        case .openFinder: return localization.text("action.open_finder")
         }
+    }
+
+    var shortcutDisplayLabel: String? {
+        switch self {
+        case .returnKey: return "↩"
+        case .shiftReturn: return "⇧↩"
+        case .commandReturn: return "⌘↩"
+        case .escape: return "Esc"
+        case .space: return "Space"
+        case .tab: return "⇥"
+        case .deleteBackward: return "⌫"
+        case .commandDelete: return "⌘⌫"
+        case .commandCopy: return "⌘C"
+        case .commandPaste: return "⌘V"
+        case .commandCut: return "⌘X"
+        case .commandSelectAll: return "⌘A"
+        case .commandUndo: return "⌘Z"
+        case .commandRedo: return "⇧⌘Z"
+        case .commandFind: return "⌘F"
+        case .commandSave: return "⌘S"
+        case .commandClose: return "⌘W"
+        case .commandQuit: return "⌘Q"
+        case .arrowUp: return "↑"
+        case .arrowDown: return "↓"
+        case .arrowLeft: return "←"
+        case .arrowRight: return "→"
+        case .appSwitcher: return "⌘Tab"
+        case .missionControl: return "⌃↑"
+        case .showDesktop: return "fn F11"
+        case .notificationCenter: return "fn N"
+        case .spotlight: return "⌘Space"
+        case .spaceLeft: return "⌃←"
+        case .spaceRight: return "⌃→"
+        case .lockScreen: return "⌃⌘Q"
+        case .screenshot: return "⇧⌘5"
+        default: return nil
+        }
+    }
+
+    @MainActor
+    func detailedDisplayName(using localization: LocalizationStore) -> String {
+        let name = displayName(using: localization)
+        guard let shortcut = shortcutDisplayLabel else { return name }
+        return "\(name) (\(shortcut))"
     }
 
     var presetApplication: PresetApplication? {
@@ -179,16 +279,28 @@ enum ButtonAction: String, CaseIterable, Codable, Identifiable {
         case .openRemoteBuddy: return .remoteMic
         case .openCodex: return .codex
         case .openClaude: return .claude
+        case .openChatGPT: return .chatGPT
+        case .openDeepSeekHarness: return .deepSeekHarness
+        case .openWorkBuddy: return .workBuddy
         case .openCmux: return .cmux
-        case .openWeChat: return .weChat
         case .openCursor: return .cursor
+        case .openVSCode: return .vsCode
         case .openXcode: return .xcode
-        case .openSlack: return .slack
-        case .openWeCom: return .weCom
-        case .openNeteaseMusic: return .neteaseMusic
+        case .openZed: return .zed
+        case .openGhostty: return .ghostty
+        case .openITerm2: return .iTerm2
+        case .openTerminal: return .terminal
         case .openChrome: return .chrome
         case .openSafari: return .safari
-        case .openZed: return .zed
+        case .openWeChat: return .weChat
+        case .openWeCom: return .weCom
+        case .openFeishu: return .feishu
+        case .openDingTalk: return .dingTalk
+        case .openSlack: return .slack
+        case .openNeteaseMusic: return .neteaseMusic
+        case .openAppleMusic: return .appleMusic
+        case .openSpotify: return .spotify
+        case .openFinder: return .finder
         default: return nil
         }
     }
@@ -198,14 +310,16 @@ enum ButtonAction: String, CaseIterable, Codable, Identifiable {
         switch self {
         case .directPassthrough:
             return .directPassthrough
-        case .disabled, .escape, .returnKey, .commandReturn, .shiftReturn, .commandCopy,
-             .commandPaste, .commandClose, .commandQuit, .commandCut, .commandSelectAll,
-             .commandUndo, .commandRedo, .commandFind, .commandSave, .commandDelete,
-             .arrowUp, .arrowDown, .arrowLeft, .arrowRight, .scrollUp, .scrollDown,
-             .deleteBackward:
+        case .disabled, .returnKey, .shiftReturn, .commandReturn, .escape, .space, .tab,
+             .deleteBackward, .commandDelete, .commandCopy, .commandPaste, .commandCut,
+             .commandSelectAll, .commandUndo, .commandRedo, .commandFind, .commandSave,
+             .commandClose, .commandQuit, .arrowUp, .arrowDown, .arrowLeft, .arrowRight,
+             .scrollUp, .scrollDown:
             return .basicKeys
-        case .showDesktop, .contextMenu, .appSwitcher, .focusInput, .volumeUp, .volumeDown, .volumeMute,
-             .playPause, .previousCommandLeft, .nextCommandRight, .toggleLongRecording:
+        case .appSwitcher, .missionControl, .showDesktop, .notificationCenter, .spotlight,
+             .spaceLeft, .spaceRight, .lockScreen, .screenshot, .contextMenu, .focusInput,
+             .toggleLongRecording, .playPause, .previousCommandLeft, .nextCommandRight,
+             .volumeUp, .volumeDown, .volumeMute, .brightnessUp, .brightnessDown:
             return .systemAndMedia
         case .openCommonPhrases:
             return .commonPhrases
@@ -213,9 +327,11 @@ enum ButtonAction: String, CaseIterable, Codable, Identifiable {
             return .applications
         case .customShortcut, .repeatSingleClick:
             return .custom
-        case .openRemoteBuddy, .openCodex, .openClaude, .openCmux, .openWeChat, .openCursor,
-             .openXcode, .openSlack, .openWeCom, .openNeteaseMusic, .openChrome, .openSafari,
-             .openZed:
+        case .openRemoteBuddy, .openCodex, .openClaude, .openChatGPT, .openDeepSeekHarness,
+             .openWorkBuddy, .openCmux, .openCursor, .openVSCode, .openXcode, .openZed,
+             .openGhostty, .openITerm2, .openTerminal, .openChrome, .openSafari, .openWeChat,
+             .openWeCom, .openFeishu, .openDingTalk, .openSlack, .openNeteaseMusic,
+             .openAppleMusic, .openSpotify, .openFinder:
             return .applications
         }
     }
@@ -238,7 +354,7 @@ enum ButtonAction: String, CaseIterable, Codable, Identifiable {
                 return true
             }
             guard let application = action.presetApplication else { return true }
-            return installedBundleIdentifiers.contains(application.bundleIdentifier) || action == current
+            return application.isInstalled(in: installedBundleIdentifiers) || action == current
         }
         return actions.filter { $0 != .openCustomApplication } +
             (actions.contains(.openCustomApplication) ? [.openCustomApplication] : [])

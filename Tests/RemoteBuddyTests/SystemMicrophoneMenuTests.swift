@@ -72,7 +72,7 @@ struct SystemMicrophoneMenuTests {
         ))
     }
 
-    @Test func menuBuilderRendersDisabledEmptyItemWhenNoInputsExist() {
+    @Test func menuBuilderRendersDisabledEmptyItemWhenNoInputsExist() throws {
         let menu = NSMenu()
         menu.addItem(NSMenuItem(title: "Stale", action: nil, keyEquivalent: ""))
 
@@ -90,9 +90,40 @@ struct SystemMicrophoneMenuTests {
         #expect(menu.items[0].title == noteTitle)
         #expect(!menu.items[0].isEnabled)
         #expect(menu.items[0].action == nil)
+        #expect(menu.items[0].attributedTitle == nil)
+        #expect(menu.items[0].view != nil)
         #expect(menu.items[1].isSeparatorItem)
         #expect(menu.items[2].title == "No Microphones Available")
         #expect(!menu.items[2].isEnabled)
+    }
+
+    @Test func menuBuilderNoteItemUsesCrispNonInteractiveCustomView() throws {
+        let menu = NSMenu()
+        SystemMicrophoneMenuBuilder.populate(
+            menu,
+            devices: [],
+            defaultInputUID: nil,
+            noteTitle: noteTitle,
+            emptyTitle: "No Microphones Available",
+            target: DummyTarget(),
+            action: #selector(DummyTarget.selectMic(_:))
+        )
+
+        let noteItem = try #require(menu.items.first)
+        #expect(noteItem.title == noteTitle)
+        #expect(!noteItem.isEnabled)
+        #expect(noteItem.action == nil)
+        #expect(noteItem.attributedTitle == nil)
+
+        let noteView = try #require(noteItem.view)
+        #expect(noteView.frame.width > 0)
+        #expect(noteView.frame.height > 0)
+
+        let label = try #require(noteView.subviews.compactMap { $0 as? NSTextField }.first)
+        #expect(label.stringValue == noteTitle)
+        #expect(label.textColor == .labelColor)
+        #expect(!label.isEditable)
+        #expect(!label.isSelectable)
     }
 
     @Test func menuBuilderPopulatesDevicesMarksDefaultAndReplacesOnRefresh() {

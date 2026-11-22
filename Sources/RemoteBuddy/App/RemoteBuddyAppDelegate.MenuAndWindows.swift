@@ -630,13 +630,7 @@ enum SystemMicrophoneMenuBuilder {
         menu.removeAllItems()
         let noteItem = NSMenuItem(title: noteTitle, action: nil, keyEquivalent: "")
         noteItem.isEnabled = false
-        noteItem.attributedTitle = NSAttributedString(
-            string: noteTitle,
-            attributes: [
-                .font: NSFont.menuFont(ofSize: NSFont.smallSystemFontSize),
-                .foregroundColor: NSColor.secondaryLabelColor,
-            ]
-        )
+        noteItem.view = makeNoteView(title: noteTitle)
         menu.addItem(noteItem)
         menu.addItem(.separator())
         guard !devices.isEmpty else {
@@ -652,5 +646,55 @@ enum SystemMicrophoneMenuBuilder {
             item.state = device.uid == defaultInputUID ? .on : .off
             menu.addItem(item)
         }
+    }
+
+    private static func makeNoteView(title: String) -> NSView {
+        let container = NSView()
+        container.autoresizingMask = [.width]
+
+        let label = NSTextField(wrappingLabelWithString: title)
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.font = NSFont.menuFont(ofSize: 12)
+        label.textColor = .labelColor
+        label.lineBreakMode = .byWordWrapping
+        label.maximumNumberOfLines = 0
+        label.preferredMaxLayoutWidth = 280
+        label.isEditable = false
+        label.isSelectable = false
+        label.isBezeled = false
+        label.drawsBackground = false
+        label.setContentCompressionResistancePriority(.required, for: .vertical)
+        container.addSubview(label)
+
+        var constraints: [NSLayoutConstraint] = [
+            label.topAnchor.constraint(equalTo: container.topAnchor, constant: 6),
+            label.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -14),
+            label.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -6),
+        ]
+
+        if let symbol = NSImage(systemSymbolName: "info.circle", accessibilityDescription: nil) {
+            let iconView = NSImageView(image: symbol)
+            iconView.translatesAutoresizingMaskIntoConstraints = false
+            iconView.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 12, weight: .regular)
+            iconView.contentTintColor = .secondaryLabelColor
+            iconView.setContentHuggingPriority(.required, for: .horizontal)
+            iconView.setContentCompressionResistancePriority(.required, for: .horizontal)
+            container.addSubview(iconView)
+
+            constraints.append(contentsOf: [
+                iconView.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 14),
+                iconView.topAnchor.constraint(equalTo: label.topAnchor, constant: 1),
+                iconView.bottomAnchor.constraint(lessThanOrEqualTo: container.bottomAnchor, constant: -6),
+                label.leadingAnchor.constraint(equalTo: iconView.trailingAnchor, constant: 6),
+            ])
+        } else {
+            constraints.append(label.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 14))
+        }
+
+        NSLayoutConstraint.activate(constraints)
+        container.layoutSubtreeIfNeeded()
+        let fitted = container.fittingSize
+        container.frame = NSRect(origin: .zero, size: NSSize(width: ceil(fitted.width), height: ceil(fitted.height)))
+        return container
     }
 }

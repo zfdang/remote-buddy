@@ -12,11 +12,11 @@ def generate(text):
     buttons = {'OK': 'ok', '左': 'left', '上': 'up', '右': 'right', '下': 'down',
                '主页': 'home', '静音': 'mute', '菜单': 'menu', 'TV': 'tv',
                '音量+': 'volume_up', '音量-': 'volume_down',
-               'YouTube': 'youtube', 'Netflix': 'netflix', '信源': 'input'}
+               'YouTube': 'youtube', 'Netflix': 'netflix', '电源': 'power', '信源': 'input'}
     base = ('ok', 'left', 'up', 'right', 'down')
     device_groups = (
         base + ('home', 'menu', 'tv', 'volume_up', 'volume_down'),
-        base + ('home', 'mute', 'youtube', 'netflix', 'input'),
+        base + ('home', 'mute', 'youtube', 'netflix', 'power', 'input'),
         base + ('mute', 'home', 'menu'),
     )
     for line in text.splitlines():
@@ -44,7 +44,7 @@ def generate(text):
             if button in defaults or index not in range(len(phrases)) or cells[2] != phrases[index]['text']:
                 raise ValueError('Duplicate, unknown or inconsistent default binding')
             defaults[button] = phrases[index]['id']
-    if not 10 <= len(phrases) <= 500 or set(defaults) != set(buttons.values()) \
+    if not 11 <= len(phrases) <= 500 or set(defaults) != set(buttons.values()) \
             or any(len(set(defaults[b] for b in group)) != len(group) for group in device_groups):
         raise ValueError('Missing phrases or defaults')
     return dict(schemaVersion=2, entries=phrases, bindings=defaults, builtInIDs=[p['id'] for p in phrases])

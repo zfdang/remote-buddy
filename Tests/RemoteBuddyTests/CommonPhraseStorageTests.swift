@@ -176,7 +176,7 @@ struct CommonPhraseStorageTests {
             var invalid = phrase("user-invalid")
             invalid.text = "  "
             #expect(throws: CommonPhraseStore.StoreError.self) { try store.save(invalid, replacing: nil) }
-            #expect(throws: CommonPhraseStore.StoreError.self) { try store.assign(.power, to: "builtin-one") }
+            #expect(throws: CommonPhraseStore.StoreError.self) { try store.assign(.back, to: "builtin-one") }
             #expect(throws: CommonPhraseStore.StoreError.self) { try store.assign(.ok, to: "missing") }
             #expect(throws: CommonPhraseStore.StoreError.self) { try store.save(phrase("builtin-one"), replacing: nil) }
             #expect(store.archive == original)
@@ -240,11 +240,43 @@ struct CommonPhraseStorageTests {
         #expect(reloaded.phrase(for: .ok) == nil)
     }
 
+    @Test func reopeningSavedArchiveWithoutPowerBindingKeyBackfillsPowerDefaultOnce() throws {
+        let name = "phrase-power-backfill-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let entries = [phrase("builtin-001"), phrase("builtin-011", text: "不对，再检查一下")]
+        let builtIn = CommonPhraseArchive(
+            entries: entries,
+            bindings: ["ok": "builtin-001", "power": "builtin-011"],
+            builtInIDs: ["builtin-001", "builtin-011"],
+            builtInBindingKeys: ["ok", "power"]
+        )
+        let savedBeforeUpgrade = CommonPhraseArchive(
+            entries: entries,
+            bindings: ["ok": "builtin-001"],
+            builtInIDs: ["builtin-001", "builtin-011"],
+            builtInBindingKeys: ["ok"]
+        )
+        defaults.set(try JSONEncoder().encode(savedBeforeUpgrade), forKey: "commonPhrases.archive.v2")
+        let data = try JSONEncoder().encode(builtIn)
+
+        let upgraded = CommonPhraseStore(defaults: defaults, builtInData: data)
+        #expect(upgraded.phrase(for: .ok)?.id == "builtin-001")
+        #expect(upgraded.phrase(for: .power)?.id == "builtin-011")
+
+        try upgraded.delete("builtin-011")
+        let reloaded = CommonPhraseStore(defaults: defaults, builtInData: data)
+        #expect(reloaded.phrase(for: .power) == nil)
+    }
+
     @Test func switchingRemoteModelClearsUnsupportedEditorSelection() {
         #expect(CommonPhraseSettingsView.reconciledSelection(.youtube, for: .chromecastVoiceRemote) == .youtube)
+        #expect(CommonPhraseSettingsView.reconciledSelection(.power, for: .chromecastVoiceRemote) == .power)
         #expect(CommonPhraseSettingsView.reconciledSelection(.youtube, for: .rc003) == nil)
+        #expect(CommonPhraseSettingsView.reconciledSelection(.power, for: .rc003) == nil)
         #expect(CommonPhraseSettingsView.reconciledSelection(.home, for: .rc003) == .home)
         #expect(CommonPhraseSettingsView.reconciledSelection(.volumeUp, for: .t1Remote) == nil)
+        #expect(CommonPhraseSettingsView.reconciledSelection(.power, for: .t1Remote) == nil)
         #expect(CommonPhraseSettingsView.reconciledSelection(.ok, for: nil) == .ok)
     }
 
@@ -258,11 +290,11 @@ struct CommonPhraseStorageTests {
 
     @Test func archiveValidatesDeviceKeysAndRejectsNonPhraseKeys() throws {
         var archive = bundled
-        for key in ["home", "mute", "menu", "tv", "volume_up", "volume_down", "youtube", "netflix", "input"] {
+        for key in ["home", "mute", "menu", "tv", "volume_up", "volume_down", "youtube", "netflix", "power", "input"] {
             archive.bindings[key] = "builtin-one"
         }
         try archive.validate()
-        for invalidKey in ["power", "back", "play_pause"] {
+        for invalidKey in ["back", "play_pause"] {
             var bad = archive
             bad.bindings[invalidKey] = "builtin-one"
             #expect(throws: CommonPhraseStore.StoreError.self) { try bad.validate() }
@@ -271,7 +303,7 @@ struct CommonPhraseStorageTests {
 
     @Test func deviceButtonListsMatchEachRemoteLayout() {
         #expect(CommonPhraseStore.extraButtonRows(for: .chromecastVoiceRemote)
-            == [[.home, .mute], [.youtube, .netflix], [nil, .input]])
+            == [[.home, .mute], [.youtube, .netflix], [.power, .input]])
         #expect(CommonPhraseStore.extraButtonRows(for: .rc001)
             == [[nil, .volumeUp], [.home, .volumeDown], [.menu, .tv]])
         #expect(CommonPhraseStore.extraButtonRows(for: .rc003)
@@ -279,7 +311,7 @@ struct CommonPhraseStorageTests {
         #expect(CommonPhraseStore.extraButtonRows(for: .t1Remote)
             == [[.mute, .home], [nil, .menu]])
         #expect(CommonPhraseStore.buttons(for: .chromecastVoiceRemote)
-            == [.ok, .left, .up, .right, .down, .home, .mute, .youtube, .netflix, .input])
+            == [.ok, .left, .up, .right, .down, .home, .mute, .youtube, .netflix, .power, .input])
         #expect(CommonPhraseStore.buttons(for: .rc003)
             == [.ok, .left, .up, .right, .down, .volumeUp, .home, .volumeDown, .menu, .tv])
         #expect(CommonPhraseStore.buttons(for: .t1Remote)
@@ -516,16 +548,63 @@ struct CommonPhraseOwnershipTests {
         #expect(routing.handle(button, phase: .press, source: "first") == .unhandled)
         #expect(routing.owner == "first")
     }
-    @Test(arguments: [RemoteButton.back, .power])
-    func exitButtonsClosePanelAcrossAllDevices(button: RemoteButton) {
+    @Test func backButtonClosesPanelAcrossAllDevices() {
         for model in [RemoteModel.chromecastVoiceRemote, .rc003, .t1Remote] {
             var routing = CommonPhraseRouting()
             routing.open(source: "first", buttons: CommonPhraseStore.buttons(for: model))
-            #expect(routing.claims(button, source: "first"))
-            #expect(routing.handle(button, phase: .press, source: "first") == .close)
+            #expect(routing.claims(.back, source: "first"))
+            #expect(routing.handle(.back, phase: .press, source: "first") == .close)
             #expect(routing.owner == nil)
-            #expect(routing.handle(button, phase: .release, source: "first") == .consumed)
+            #expect(routing.handle(.back, phase: .release, source: "first") == .consumed)
         }
+    }
+    @Test func powerButtonClosesNonChromecastPanelsAndInsertsOnChromecast() {
+        for model in [RemoteModel.rc001, .rc003, .t1Remote, .appleSiriRemoteA2854, nil] as [RemoteModel?] {
+            var routing = CommonPhraseRouting()
+            routing.open(source: "first", buttons: CommonPhraseStore.buttons(for: model))
+            #expect(routing.claims(.power, source: "first"))
+            #expect(routing.handle(.power, phase: .press, source: "first") == .close)
+            #expect(routing.owner == nil)
+            #expect(routing.handle(.power, phase: .release, source: "first") == .consumed)
+        }
+        var chromecastRouting = CommonPhraseRouting()
+        chromecastRouting.open(source: "first", buttons: CommonPhraseStore.buttons(for: .chromecastVoiceRemote))
+        #expect(chromecastRouting.claims(.power, source: "first"))
+        #expect(chromecastRouting.handle(.power, phase: .press, source: "first") == .insert(.power))
+        #expect(chromecastRouting.owner == nil)
+        #expect(chromecastRouting.handle(.power, phase: .release, source: "first") == .consumed)
+    }
+    @Test @MainActor func openPanelHintReflectsWhetherPowerClosesOrInserts() throws {
+        let name = "phrase-panel-hint-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let settings = AppSettings(defaults: defaults)
+        let localization = LocalizationStore(settings: settings)
+        let data = try JSONEncoder().encode(CommonPhraseArchive(
+            entries: [CommonPhrase(id: "builtin-one", text: "好的", label: "好的")], bindings: [:]))
+        let controller = CommonPhraseController(
+            store: CommonPhraseStore(defaults: defaults, builtInData: data),
+            frontmostProcessID: { 12345 }
+        )
+        defer { controller.close(reason: "test_cleanup") }
+
+        #expect(controller.open(source: "test", model: .chromecastVoiceRemote, localization: localization))
+        #expect(controller.messageKey == "common_phrases.panel_hint_back_voice")
+        for model in [RemoteModel.rc003, .t1Remote, nil] as [RemoteModel?] {
+            controller.close(reason: "test_reset")
+            #expect(controller.open(source: "test", model: model, localization: localization))
+            #expect(controller.messageKey == "common_phrases.panel_hint")
+        }
+
+        localization.select(.english)
+        let english = localization.text("common_phrases.panel_hint_back_voice")
+        #expect(english != "common_phrases.panel_hint_back_voice")
+        #expect(!english.contains("Power"))
+
+        localization.select(.simplifiedChinese)
+        let chinese = localization.text("common_phrases.panel_hint_back_voice")
+        #expect(chinese != "common_phrases.panel_hint_back_voice")
+        #expect(!chinese.contains("电源"))
     }
     @Test(arguments: CommonPhraseStore.extraButtons(for: .chromecastVoiceRemote))
     func chromecastKeysInsertWhenPanelIsOpen(button: RemoteButton) {

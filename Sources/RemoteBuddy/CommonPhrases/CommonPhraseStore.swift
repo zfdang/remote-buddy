@@ -94,7 +94,7 @@ final class CommonPhraseStore: ObservableObject {
     nonisolated static let chromecastExtraRows: [[RemoteButton?]] = [
         [.home, .mute],
         [.youtube, .netflix],
-        [nil, .input],
+        [.power, .input],
     ]
     nonisolated static let xiaomiExtraRows: [[RemoteButton?]] = [
         [nil, .volumeUp],
@@ -106,7 +106,7 @@ final class CommonPhraseStore: ObservableObject {
         [nil, .menu],
     ]
     nonisolated static let allExtraButtons: [RemoteButton] = [
-        .home, .mute, .menu, .tv, .volumeUp, .volumeDown, .youtube, .netflix, .input,
+        .home, .mute, .menu, .tv, .volumeUp, .volumeDown, .youtube, .netflix, .power, .input,
     ]
     nonisolated static let buttons = baseButtons + allExtraButtons
     nonisolated static func extraButtonRows(for model: RemoteModel?) -> [[RemoteButton?]] {
@@ -333,6 +333,6 @@ struct CommonPhraseRouting {
         else { return .unhandled }
         held.insert(input)
         owner = nil
-        return Self.exitButtons.contains(button) ? .close : .insert(button)
+        return phraseButtons.contains(button) ? .insert(button) : .close
     }
 }

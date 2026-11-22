@@ -891,6 +891,7 @@
 "common_phrases.import_hint" = "Import replaces your current phrases and button assignments.";
 "common_phrases.local_storage" = "Saved on this Mac and retained after restarting. Phrase content stays the same when you change the interface language.";
 "common_phrases.panel_hint" = "Press a button to insert its phrase\nPress Back, Voice, or Power to close";
+"common_phrases.panel_hint_back_voice" = "Press a button to insert its phrase\nPress Back or Voice to close";
 "common_phrases.close" = "Close Common Phrases";
 "common_phrases.settings_hint" = "Assign Open Common Phrases to a remote button. Phrases stay on this Mac. Some editors use a temporary clipboard paste; the app attempts to restore previous contents and keeps any detected new copy.";
 "common_phrases.assign_hint" = "Button Assignments";

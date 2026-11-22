@@ -17,7 +17,7 @@ class PhraseTests(unittest.TestCase):
         self.assertEqual(result['entries'][3]['text'], '解释清楚一点')
     def test_device_keys_have_defaults(self):
         result = module.generate(source)
-        self.assertEqual(len(result['bindings']), 14)
+        self.assertEqual(len(result['bindings']), 15)
         self.assertEqual(result['bindings']['home'], 'builtin-006')
         self.assertEqual(result['bindings']['mute'], 'builtin-007')
         self.assertEqual(result['bindings']['volume_up'], 'builtin-007')
@@ -26,8 +26,8 @@ class PhraseTests(unittest.TestCase):
         self.assertEqual(result['bindings']['volume_down'], 'builtin-009')
         self.assertEqual(result['bindings']['netflix'], 'builtin-009')
         self.assertEqual(result['bindings']['tv'], 'builtin-010')
+        self.assertEqual(result['bindings']['power'], 'builtin-011')
         self.assertEqual(result['bindings']['input'], 'builtin-010')
-        self.assertNotIn('power', result['bindings'])
         self.assertNotIn('back', result['bindings'])
     def test_swift_store_buttons_match_generator_bindings(self):
         swift = (root / 'Sources/RemoteBuddy/CommonPhrases/CommonPhraseStore.swift').read_text()
@@ -64,6 +64,7 @@ class PhraseTests(unittest.TestCase):
                     source.replace('| 左 | 2 |', '| OK | 2 |'),
                     source.replace('| 上 | 4 | 解释清楚一点 |', '| 上 | 4 | 错误 |'),
                     source.replace('| 静音 | 7 | 简短一点 |', '| 静音 | 6 | 检查一下有没有问题 |'),
+                    source.replace('| 电源 | 11 | 不对，再检查一下 |', '| 电源 | 6 | 检查一下有没有问题 |'),
                     source.replace('| TV | 10 | 还有其他方案吗？ |', '| TV | 6 | 检查一下有没有问题 |')]:
             with self.assertRaises(ValueError): module.generate(bad)
     def test_bad_phrase_rows_fail(self):

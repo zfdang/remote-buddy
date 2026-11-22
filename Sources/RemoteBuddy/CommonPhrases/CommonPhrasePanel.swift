@@ -80,7 +80,9 @@ final class CommonPhraseController: ObservableObject {
         let rows = CommonPhraseStore.extraButtonRows(for: model)
         routing.open(source: source, buttons: buttons)
         extraRows = rows
-        messageKey = "common_phrases.panel_hint"
+        messageKey = buttons.contains(.power)
+            ? "common_phrases.panel_hint_back_voice"
+            : "common_phrases.panel_hint"
         isVisible = true
         let size = CommonPhrasePanelView.size(forRows: rows)
         let window = CommonPhrasePanel(contentRect: NSRect(origin: .zero, size: size),

@@ -440,6 +440,7 @@
 "remote.voice_button.accessibility_label" = "语音输入键，热键可配置";
 "menu.open_settings" = "打开设置…";
 "menu.system_microphone" = "系统默认麦克风";
+"menu.system_microphone.note" = "一般无需修改，在语音输入工具内选麦即可\n此处的改动会影响所有应用";
 "menu.system_microphone.none" = "未检测到可用麦克风";
 "menu.show_logs" = "显示日志";
 "menu.about" = "关于遥控搭子";

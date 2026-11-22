@@ -7,9 +7,11 @@ import Testing
 @Suite("System microphone menu")
 @MainActor
 struct SystemMicrophoneMenuTests {
-    private final class DummyTarget: NSObject {
+    private final class DummyTarget: NSObject, NSMenuDelegate {
         @objc func selectMic(_ sender: NSMenuItem) {}
     }
+
+    private let noteTitle = "Usually unchanged—select the mic in your voice tool\nChanges here affect all apps"
 
     @Test func setDefaultInputDeviceWritesMatchedDeviceIDToSystemObject() {
         let devices = [
@@ -78,14 +80,19 @@ struct SystemMicrophoneMenuTests {
             menu,
             devices: [],
             defaultInputUID: nil,
+            noteTitle: noteTitle,
             emptyTitle: "No Microphones Available",
             target: DummyTarget(),
             action: #selector(DummyTarget.selectMic(_:))
         )
 
-        #expect(menu.items.count == 1)
-        #expect(menu.items[0].title == "No Microphones Available")
+        #expect(menu.items.count == 3)
+        #expect(menu.items[0].title == noteTitle)
         #expect(!menu.items[0].isEnabled)
+        #expect(menu.items[0].action == nil)
+        #expect(menu.items[1].isSeparatorItem)
+        #expect(menu.items[2].title == "No Microphones Available")
+        #expect(!menu.items[2].isEnabled)
     }
 
     @Test func menuBuilderPopulatesDevicesMarksDefaultAndReplacesOnRefresh() {
@@ -100,27 +107,38 @@ struct SystemMicrophoneMenuTests {
             menu,
             devices: devices,
             defaultInputUID: "mic-2",
+            noteTitle: noteTitle,
             emptyTitle: "No Microphones Available",
             target: target,
             action: #selector(DummyTarget.selectMic(_:))
         )
 
-        #expect(menu.items.map(\.title) == ["MacBook Pro Microphone", "Remote Buddy Mic"])
-        #expect(menu.items.map { $0.representedObject as? String } == ["mic-1", "mic-2"])
-        #expect(menu.items.map(\.state) == [.off, .on])
-        #expect(menu.items.allSatisfy { $0.target === target && $0.action == #selector(DummyTarget.selectMic(_:)) })
+        #expect(menu.items.count == 4)
+        #expect(!menu.items[0].isEnabled)
+        #expect(menu.items[0].action == nil)
+        #expect(menu.items[1].isSeparatorItem)
+        let deviceItems = Array(menu.items.dropFirst(2))
+        #expect(deviceItems.map(\.title) == ["MacBook Pro Microphone", "Remote Buddy Mic"])
+        #expect(deviceItems.map { $0.representedObject as? String } == ["mic-1", "mic-2"])
+        #expect(deviceItems.map(\.state) == [.off, .on])
+        #expect(deviceItems.allSatisfy { $0.target === target && $0.action == #selector(DummyTarget.selectMic(_:)) })
 
         SystemMicrophoneMenuBuilder.populate(
             menu,
             devices: [devices[0]],
             defaultInputUID: "mic-1",
+            noteTitle: noteTitle,
             emptyTitle: "No Microphones Available",
             target: target,
             action: #selector(DummyTarget.selectMic(_:))
         )
 
-        #expect(menu.items.map(\.title) == ["MacBook Pro Microphone"])
-        #expect(menu.items.map(\.state) == [.on])
+        #expect(menu.items.count == 3)
+        #expect(!menu.items[0].isEnabled)
+        #expect(menu.items[1].isSeparatorItem)
+        let refreshedItems = Array(menu.items.dropFirst(2))
+        #expect(refreshedItems.map(\.title) == ["MacBook Pro Microphone"])
+        #expect(refreshedItems.map(\.state) == [.on])
     }
 
     @Test func statusMenuPlacesSystemMicrophoneDirectlyBelowOpenSettings() throws {
@@ -135,13 +153,15 @@ struct SystemMicrophoneMenuTests {
             connectionItem: NSMenuItem(title: "Status", action: nil, keyEquivalent: ""),
             localization: localization,
             target: target,
-            delegate: nil,
+            delegate: target,
             includesCheckForUpdates: true,
             canRestoreClipboard: false,
             supportItem: NSMenuItem(title: "Help & Support", action: nil, keyEquivalent: ""),
             versionItem: NSMenuItem(title: "Version 1.0", action: nil, keyEquivalent: "")
         )
 
+        #expect(built.menu.delegate === target)
+        #expect(built.systemMicrophoneSubmenu.delegate === target)
         let titles = built.menu.items.map(\.title)
         let settingsIndex = try #require(titles.firstIndex(of: localization.text("menu.open_settings")))
         let microphoneIndex = settingsIndex + 1
@@ -157,7 +177,7 @@ struct SystemMicrophoneMenuTests {
         defer { defaults.removePersistentDomain(forName: suite) }
         let localization = LocalizationStore(settings: AppSettings(defaults: defaults))
 
-        for key in ["menu.system_microphone", "menu.system_microphone.none"] {
+        for key in ["menu.system_microphone", "menu.system_microphone.note", "menu.system_microphone.none"] {
             localization.select(.english)
             #expect(localization.text(key) != key)
             localization.select(.simplifiedChinese)

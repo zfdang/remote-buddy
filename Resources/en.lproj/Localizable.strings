@@ -440,6 +440,7 @@
 "remote.voice_button.accessibility_label" = "Voice input button with configurable trigger";
 "menu.open_settings" = "Open Settings…";
 "menu.system_microphone" = "System Default Microphone";
+"menu.system_microphone.note" = "Usually unchanged—select the mic in your voice tool\nChanges here affect all apps";
 "menu.system_microphone.none" = "No Microphones Available";
 "menu.show_logs" = "Show Logs";
 "menu.about" = "About Remote Buddy";

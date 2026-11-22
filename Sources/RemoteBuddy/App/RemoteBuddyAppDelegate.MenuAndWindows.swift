@@ -9,12 +9,8 @@ extension RemoteBuddyAppDelegate {
     }
 
     func menuWillOpen(_ menu: NSMenu) {
-        if menu === systemMicrophoneSubmenu {
-            refreshSystemMicrophoneSubmenu()
-            return
-        }
+        guard menu === statusMenu else { return }
         refreshMenuStatus()
-        refreshSystemMicrophoneSubmenu()
     }
 
     @discardableResult
@@ -341,6 +337,7 @@ extension RemoteBuddyAppDelegate {
             systemMicrophoneSubmenu,
             devices: CoreAudioDeviceCatalog.inputDevices(),
             defaultInputUID: CoreAudioDeviceCatalog.defaultInputDevice()?.uid,
+            noteTitle: localization.text("menu.system_microphone.note"),
             emptyTitle: localization.text("menu.system_microphone.none"),
             target: self,
             action: #selector(selectSystemMicrophone(_:))
@@ -625,11 +622,23 @@ enum SystemMicrophoneMenuBuilder {
         _ menu: NSMenu,
         devices: [AudioDeviceInfo],
         defaultInputUID: String?,
+        noteTitle: String,
         emptyTitle: String,
         target: AnyObject?,
         action: Selector
     ) {
         menu.removeAllItems()
+        let noteItem = NSMenuItem(title: noteTitle, action: nil, keyEquivalent: "")
+        noteItem.isEnabled = false
+        noteItem.attributedTitle = NSAttributedString(
+            string: noteTitle,
+            attributes: [
+                .font: NSFont.menuFont(ofSize: NSFont.smallSystemFontSize),
+                .foregroundColor: NSColor.secondaryLabelColor,
+            ]
+        )
+        menu.addItem(noteItem)
+        menu.addItem(.separator())
         guard !devices.isEmpty else {
             let emptyItem = NSMenuItem(title: emptyTitle, action: nil, keyEquivalent: "")
             emptyItem.isEnabled = false

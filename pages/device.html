@@ -103,9 +103,9 @@
           <span class="device-status is-supported">语音与按键已支持</span>
         </div>
         <ul class="device-specs">
-          <li><strong>三类已知 HID 硬件批次（同为 VID/PID <code>18D1:9450</code> · DIS <code>A0</code>，连上后可在「遥控器连接」查看 <code>HID 版本</code> 区分）</strong>：
-            ① <code>0x0110</code>（<strong>完全支持</strong>）：Report <code>1</code> 完整 3 字节报告，macOS 正常接收，语音与 14 颗普通按键全可用；
-            ② <code>A0 / 固件 26.7</code>（<strong>部分支持</strong>）：单键仅发 1 字节被系统丢弃，仅双键组合到达 IOHID，向导确认兼容模式后可用语音与「方向键 + OK」发 Enter；
+          <li><strong>已观测到的 HID / 固件差异（同为 VID/PID <code>18D1:9450</code> · DIS <code>A0</code>，连上后可在「遥控器连接」查看 <code>HID 版本</code> 与固件版本，单看 <code>0x0110</code> 仍需配合实测）</strong>：
+            ① <code>0x0110 / 固件 26.2</code>（<code>PVT/MP</code>，<strong>完全支持</strong>）：Report <code>1</code> 完整 3 字节报告，macOS 正常接收，语音与 14 颗普通按键全可用；
+            ② <code>A0 / 固件 26.7</code> 与 <code>0x0110 / 固件 26.0</code>（<code>CR PVT/MP</code>，见 <a class="text-link" href="https://github.com/zfdang/remote-buddy/issues/256">#256 ↗</a>，<strong>部分支持</strong>）：<code>26.7</code> 已抓包确认单键仅发 1 字节被系统丢弃，<code>26.0 / CR PVT/MP</code> 在 <code>IOHID</code> 表现相同（原始 BLE 原因待抓包确认，可能为不同硬件或固件变体），仅双键组合到达 <code>IOHID</code>，向导确认兼容模式后可用语音与「方向键 + OK」发 Enter；
             ③ <code>0x011B</code>（<strong>普通按键不兼容公开 IOHID</strong>，见 <a class="text-link" href="https://github.com/brightac/remote-buddy/issues/7">社区实测记录 #7 ↗</a>）：Report <code>2</code> 描述符与 2 字节实际报文长度不符，普通按键在 macOS <code>BTLEServer</code> 层被丢弃（连双键都收不到），仅语音键可用。</li>
           <li><strong>按键映射</strong>：方向、OK、返回、主页、静音、音量加减、YouTube、Netflix、输入源和电源，共 14 颗普通按键支持单击、双击、长按自定义。</li>
           <li><strong>语音、时长与状态灯</strong>：默认支持<strong>智能切换（点按免提）</strong>——短按并松手后保持免提收音（再按语音键或按其他键停止，松手瞬间约 0.2 秒硬件重连间隔），长按超过 0.7 秒则松手即停；也可在连接设置切换为纯「按住说话」。两种模式均<strong>突破 60 秒限制</strong>，后台每 10 秒保活、最长约 5 分钟自动停止防忘关麦耗电；传输语音期间底部白色指示灯常亮，应用读到电量时显示百分比。</li>

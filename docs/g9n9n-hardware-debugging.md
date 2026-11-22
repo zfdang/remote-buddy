@@ -1,24 +1,24 @@
 # G9N9N 真机验证与调试历史
 
-本页按硬件/固件批次汇总已知 G9N9N 的**三类真机 HID 表现**及实测记录：
+本页按硬件/固件批次汇总已知 G9N9N 的**真实设备表现**及实测记录：
 
-1. **Fully Supported 设备（`HID 版本 0x0110`，完整 3 字节 report 1）**：单键按下与松开均发出完整 3 字节索引格式报告，macOS 正常认识并送达公开 `IOHID` → 进入 **Fully Supported（完全支持）** 模式，语音键与全部 14 颗普通按键完整可用。
-2. **Partially Supported 设备（`DIS A0 / 固件 26.7`，1 字节短 report 1）**：描述符声明 2 槽位，但单键与松开仅发出 1 字节，被 macOS 在进入公开 `IOHID` 前丢弃；只有同时按两个键凑齐长度才进入公开 `IOHID` → 进入 **Partially Supported（部分支持）** 模式，仅保留语音键与「方向键 + OK」发送 Enter。
+1. **Fully Supported 设备（`HID 版本 0x0110` / 固件 `26.2`，`PVT/MP`，完整 3 字节 report 1）**：单键按下与松开均发出完整 3 字节索引格式报告，macOS 正常认识并送达公开 `IOHID` → 进入 **Fully Supported（完全支持）** 模式，语音键与全部 14 颗普通按键完整可用。
+2. **Partially Supported 设备（`DIS A0 / 固件 26.7` 已抓包；以及社区反馈的 `HID 0x0110 / 固件 26.0 / CR PVT/MP`，见 [#256](https://github.com/zfdang/remote-buddy/issues/256)）**：`固件 26.7` 经 PacketLogger 抓包确认单键与松开仅发出 1 字节，被 macOS 在进入公开 `IOHID` 前丢弃，只有同时按两个键凑齐长度才进入公开 `IOHID`；而 `0x0110 / 固件 26.0（CR PVT/MP）` 在 `IOHID` 层表现出相同现象（无单键事件，仅双键 3 字节进入 `IOHID`），原始 BLE 报文尚待抓包确认，可能是类似短报告，也可能是新的硬件或固件变体 → 进入 **Partially Supported（部分支持）** 模式，保留完整语音键（含智能切换与约 5 分钟保活）与「方向键 + OK」发送 Enter。
 3. **`HID 版本 0x011B` 批次（社区反馈，详见 [brightac/remote-buddy#7](https://github.com/brightac/remote-buddy/issues/7)）**：使用 Report ID `2`（小端 16-bit consumer usage，涵盖 14 键编码），描述符声明不含 ID 3 字节、但固件实际仅发送 2 字节（如按下 `42 00`、松开 `00 00`），导致报告在 macOS `BTLEServer` 层即被长度校验丢弃——**公开 `IOHID` 既收不到单键，也收不到双键**；ATVV 语音链路走 GATT 不受 HID 影响仍可使用。Remote Buddy 连接页会读取并显示 PnP / IOHID 中的 **HID 版本**（如 `0x0110` / `0x011B`）供用户快速鉴别批次，但依据只使用公开系统接口的原则，不通过读取系统调试日志绕过 `BTLEServer`。
 
 版本识别、模式说明与操作指南见 [G9N9N 语音与按键使用指南](g9n9n-compatibility.md)。
 
 ---
 
-## 一、完全支持版本测试记录（2026-11-16，`0x0110`）
+## 一、完全支持版本测试记录（2026-11-16，`0x0110` / 固件 `26.2`）
 
 2026-11-16，新加坡时间 11:43:26–11:43:58，操作者按指定顺序完成逐键短按、完全松开及语音测试。运行版本为 26.11.16 / 901，使用公开 IOHID 与蓝牙 ATVV 路径。
 
 ### 设备身份
 
 - 产品：Chromecast Remote；厂商：Google Inc.
-- VID/PID：`18D1:9450`；DIS 型号：`A0`。
-- 系统 HID VersionNumber：`272 / 0x0110`（此字段不是 DIS 固件字符串）。
+- VID/PID：`18D1:9450`；DIS 型号：`A0`；固件版本：`26.2`；硬件修订：`PVT/MP`（见第三节同机 DIS 信息）。
+- 系统 HID VersionNumber：`272 / 0x0110`（此字段与 DIS 固件版本并非同一字段）。
 - MaxInputReportSize：3 字节；传输：Bluetooth Low Energy。
 
 ### 普通按键
@@ -84,6 +84,17 @@
 | `g9n9n-single-up.pklg` | `984bca87453ffea640947a7e3bdba3eb8a466f2a0b5aae1867258f53b5d7189f` |
 | `g9n9n-up-back-release.pklg` | `5b944ed5151c741cfc6c02cfbb35a8eaa80ca31c2dacc227fe7ae8b947c5914c` |
 | `g9n9n-hid-after-reboot.log` | `5b7baa430cbe55b9345b54ff26a4aa602e1a9865bb1fa413802845af6a125f8a` |
+
+### 社区实测补充：`HID 0x0110` / 固件 `26.0` / `CR PVT/MP`（[#256](https://github.com/zfdang/remote-buddy/issues/256)，待 BLE 抓包确认）
+
+2026-11-22 社区报告一台在 macOS 27.0.1（`26A434`，Apple Silicon M2 Max）与 Remote Buddy `v26-11-22.957` 下测试的样机，其公开识别身份与表现如下：
+
+- **设备身份**：`Chromecast Remote`（`Google Inc.`），VID/PID `18D1:9450`，`HID VersionNumber = 0x0110 (272)`，固件 `26.0`，硬件修订 `CR PVT/MP`，最大输入报告大小 3 字节。
+- **应用层 HID 回调表现**：单按 OK、上、下等普通按键及松开时，`HID GOOGLE report` 均未收到事件；同时按下两个普通键时，3 字节 Report ID `1` 正常进入 `IOHID` 回调：
+  - `HID GOOGLE report id=1 bytes=3 payload=01 07 04` → `usage_count=2 buttons=down,ok`
+  - `HID GOOGLE report id=1 bytes=3 payload=01 07 03` → `usage_count=2 buttons=ok,up`
+- **语音表现**：ATVV 语音键正常（智能切换短按开始/结束与长按松手结束均可用）。
+- **结论边界**：该样机尚未抓取原始 BLE 报文，因此不能直接断定底层原因与 `26.7` 的 1 字节短报告完全一致——鉴于其固件为 `26.0`、硬件修订为 `CR PVT/MP`（区别于已测完全支持的 `26.2 / PVT/MP`），也可能是不同的硬件或固件变体。但已明确证明**仅凭 `HID 版本 0x0110` 并不能保证单键可用**，应结合固件版本与向导单键实测判定是否进入部分支持模式。
 
 ---
 

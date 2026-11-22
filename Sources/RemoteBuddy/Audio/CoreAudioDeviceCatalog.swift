@@ -24,7 +24,7 @@ enum CoreAudioDeviceCatalog {
 
     static func inputDevices() -> [AudioDeviceInfo] {
         withPropertyLock {
-            devicesLocked(scope: kAudioDevicePropertyScopeInput)
+            devicesLocked(scope: kAudioDevicePropertyScopeInput, onlyDefaultCapable: true)
         }
     }
 
@@ -67,7 +67,10 @@ enum CoreAudioDeviceCatalog {
     }
 
 
-    private static func devicesLocked(scope: AudioObjectPropertyScope) -> [AudioDeviceInfo] {
+    private static func devicesLocked(
+        scope: AudioObjectPropertyScope,
+        onlyDefaultCapable: Bool = false
+    ) -> [AudioDeviceInfo] {
         var address = AudioObjectPropertyAddress(
             mSelector: kAudioHardwarePropertyDevices,
             mScope: kAudioObjectPropertyScopeGlobal,
@@ -99,11 +102,28 @@ enum CoreAudioDeviceCatalog {
         guard result == noErr else { return [] }
 
         var seenUIDs = Set<String>()
-        return deviceIDs.compactMap { deviceID in
-            guard channelCount(for: deviceID, scope: scope) > 0 else { return nil }
-            return deviceInfo(for: deviceID)
+        return deviceIDs.compactMap { deviceID -> AudioDeviceInfo? in
+            guard channelCount(for: deviceID, scope: scope) > 0,
+                  let info = deviceInfo(for: deviceID)
+            else { return nil }
+            if onlyDefaultCapable {
+                let isAlive = uint32PropertyLocked(
+                    deviceID, selector: kAudioDevicePropertyDeviceIsAlive, scope: kAudioObjectPropertyScopeGlobal
+                ).map { $0 != 0 }
+                let isHidden = uint32PropertyLocked(
+                    deviceID, selector: kAudioDevicePropertyIsHidden, scope: kAudioObjectPropertyScopeGlobal
+                ).map { $0 != 0 }
+                let canBeDefaultInput = uint32PropertyLocked(
+                    deviceID, selector: kAudioDevicePropertyDeviceCanBeDefaultDevice, scope: scope
+                ).map { $0 != 0 }
+                guard shouldPresentAsDefaultInputDevice(
+                    info, isAlive: isAlive, isHidden: isHidden, canBeDefaultInput: canBeDefaultInput
+                ) else { return nil }
+            } else {
+                guard shouldPresentToUser(info) else { return nil }
+            }
+            return info
         }
-        .filter(shouldPresentToUser)
         .filter { seenUIDs.insert($0.uid).inserted }
         .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
     }
@@ -113,6 +133,21 @@ enum CoreAudioDeviceCatalog {
     /// device. Keep it out of settings and onboarding lists.
     static func shouldPresentToUser(_ device: AudioDeviceInfo) -> Bool {
         !device.uid.hasPrefix("CADefaultDeviceAggregate-")
+    }
+
+    /// Matches macOS System Settings by filtering out hidden, inactive, or
+    /// non-defaultable input drivers (such as loopback-only drivers whose
+    /// `kAudioDevicePropertyDeviceCanBeDefaultDevice` is `0`).
+    static func shouldPresentAsDefaultInputDevice(
+        _ device: AudioDeviceInfo,
+        isAlive: Bool?,
+        isHidden: Bool?,
+        canBeDefaultInput: Bool?
+    ) -> Bool {
+        shouldPresentToUser(device) &&
+            isAlive != false &&
+            isHidden != true &&
+            canBeDefaultInput != false
     }
 
     static func deviceInfo(for deviceID: AudioDeviceID) -> AudioDeviceInfo? {

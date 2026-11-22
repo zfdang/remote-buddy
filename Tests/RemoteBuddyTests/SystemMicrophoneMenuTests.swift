@@ -164,4 +164,24 @@ struct SystemMicrophoneMenuTests {
             #expect(localization.text(key) != key)
         }
     }
+
+    @Test func defaultInputFilterExcludesNonDefaultableHiddenDeadAndAggregateDevices() {
+        let builtIn = AudioDeviceInfo(id: 93, uid: "BuiltInMicrophoneDevice", name: "MacBook Pro Microphone")
+        let buddy = AudioDeviceInfo(id: 98, uid: "BuddyMic2ch_UID", name: "Remote Buddy Mic")
+        let teams = AudioDeviceInfo(id: 53, uid: "MSLoopbackDriverDevice_UID", name: "Microsoft Teams Audio")
+        let aggregate = AudioDeviceInfo(id: 120, uid: "CADefaultDeviceAggregate-123", name: "Aggregate")
+
+        #expect(CoreAudioDeviceCatalog.shouldPresentAsDefaultInputDevice(
+            builtIn, isAlive: true, isHidden: false, canBeDefaultInput: true))
+        #expect(CoreAudioDeviceCatalog.shouldPresentAsDefaultInputDevice(
+            buddy, isAlive: nil, isHidden: nil, canBeDefaultInput: nil))
+        #expect(!CoreAudioDeviceCatalog.shouldPresentAsDefaultInputDevice(
+            teams, isAlive: true, isHidden: false, canBeDefaultInput: false))
+        #expect(!CoreAudioDeviceCatalog.shouldPresentAsDefaultInputDevice(
+            builtIn, isAlive: true, isHidden: true, canBeDefaultInput: true))
+        #expect(!CoreAudioDeviceCatalog.shouldPresentAsDefaultInputDevice(
+            builtIn, isAlive: false, isHidden: false, canBeDefaultInput: true))
+        #expect(!CoreAudioDeviceCatalog.shouldPresentAsDefaultInputDevice(
+            aggregate, isAlive: true, isHidden: false, canBeDefaultInput: true))
+    }
 }

@@ -439,6 +439,8 @@
 "remote.voice_button.help" = "使用麦克风键进行语音输入；触发热键在输入法集成中设置。";
 "remote.voice_button.accessibility_label" = "语音输入键，热键可配置";
 "menu.open_settings" = "打开设置…";
+"menu.system_microphone" = "系统默认麦克风";
+"menu.system_microphone.none" = "未检测到可用麦克风";
 "menu.show_logs" = "显示日志";
 "menu.about" = "关于遥控搭子";
 "menu.file" = "文件";

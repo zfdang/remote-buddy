@@ -439,6 +439,8 @@
 "remote.voice_button.help" = "Use the microphone button for voice input. Configure its trigger in Input Tool Integration.";
 "remote.voice_button.accessibility_label" = "Voice input button with configurable trigger";
 "menu.open_settings" = "Open Settings…";
+"menu.system_microphone" = "System Default Microphone";
+"menu.system_microphone.none" = "No Microphones Available";
 "menu.show_logs" = "Show Logs";
 "menu.about" = "About Remote Buddy";
 "menu.file" = "File";

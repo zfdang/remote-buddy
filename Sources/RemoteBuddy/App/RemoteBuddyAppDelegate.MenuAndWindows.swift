@@ -2,8 +2,19 @@ import AppKit
 import SwiftUI
 
 extension RemoteBuddyAppDelegate {
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        if menu === systemMicrophoneSubmenu {
+            refreshSystemMicrophoneSubmenu()
+        }
+    }
+
     func menuWillOpen(_ menu: NSMenu) {
+        if menu === systemMicrophoneSubmenu {
+            refreshSystemMicrophoneSubmenu()
+            return
+        }
         refreshMenuStatus()
+        refreshSystemMicrophoneSubmenu()
     }
 
     @discardableResult
@@ -41,6 +52,7 @@ extension RemoteBuddyAppDelegate {
         NSStatusBar.system.removeStatusItem(statusItem)
         self.statusItem = nil
         statusMenu = nil
+        systemMicrophoneSubmenu = nil
         appliedStatusItemPresentation = nil
         return true
     }
@@ -65,30 +77,98 @@ extension RemoteBuddyAppDelegate {
     func rebuildStatusMenu() {
         statusMenu?.removeItem(connectionItem)
 
+        let built = Self.buildStatusMenu(
+            connectionItem: connectionItem,
+            localization: localization,
+            target: self,
+            delegate: self,
+            includesCheckForUpdates: updateFeedSelection.validatedStableFeedURL != nil,
+            canRestoreClipboard: CommonPhraseClipboardPaste.shared.canRestoreClipboard,
+            supportItem: supportMenuItem(),
+            versionItem: versionMenuItem()
+        )
+        systemMicrophoneSubmenu = built.systemMicrophoneSubmenu
+        restoreClipboardItem = built.restoreClipboardItem
+        statusMenu = built.menu
+        refreshMenuStatus()
+        refreshSystemMicrophoneSubmenu()
+    }
+
+    static func buildStatusMenu(
+        connectionItem: NSMenuItem,
+        localization: LocalizationStore,
+        target: AnyObject?,
+        delegate: NSMenuDelegate?,
+        includesCheckForUpdates: Bool,
+        canRestoreClipboard: Bool,
+        supportItem: NSMenuItem,
+        versionItem: NSMenuItem
+    ) -> (menu: NSMenu, systemMicrophoneSubmenu: NSMenu, restoreClipboardItem: NSMenuItem) {
         let menu = NSMenu()
-        menu.delegate = self
+        menu.delegate = delegate
         menu.addItem(connectionItem)
-        menu.addItem(menuItem("connection.action.reconnect", action: #selector(reconnect)))
+        menu.addItem(makeMenuItem(
+            title: localization.text("connection.action.reconnect"),
+            action: #selector(reconnect),
+            target: target
+        ))
         menu.addItem(.separator())
-        let settingsItem = menuItem("menu.open_settings", action: #selector(showSettingsFromStatusItem))
+
+        let settingsItem = makeMenuItem(
+            title: localization.text("menu.open_settings"),
+            action: #selector(showSettingsFromStatusItem),
+            target: target
+        )
         settingsItem.keyEquivalent = ","
         settingsItem.keyEquivalentModifierMask = .command
         menu.addItem(settingsItem)
+
+        let microphoneItem = NSMenuItem(
+            title: localization.text("menu.system_microphone"),
+            action: nil,
+            keyEquivalent: ""
+        )
+        let microphoneSubmenu = NSMenu()
+        microphoneSubmenu.delegate = delegate
+        microphoneItem.submenu = microphoneSubmenu
+        menu.addItem(microphoneItem)
+
         menu.addItem(.separator())
-        if updateFeedSelection.validatedStableFeedURL != nil {
-            menu.addItem(menuItem("menu.check_for_updates", action: #selector(checkForUpdates)))
+        if includesCheckForUpdates {
+            menu.addItem(makeMenuItem(
+                title: localization.text("menu.check_for_updates"),
+                action: #selector(checkForUpdates),
+                target: target
+            ))
         }
-        menu.addItem(supportMenuItem())
-        menu.addItem(menuItem("menu.about", action: #selector(showAbout)))
-        menu.addItem(versionMenuItem())
+        menu.addItem(supportItem)
+        menu.addItem(makeMenuItem(
+            title: localization.text("menu.about"),
+            action: #selector(showAbout),
+            target: target
+        ))
+        menu.addItem(versionItem)
         menu.addItem(.separator())
-        let restoreItem = menuItem("common_phrases.restore_clipboard", action: #selector(restorePhraseClipboard))
-        restoreItem.isHidden = !CommonPhraseClipboardPaste.shared.canRestoreClipboard
+
+        let restoreItem = makeMenuItem(
+            title: localization.text("common_phrases.restore_clipboard"),
+            action: #selector(restorePhraseClipboard),
+            target: target
+        )
+        restoreItem.isHidden = !canRestoreClipboard
         menu.addItem(restoreItem)
-        restoreClipboardItem = restoreItem
-        menu.addItem(menuItem("common.action.quit", action: #selector(quit)))
-        statusMenu = menu
-        refreshMenuStatus()
+        menu.addItem(makeMenuItem(
+            title: localization.text("common.action.quit"),
+            action: #selector(quit),
+            target: target
+        ))
+        return (menu, microphoneSubmenu, restoreItem)
+    }
+
+    private static func makeMenuItem(title: String, action: Selector, target: AnyObject?) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
+        item.target = target
+        return item
     }
 
     func configureApplicationMenu() {
@@ -255,6 +335,32 @@ extension RemoteBuddyAppDelegate {
         connectionItem.title = model.connectionStatus.text(using: localization)
     }
 
+    func refreshSystemMicrophoneSubmenu() {
+        guard let systemMicrophoneSubmenu else { return }
+        SystemMicrophoneMenuBuilder.populate(
+            systemMicrophoneSubmenu,
+            devices: CoreAudioDeviceCatalog.inputDevices(),
+            defaultInputUID: CoreAudioDeviceCatalog.defaultInputDevice()?.uid,
+            emptyTitle: localization.text("menu.system_microphone.none"),
+            target: self,
+            action: #selector(selectSystemMicrophone(_:))
+        )
+    }
+
+    @objc private func selectSystemMicrophone(_ sender: NSMenuItem) {
+        guard let uid = sender.representedObject as? String else { return }
+        let devices = CoreAudioDeviceCatalog.inputDevices()
+        let targetDevice = devices.first { $0.uid == uid }
+        let applied = CoreAudioDeviceCatalog.setDefaultInputDevice(
+            uid: uid,
+            availableInputDevices: { devices }
+        )
+        AppLogger.shared.write(
+            "AUDIO DEFAULT_INPUT_SWITCH phase=completed result=\(applied ? "applied" : "failed") " +
+                "target={\(CoreAudioDeviceCatalog.deviceDiagnostic(targetDevice))}"
+        )
+    }
+
     func refreshStatusItemPresentation() {
         guard let button = statusItem?.button else { return }
         let description = LocalizedMessage(
@@ -304,6 +410,7 @@ extension RemoteBuddyAppDelegate {
         restoreClipboardItem?.isEnabled = canRestore
         guard let statusItem, let statusMenu else { return }
         refreshMenuStatus()
+        refreshSystemMicrophoneSubmenu()
         statusItem.menu = statusMenu
         statusItem.button?.performClick(nil)
         statusItem.menu = nil
@@ -509,5 +616,32 @@ extension RemoteBuddyAppDelegate {
 
     @objc private func quit() {
         NSApp.terminate(nil)
+    }
+}
+
+@MainActor
+enum SystemMicrophoneMenuBuilder {
+    static func populate(
+        _ menu: NSMenu,
+        devices: [AudioDeviceInfo],
+        defaultInputUID: String?,
+        emptyTitle: String,
+        target: AnyObject?,
+        action: Selector
+    ) {
+        menu.removeAllItems()
+        guard !devices.isEmpty else {
+            let emptyItem = NSMenuItem(title: emptyTitle, action: nil, keyEquivalent: "")
+            emptyItem.isEnabled = false
+            menu.addItem(emptyItem)
+            return
+        }
+        for device in devices {
+            let item = NSMenuItem(title: device.name, action: action, keyEquivalent: "")
+            item.target = target
+            item.representedObject = device.uid
+            item.state = device.uid == defaultInputUID ? .on : .off
+            menu.addItem(item)
+        }
     }
 }

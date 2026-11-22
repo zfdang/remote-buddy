@@ -22,6 +22,50 @@ enum CoreAudioDeviceCatalog {
         }
     }
 
+    static func inputDevices() -> [AudioDeviceInfo] {
+        withPropertyLock {
+            devicesLocked(scope: kAudioDevicePropertyScopeInput)
+        }
+    }
+
+    static func defaultInputDevice() -> AudioDeviceInfo? {
+        withPropertyLock {
+            defaultDevice(selector: kAudioHardwarePropertyDefaultInputDevice)
+        }
+    }
+
+    /// Changes macOS's system default input device only in response to an explicit user selection.
+    /// Resolves the device freshly by UID so a stale or unplugged device cannot be applied.
+    @discardableResult
+    static func setDefaultInputDevice(
+        uid: String,
+        availableInputDevices: () -> [AudioDeviceInfo] = { inputDevices() },
+        isSettable: (AudioObjectID, inout AudioObjectPropertyAddress) -> Bool = { objectID, address in
+            var settable = DarwinBoolean(false)
+            return AudioObjectHasProperty(objectID, &address) &&
+                AudioObjectIsPropertySettable(objectID, &address, &settable) == noErr &&
+                settable.boolValue
+        },
+        writer: CoreAudioDevicePropertyWriter.Writer = { AudioObjectSetPropertyData($0, $1, $2, $3, $4, $5) }
+    ) -> Bool {
+        guard !uid.isEmpty,
+              let device = availableInputDevices().first(where: { $0.uid == uid }),
+              device.id != AudioDeviceID(kAudioObjectUnknown),
+              device.id != AudioDeviceID(kAudioObjectSystemObject)
+        else { return false }
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultInputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        let systemObject = AudioObjectID(kAudioObjectSystemObject)
+        guard isSettable(systemObject, &address) else { return false }
+        var deviceID = device.id
+        return withUnsafePointer(to: &deviceID) { pointer in
+            writer(systemObject, &address, 0, nil, UInt32(MemoryLayout<AudioDeviceID>.size), pointer) == noErr
+        }
+    }
+
 
     private static func devicesLocked(scope: AudioObjectPropertyScope) -> [AudioDeviceInfo] {
         var address = AudioObjectPropertyAddress(

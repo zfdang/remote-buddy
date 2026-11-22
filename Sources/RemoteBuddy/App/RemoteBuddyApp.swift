@@ -119,6 +119,7 @@ final class RemoteBuddyAppDelegate: NSObject, NSApplicationDelegate, NSMenuDeleg
     var statusItemOperationID: UInt = 0
     var entryPointOperationID: UInt = 0
     var restoreClipboardItem: NSMenuItem?
+    var systemMicrophoneSubmenu: NSMenu?
     var statusMenu: NSMenu?
     var settingsWindowController: NSWindowController?
     var isSettingsWindowOpen = false

@@ -64,15 +64,15 @@
     <details class="troubleshooting-card">
       <summary><span class="troubleshooting-question">Is there a Windows version of Remote Buddy? How does it differ from the macOS version?</span></summary>
       <div class="troubleshooting-body">
-        <p><strong>Yes. Remote Buddy has an independent open-source Windows version, though it is currently in an early preview stage with limited functionality.</strong></p>
-        <p>The Windows version is hosted in its own repository: <a class="text-link" href="https://github.com/zfdang/remote-buddy-windows">zfdang/remote-buddy-windows ↗</a>. Key differences include:</p>
+        <p><strong>Yes. Remote Buddy has an independent open-source Windows version, hosted in its own repository: <a class="text-link" href="https://github.com/zfdang/remote-buddy-windows">zfdang/remote-buddy-windows ↗</a>.</strong></p>
+        <p>Key features and differences include:</p>
         <ol>
-          <li><strong>Tech Stack:</strong> The macOS app is written in native Swift / AppKit with deeply tuned CoreAudio and IOHID integration; the Windows app is built on native <strong>C# / .NET 10 LTS (WPF)</strong>, distributed as a self-contained portable zip.</li>
-          <li><strong>Virtual Microphone:</strong> The macOS app bundles our own kernel-level <code>Remote Buddy Mic</code> driver with zero external dependencies; the Windows app requires users to independently install the WHQL-certified third-party <a class="text-link" href="https://vb-audio.com/Cable/" target="_blank" rel="noopener">VB-CABLE Driver ↗</a>.</li>
-          <li><strong>Remote &amp; Key Support:</strong> macOS fully supports 14 remappable buttons on G9N9N, all buttons on Xiaomi 2 / 2 Pro, and T1. The Windows version is currently verified primarily on the <strong>Xiaomi Remote 2 Pro (RC003)</strong> for voice input and D-pad/OK/Home/Menu/Power keys; <strong>Back and Volume buttons are not supported</strong> under standard Windows BLE GATT channels. G9N9N and other remotes remain in ongoing validation.</li>
-          <li><strong>Input Tool Integration:</strong> The Windows version is currently hardware-verified with WeChat Keyboard (configured to <code>Ctrl + F5</code>) and native Windows Dictation (<code>Win + H</code>).</li>
+          <li><strong>Tech Stack &amp; Architecture:</strong> The macOS app is written in native Swift / AppKit deeply optimized for CoreAudio and IOHID; the Windows app is built on native <strong>C# / .NET 10 LTS (WPF)</strong> and distributed as a portable standalone package.</li>
+          <li><strong>Microphone Driver:</strong> The macOS app bundles our custom-engineered <code>Remote Buddy Mic</code> virtual audio driver with one-click setup; the Windows app requires the Microsoft WHQL-certified third-party <a class="text-link" href="https://vb-audio.com/Cable/" target="_blank" rel="noopener">VB-CABLE Driver ↗</a>.</li>
+          <li><strong>Remote &amp; Button Support:</strong> Both editions implement the complete ATVV voice protocol state machine and timing jitter protection. The Windows edition has verified audio streaming and full custom button mapping (supporting click, hold, and double-click actions for shortcuts, media controls, or text snippets) for the <strong>Google Chromecast Remote (G9N9N)</strong>, <strong>Xiaomi Bluetooth Voice Remote 2 / 2 Pro</strong>, and <strong>T1 Air Mouse Remote</strong>.</li>
+          <li><strong>Input Tool Integration:</strong> Fully compatible with WeChat Keyboard (e.g. <code>Ctrl + F5</code>), native Windows Dictation (<code>Win + H</code>), and any global voice typing shortcut tools.</li>
         </ol>
-        <p>If you are on Windows and want to try voice typing with a remote, head over to the <a class="text-link" href="https://github.com/zfdang/remote-buddy-windows/releases/latest">Windows Releases Page ↗</a>.</p>
+        <p>If you are on Windows, visit the <a class="text-link" href="https://github.com/zfdang/remote-buddy-windows/releases/latest">Windows Releases Page ↗</a> to download and try it.</p>
       </div>
     </details>
 
@@ -368,7 +368,7 @@
     <a href="downloads/index.en.html">Website Download</a>
     <a href="device_en.html">Supported Remotes</a>
     <a href="faq_en.html">FAQ</a>
-    <a href="https://github.com/zfdang/remote-buddy-windows">Windows Preview ↗</a>
+    <a href="https://github.com/zfdang/remote-buddy-windows">Windows Edition ↗</a>
     <a href="https://github.com/zfdang/remote-buddy/blob/main/README.en.md">GitHub Docs</a>
     <a href="https://github.com/zfdang/remote-buddy/blob/main/LICENSE">GPL-3.0-only</a>
   </div>

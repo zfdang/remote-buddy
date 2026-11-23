@@ -6,7 +6,7 @@ Turn a remote control into a voice-input button for your computer. Press to talk
 
 [Website](https://remote.zfdang.com/index.en.html) · [Downloads](https://github.com/zfdang/remote-buddy/releases) · [Device Guide](https://remote.zfdang.com/device_en.html) · [FAQ](https://remote.zfdang.com/faq_en.html)
 
-This repository is the stable native **macOS 14 and later** edition (Apple Silicon and Intel Macs). For **Windows 10/11**, a standalone early-preview repository is now available at [Remote Buddy for Windows](https://github.com/zfdang/remote-buddy-windows) (built with .NET 10 LTS C# / WPF + VB-CABLE; early preview with limited button support).
+This repository is the native **macOS 14 and later** edition (Apple Silicon and Intel Macs). For **Windows 10/11**, please visit the companion open-source project [Remote Buddy for Windows](https://github.com/zfdang/remote-buddy-windows) (built with .NET 10 LTS C# / WPF + VB-CABLE, featuring full ATVV protocol support and button mapping for G9N9N, Xiaomi, and other remotes).
 
 ## Screenshots
 
@@ -109,7 +109,7 @@ The tool must accept the virtual microphone and expose a usable voice shortcut (
 - [Releases and installers](docs/releases.md)
 - [Architecture and scope](docs/architecture.md)
 - [Privacy and testing](docs/privacy-and-testing.md)
-- [Remote Buddy for Windows (Early Preview)](https://github.com/zfdang/remote-buddy-windows)
+- [Remote Buddy for Windows](https://github.com/zfdang/remote-buddy-windows)
 - [Source provenance](docs/provenance.md), [GPL-3.0-only license](LICENSE), [third-party notices](THIRD_PARTY_NOTICES.md)
 
 ## Download and uninstall

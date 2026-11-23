@@ -6,7 +6,7 @@ Remote Buddy（遥控搭子）把遥控器变成电脑上的语音输入按钮�
 
 [产品官网](https://remote.zfdang.com) · [下载](https://github.com/zfdang/remote-buddy/releases) · [设备指南](https://remote.zfdang.com/device.html) · [常见问答 (FAQ)](https://remote.zfdang.com/faq.html)
 
-本仓库为原生 **macOS 14 及以上版本**稳定版（支持 Apple Silicon 和 Intel Mac）。Windows 10/11 已有独立开源仓库 [Remote Buddy for Windows](https://github.com/zfdang/remote-buddy-windows)（基于 .NET 10 LTS C# / WPF + VB-CABLE 的早期预览版，按键支持尚有限）。
+本仓库为原生 **macOS 14 及以上版本**（支持 Apple Silicon 和 Intel Mac）。Windows 10/11 请移步同源开源项目 [Remote Buddy for Windows](https://github.com/zfdang/remote-buddy-windows)（基于 .NET 10 LTS C# / WPF + VB-CABLE 构建，完整支持 ATVV 协议与 G9N9N / 小米遥控器等设备按键映射）。
 
 ## 界面预览
 
@@ -109,7 +109,7 @@ Remote Buddy 接收遥控器音频，解码后送入虚拟麦克风，同时将�
 - [发布与安装包说明](docs/releases.md)
 - [架构与产品范围](docs/architecture.md)
 - [隐私与验证记录](docs/privacy-and-testing.md)
-- [Remote Buddy for Windows（早期预览版）](https://github.com/zfdang/remote-buddy-windows)
+- [Remote Buddy for Windows](https://github.com/zfdang/remote-buddy-windows)
 - [源码来源](docs/provenance.md)、[GPL-3.0-only 许可证](LICENSE)、[第三方声明](THIRD_PARTY_NOTICES.md)
 
 ## 下载与卸载

@@ -7,6 +7,7 @@ on:
     branches: ["main"]
     paths:
       - "pages/**"
+      - "scripts/prepare-pages-windows-downloads.py"
       - ".github/workflows/static.yml"
 
   # Allows you to run this workflow manually from the Actions tab
@@ -14,6 +15,9 @@ on:
     workflows: ["macOS installer and release"]
     types: [completed]
     branches: [main]
+
+  repository_dispatch:
+    types: [windows-release-published]
 
   workflow_dispatch:
 
@@ -46,6 +50,11 @@ jobs:
           PAGES_UPDATE_RUN_ID: ${{ github.event.workflow_run.id }}
         shell: bash
         run: scripts/prepare-pages-update-feeds.sh
+      - name: Include latest Windows release mirror
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: python3 scripts/prepare-pages-windows-downloads.py
       - name: Setup Pages
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
       - name: Upload artifact

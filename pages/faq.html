@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>常见问答 (FAQ) · Remote Buddy 遥控搭子</title>
-  <meta name="description" content="Remote Buddy（遥控搭子）使用常见问答：遥控器选购推荐、点按免提与按住说话区别、为什么有的遥控器只能长按、60秒录音物理上限原理解析、按键直通模式、常用语设置、应用集成、输入法长按点按转换、Fn热键排障与推荐配置。">
+  <meta name="description" content="Remote Buddy（遥控搭子）使用常见问答：遥控器选购推荐、点按免提与按住说话区别、为什么有的遥控器只能长按、60秒录音物理上限原理解析、按键直通模式、常用语设置、应用集成、输入法长按点按转换、Fn热键排障以及 Windows 平台安装与使用指南。">
   <meta name="theme-color" content="#203a68">
   <link rel="canonical" href="https://remote.zfdang.com/faq.html">
   <link rel="alternate" hreflang="zh-CN" href="https://remote.zfdang.com/faq.html">
   <link rel="alternate" hreflang="en" href="https://remote.zfdang.com/faq_en.html">
   <link rel="alternate" hreflang="x-default" href="https://remote.zfdang.com/faq.html">
   <link rel="icon" href="assets/app-icon.png">
-  <link rel="stylesheet" href="style.css?v=261120faq">
+  <link rel="stylesheet" href="style.css?v=261123win">
 </head>
 <body>
 <header class="nav wrap device-nav">
@@ -22,6 +22,7 @@
     <a href="#integrations">应用集成</a>
     <a href="#input-methods">输入法与转换</a>
     <a href="#troubleshooting">排障与安全</a>
+    <a href="#windows-guide">Windows 指南</a>
     <a class="nav-home" href="index.html">返回首页</a>
     <span class="language-switch" aria-label="语言"><b aria-current="page">中文</b><a href="faq_en.html" lang="en">English</a></span>
   </nav>
@@ -31,7 +32,7 @@
   <div class="downloads-head">
     <p class="eyebrow">使用指南 · 常见问答</p>
     <h1 class="section-title">常见问答 (FAQ)</h1>
-    <p class="lead-sub">汇总 Remote Buddy（遥控搭子）在硬件选购、语音触发、按键直通、常用语面板、应用集成、输入法生态与常见疑难排障方面的完整解答。</p>
+    <p class="lead-sub">汇总 Remote Buddy（遥控搭子）在硬件选购、语音触发、按键直通、常用语面板、应用集成、输入法生态、常见疑难排障以及 Windows 平台安装配置方面的完整解答。</p>
   </div>
 
   <!-- 一、硬件支持与选购推荐 -->
@@ -67,12 +68,12 @@
         <p><strong>有。Remote Buddy 拥有独立的 Windows 开源版本，代码托管于独立的开源仓库：<a class="text-link" href="https://github.com/zfdang/remote-buddy-windows">zfdang/remote-buddy-windows ↗</a>。</strong></p>
         <p>两个版本的核心特性与区别如下：</p>
         <ol>
-          <li><strong>技术栈与架构：</strong>macOS 版使用原生 Swift / AppKit 开发，针对 CoreAudio 与 IOHID 系统深度优化；Windows 版采用原生 <strong>C# / .NET 10 LTS (WPF)</strong> 构建，单文件绿色免安装发布。</li>
-          <li><strong>麦克风驱动：</strong>macOS 版内嵌了自主研发的 <code>Remote Buddy Mic</code> 虚拟麦克风驱动，一键安装无需第三方工具；Windows 版因驱动签名机制，<strong>需配合微软 WHQL 认证的第三方虚拟声卡 <a class="text-link" href="https://vb-audio.com/Cable/" target="_blank" rel="noopener">VB-CABLE Driver ↗</a></strong>。</li>
-          <li><strong>按键与型号支持：</strong>两个版本均完整移植了 ATVV 语音协议状态机与防吞字时序。已实机验证 <strong>Google Chromecast 遥控器（G9N9N）</strong>、<strong>小米蓝牙语音遥控器 2 / 2 Pro</strong> 以及 <strong>T1 飞鼠遥控器</strong>的语音推流与全按键自定义映射（支持单击、长按、双击触发快捷键、媒体控制或文本片段）。</li>
-          <li><strong>输入法适配：</strong>支持微信输入法（如快捷键 <code>Ctrl + F5</code>）、Windows 自带语音听写（<code>Win + H</code>）以及各类全局快捷键语音工具。</li>
+          <li><strong>技术栈与架构：</strong>macOS 版使用原生 Swift / AppKit 开发，针对 CoreAudio 与 IOHID 系统深度优化；Windows 版采用原生 <strong>C# / .NET 10 LTS (WPF)</strong> 构建，自包含单文件绿色免安装发布（无需预装 .NET 运行库）。</li>
+          <li><strong>麦克风驱动：</strong>macOS 版内嵌了自主研发的 <code>Remote Buddy Mic</code> 虚拟麦克风驱动，随安装包一站式装好；Windows 版因内核驱动强制签名机制，<strong>需配合微软 WHQL 认证的第三方虚拟声卡 <a class="text-link" href="https://vb-audio.com/Cable/" target="_blank" rel="noopener">VB-CABLE Driver ↗</a></strong>（软件向导内置一键下载与安装入口，会优先从官网镜像下载并支持 VB-Audio 官网回退）。</li>
+          <li><strong>按键与型号支持：</strong>两个版本均完整实现 ATVV 语音协议状态机与首尾音防护时序。已验证 <strong>Google Chromecast 遥控器（G9N9N）</strong>、<strong>小米蓝牙语音遥控器 2 / 2 Pro</strong> 与 <strong>T1 飞鼠遥控器</strong>，支持单击、长按、双击触发快捷键、媒体控制或常用文本。</li>
+          <li><strong>输入法适配：</strong>支持微信输入法（默认 <code>Ctrl + F5</code>）、豆包输入法 / 客户端（支持通过签名 USB/IP 虚拟键盘驱动触发长按说话）、Windows 自带语音听写（<code>Win + H</code>）以及 Typeless（默认 <code>Ctrl + Alt + V</code>）等全局语音工具。</li>
         </ol>
-        <p>如果你使用的是 Windows 电脑，可前往 <a class="text-link" href="https://github.com/zfdang/remote-buddy-windows/releases/latest">Windows Releases 页面 ↗</a> 下载体验。</p>
+        <p>如果你使用的是 Windows 电脑，可直接前往 <a class="text-link" href="downloads/index.html#platform-windows">下载页 Windows 专区</a>（或 <a class="text-link" href="https://github.com/zfdang/remote-buddy-windows/releases/latest">Windows Releases 页面 ↗</a>）获取压缩包，详细安装与配置步骤请参阅下方 <a class="text-link" href="#windows-guide">六、Windows 平台安装与使用指南 ↓</a>。</p>
       </div>
     </details>
 
@@ -356,6 +357,88 @@
             </ul>
           </li>
         </ol>
+      </div>
+    </details>
+  </section>
+
+  <!-- 六、Windows 平台安装与使用指南 -->
+  <section class="troubleshooting" id="windows-guide" aria-labelledby="cat-windows-title">
+    <p class="eyebrow">WINDOWS 平台</p>
+    <h2 class="section-title" id="cat-windows-title">六、Windows 平台安装与使用指南</h2>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">Windows 版下载完成后如何安装与开始使用？</span></summary>
+      <div class="troubleshooting-body">
+        <p>Windows 版采用自包含（Self-Contained）.NET 10 LTS 绿色包发布，无需单独安装 .NET 运行库。按以下步骤即可快速完成初次配置：</p>
+        <ol>
+          <li><strong>下载并完整解压：</strong>在 <a class="text-link" href="downloads/index.html#platform-windows">下载页 Windows 专区</a> 下载 <code>Remote_Buddy_Windows_*_x64.zip</code>，将其完整解压到一个固定文件夹（例如 <code>D:\Tools\RemoteBuddy</code>）；请勿直接在压缩包预览窗口中双击运行。</li>
+          <li><strong>以管理员身份运行主程序：</strong>进入解压目录，右键点击 <code>RemoteBuddy.App.exe</code>，选择<strong>「以管理员身份运行」</strong>并在 UAC 弹窗中确认。首次运行如遇到 Windows SmartScreen 提示，可点击「更多信息 → 仍要运行」。</li>
+          <li><strong>安装 VB-CABLE 虚拟麦克风并重启电脑：</strong>首次打开会进入配置向导。第 2 步「检查虚拟麦克风驱动」如果检测到未安装，直接点击<strong>「安装 VB-CABLE」</strong>，程序会从官网镜像下载 <code>VBCABLE_Driver_Pack46.zip</code>（失败时自动回退 VB-Audio 官网）并校验 SHA-256，随后弹出官方安装器；在安装器中点击 <strong>Install Driver</strong>，完成后<strong>重启 Windows</strong> 让系统音频服务注册虚拟端点。</li>
+          <li><strong>蓝牙配对并在应用内点击“连接”：</strong>先在 Windows 系统蓝牙设置中配对遥控器（或进入向导「连接遥控器」步骤扫描）。<strong>重要：</strong>即使 Windows 蓝牙已显示“已配对/已连接”，仍需在向导或「设备」页面点击该遥控器右侧的<strong>「连接」</strong>按钮，才能建立 ATVV 语音通道并开始按键检测。</li>
+          <li><strong>配置输入法麦克风与语音热键并验收：</strong>在输入法或语音工具设置中将录音麦克风选为 <code>CABLE Output (VB-Audio Virtual Cable)</code>，使语音热键与 Remote Buddy 向导一致，最后在向导中完成一次「语音转写验收」即可日常使用。</li>
+        </ol>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">为什么 Windows 版必须安装 VB-CABLE 虚拟麦克风？安装后电脑没声音怎么办？</span></summary>
+      <div class="troubleshooting-body">
+        <p><strong>为什么需要单独安装 VB-CABLE？</strong><br>在 64 位 Windows 10/11 上，内核强制驱动签名机制（DSE）要求虚拟声卡驱动必须具有微软官方 <strong>WHQL 认证签名</strong>，自签名驱动无法加载。因此 Windows 版不像 macOS 版那样内嵌自研驱动，而是采用由 VB-Audio Software 提供的微软 WHQL 认证虚拟声卡 <strong>VB-CABLE</strong>（Donationware 免费可用）：Remote Buddy 将解码后的 16kHz 音频写入 <code>CABLE Input</code>，输入法则从配对的虚拟麦克风 <code>CABLE Output</code> 读取语音。</p>
+        <p><strong>两种安装途径：</strong></p>
+        <ul>
+          <li><strong>软件内一键安装（推荐）：</strong>在设置向导第 2 步或主界面<strong>「权限与驱动」</strong>页面点击<strong>「安装 VB-CABLE」</strong>，按提示同意 UAC 提权后在弹出窗口点击 <code>Install Driver</code>，安装结束后重启电脑。</li>
+          <li><strong>手动提前安装：</strong>也可在 <a class="text-link" href="downloads/index.html#platform-windows">下载页</a> 或 <a class="text-link" href="https://vb-audio.com/Cable/" target="_blank" rel="noopener">VB-Audio 官网 ↗</a> 下载 <code>VBCABLE_Driver_Pack46.zip</code>，解压后右键以管理员身份运行 <code>VBCABLE_Setup_x64.exe</code>，点击 <code>Install Driver</code> 并重启电脑。</li>
+        </ul>
+        <p><strong>常见安装后排障：</strong></p>
+        <ul>
+          <li><strong>装完 VB-CABLE 后电脑扬声器/耳机突然没声音：</strong>这是最常见现象——Windows 安装新声卡后有时会自动把系统默认<strong>播放输出设备</strong>切换为 <code>CABLE Input (VB-Audio Virtual Cable)</code>。只需点击任务栏右下角音量图标（或打开「系统 → 声音」），把默认<strong>输出设备</strong>改回你的物理扬声器或耳机即可恢复外放；同时不要更改输入法里选中的 <code>CABLE Output</code> 麦克风。</li>
+          <li><strong>提示需要重启或设备未就绪：</strong>VB-CABLE 官方明确要求安装或更新后重启 Windows 以完成音频端点注册，请保存工作后重启电脑再检测。</li>
+          <li><strong>检测到设备被禁用：</strong>在 Windows「声音设置 → 更多声音设置」中确认 <code>CABLE Input</code>（播放）和 <code>CABLE Output</code>（录制）均处于启用状态。</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">为什么强烈建议在 Windows 上“以管理员身份运行” Remote Buddy？</span></summary>
+      <div class="troubleshooting-body">
+        <p>虽然不提权也能启动应用主界面，但在 Windows 下强烈建议始终以<strong>管理员身份（Administrator）</strong>运行 Remote Buddy，核心原因有四点：</p>
+        <ol>
+          <li><strong>完整捕获遥控器普通按键（BthPort ETW 内核跟踪）：</strong>在 Windows 上，<strong>Google Chromecast (G9N9N)</strong> 的多数普通按键以及 <strong>小米遥控器 2 Pro (RC003)</strong> 的返回、音量加、音量减键，系统不会完整交付给普通权限的 Raw Input 监听，需要依赖 Windows 内核蓝牙事件跟踪（BthPort ETW）补取。以管理员身份运行时，ETW 服务可在进程内原生直接运行，无需反复弹出 UAC 提权工作进程确认。</li>
+          <li><strong>支持豆包输入法的 USB/IP 虚拟键盘驱动：</strong>豆包输入法的「长按模式」会忽略带有 <code>LLKHF_INJECTED</code> 标志的软件模拟按键（普通 <code>SendInput</code> 无法唤起）。当你在向导中选择豆包时，Remote Buddy 会通过微软签名的 <code>usbip-win2</code> 与 HIDMaestro 创建硬件级 USB/IP 虚拟键盘来发送语音快捷键，该虚拟键盘通道需要管理员权限。</li>
+          <li><strong>避免 Windows UIPI 权限隔离导致热键失效：</strong>根据 Windows 安全架构，普通权限进程无法向“以管理员身份运行”的前台窗口（例如管理员终端/PowerShell、任务管理器或部分提权软件）发送模拟快捷键或粘贴常用语；以管理员身份运行 Remote Buddy 后即可在这些高权限窗口正常语音输入。</li>
+          <li><strong>驱动安装与蓝牙适配器一键恢复：</strong>在软件内安装 VB-CABLE 驱动，或当遥控器连接异常时使用向导中的「重启蓝牙适配器」恢复功能，均需管理员权限。</li>
+        </ol>
+        <p><strong>如何一劳永逸地默认以管理员身份启动？</strong><br>
+        右键点击 <code>RemoteBuddy.App.exe</code> → <strong>属性 → 兼容性 → 勾选「以管理员身份运行此程序」</strong>并确定；如果已经以普通权限打开，也可在软件左侧<strong>「权限与驱动」</strong>页面点击<strong>「以管理员身份重启本程序」</strong>。</p>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">Windows 上如何配置微信输入法、豆包输入法、Windows 语音听写和 Typeless？</span></summary>
+      <div class="troubleshooting-body">
+        <p><strong>通用前置条件：</strong>确保已在目标输入法或 Windows 系统录音设置中选择 <code>CABLE Output (VB-Audio Virtual Cable)</code> 作为麦克风输入设备，且配置的语音快捷键与 Remote Buddy 向导一致。</p>
+        <ul>
+          <li><strong>微信输入法（WeType）：</strong>打开微信输入法设置 →「语音输入」页，勾选<strong>「快捷键全局生效」</strong>并选择<strong>「按住说话」</strong>（默认快捷键推荐 <code>Ctrl + F5</code>），将麦克风设为 <code>CABLE Output (VB-Audio Virtual Cable)</code>；在 Remote Buddy 中同样保持「按住说话」。</li>
+          <li><strong>豆包输入法 / 客户端：</strong>打开豆包设置 →「语音输入」页，将「全局唤起语音」设为<strong>「持续模式」</strong>，麦克风设为 <code>CABLE Output (VB-Audio Virtual Cable)</code>，确保豆包「长按模式」快捷键与 Remote Buddy <strong>完全一致（区分左右修饰键）</strong>（例如默认的右 Alt <code>RAlt</code>，或左 <code>Ctrl + Shift + D</code>）。请<strong>以管理员身份运行</strong> Remote Buddy 并选择「按住说话」，首次使用会自动准备已签名的 USB/IP 虚拟键盘驱动。</li>
+          <li><strong>Windows 语音听写（Win + H）：</strong>Windows 10/11 原生内置，无需安装第三方软件。将 Windows 系统默认输入麦克风设为 <code>CABLE Output (VB-Audio Virtual Cable)</code>，向导中选择「Windows 语音听写」（快捷键 <code>Win + H</code>，单击切换开始与停止）。</li>
+          <li><strong>Typeless 及其他全球热键语音工具：</strong>Typeless 默认语音快捷键为 <code>Ctrl + Alt + V</code>（按住说话）；其他支持全局热键的工具只需在工具中选定 <code>CABLE Output</code> 麦克风并在 Remote Buddy 向导录入对应快捷键即可。</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">Windows 版常见注意事项与排障（按键附加映射、已配对却无反应、SmartScreen 提示）</span></summary>
+      <div class="troubleshooting-body">
+        <ul>
+          <li><strong>为什么修改普通键映射后，系统原本的动作（如调音量、主页键）有时仍会同时触发？</strong><br>
+          这是 Windows Raw Input 与低级钩子的系统机制限制：Raw Input 是被动监听接口，无法单独“吞掉”遥控器原始按键而不误伤物理键盘。因此 Windows 版普通键默认采用<strong>附加映射（Additive Mapping）</strong>——触发你设置的快捷键或常用语的同时，部分系统原生动作（例如音量调节）仍可能发生。</li>
+          <li><strong>Windows 蓝牙已经显示“已配对/已连接”，但软件里没声音或普通键不响应怎么办？</strong><br>
+          1) 请先确认已在 Remote Buddy 向导或「设备」页面手动点击该遥控器的<strong>「连接」</strong>按钮建立 ATVV 音频会话；<br>
+          2) 若语音正常但 G9N9N 普通键或小米 RC003 返回/音量键无反应，打开主界面<strong>「权限与驱动」</strong>，确认已处于<strong>管理员权限</strong>且<strong>「ETW 底层按键捕获服务」</strong>正在运行；若异常可点击「重试启动捕获」或以管理员重启程序；<br>
+          3) 若蓝牙连接卡死或出现报文截断警告，可直接使用向导中的<strong>「重启蓝牙适配器」</strong>按钮（或在设备管理器中禁用再启用蓝牙适配器）后重新连接。</li>
+          <li><strong>首次运行提示“Windows 已保护你的电脑”（SmartScreen 警告）安全吗？</strong><br>
+          本项目为 GPL-3.0-only 开源免费软件，发布包暂未购买商业代码签名证书，因此初次下载解压运行可能触发 Windows Defender SmartScreen 提示。只要你确认包体来自官网镜像（<code>remote.zfdang.com</code>）或官方仓库 <a class="text-link" href="https://github.com/zfdang/remote-buddy-windows/releases">zfdang/remote-buddy-windows ↗</a>，即可放心点击「更多信息 → 仍要运行」。</li>
+        </ul>
       </div>
     </details>
   </section>

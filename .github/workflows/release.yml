@@ -143,6 +143,7 @@ jobs:
               "scripts/test-app-ownership.py",
               "scripts/test-appcast.py",
               "scripts/test-pages-update-feeds.py",
+              "scripts/test-pages-windows-downloads.py",
               "scripts/test-update-signature.py",
               "scripts/test-release-signing.py",
               "scripts/test-sign-bundle.py",

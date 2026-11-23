@@ -1,27 +1,66 @@
 (function () {
   var english = document.documentElement.lang === 'en';
   var tagBadge = document.getElementById('release-tag');
+  var macosNavVersion = document.getElementById('macos-nav-version');
   var statusNote = document.getElementById('mirror-status');
   var cardsContainer = document.getElementById('mirror-cards');
   var fallbackPanel = document.getElementById('mirror-fallback');
 
-  if (!cardsContainer) return;
+  var winTagBadge = document.getElementById('windows-release-tag');
+  var winNavVersion = document.getElementById('windows-nav-version');
+  var winMeta = document.getElementById('windows-meta');
+  var winActions = document.getElementById('windows-actions');
+
+  function escapeHtml(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
 
   function formatBytes(bytes) {
     if (!bytes || typeof bytes !== 'number') return '';
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   }
 
-  function renderPackages(manifest, websiteBaseUrl) {
+  function detectPlatformHint() {
+    var raw =
+      (navigator.userAgentData && navigator.userAgentData.platform) ||
+      navigator.platform ||
+      navigator.userAgent ||
+      '';
+    var macHint = document.getElementById('macos-os-hint');
+    var winHint = document.getElementById('windows-os-hint');
+    if (/mac/i.test(raw)) {
+      if (macHint) macHint.hidden = false;
+    } else if (/win/i.test(raw)) {
+      if (winHint) winHint.hidden = false;
+    }
+  }
+
+  function loadManifest(url) {
+    return fetch(url, { cache: 'no-store' }).then(function (response) {
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      return response.json();
+    });
+  }
+
+  function renderMacPackages(manifest, websiteBaseUrl) {
     var tag = manifest && manifest.tag;
     var packages = manifest && manifest.packages;
     if (!tag || !packages || !packages.arm64 || !packages.intel) {
-      throw new Error('Incomplete download manifest');
+      throw new Error('Incomplete macOS download manifest');
     }
 
     if (tagBadge) {
-      tagBadge.textContent = (english ? 'Latest version: ' : '最新版本：') + tag;
+      tagBadge.textContent = (english ? 'Latest: ' : '最新版本：') + tag;
       tagBadge.hidden = false;
+    }
+    if (macosNavVersion) {
+      macosNavVersion.textContent = tag;
+      macosNavVersion.hidden = false;
     }
 
     var specs = [
@@ -70,25 +109,26 @@
 
       var sizeText = formatBytes(pkg.size);
       var websiteHref = (websiteBaseUrl || '') + encodeURIComponent(pkg.name);
-      var badgeHtml = spec.badge ? '<span class="download-badge">' + spec.badge + '</span>' : '';
+      var githubHref = 'https://github.com/zfdang/remote-buddy/releases/download/' +
+        encodeURIComponent(tag) + '/' + encodeURIComponent(pkg.name);
+      var badgeHtml = spec.badge ? '<span class="download-badge">' + escapeHtml(spec.badge) + '</span>' : '';
       var primaryBtnClass = spec.isUninstaller ? 'button secondary' : 'button primary';
 
       card.innerHTML =
         '<div class="download-card-body">' +
-          '<h2>' + spec.title + badgeHtml + '</h2>' +
-          '<p>' + spec.subtitle + '</p>' +
+          '<h2>' + escapeHtml(spec.title) + badgeHtml + '</h2>' +
+          '<p>' + escapeHtml(spec.subtitle) + '</p>' +
           '<div class="download-meta">' +
-            '<span><code>' + pkg.name + '</code></span>' +
-            (sizeText ? '<span>' + sizeText + '</span>' : '') +
-            '<span>' + spec.archLabel + '</span>' +
+            '<span><code>' + escapeHtml(pkg.name) + '</code></span>' +
+            (sizeText ? '<span>' + escapeHtml(sizeText) + '</span>' : '') +
+            '<span>' + escapeHtml(spec.archLabel) + '</span>' +
           '</div>' +
         '</div>' +
         '<div class="download-actions">' +
-          '<a class="' + primaryBtnClass + '" href="' + websiteHref + '" download>' +
+          '<a class="' + primaryBtnClass + '" href="' + escapeHtml(websiteHref) + '" download>' +
             (english ? 'Download from Website ↓' : '从官网下载 ↓') +
           '</a>' +
-          '<a class="button secondary" href="https://github.com/zfdang/remote-buddy/releases/download/' +
-            encodeURIComponent(tag) + '/' + encodeURIComponent(pkg.name) + '">' +
+          '<a class="button secondary" href="' + escapeHtml(githubHref) + '">' +
             (english ? 'Download from GitHub ↗' : '从 GitHub 下载 ↗') +
           '</a>' +
         '</div>';
@@ -97,30 +137,79 @@
     });
 
     if (fallbackPanel) fallbackPanel.hidden = true;
-    if (statusNote) {
-      statusNote.hidden = true;
+    if (statusNote) statusNote.hidden = true;
+  }
+
+  function renderWindowsPackage(manifest, websiteBaseUrl) {
+    var tag = manifest && manifest.tag;
+    var pkg = manifest && manifest.packages && manifest.packages.x64;
+    if (!tag || !pkg || !pkg.name) {
+      throw new Error('Incomplete Windows download manifest');
+    }
+
+    if (winTagBadge) {
+      winTagBadge.textContent = (english ? 'Latest: ' : '最新版本：') + tag;
+      winTagBadge.hidden = false;
+    }
+    if (winNavVersion) {
+      winNavVersion.textContent = tag;
+      winNavVersion.hidden = false;
+    }
+
+    var sizeText = formatBytes(pkg.size);
+    if (winMeta) {
+      winMeta.innerHTML =
+        '<span><code>' + escapeHtml(pkg.name) + '</code></span>' +
+        (sizeText ? '<span>' + escapeHtml(sizeText) + '</span>' : '') +
+        '<span>x64 · .zip · Windows 10 / 11</span>';
+    }
+
+    if (winActions) {
+      var websiteHref = (websiteBaseUrl || '') + encodeURIComponent(pkg.name);
+      var githubHref = 'https://github.com/zfdang/remote-buddy-windows/releases/download/' +
+        encodeURIComponent(tag) + '/' + encodeURIComponent(pkg.name);
+      winActions.innerHTML =
+        '<a class="button primary" href="' + escapeHtml(websiteHref) + '" download>' +
+          (english ? 'Download from Website ↓' : '从官网下载 ↓') +
+        '</a>' +
+        '<a class="button secondary" href="' + escapeHtml(githubHref) + '" target="_blank" rel="noopener">' +
+          (english ? 'Download from GitHub ↗' : '从 GitHub 下载 ↗') +
+        '</a>';
     }
   }
 
-  function loadManifest(url) {
-    return fetch(url, { cache: 'no-store' }).then(function (response) {
-      if (!response.ok) throw new Error('HTTP ' + response.status);
-      return response.json();
-    });
+  detectPlatformHint();
+
+  if (cardsContainer) {
+    loadManifest('latest.json')
+      .then(function (manifest) {
+        renderMacPackages(manifest, '');
+      })
+      .catch(function () {
+        return loadManifest('https://remote.zfdang.com/downloads/latest.json')
+          .then(function (manifest) {
+            renderMacPackages(manifest, 'https://remote.zfdang.com/downloads/');
+          });
+      })
+      .catch(function () {
+        if (fallbackPanel) fallbackPanel.hidden = false;
+        if (statusNote) statusNote.hidden = true;
+      });
   }
 
-  loadManifest('latest.json')
-    .then(function (manifest) {
-      renderPackages(manifest, '');
-    })
-    .catch(function () {
-      return loadManifest('https://remote.zfdang.com/downloads/latest.json')
-        .then(function (manifest) {
-          renderPackages(manifest, 'https://remote.zfdang.com/downloads/');
-        });
-    })
-    .catch(function () {
-      if (fallbackPanel) fallbackPanel.hidden = false;
-      if (statusNote) statusNote.hidden = true;
-    });
+  if (winMeta && winActions) {
+    loadManifest('windows-latest.json')
+      .then(function (manifest) {
+        renderWindowsPackage(manifest, '');
+      })
+      .catch(function () {
+        return loadManifest('https://remote.zfdang.com/downloads/windows-latest.json')
+          .then(function (manifest) {
+            renderWindowsPackage(manifest, 'https://remote.zfdang.com/downloads/');
+          });
+      })
+      .catch(function () {
+        // Keep static GitHub Releases fallback links visible.
+      });
+  }
 })();

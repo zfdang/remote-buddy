@@ -2,7 +2,7 @@
 
 官网源文件位于 `pages/`，为无需构建的静态 HTML、CSS 和 JavaScript。默认首页 `index.html` 使用中文，英文页面位于 `index.en.html`；右上角可通过链接切换语言。仓库默认文档 `README.md` 使用中文，`README.en.md` 使用英文，并提供相互切换的链接。两份网页与 README 中英文版本应一起更新。
 
-`.github/workflows/static.yml` 在 main 中的 `pages/**` 或该 workflow 更新时部署，也支持手动触发，以及 main 的安装包发布 workflow 成功完成后的部署。部署前通过 `scripts/prepare-pages-update-feeds.sh` 获取并校验更新源与安装包，将 `appcast-*.xml` 放入 `pages/`，并将对应版本的 `*.pkg` 与 `latest.json` 放入 `pages/downloads/`（依次从当前 `workflow_run` 产物、最新 Release 附件、最近成功的发布工作流产物、仓库 `pages/` 预提交/本地重建源或线上当前源回退检索并校验；全部源无效时停止部署）。若线上旧源或构建产物失效，可通过 `scripts/rebuild-pages-update-feeds.py` 从已发布的安装包和签名重新生成更新源。仅上传 `pages/` 静态站点及发布 `.pkg` 镜像，不上传 App 源码或构建目录；其中不应放入待提交以外的本地文件。
+`.github/workflows/static.yml` 在 main 中的 `pages/**`、`scripts/prepare-pages-windows-downloads.py` 或该 workflow 更新时部署，也支持手动触发、main 安装包发布 workflow 成功完成后触发，以及通过 `repository_dispatch`（`windows-release-published`）在 Windows 版发布后触发。部署前通过 `scripts/prepare-pages-update-feeds.sh` 获取并校验 macOS 更新源与安装包，将 `appcast-*.xml` 放入 `pages/`，并将对应版本的 `*.pkg` 与 `latest.json` 放入 `pages/downloads/`（依次从当前 `workflow_run` 产物、最新 Release 附件、最近成功的发布工作流产物、仓库 `pages/` 预提交/本地重建源或线上当前源回退检索并校验；全部源无效时停止部署）；同时通过 `scripts/prepare-pages-windows-downloads.py` 镜像 `zfdang/remote-buddy-windows` 最新 Release 的 `Remote_Buddy_Windows_*_x64.zip` 与 `windows-latest.json` 到 `pages/downloads/`（Windows 版无自动更新，不生成 Sparkle `appcast-*.xml`；若 GitHub 与线上镜像均不可用则跳过并保留警告，不阻塞 macOS 部署）。若线上旧源或构建产物失效，可通过 `scripts/rebuild-pages-update-feeds.py` 从已发布的安装包和签名重新生成更新源。仅上传 `pages/` 静态站点及发布镜像，不上传 App 源码或构建目录；其中不应放入待提交以外的本地文件。
 
 `pages/CNAME` 为 `remote.zfdang.com`，GitHub Pages 仓库设置已选择 Actions 部署与此自定义域名。域名 DNS 应正确指向 GitHub Pages；TLS 证书和域名验证由 GitHub 与域名服务配置决定。部署完成前，本地预览不等于官网已上线。
 
@@ -41,5 +41,6 @@ dist/videos/venv/bin/python scripts/demo-video/render.py
 
 ## 部署体积限制
 
-- GitHub Pages 单个部署文件上限为 25 MB。
-- 发布工作流会将 `arm64`、`intel` 安装包与通用卸载包镜像至官网 `downloads/` 目录，目前单个 `.pkg` 约 17 MB，余量约 8 MB；`scripts/verify-pages-update-feeds.py` 会在部署前校验单个镜像文件不超过 25 MB。新增驱动或资源时需关注包体大小，避免超出 Pages 限制。
+- GitHub Pages 单个仓库与发布站点推荐及规范上限为 1 GB，且单文件需控制在仓库/发布限制内。
+- macOS 发布工作流会将 `arm64`、`intel` 安装包与通用卸载包镜像至官网 `downloads/` 目录，目前单个 `.pkg` 约 12–17 MB；`scripts/verify-pages-update-feeds.py` 会在部署前校验单个 macOS 镜像文件不超过 25 MB。
+- Windows 镜像脚本 `scripts/prepare-pages-windows-downloads.py` 会将 `Remote_Buddy_Windows_*_x64.zip`（当前约 73 MB 自包含单文件绿色版）与 `windows-latest.json` 镜像至 `pages/downloads/`，并校验单文件不超过 100 MB。新增资源时需关注整体站点体量，避免接近 1 GB 限制。

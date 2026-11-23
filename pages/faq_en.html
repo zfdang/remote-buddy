@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Frequently Asked Questions (FAQ) · Remote Buddy</title>
-  <meta name="description" content="Frequently Asked Questions for Remote Buddy on macOS: remote buying recommendations, Hold-to-Talk vs Hands-Free Toggle, 60s hardware limit, Direct Passthrough mode, Common Phrases, Application Integration, input method Hold vs Tap bridging, Fn troubleshooting, and supported tools.">
+  <meta name="description" content="Frequently Asked Questions for Remote Buddy on macOS and Windows: remote buying recommendations, Hold-to-Talk vs Hands-Free Toggle, 60s hardware limit, Direct Passthrough mode, Common Phrases, Application Integration, input method bridging, Fn troubleshooting, and Windows installation & usage guide.">
   <meta name="theme-color" content="#203a68">
   <link rel="canonical" href="https://remote.zfdang.com/faq_en.html">
   <link rel="alternate" hreflang="zh-CN" href="https://remote.zfdang.com/faq.html">
   <link rel="alternate" hreflang="en" href="https://remote.zfdang.com/faq_en.html">
   <link rel="alternate" hreflang="x-default" href="https://remote.zfdang.com/faq.html">
   <link rel="icon" href="assets/app-icon.png">
-  <link rel="stylesheet" href="style.css?v=261120faq">
+  <link rel="stylesheet" href="style.css?v=261123win">
 </head>
 <body>
 <header class="nav wrap device-nav">
@@ -22,6 +22,7 @@
     <a href="#integrations">Integration</a>
     <a href="#input-methods">Input Tools</a>
     <a href="#troubleshooting">Troubleshooting</a>
+    <a href="#windows-guide">Windows Guide</a>
     <a class="nav-home" href="index.en.html">Home</a>
     <span class="language-switch" aria-label="Language"><a href="faq.html" hreflang="zh-CN" lang="zh-CN">中文</a><b aria-current="page">English</b></span>
   </nav>
@@ -31,7 +32,7 @@
   <div class="downloads-head">
     <p class="eyebrow">GUIDE &amp; REFERENCES</p>
     <h1 class="section-title">Frequently Asked Questions (FAQ)</h1>
-    <p class="lead-sub">Essential guides, hardware choices, voice trigger modes, Direct Passthrough, Common Phrases, Application Integration, input method bridging, and troubleshooting for Remote Buddy on macOS.</p>
+    <p class="lead-sub">Essential guides, hardware choices, voice trigger modes, Direct Passthrough, Common Phrases, Application Integration, input method bridging, troubleshooting, and Windows setup guidance for Remote Buddy.</p>
   </div>
 
   <!-- 1. Hardware Support & Buying Recommendations -->
@@ -67,12 +68,12 @@
         <p><strong>Yes. Remote Buddy has an independent open-source Windows version, hosted in its own repository: <a class="text-link" href="https://github.com/zfdang/remote-buddy-windows">zfdang/remote-buddy-windows ↗</a>.</strong></p>
         <p>Key features and differences include:</p>
         <ol>
-          <li><strong>Tech Stack &amp; Architecture:</strong> The macOS app is written in native Swift / AppKit deeply optimized for CoreAudio and IOHID; the Windows app is built on native <strong>C# / .NET 10 LTS (WPF)</strong> and distributed as a portable standalone package.</li>
-          <li><strong>Microphone Driver:</strong> The macOS app bundles our custom-engineered <code>Remote Buddy Mic</code> virtual audio driver with one-click setup; the Windows app requires the Microsoft WHQL-certified third-party <a class="text-link" href="https://vb-audio.com/Cable/" target="_blank" rel="noopener">VB-CABLE Driver ↗</a>.</li>
-          <li><strong>Remote &amp; Button Support:</strong> Both editions implement the complete ATVV voice protocol state machine and timing jitter protection. The Windows edition has verified audio streaming and full custom button mapping (supporting click, hold, and double-click actions for shortcuts, media controls, or text snippets) for the <strong>Google Chromecast Remote (G9N9N)</strong>, <strong>Xiaomi Bluetooth Voice Remote 2 / 2 Pro</strong>, and <strong>T1 Air Mouse Remote</strong>.</li>
-          <li><strong>Input Tool Integration:</strong> Fully compatible with WeChat Keyboard (e.g. <code>Ctrl + F5</code>), native Windows Dictation (<code>Win + H</code>), and any global voice typing shortcut tools.</li>
+          <li><strong>Tech Stack &amp; Architecture:</strong> The macOS app is written in native Swift / AppKit deeply optimized for CoreAudio and IOHID; the Windows app is built on native <strong>C# / .NET 10 LTS (WPF)</strong> and distributed as a self-contained portable package (no .NET runtime pre-install required).</li>
+          <li><strong>Microphone Driver:</strong> The macOS app bundles our custom-engineered <code>Remote Buddy Mic</code> virtual audio driver with one-click setup; due to Windows kernel driver signing rules, the Windows app uses the Microsoft WHQL-certified third-party <a class="text-link" href="https://vb-audio.com/Cable/" target="_blank" rel="noopener">VB-CABLE Driver ↗</a> (with one-click download &amp; install built right into the setup wizard, pulling from our website mirror first and falling back to VB-Audio).</li>
+          <li><strong>Remote &amp; Button Support:</strong> Both editions implement the complete ATVV voice protocol state machine and pre-roll/drain audio protection. The Windows edition supports audio streaming and custom button mapping (single click, long press, and double click actions for shortcuts, media controls, or text snippets) for the <strong>Google Chromecast Remote (G9N9N)</strong>, <strong>Xiaomi Bluetooth Voice Remote 2 / 2 Pro</strong>, and <strong>T1 Air Mouse Remote</strong>.</li>
+          <li><strong>Input Tool Integration:</strong> Works with WeChat Input Method (e.g., <code>Ctrl + F5</code>), Doubao (via a signed USB/IP virtual keyboard driver for Hold mode), native Windows Dictation (<code>Win + H</code>), Typeless (default <code>Ctrl + Alt + V</code>), and other global voice shortcut tools.</li>
         </ol>
-        <p>If you are on Windows, visit the <a class="text-link" href="https://github.com/zfdang/remote-buddy-windows/releases/latest">Windows Releases Page ↗</a> to download and try it.</p>
+        <p>If you are on Windows, download the portable package from the <a class="text-link" href="downloads/index.en.html#platform-windows">Windows section on our Downloads page</a> (or the <a class="text-link" href="https://github.com/zfdang/remote-buddy-windows/releases/latest">Windows Releases Page ↗</a>), and follow Section <a class="text-link" href="#windows-guide">6. Windows Installation &amp; Usage Guide ↓</a> below.</p>
       </div>
     </details>
 
@@ -356,6 +357,88 @@
             </ul>
           </li>
         </ol>
+      </div>
+    </details>
+  </section>
+
+  <!-- 6. Windows Installation & Usage Guide -->
+  <section class="troubleshooting" id="windows-guide" aria-labelledby="cat-windows-title">
+    <p class="eyebrow">WINDOWS EDITION</p>
+    <h2 class="section-title" id="cat-windows-title">6. Windows Installation &amp; Usage Guide</h2>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">How do I install and get started on Windows after downloading?</span></summary>
+      <div class="troubleshooting-body">
+        <p>The Windows edition is published as a self-contained .NET 10 LTS portable archive—no separate .NET runtime installation is required. Follow these steps to set everything up:</p>
+        <ol>
+          <li><strong>Download and extract completely:</strong> Download <code>Remote_Buddy_Windows_*_x64.zip</code> from the <a class="text-link" href="downloads/index.en.html#platform-windows">Windows section of the Downloads page</a> and extract it to a permanent folder (for example, <code>D:\Tools\RemoteBuddy</code>). Do not launch the app directly from inside a zip preview window.</li>
+          <li><strong>Launch as Administrator:</strong> Open the extracted folder, right-click <code>RemoteBuddy.App.exe</code>, choose <strong>Run as administrator</strong>, and accept the UAC prompt. If Windows SmartScreen appears on first launch, click <strong>More info → Run anyway</strong>.</li>
+          <li><strong>Install VB-CABLE and reboot Windows:</strong> On Step 2 of the setup wizard (<em>Virtual Audio Driver Check</em>), if VB-CABLE is not detected, click <strong>Install VB-CABLE</strong> (<code>安装 VB-CABLE</code>). Remote Buddy downloads <code>VBCABLE_Driver_Pack46.zip</code> from our website mirror (falling back to VB-Audio if needed), verifies its SHA-256 hash, and launches the official installer—click <strong>Install Driver</strong>, then <strong>reboot Windows</strong> so the audio service registers the virtual endpoints.</li>
+          <li><strong>Pair via Bluetooth and click Connect inside the app:</strong> Pair your remote in Windows Bluetooth settings (or scan in Step 3 of the wizard). <strong>Important:</strong> Even after Windows shows the remote as Paired or Connected, click <strong>Connect</strong> inside Remote Buddy's wizard or Devices page to open the ATVV voice link.</li>
+          <li><strong>Select the virtual microphone and pass the voice test:</strong> In your voice input tool, set the microphone to <code>CABLE Output (VB-Audio Virtual Cable)</code>, match the voice shortcut configured in Remote Buddy, and complete the wizard's voice transcription verification step.</li>
+        </ol>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">Why is VB-CABLE required on Windows, and what if my speakers go silent after installing it?</span></summary>
+      <div class="troubleshooting-body">
+        <p><strong>Why is a third-party driver needed?</strong><br>On 64-bit Windows 10/11, Driver Signature Enforcement (DSE) requires every kernel audio driver (<code>.sys</code>) to carry Microsoft <strong>WHQL</strong> certification—self-signed drivers are rejected by the OS. Rather than forcing users into Windows Test Mode, the Windows edition uses the WHQL-certified <strong>VB-CABLE</strong> virtual audio cable by VB-Audio Software (Donationware): Remote Buddy writes decoded 16 kHz PCM speech into <code>CABLE Input</code>, and your dictation tool listens on <code>CABLE Output</code>.</p>
+        <p><strong>Two ways to install:</strong></p>
+        <ul>
+          <li><strong>In-app one-click installer (Recommended):</strong> Click <strong>Install VB-CABLE</strong> in Step 2 of the wizard or on the <strong>Permissions &amp; Driver</strong> (<code>权限与驱动</code>) page, confirm elevation, click <strong>Install Driver</strong>, and reboot Windows.</li>
+          <li><strong>Manual download:</strong> Download <code>VBCABLE_Driver_Pack46.zip</code> from the <a class="text-link" href="downloads/index.en.html#platform-windows">Downloads page</a> or from <a class="text-link" href="https://vb-audio.com/Cable/" target="_blank" rel="noopener">vb-audio.com/Cable ↗</a>, unzip it, run <code>VBCABLE_Setup_x64.exe</code> as Administrator, click <strong>Install Driver</strong>, and reboot Windows.</li>
+        </ul>
+        <p><strong>Common VB-CABLE troubleshooting:</strong></p>
+        <ul>
+          <li><strong>My speakers or headphones have no sound after installing VB-CABLE:</strong> Windows sometimes automatically switches the default <strong>playback output device</strong> to <code>CABLE Input (VB-Audio Virtual Cable)</code>. Click the taskbar speaker icon (or open Settings → System → Sound) and switch your default <strong>Output</strong> back to your physical speakers or headphones, while keeping <code>CABLE Output (VB-Audio Virtual Cable)</code> selected as the microphone in your voice input tool.</li>
+          <li><strong>Reboot required / device not ready:</strong> VB-CABLE requires a Windows restart after driver installation to initialize the audio endpoints properly.</li>
+          <li><strong>Device disabled:</strong> Open Windows Sound Settings → More sound settings and verify both <code>CABLE Input</code> (Playback) and <code>CABLE Output</code> (Recording) are enabled.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">Why is running Remote Buddy as Administrator strongly recommended on Windows?</span></summary>
+      <div class="troubleshooting-body">
+        <p>While the app can launch under a standard user account, running Remote Buddy <strong>as Administrator</strong> unlocks full functionality and avoids UAC friction for four specific technical reasons:</p>
+        <ol>
+          <li><strong>Complete remote button capture (BthPort ETW):</strong> On Windows, most ordinary buttons on <strong>Google Chromecast (G9N9N)</strong>—as well as Back, Volume+, and Volume− on <strong>Xiaomi Remote 2 Pro (RC003)</strong>—are not exposed completely through standard Raw Input and must be decoded via Windows kernel Bluetooth tracing (BthPort ETW). Running elevated lets ETW run natively inside the main process without spawning separate UAC helper prompts.</li>
+          <li><strong>Doubao Input Method USB/IP virtual keyboard:</strong> Doubao's Hold-to-Talk ignores synthetic <code>SendInput</code> events flagged with <code>LLKHF_INJECTED</code>. When Doubao is selected, Remote Buddy uses the Microsoft-signed <code>usbip-win2</code> host controller and HIDMaestro virtual keyboard so key events appear as hardware input—this driver path requires Administrator privileges.</li>
+          <li><strong>Windows UIPI (User Interface Privilege Isolation):</strong> Non-elevated apps are blocked by Windows from sending shortcuts or pasting phrases into elevated windows (such as an Admin PowerShell/CMD terminal, Task Manager, or elevated tools). Running Remote Buddy elevated lets it type into elevated apps too.</li>
+          <li><strong>Driver installation &amp; Bluetooth adapter recovery:</strong> Installing VB-CABLE or using the wizard's <strong>Restart Bluetooth Adapter</strong> recovery button requires Administrator rights.</li>
+        </ol>
+        <p><strong>Tip — Always launch elevated automatically:</strong><br>
+        Right-click <code>RemoteBuddy.App.exe</code> → <strong>Properties → Compatibility → check "Run this program as an administrator"</strong>. If you are already running normally, open <strong>Permissions &amp; Driver</strong> (<code>权限与驱动</code>) inside the app and click <strong>Restart as Administrator</strong> (<code>以管理员身份重启本程序</code>).</p>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">How should I configure WeChat Input, Doubao, Windows Dictation, and Typeless on Windows?</span></summary>
+      <div class="troubleshooting-body">
+        <p><strong>Universal rule:</strong> Set the recording microphone in your chosen tool (or Windows Sound input for system dictation) to <code>CABLE Output (VB-Audio Virtual Cable)</code> and match its trigger shortcut with Remote Buddy.</p>
+        <ul>
+          <li><strong>WeChat Input Method (WeType):</strong> In WeChat Input Settings → Voice Input, enable <strong>Global shortcut</strong> (<code>快捷键全局生效</code>) and set it to <strong>Hold to talk</strong> (<code>按住说话</code>, default shortcut <code>Ctrl + F5</code>). Choose <code>CABLE Output (VB-Audio Virtual Cable)</code> as the microphone and keep Remote Buddy in Hold-to-Talk mode.</li>
+          <li><strong>Doubao Input Method / Desktop Client:</strong> In Doubao Settings → Voice Input, set <strong>Global voice activation</strong> (<code>全局唤起语音</code>) to <strong>Continuous mode</strong> (<code>持续模式</code>), choose <code>CABLE Output (VB-Audio Virtual Cable)</code> as the microphone, and match the Hold-mode shortcut <strong>including exact left/right modifier keys</strong> (e.g., default Right Alt <code>RAlt</code>, or Left <code>Ctrl + Shift + D</code>). Run Remote Buddy as Administrator and choose Hold-to-Talk; first use prepares the signed USB/IP virtual keyboard driver.</li>
+          <li><strong>Windows Dictation (<code>Win + H</code>):</strong> Built into Windows 10/11—no third-party software needed. Set your Windows default input microphone to <code>CABLE Output (VB-Audio Virtual Cable)</code> and choose Windows Dictation (<code>Win + H</code>, toggle start/stop).</li>
+          <li><strong>Typeless &amp; Other Voice Apps:</strong> Typeless defaults to <code>Ctrl + Alt + V</code> (Hold-to-Talk). Any tool supporting a global hotkey and microphone selection works by choosing <code>CABLE Output</code> and entering the same hotkey in Remote Buddy's wizard.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">Windows Troubleshooting &amp; Key Differences (Additive Mapping, Paired but No Response, SmartScreen)</span></summary>
+      <div class="troubleshooting-body">
+        <ul>
+          <li><strong>Why do native remote actions (like system volume or Home) sometimes still happen alongside custom mappings?</strong><br>
+          Windows Raw Input is a passive sink and cannot selectively block a specific remote's native keys without using a global low-level hook that lacks per-device handles (which would block your physical keyboard keys too). Therefore, ordinary keys on Windows use <strong>Additive Mapping</strong>: your custom shortcut or snippet fires while native OS actions (such as volume adjustments) may also take effect.</li>
+          <li><strong>My remote shows Paired/Connected in Windows Bluetooth settings, but voice or buttons don't respond:</strong><br>
+          1) Make sure you clicked <strong>Connect</strong> inside Remote Buddy's setup wizard or Devices page to establish the ATVV voice connection;<br>
+          2) If voice works on G9N9N (or Xiaomi RC003 Back / Vol+ / Vol− don't respond), open <strong>Permissions &amp; Driver</strong> (<code>权限与驱动</code>) and check that Remote Buddy is running as Administrator and the <strong>ETW button capture service</strong> is active;<br>
+          3) If the Bluetooth stack gets stuck or key events appear truncated, click <strong>Restart Bluetooth Adapter</strong> in the wizard (or disable and re-enable your Bluetooth adapter in Windows Device Manager) and reconnect.</li>
+          <li><strong>Why does Windows SmartScreen show an unrecognized app warning on first launch?</strong><br>
+          Because Remote Buddy is a free GPL-3.0-only open-source project without a paid commercial Authenticode signing certificate, Windows Defender SmartScreen may display an "unrecognized app" prompt. As long as you downloaded from <code>remote.zfdang.com</code> or <a class="text-link" href="https://github.com/zfdang/remote-buddy-windows/releases">zfdang/remote-buddy-windows ↗</a>, click <strong>More info → Run anyway</strong>.</li>
+        </ul>
       </div>
     </details>
   </section>

@@ -3,20 +3,22 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Download Remote Buddy · macOS Installers</title>
-  <meta name="description" content="Download Remote Buddy macOS installer packages and universal uninstaller directly from remote.zfdang.com or via GitHub Releases.">
+  <title>Download Remote Buddy · macOS &amp; Windows</title>
+  <meta name="description" content="Download Remote Buddy for macOS installers, universal uninstaller, Windows 64-bit portable edition, and VB-CABLE virtual microphone driver from remote.zfdang.com or GitHub Releases.">
   <meta name="theme-color" content="#203a68">
   <link rel="canonical" href="https://remote.zfdang.com/downloads/index.en.html">
   <link rel="alternate" hreflang="zh-CN" href="https://remote.zfdang.com/downloads/">
   <link rel="alternate" hreflang="en" href="https://remote.zfdang.com/downloads/index.en.html">
   <link rel="alternate" hreflang="x-default" href="https://remote.zfdang.com/downloads/">
   <link rel="icon" href="../assets/app-icon.png">
-  <link rel="stylesheet" href="../style.css?v=261115c">
+  <link rel="stylesheet" href="../style.css?v=261123win">
 </head>
 <body>
-<header class="nav wrap">
+<header class="nav wrap device-nav">
   <a class="brand" href="../index.en.html"><img src="../assets/app-icon.png" alt="" width="38" height="38"><span>Remote Buddy<small>Voice within reach</small></span></a>
   <nav aria-label="Page navigation">
+    <a href="../device_en.html">Supported Remotes</a>
+    <a href="../faq_en.html">FAQ</a>
     <a class="nav-home" href="../index.en.html">Home</a>
     <span class="language-switch" aria-label="Language"><a href="index.html" lang="zh-CN">中文</a><b aria-current="page">English</b></span>
   </nav>
@@ -24,59 +26,143 @@
 
 <main class="wrap downloads-wrap">
   <div class="downloads-head">
-    <p class="eyebrow">DOWNLOAD</p>
-    <h1 class="section-title">Download Remote Buddy for macOS</h1>
-    <span class="downloads-tag" id="release-tag" hidden></span>
-    <p class="lead-sub" id="mirror-status">Loading installer packages…</p>
+    <p class="eyebrow">DOWNLOAD · MACOS &amp; WINDOWS</p>
+    <h1 class="section-title">Download Remote Buddy</h1>
+    <p class="lead-sub">Available for macOS 14+ and Windows 10 / 11 (64-bit), with both direct website mirror and GitHub Releases downloads.</p>
   </div>
 
-  <div class="downloads-grid" id="mirror-cards"></div>
+  <div class="platform-switcher" role="navigation" aria-label="Choose your platform">
+    <a class="platform-jump is-macos" href="#platform-macos">
+      <span class="platform-icon is-macos" aria-hidden="true">⌘</span>
+      <span class="platform-jump-main">
+        <span class="platform-jump-title">
+          <strong>macOS</strong>
+          <span class="download-badge">Primary · Built-in Driver</span>
+          <span class="platform-os-pill" id="macos-os-hint" hidden>This device</span>
+        </span>
+        <span class="platform-jump-meta">
+          <span>macOS 14+ · Apple Silicon &amp; Intel</span>
+          <span class="downloads-tag" id="macos-nav-version" hidden></span>
+        </span>
+      </span>
+      <span class="platform-jump-arrow" aria-hidden="true">↓</span>
+    </a>
 
-  <section class="download-card" id="mirror-fallback" hidden>
-    <h2>Download from GitHub Releases</h2>
-    <p>Choose the PKG matching your Mac architecture (<code>*_macOS_arm64.pkg</code> for Apple Silicon or <code>*_macOS_intel.pkg</code> for Intel).</p>
-    <div class="download-actions">
-      <a class="button secondary" href="https://github.com/zfdang/remote-buddy/releases/latest">Open GitHub Releases ↗</a>
+    <a class="platform-jump is-windows" href="#platform-windows">
+      <span class="platform-icon is-windows" aria-hidden="true">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 20h8M12 17v3"/></svg>
+      </span>
+      <span class="platform-jump-main">
+        <span class="platform-jump-title">
+          <strong>Windows</strong>
+          <span class="download-badge is-windows">Portable Zip</span>
+          <span class="platform-os-pill is-windows" id="windows-os-hint" hidden>This device</span>
+        </span>
+        <span class="platform-jump-meta">
+          <span>Windows 10 / 11 · 64-bit</span>
+          <span class="downloads-tag is-windows" id="windows-nav-version" hidden></span>
+        </span>
+      </span>
+      <span class="platform-jump-arrow" aria-hidden="true">↓</span>
+    </a>
+  </div>
+
+  <section class="platform-panel is-macos" id="platform-macos" aria-labelledby="macos-platform-title">
+    <div class="platform-panel-head">
+      <div class="platform-panel-identity">
+        <span class="platform-icon is-macos" aria-hidden="true">⌘</span>
+        <div>
+          <div class="platform-panel-title-row">
+            <h2 id="macos-platform-title">Remote Buddy for macOS</h2>
+            <span class="downloads-tag" id="release-tag" hidden></span>
+            <span class="platform-sys-badge">macOS 14+</span>
+          </div>
+          <p class="platform-panel-summary">Built natively with Swift / AppKit. Each installer includes the app and the <code>Remote Buddy Mic</code> virtual driver—ready out of the box.</p>
+        </div>
+      </div>
+      <a class="text-link platform-panel-guide" href="../faq_en.html">macOS FAQ &amp; Troubleshooting →</a>
+    </div>
+
+    <div class="platform-panel-body">
+      <p class="lead-sub" id="mirror-status">Loading macOS installer packages…</p>
+
+      <div class="downloads-grid" id="mirror-cards"></div>
+
+      <section class="download-card" id="mirror-fallback" hidden>
+        <div class="download-card-body">
+          <h2>Download from GitHub Releases</h2>
+          <p>Choose the PKG matching your Mac architecture (<code>*_macOS_arm64.pkg</code> for Apple Silicon or <code>*_macOS_intel.pkg</code> for Intel).</p>
+        </div>
+        <div class="download-actions">
+          <a class="button secondary" href="https://github.com/zfdang/remote-buddy/releases/latest">Open GitHub Releases ↗</a>
+        </div>
+      </section>
     </div>
   </section>
 
-  <div class="download-note" style="margin-top:20px">
-    <strong>Architecture tip:</strong> Check  → About This Mac. Pick <strong>Apple Silicon (arm64)</strong> for M1 / M2 / M3 / M4 Macs, or <strong>Intel</strong> for Intel-based Macs. Installers are currently not Apple-notarized; if macOS blocks the installer, allow it in System Settings → Privacy &amp; Security.
-  </div>
-
-  <div class="downloads-head" style="margin-top:52px">
-    <p class="eyebrow">CROSS-PLATFORM · STANDALONE REPO</p>
-    <h2 class="section-title">Remote Buddy for Windows</h2>
-    <p class="lead-sub">Built with native .NET 10 LTS (C# / WPF), self-contained with no runtime prerequisites.</p>
-  </div>
-
-  <div class="downloads-grid">
-    <article class="download-card is-wide">
-      <div class="download-card-body">
-        <div class="companion-head">
-          <h2 style="margin:0">Windows 64-bit Portable</h2>
-          <span class="download-badge">Standalone Open Source</span>
-        </div>
-        <p>Connects remotes directly over native Windows BLE. Hold to talk to trigger input methods (WeChat Keyboard Ctrl+F5) or Windows Dictation (Win+H). Fully offline, zero telemetry.</p>
-        <div class="download-meta">
-          <span><code>Remote_Buddy_Windows_*_x64.zip</code></span>
-          <span>x64 Portable Zip Archive (~67 MB)</span>
-          <span>Windows 10 / 11 (64-bit)</span>
-        </div>
-        <div class="download-note" style="margin-top:12px; background:#fbfcfe; font-size:13px">
-          <strong>Setup &amp; Hardware Support Notes:</strong>
-          <ul style="margin:6px 0 0; padding-left:18px">
-            <li><strong>Virtual Audio Cable Required:</strong> Unlike the macOS app, the Windows edition does not bundle an in-box kernel driver. Please install the WHQL-certified <a class="text-link" href="https://vb-audio.com/Cable/" target="_blank" rel="noopener">VB-CABLE Driver ↗</a> before running.</li>
-            <li><strong>Hardware Support:</strong> Verified with Google Chromecast Voice Remote (G9N9N) and Xiaomi Bluetooth Remote 2 / 2 Pro for voice streaming and full button customization (single click, long press, and double click mapped to shortcuts or media keys).</li>
-          </ul>
+  <section class="platform-panel is-windows" id="platform-windows" aria-labelledby="windows-platform-title">
+    <div class="platform-panel-head">
+      <div class="platform-panel-identity">
+        <span class="platform-icon is-windows" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 20h8M12 17v3"/></svg>
+        </span>
+        <div>
+          <div class="platform-panel-title-row">
+            <h2 id="windows-platform-title">Remote Buddy for Windows</h2>
+            <span class="downloads-tag is-windows" id="windows-release-tag" hidden></span>
+            <span class="platform-sys-badge">Windows 10 / 11 · 64-bit</span>
+          </div>
+          <p class="platform-panel-summary">Native .NET 10 LTS (C# / WPF) self-contained portable edition—unzip and run with no runtime prerequisites. Uses VB-CABLE as its virtual microphone.</p>
         </div>
       </div>
-      <div class="download-actions">
-        <a class="button primary" href="https://github.com/zfdang/remote-buddy-windows/releases/latest" target="_blank" rel="noopener">Download on GitHub Releases <span>↗</span></a>
-        <a class="button secondary" href="https://github.com/zfdang/remote-buddy-windows" target="_blank" rel="noopener">Windows Source Repository ↗</a>
+      <a class="text-link platform-panel-guide" href="../faq_en.html#windows-guide">Windows Setup Guide (FAQ) →</a>
+    </div>
+
+    <div class="platform-panel-body">
+      <div class="downloads-grid">
+        <article class="download-card is-windows-recommended">
+          <div class="download-card-body">
+            <h2>Windows 64-bit Portable<span class="download-badge is-windows">Recommended · Unzip &amp; Run</span></h2>
+            <p>Connects remotes over built-in Windows BLE for WeChat Input, Doubao, Windows Dictation (Win+H), and Typeless. Runs 100% locally with zero telemetry.</p>
+            <div class="download-meta" id="windows-meta">
+              <span><code>Remote_Buddy_Windows_*_x64.zip</code></span>
+              <span>x64 · .zip</span>
+              <span>Windows 10 / 11 (64-bit)</span>
+            </div>
+          </div>
+          <div class="download-actions" id="windows-actions">
+            <a class="button primary" href="https://github.com/zfdang/remote-buddy-windows/releases/latest" target="_blank" rel="noopener">Download on GitHub Releases <span>↗</span></a>
+            <a class="button secondary" href="https://github.com/zfdang/remote-buddy-windows" target="_blank" rel="noopener">Windows Source Repository ↗</a>
+          </div>
+        </article>
+
+        <article class="download-card">
+          <div class="download-card-body">
+            <h2>VB-CABLE Virtual Mic Driver<span class="download-badge is-windows">Required on First Setup</span></h2>
+            <p>Routes decoded remote voice to input tools via the WHQL-certified VB-CABLE virtual sound driver. The in-app wizard can install it for you, or you can download the driver pack directly here.</p>
+            <div class="download-meta">
+              <span><code>VBCABLE_Driver_Pack46.zip</code></span>
+              <span>1.3 MB</span>
+              <span>Microsoft WHQL-Certified</span>
+            </div>
+          </div>
+          <div class="download-actions">
+            <a class="button secondary" href="drivers/VBCABLE_Driver_Pack46.zip" download>Download Driver Mirror ↓</a>
+            <a class="button secondary" href="https://vb-audio.com/Cable/" target="_blank" rel="noopener">VB-Audio Official Site ↗</a>
+          </div>
+        </article>
       </div>
-    </article>
-  </div>
+
+      <div class="download-note is-windows" style="margin-top:20px">
+        <strong>Windows Quick-Start Notes:</strong>
+        <ul>
+          <li><strong>Unzip &amp; Run as Administrator:</strong> Extract to a permanent folder, then right-click <code>RemoteBuddy.App.exe</code> and choose <strong>Run as administrator</strong> to enable full kernel button capture, Doubao support, and shortcut injection into elevated apps.</li>
+          <li><strong>Install VB-CABLE &amp; Reboot:</strong> Use the in-app wizard's one-click installer (or run <code>VBCABLE_Setup_x64.exe</code> from the driver pack above), reboot Windows, and select <code>CABLE Output (VB-Audio Virtual Cable)</code> as your input tool's microphone.</li>
+          <li><strong>Full Guide &amp; Source:</strong> See the <a class="text-link" href="../faq_en.html#windows-guide">Windows Installation &amp; Usage Guide (FAQ) →</a> · <a class="text-link" href="https://github.com/zfdang/remote-buddy-windows" target="_blank" rel="noopener">Windows Repository ↗</a>.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
 </main>
 
 <footer class="wrap">
@@ -84,6 +170,7 @@
   <div class="footer-links">
     <a href="../index.en.html">Home</a>
     <a href="../device_en.html">Supported Remotes</a>
+    <a href="../faq_en.html">FAQ</a>
     <a href="https://github.com/zfdang/remote-buddy/releases">macOS Releases</a>
     <a href="https://github.com/zfdang/remote-buddy-windows">Windows Edition ↗</a>
     <a href="https://github.com/zfdang/remote-buddy/blob/main/README.en.md">Docs &amp; References</a>
@@ -91,6 +178,6 @@
     <a href="https://github.com/zfdang/remote-buddy/blob/main/LICENSE">GPL-3.0-only</a>
   </div>
 </footer>
-<script src="downloads.js?v=261115c"></script>
+<script src="downloads.js?v=261123win"></script>
 </body>
 </html>

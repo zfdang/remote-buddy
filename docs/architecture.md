@@ -15,7 +15,7 @@ Remote Buddy 是硬件到语音输入工具的桥接应用，首先实现 macOS�
 
 此前反馈中的实时预览、识别尾部延迟和语义整理涉及识别引擎。如果将来增加自有识别后端，应分开测量识别、整理和交付阶段；桥接第三方软件时无法保证这些体验。专用 USB / 蓝牙按钮和脚踏设备可作为后续触发源，不应将其标为当前已验证设备。
 
-Windows 尚未迁入源码，不具备可发布能力。后续需要独立实现系统权限、BLE、音频回环与键盘注入，并进行真实设备测试。
+Windows 版本已作为同源独立项目在 [remote-buddy-windows](https://github.com/zfdang/remote-buddy-windows) 中实现，基于 C# / .NET 10 LTS (WPF) 构建，独立实现了系统权限、BLE ATVV 协议、VB-CABLE 音频回环与全局按键映射，并已在 G9N9N、小米 2 / 2 Pro 与 T1 设备上完成真机验证。
 
 ### Runtime ownership
 

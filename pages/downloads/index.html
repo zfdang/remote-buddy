@@ -3,20 +3,22 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>下载 Remote Buddy 遥控搭子 · macOS 安装包</title>
-  <meta name="description" content="从官网镜像（remote.zfdang.com）或 GitHub Releases 下载 Remote Buddy 遥控搭子 macOS 安装包与通用卸载包。">
+  <title>下载 Remote Buddy 遥控搭子 · macOS &amp; Windows 安装包</title>
+  <meta name="description" content="从官网镜像（remote.zfdang.com）或 GitHub Releases 下载 Remote Buddy 遥控搭子 macOS 安装包、Windows 64 位绿色版及 VB-CABLE 虚拟麦克风驱动。">
   <meta name="theme-color" content="#203a68">
   <link rel="canonical" href="https://remote.zfdang.com/downloads/">
   <link rel="alternate" hreflang="zh-CN" href="https://remote.zfdang.com/downloads/">
   <link rel="alternate" hreflang="en" href="https://remote.zfdang.com/downloads/index.en.html">
   <link rel="alternate" hreflang="x-default" href="https://remote.zfdang.com/downloads/">
   <link rel="icon" href="../assets/app-icon.png">
-  <link rel="stylesheet" href="../style.css?v=261115c">
+  <link rel="stylesheet" href="../style.css?v=261123win">
 </head>
 <body>
-<header class="nav wrap">
+<header class="nav wrap device-nav">
   <a class="brand" href="../index.html"><img src="../assets/app-icon.png" alt="" width="38" height="38"><span>Remote Buddy<small>遥控搭子</small></span></a>
   <nav aria-label="页面导航">
+    <a href="../device.html">支持设备</a>
+    <a href="../faq.html">常见问答 (FAQ)</a>
     <a class="nav-home" href="../index.html">返回首页</a>
     <span class="language-switch" aria-label="语言"><b aria-current="page">中文</b><a href="index.en.html" lang="en">English</a></span>
   </nav>
@@ -24,59 +26,143 @@
 
 <main class="wrap downloads-wrap">
   <div class="downloads-head">
-    <p class="eyebrow">安装包下载</p>
-    <h1 class="section-title">下载 Remote Buddy 安装包</h1>
-    <span class="downloads-tag" id="release-tag" hidden></span>
-    <p class="lead-sub" id="mirror-status">正在加载安装包列表…</p>
+    <p class="eyebrow">多平台下载 · MACOS &amp; WINDOWS</p>
+    <h1 class="section-title">下载 Remote Buddy 遥控搭子</h1>
+    <p class="lead-sub">支持 macOS 14+ 与 Windows 10 / 11（64 位），提供官网直连镜像与 GitHub Releases 双通道下载。</p>
   </div>
 
-  <div class="downloads-grid" id="mirror-cards"></div>
+  <div class="platform-switcher" role="navigation" aria-label="选择平台">
+    <a class="platform-jump is-macos" href="#platform-macos">
+      <span class="platform-icon is-macos" aria-hidden="true">⌘</span>
+      <span class="platform-jump-main">
+        <span class="platform-jump-title">
+          <strong>macOS 版</strong>
+          <span class="download-badge">主推 · 内置驱动</span>
+          <span class="platform-os-pill" id="macos-os-hint" hidden>当前系统</span>
+        </span>
+        <span class="platform-jump-meta">
+          <span>macOS 14+ · Apple Silicon &amp; Intel</span>
+          <span class="downloads-tag" id="macos-nav-version" hidden></span>
+        </span>
+      </span>
+      <span class="platform-jump-arrow" aria-hidden="true">↓</span>
+    </a>
 
-  <section class="download-card" id="mirror-fallback" hidden>
-    <h2>前往 GitHub Releases 下载安装包</h2>
-    <p>选择对应 Mac 芯片的 PKG 安装包（Apple Silicon 请下载 <code>*_macOS_arm64.pkg</code>，Intel 请下载 <code>*_macOS_intel.pkg</code>）。</p>
-    <div class="download-actions">
-      <a class="button secondary" href="https://github.com/zfdang/remote-buddy/releases/latest">打开 GitHub Releases ↗</a>
+    <a class="platform-jump is-windows" href="#platform-windows">
+      <span class="platform-icon is-windows" aria-hidden="true">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 20h8M12 17v3"/></svg>
+      </span>
+      <span class="platform-jump-main">
+        <span class="platform-jump-title">
+          <strong>Windows 版</strong>
+          <span class="download-badge is-windows">免安装绿色版</span>
+          <span class="platform-os-pill is-windows" id="windows-os-hint" hidden>当前系统</span>
+        </span>
+        <span class="platform-jump-meta">
+          <span>Windows 10 / 11 · 64 位</span>
+          <span class="downloads-tag is-windows" id="windows-nav-version" hidden></span>
+        </span>
+      </span>
+      <span class="platform-jump-arrow" aria-hidden="true">↓</span>
+    </a>
+  </div>
+
+  <section class="platform-panel is-macos" id="platform-macos" aria-labelledby="macos-platform-title">
+    <div class="platform-panel-head">
+      <div class="platform-panel-identity">
+        <span class="platform-icon is-macos" aria-hidden="true">⌘</span>
+        <div>
+          <div class="platform-panel-title-row">
+            <h2 id="macos-platform-title">Remote Buddy for macOS</h2>
+            <span class="downloads-tag" id="release-tag" hidden></span>
+            <span class="platform-sys-badge">macOS 14+</span>
+          </div>
+          <p class="platform-panel-summary">原生 Swift / AppKit 构建，安装包内含主程序与 <code>Remote Buddy Mic</code> 虚拟麦克风驱动，安装即用。</p>
+        </div>
+      </div>
+      <a class="text-link platform-panel-guide" href="../faq.html">macOS 常见问答与安装排障 →</a>
+    </div>
+
+    <div class="platform-panel-body">
+      <p class="lead-sub" id="mirror-status">正在加载 macOS 安装包列表…</p>
+
+      <div class="downloads-grid" id="mirror-cards"></div>
+
+      <section class="download-card" id="mirror-fallback" hidden>
+        <div class="download-card-body">
+          <h2>前往 GitHub Releases 下载安装包</h2>
+          <p>选择对应 Mac 芯片的 PKG 安装包（Apple Silicon 请下载 <code>*_macOS_arm64.pkg</code>，Intel 请下载 <code>*_macOS_intel.pkg</code>）。</p>
+        </div>
+        <div class="download-actions">
+          <a class="button secondary" href="https://github.com/zfdang/remote-buddy/releases/latest">打开 GitHub Releases ↗</a>
+        </div>
+      </section>
     </div>
   </section>
 
-  <div class="download-note" style="margin-top:20px">
-    <strong>安装提示：</strong>不知道自己的 Mac 是哪种芯片？点击屏幕左上角  →“关于本机”：芯片显示 M1 / M2 / M3 / M4 等请选择 <strong>Apple Silicon (arm64)</strong>，处理器显示 Intel Core 请选择 <strong>Intel</strong>。当前安装包未经过 Apple 公证，如遇系统拦截可在“系统设置 → 隐私与安全性”中允许打开。
-  </div>
-
-  <div class="downloads-head" style="margin-top:52px">
-    <p class="eyebrow">多平台支持 · 独立项目</p>
-    <h2 class="section-title">Remote Buddy for Windows</h2>
-    <p class="lead-sub">基于原生 .NET 10 LTS (C# / WPF) 构建，免安装运行库，解压即用。</p>
-  </div>
-
-  <div class="downloads-grid">
-    <article class="download-card is-wide">
-      <div class="download-card-body">
-        <div class="companion-head">
-          <h2 style="margin:0">Windows 64 位绿色版</h2>
-          <span class="download-badge">独立开源版</span>
-        </div>
-        <p>通过 Windows 电脑内置蓝牙直连遥控器，按住说话触发输入法（微信输入法 Ctrl+F5）或系统语音听写（Win+H）。纯本地运行，不采集隐私。</p>
-        <div class="download-meta">
-          <span><code>Remote_Buddy_Windows_*_x64.zip</code></span>
-          <span>x64 免安装 Zip 压缩包 (~67 MB)</span>
-          <span>Windows 10 / 11 (64位)</span>
-        </div>
-        <div class="download-note" style="margin-top:12px; background:#fbfcfe; font-size:13px">
-          <strong>配置与支持须知：</strong>
-          <ul style="margin:6px 0 0; padding-left:18px">
-            <li><strong>需外置虚拟麦克风：</strong>Windows 版未内置内核声卡驱动，运行前请先前往官网安装微软认证的 <a class="text-link" href="https://vb-audio.com/Cable/" target="_blank" rel="noopener">VB-CABLE Driver ↗</a>。</li>
-            <li><strong>按键与型号支持：</strong>已实机验证 Google Chromecast 遥控器（G9N9N）与小米蓝牙语音遥控器 2 / 2 Pro 的语音流与全键位自定义映射（支持单击、长按、双击映射快捷键或媒体键）。</li>
-          </ul>
+  <section class="platform-panel is-windows" id="platform-windows" aria-labelledby="windows-platform-title">
+    <div class="platform-panel-head">
+      <div class="platform-panel-identity">
+        <span class="platform-icon is-windows" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 20h8M12 17v3"/></svg>
+        </span>
+        <div>
+          <div class="platform-panel-title-row">
+            <h2 id="windows-platform-title">Remote Buddy for Windows</h2>
+            <span class="downloads-tag is-windows" id="windows-release-tag" hidden></span>
+            <span class="platform-sys-badge">Windows 10 / 11 · 64 位</span>
+          </div>
+          <p class="platform-panel-summary">原生 .NET 10 LTS (C# / WPF) 绿色免安装版，解压即用，无需额外安装运行库；需配合 VB-CABLE 虚拟麦克风使用。</p>
         </div>
       </div>
-      <div class="download-actions">
-        <a class="button primary" href="https://github.com/zfdang/remote-buddy-windows/releases/latest" target="_blank" rel="noopener">前往 GitHub Releases 下载 Windows 版 <span>↗</span></a>
-        <a class="button secondary" href="https://github.com/zfdang/remote-buddy-windows" target="_blank" rel="noopener">查看 Windows 源码仓库 ↗</a>
+      <a class="text-link platform-panel-guide" href="../faq.html#windows-guide">Windows 使用与配置指南 (FAQ) →</a>
+    </div>
+
+    <div class="platform-panel-body">
+      <div class="downloads-grid">
+        <article class="download-card is-windows-recommended">
+          <div class="download-card-body">
+            <h2>Windows 64 位绿色版<span class="download-badge is-windows">推荐 · 解压即用</span></h2>
+            <p>通过电脑内置蓝牙直连遥控器，支持微信输入法、豆包输入法、Windows 语音听写（Win+H）及 Typeless 等语音工具。纯本地运行，零遥测。</p>
+            <div class="download-meta" id="windows-meta">
+              <span><code>Remote_Buddy_Windows_*_x64.zip</code></span>
+              <span>x64 · .zip</span>
+              <span>Windows 10 / 11 (64位)</span>
+            </div>
+          </div>
+          <div class="download-actions" id="windows-actions">
+            <a class="button primary" href="https://github.com/zfdang/remote-buddy-windows/releases/latest" target="_blank" rel="noopener">前往 GitHub Releases 下载 <span>↗</span></a>
+            <a class="button secondary" href="https://github.com/zfdang/remote-buddy-windows" target="_blank" rel="noopener">查看 Windows 源码仓库 ↗</a>
+          </div>
+        </article>
+
+        <article class="download-card">
+          <div class="download-card-body">
+            <h2>VB-CABLE 虚拟麦克风驱动<span class="download-badge is-windows">首次使用必装</span></h2>
+            <p>Windows 版借助微软 WHQL 认证的 VB-CABLE 将遥控器音频送入输入法。软件内向导支持一键下载安装；如需提前准备，也可直接下载官方驱动包。</p>
+            <div class="download-meta">
+              <span><code>VBCABLE_Driver_Pack46.zip</code></span>
+              <span>1.3 MB</span>
+              <span>WHQL 微软认证驱动</span>
+            </div>
+          </div>
+          <div class="download-actions">
+            <a class="button secondary" href="drivers/VBCABLE_Driver_Pack46.zip" download>从官网下载驱动 ↓</a>
+            <a class="button secondary" href="https://vb-audio.com/Cable/" target="_blank" rel="noopener">VB-Audio 官网 ↗</a>
+          </div>
+        </article>
       </div>
-    </article>
-  </div>
+
+      <div class="download-note is-windows" style="margin-top:20px">
+        <strong>Windows 快速上手提示：</strong>
+        <ul>
+          <li><strong>解压后以管理员身份运行：</strong>请完整解压到固定文件夹，右键 <code>RemoteBuddy.App.exe</code> 选择「以管理员身份运行」，即可开启完整底层按键捕获、支持豆包输入法及向管理员窗口注入快捷键。</li>
+          <li><strong>先装 VB-CABLE 驱动并重启：</strong>可在软件内向导一键安装（或使用上方驱动包以管理员运行 <code>VBCABLE_Setup_x64.exe</code>），安装完成后建议重启 Windows，并在输入法中将麦克风设为 <code>CABLE Output (VB-Audio Virtual Cable)</code>。</li>
+          <li><strong>详细教程与源码：</strong>完整配置与排障请参阅 <a class="text-link" href="../faq.html#windows-guide">Windows 平台安装与使用指南 (FAQ) →</a> · <a class="text-link" href="https://github.com/zfdang/remote-buddy-windows" target="_blank" rel="noopener">Windows 开源仓库 ↗</a>。</li>
+        </ul>
+      </div>
+    </div>
+  </section>
 </main>
 
 <footer class="wrap">
@@ -84,6 +170,7 @@
   <div class="footer-links">
     <a href="../index.html">返回首页</a>
     <a href="../device.html">支持设备</a>
+    <a href="../faq.html">常见问答 (FAQ)</a>
     <a href="https://github.com/zfdang/remote-buddy/releases">macOS Releases</a>
     <a href="https://github.com/zfdang/remote-buddy-windows">Windows 版 ↗</a>
     <a href="https://github.com/zfdang/remote-buddy/blob/main/README.md">项目文档</a>
@@ -91,6 +178,6 @@
     <a href="https://github.com/zfdang/remote-buddy/blob/main/LICENSE">GPL-3.0-only</a>
   </div>
 </footer>
-<script src="downloads.js?v=261115c"></script>
+<script src="downloads.js?v=261123win"></script>
 </body>
 </html>

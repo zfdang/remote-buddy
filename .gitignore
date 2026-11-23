@@ -12,6 +12,8 @@ __pycache__/
 /pages/appcast-*.xml
 /pages/downloads/*.pkg
 /pages/downloads/latest.json
+/pages/downloads/*.zip
+/pages/downloads/windows-latest.json
 
 # Local research notes; product references belong in the tracked README/docs.
 /references/

@@ -8,13 +8,15 @@ extension OnboardingView {
         guard interactionProbe == nil else { diagnosticCopySucceeded = true; return }
         var diagnosticVoiceAttempt = voiceAttempt
         diagnosticVoiceAttempt.audioDelivery = model.voiceAudioDeliveryDiagnosticSnapshot()
+        let voiceKeyMode = settings.effectiveVoiceKeyMode
         let snapshot = FirstUseDiagnosticSnapshot(
             appVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown",
             appBuild: Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown",
             systemMajorVersion: ProcessInfo.processInfo.operatingSystemVersion.majorVersion,
             architecture: FirstUseDiagnosticSnapshot.architecture,
             voiceTool: settings.onboardingVoiceTool,
-            voiceKeyMode: settings.effectiveVoiceKeyMode,
+            voiceKeyMode: voiceKeyMode,
+            voiceShortcutName: voiceKeyMode.displayName(using: localization),
             voiceFnTapModeEnabled: settings.effectiveVoiceFnTapModeEnabled,
             context: diagnosticContext,
             voiceAttempt: diagnosticVoiceAttempt,
@@ -26,14 +28,17 @@ extension OnboardingView {
             controlSource: settings.onboardingControlSource,
             voiceBinding: settings.stagedVoiceToolBinding ?? settings.verifiedVoiceToolBinding
         )
+        let logger = AppLogger.shared
+        let summary = snapshot.redactedText
+        let clipboardText = logger.appendingRecentLog(to: summary)
         NSPasteboard.general.clearContents()
-        diagnosticCopySucceeded = NSPasteboard.general.setString(snapshot.redactedText, forType: .string)
-        AppLogger.shared.write(
+        diagnosticCopySucceeded = NSPasteboard.general.setString(clipboardText, forType: .string)
+        logger.write(
             "ONBOARDING DIAGNOSTICS copied step=\(settings.onboardingStep.rawValue) " +
                 "failure=\(failureReason?.rawValue ?? "none")"
         )
-        AppLogger.shared.writeDiagnosticSummary(
-            snapshot.redactedText,
+        logger.writeDiagnosticSummary(
+            summary,
             event: "ONBOARDING DIAGNOSTICS"
         )
     }

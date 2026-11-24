@@ -89,7 +89,7 @@ struct SettingsDiagnosticSnapshot: Equatable {
     let virtualMicrophoneReady: Bool
     let audioOutputReady: Bool
     let voiceTool: String
-    let voiceKeyMode: String
+    let voiceShortcutName: String
     let runtimeLogEnabled: Bool
     let runtimeLogAvailable: Bool
     let runtimeLogPath: String
@@ -115,7 +115,7 @@ struct SettingsDiagnosticSnapshot: Equatable {
         virtualMicrophoneReady: Bool = false,
         audioOutputReady: Bool = false,
         voiceTool: String = "unselected",
-        voiceKeyMode: String = "press_and_hold",
+        voiceShortcutName: String = "unknown",
         runtimeLogEnabled: Bool = true,
         runtimeLogAvailable: Bool,
         runtimeLogPath: String = SettingsDiagnosticSnapshot.sanitizePath(AppLogger.shared.logURL.path),
@@ -140,7 +140,7 @@ struct SettingsDiagnosticSnapshot: Equatable {
         self.virtualMicrophoneReady = virtualMicrophoneReady
         self.audioOutputReady = audioOutputReady
         self.voiceTool = voiceTool
-        self.voiceKeyMode = voiceKeyMode
+        self.voiceShortcutName = voiceShortcutName
         self.runtimeLogEnabled = runtimeLogEnabled
         self.runtimeLogAvailable = runtimeLogAvailable
         self.runtimeLogPath = Self.sanitizePath(runtimeLogPath)
@@ -191,46 +191,24 @@ struct SettingsDiagnosticSnapshot: Equatable {
             "- 输入监控 / Input Monitoring: \(inputMonitoringGranted ? "已授权 (Granted)" : "未授权 (Denied)")",
             "- 辅助功能 / Accessibility: \(accessibilityGranted ? "已授权 (Granted)" : "未授权 (Denied)")",
             "- 运行时权限诊断 / Runtime Issue: \(runtimePermissionIssue)",
+            "- 权限诊断触发来源 / Permission Diagnosis Trigger: \(runtimePermissionDiagnosisTrigger)",
+            "- 权限诊断更新时间 / Permission Issue Updated At: \(runtimePermissionIssueUpdatedAt.map(Self.timestamp) ?? "none")",
             "",
             "#### 设备与驱动 / Devices & Drivers",
             "- 遥控器连接 / Remote Connected: \(remoteConnected ? "已连接 (Yes)" : "未连接 (No)") [\(remoteModel)]",
             "- 虚拟麦克风驱动 / Virtual Mic Driver: \(virtualMicrophoneReady ? "已就绪 (Ready)" : "未就绪 (Not Ready)")",
             "- 音频输出 / Audio Output: \(audioOutputReady ? "已就绪 (Ready)" : "未就绪 (Not Ready)")",
+            "- 蓝牙连接状态 / Bluetooth Connection Status: \(connectionStatusKey)",
+            "- 按键映射状态 / Button Mapping Status: \(hidStatusKey)",
             "",
             "#### 配置与集成 / Configuration",
             "- 语音工具 / Voice Tool: \(voiceTool)",
-            "- 按键模式 / Voice Key Mode: \(voiceKeyMode)",
+            "- 语音快捷键 / Voice Shortcut: \(voiceShortcutName)",
             "",
             "#### 诊断日志 / Runtime Logs",
             "- 日志记录状态 / Logging Enabled: \(runtimeLogEnabled ? "已开启 (Enabled)" : "已关闭 (Disabled)")",
             "- 日志文件状态 / Log Available: \(runtimeLogAvailable ? "存在 (\(formattedLogSize))" : "未找到 (Not Found)")",
-            "- 本地路径 / Log Path: \(runtimeLogPath)",
-            "- 隐私承诺 / Privacy Notice: 诊断日志仅保存在本机，永不上传，绝不含语音、转写文本或剪贴板等隐私数据 (Logs stay on this Mac, are never uploaded, and never contain audio, transcripts, or clipboard contents).",
-            "",
-            "```yaml",
-            "# Machine-parseable diagnostics",
-            "app_version: \"\(appVersion)\"",
-            "app_build: \"\(appBuild)\"",
-            "macos_version: \"\(macosVersion)\"",
-            "architecture: \"\(architecture)\"",
-            "rosetta: \(isRosetta)",
-            "permission_bluetooth: \(bluetoothGranted)",
-            "permission_input_monitoring: \(inputMonitoringGranted)",
-            "permission_accessibility: \(accessibilityGranted)",
-            "runtime_permission_issue: \"\(runtimePermissionIssue)\"",
-            "runtime_permission_trigger: \"\(runtimePermissionDiagnosisTrigger)\"",
-            "runtime_permission_updated_at: \"\(runtimePermissionIssueUpdatedAt.map(Self.timestamp) ?? "none")\"",
-            "connection_status: \"\(connectionStatusKey)\"",
-            "hid_status: \"\(hidStatusKey)\"",
-            "remote_connected: \(remoteConnected)",
-            "remote_model: \"\(remoteModel)\"",
-            "virtual_microphone: \(virtualMicrophoneReady)",
-            "audio_output: \(audioOutputReady)",
-            "voice_tool: \"\(voiceTool)\"",
-            "voice_key_mode: \"\(voiceKeyMode)\"",
-            "runtime_log_enabled: \(runtimeLogEnabled)",
-            "runtime_log_available: \(runtimeLogAvailable)",
-            "```"
+            "- 本地路径 / Log Path: \(runtimeLogPath)"
         ]
         return lines.joined(separator: "\n")
     }

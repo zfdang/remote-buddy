@@ -30,6 +30,35 @@ struct LocalDiagnosticTests {
         logger.record(event)
         logger.flush()
         #expect(!FileManager.default.fileExists(atPath: directory.path))
+        #expect(logger.appendingRecentLog(to: "Summary") == "Summary")
+    }
+
+    @Test func copiedDiagnosticsIncludeTheLatestThreeHundredRuntimeLinesAcrossRotation() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let logger = AppLogger(
+            logURL: directory.appendingPathComponent("runtime.log"),
+            maximumFileSize: 8 * 1_024,
+            reportFailure: { _ in }
+        )
+        #expect(logger.appendingRecentLog(to: "Summary") == "Summary")
+
+        logger.write("record=0")
+        #expect(logger.appendingRecentLog(to: "Summary").contains("record=0\n"))
+
+        for number in 1...305 {
+            logger.write("record=\(number)")
+        }
+
+        let copied = logger.appendingRecentLog(to: "Summary")
+        let expectedRecords = (6...305).map { "record=\($0)" }
+        let copiedRecords = copied.split(separator: "\n").compactMap { line in
+            line.split(separator: " ").last.map(String.init)
+        }.filter { $0.hasPrefix("record=") }
+        let files = try FileManager.default.contentsOfDirectory(atPath: directory.path)
+        #expect(files.contains { $0.hasPrefix("runtime.part-") })
+        #expect(copied.hasPrefix("Summary\n\n"))
+        #expect(copiedRecords == expectedRecords)
     }
     @Test func writesStayOnOwnedSessionDescriptorWhenThePathIsReplaced() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
@@ -61,7 +90,7 @@ struct LocalDiagnosticTests {
             virtualMicrophoneReady: true,
             audioOutputReady: true,
             voiceTool: "wechat",
-            voiceKeyMode: "press_and_hold",
+            voiceShortcutName: "Ctrl (⌃) + Shift (⇧) + R",
             runtimeLogAvailable: true,
             runtimeLogPath: "/tmp/test.log",
             runtimeLogSizeBytes: 2048,
@@ -76,10 +105,10 @@ struct LocalDiagnosticTests {
         #expect(summary.contains("遥控器连接 / Remote Connected: 已连接 (Yes) [小米蓝牙遥控器 (xiaomi)]"))
         #expect(summary.contains("虚拟麦克风驱动 / Virtual Mic Driver: 已就绪 (Ready)"))
         #expect(summary.contains("语音工具 / Voice Tool: wechat"))
-        #expect(summary.contains("按键模式 / Voice Key Mode: press_and_hold"))
+        #expect(summary.contains("语音快捷键 / Voice Shortcut: Ctrl (⌃) + Shift (⇧) + R"))
         #expect(summary.contains("日志文件状态 / Log Available: 存在"))
-        #expect(summary.contains("永不上传"))
-        #expect(summary.contains("app_version: \"1.2.3\""))
+        #expect(!summary.contains("Privacy Notice"))
+        #expect(!summary.contains("```yaml"))
 
         var writtenSummary: String?
         var writtenAudit: String?
@@ -254,8 +283,8 @@ struct LocalDiagnosticTests {
             runtimeLogEnabled: false,
             runtimeLogAvailable: false
         )
-        #expect(snapshot.summary.contains("已关闭 (Disabled)"))
-        #expect(snapshot.summary.contains("runtime_log_enabled: false"))
+        #expect(snapshot.summary.contains("日志记录状态 / Logging Enabled: 已关闭 (Disabled)"))
+        #expect(snapshot.summary.contains("日志文件状态 / Log Available: 未找到 (Not Found)"))
 
         let localization = LocalizationStore(settings: settings)
         for key in [

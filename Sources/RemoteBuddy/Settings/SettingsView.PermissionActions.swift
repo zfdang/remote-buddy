@@ -66,7 +66,8 @@ extension SettingsView {
 
     func copySettingsDiagnosticSummary() {
         let appBuild = (Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String) ?? "unknown"
-        let logURL = AppLogger.shared.logURL
+        let logger = AppLogger.shared
+        let logURL = logger.logURL
         let logExists = FileManager.default.fileExists(atPath: logURL.path)
         var logSizeBytes: Int64?
         if logExists,
@@ -103,7 +104,7 @@ extension SettingsView {
             virtualMicrophoneReady: virtualMicReady,
             audioOutputReady: model.isAudioOutputReady,
             voiceTool: settings.onboardingVoiceTool.rawValue,
-            voiceKeyMode: settings.voiceKeyMode.rawValue,
+            voiceShortcutName: settings.effectiveVoiceKeyMode.displayName(using: localization),
             runtimeLogEnabled: settings.diagnosticLoggingEnabled,
             runtimeLogAvailable: logExists,
             runtimeLogPath: SettingsDiagnosticSnapshot.sanitizePath(logURL.path),
@@ -118,9 +119,9 @@ extension SettingsView {
             snapshot,
             writeToPasteboard: { summary in
                 NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(summary, forType: .string)
+                NSPasteboard.general.setString(logger.appendingRecentLog(to: summary), forType: .string)
             },
-            writeAuditLog: AppLogger.shared.write
+            writeAuditLog: logger.write
         )
     }
 }

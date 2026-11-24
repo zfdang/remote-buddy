@@ -252,6 +252,7 @@ struct RuntimePermissionDiagnosticsTests {
             architecture: "arm64",
             voiceTool: .unselected,
             voiceKeyMode: .function,
+            voiceShortcutName: "Fn/Globe",
             voiceFnTapModeEnabled: false,
             context: remoteContext,
             voiceAttempt: FirstUseVoiceAttemptDiagnostic(
@@ -276,6 +277,8 @@ struct RuntimePermissionDiagnosticsTests {
             appLanguage: "en"
         )
 
+        #expect(snapshot.redactedText.contains("voice_key_mode=fn"))
+        #expect(snapshot.redactedText.contains("voice_shortcut=Fn/Globe"))
         #expect(snapshot.redactedText.contains("failure=permission.desynced"))
         #expect(snapshot.redactedText.contains("runtime_permission_issue=permission_desynced(bluetooth_unauthorized)"))
     }

@@ -8,13 +8,15 @@ extension OnboardingView {
         guard interactionProbe == nil else { diagnosticCopySucceeded = true; return }
         var diagnosticVoiceAttempt = voiceAttempt
         diagnosticVoiceAttempt.audioDelivery = model.voiceAudioDeliveryDiagnosticSnapshot()
+        let voiceKeyMode = settings.effectiveVoiceKeyMode
         let snapshot = FirstUseDiagnosticSnapshot(
             appVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown",
             appBuild: Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown",
             systemMajorVersion: ProcessInfo.processInfo.operatingSystemVersion.majorVersion,
             architecture: FirstUseDiagnosticSnapshot.architecture,
             voiceTool: settings.onboardingVoiceTool,
-            voiceKeyMode: settings.effectiveVoiceKeyMode,
+            voiceKeyMode: voiceKeyMode,
+            voiceShortcutName: voiceKeyMode.displayName(using: localization),
             voiceFnTapModeEnabled: settings.effectiveVoiceFnTapModeEnabled,
             context: diagnosticContext,
             voiceAttempt: diagnosticVoiceAttempt,

@@ -89,7 +89,7 @@ struct SettingsDiagnosticSnapshot: Equatable {
     let virtualMicrophoneReady: Bool
     let audioOutputReady: Bool
     let voiceTool: String
-    let voiceKeyMode: String
+    let voiceShortcutName: String
     let runtimeLogEnabled: Bool
     let runtimeLogAvailable: Bool
     let runtimeLogPath: String
@@ -115,7 +115,7 @@ struct SettingsDiagnosticSnapshot: Equatable {
         virtualMicrophoneReady: Bool = false,
         audioOutputReady: Bool = false,
         voiceTool: String = "unselected",
-        voiceKeyMode: String = "press_and_hold",
+        voiceShortcutName: String = "unknown",
         runtimeLogEnabled: Bool = true,
         runtimeLogAvailable: Bool,
         runtimeLogPath: String = SettingsDiagnosticSnapshot.sanitizePath(AppLogger.shared.logURL.path),
@@ -140,7 +140,7 @@ struct SettingsDiagnosticSnapshot: Equatable {
         self.virtualMicrophoneReady = virtualMicrophoneReady
         self.audioOutputReady = audioOutputReady
         self.voiceTool = voiceTool
-        self.voiceKeyMode = voiceKeyMode
+        self.voiceShortcutName = voiceShortcutName
         self.runtimeLogEnabled = runtimeLogEnabled
         self.runtimeLogAvailable = runtimeLogAvailable
         self.runtimeLogPath = Self.sanitizePath(runtimeLogPath)
@@ -203,7 +203,7 @@ struct SettingsDiagnosticSnapshot: Equatable {
             "",
             "#### 配置与集成 / Configuration",
             "- 语音工具 / Voice Tool: \(voiceTool)",
-            "- 按键模式 / Voice Key Mode: \(voiceKeyMode)",
+            "- 语音快捷键 / Voice Shortcut: \(voiceShortcutName)",
             "",
             "#### 诊断日志 / Runtime Logs",
             "- 日志记录状态 / Logging Enabled: \(runtimeLogEnabled ? "已开启 (Enabled)" : "已关闭 (Disabled)")",

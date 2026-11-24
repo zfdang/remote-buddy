@@ -104,7 +104,7 @@ extension SettingsView {
             virtualMicrophoneReady: virtualMicReady,
             audioOutputReady: model.isAudioOutputReady,
             voiceTool: settings.onboardingVoiceTool.rawValue,
-            voiceKeyMode: settings.voiceKeyMode.rawValue,
+            voiceShortcutName: settings.effectiveVoiceKeyMode.displayName(using: localization),
             runtimeLogEnabled: settings.diagnosticLoggingEnabled,
             runtimeLogAvailable: logExists,
             runtimeLogPath: SettingsDiagnosticSnapshot.sanitizePath(logURL.path),

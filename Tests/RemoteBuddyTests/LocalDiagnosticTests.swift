@@ -90,7 +90,7 @@ struct LocalDiagnosticTests {
             virtualMicrophoneReady: true,
             audioOutputReady: true,
             voiceTool: "wechat",
-            voiceKeyMode: "press_and_hold",
+            voiceShortcutName: "Ctrl (⌃) + Shift (⇧) + R",
             runtimeLogAvailable: true,
             runtimeLogPath: "/tmp/test.log",
             runtimeLogSizeBytes: 2048,
@@ -105,7 +105,7 @@ struct LocalDiagnosticTests {
         #expect(summary.contains("遥控器连接 / Remote Connected: 已连接 (Yes) [小米蓝牙遥控器 (xiaomi)]"))
         #expect(summary.contains("虚拟麦克风驱动 / Virtual Mic Driver: 已就绪 (Ready)"))
         #expect(summary.contains("语音工具 / Voice Tool: wechat"))
-        #expect(summary.contains("按键模式 / Voice Key Mode: press_and_hold"))
+        #expect(summary.contains("语音快捷键 / Voice Shortcut: Ctrl (⌃) + Shift (⇧) + R"))
         #expect(summary.contains("日志文件状态 / Log Available: 存在"))
         #expect(!summary.contains("Privacy Notice"))
         #expect(!summary.contains("```yaml"))

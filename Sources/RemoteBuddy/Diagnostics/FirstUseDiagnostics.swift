@@ -341,6 +341,7 @@ struct FirstUseDiagnosticSnapshot {
     let architecture: String
     let voiceTool: OnboardingVoiceTool
     let voiceKeyMode: VoiceKeyMode
+    let voiceShortcutName: String
     var voiceFnTapModeEnabled = false
     let context: FirstUseDiagnosticContext
     let voiceAttempt: FirstUseVoiceAttemptDiagnostic
@@ -393,6 +394,7 @@ struct FirstUseDiagnosticSnapshot {
             "step=\(context.step.rawValue)",
             "voice_tool=\(voiceTool.rawValue)",
             "voice_key_mode=\(voiceKeyMode.rawValue)",
+            "voice_shortcut=\(voiceShortcutName)",
             "voice_fn_tap_mode_enabled=\(voiceFnTapModeEnabled)",
             "onboarding_voice_key_policy=\(onboardingVoiceKeyPolicy)",
             "voice_key_policy_compliant=\(voiceKeyPolicyCompliant)",

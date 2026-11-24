@@ -33,7 +33,7 @@ struct LocalDiagnosticTests {
         #expect(logger.appendingRecentLog(to: "Summary") == "Summary")
     }
 
-    @Test func copiedDiagnosticsIncludeTheLatestTwoHundredRuntimeLinesAcrossRotation() throws {
+    @Test func copiedDiagnosticsIncludeTheLatestThreeHundredRuntimeLinesAcrossRotation() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let logger = AppLogger(
@@ -46,12 +46,12 @@ struct LocalDiagnosticTests {
         logger.write("record=0")
         #expect(logger.appendingRecentLog(to: "Summary").contains("record=0\n"))
 
-        for number in 1...205 {
+        for number in 1...305 {
             logger.write("record=\(number)")
         }
 
         let copied = logger.appendingRecentLog(to: "Summary")
-        let expectedRecords = (6...205).map { "record=\($0)" }
+        let expectedRecords = (6...305).map { "record=\($0)" }
         let copiedRecords = copied.split(separator: "\n").compactMap { line in
             line.split(separator: " ").last.map(String.init)
         }.filter { $0.hasPrefix("record=") }

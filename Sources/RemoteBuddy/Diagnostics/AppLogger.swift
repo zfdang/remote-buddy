@@ -43,7 +43,7 @@ final class AppLogger: PublicDiagnosticEventSink, @unchecked Sendable {
     )
     private static let defaultMaximumFileSize: UInt64 = 10 * 1_024 * 1_024
     private static let fileHeader = Data("Remote Buddy runtime log (UTF-8)\n".utf8)
-    private static let diagnosticLogLineLimit = 200
+    private static let diagnosticLogLineLimit = 300
 
     private let queue = DispatchQueue(label: "RemoteBuddy.logger")
     private let enabledLock: OSAllocatedUnfairLock<Bool>

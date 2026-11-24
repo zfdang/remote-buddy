@@ -67,11 +67,11 @@
         key: 'arm64',
         title: english ? 'Mac with Apple Silicon' : 'Apple Silicon 芯片 Mac',
         subtitle: english
-          ? 'For M1 / M2 / M3 / M4 and newer Apple Silicon Macs. Includes the app and virtual microphone driver.'
-          : '适用于 M1 / M2 / M3 / M4 及更新款芯片 Mac，包含应用与虚拟麦克风驱动。',
+          ? 'For M-series Apple Silicon Macs running macOS 14 or later. Includes the app and virtual microphone driver.'
+          : '适用于 M 系列芯片（Apple Silicon）Mac，包含应用与虚拟麦克风驱动。',
         archLabel: 'arm64 · .pkg',
         recommended: true,
-        badge: english ? 'M1–M4 · Recommended' : 'M1–M4 主流机型'
+        badge: english ? 'M-series · Recommended' : 'M 系列 · 推荐'
       },
       {
         key: 'intel',

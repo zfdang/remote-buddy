@@ -4,7 +4,6 @@
   var macosNavVersion = document.getElementById('macos-nav-version');
   var statusNote = document.getElementById('mirror-status');
   var cardsContainer = document.getElementById('mirror-cards');
-  var fallbackPanel = document.getElementById('mirror-fallback');
 
   var winTagBadge = document.getElementById('windows-release-tag');
   var winNavVersion = document.getElementById('windows-nav-version');
@@ -109,8 +108,6 @@
 
       var sizeText = formatBytes(pkg.size);
       var websiteHref = (websiteBaseUrl || '') + encodeURIComponent(pkg.name);
-      var githubHref = 'https://github.com/zfdang/remote-buddy/releases/download/' +
-        encodeURIComponent(tag) + '/' + encodeURIComponent(pkg.name);
       var badgeHtml = spec.badge ? '<span class="download-badge">' + escapeHtml(spec.badge) + '</span>' : '';
       var primaryBtnClass = spec.isUninstaller ? 'button secondary' : 'button primary';
 
@@ -128,15 +125,11 @@
           '<a class="' + primaryBtnClass + '" href="' + escapeHtml(websiteHref) + '" download>' +
             (english ? 'Download from Website ↓' : '从官网下载 ↓') +
           '</a>' +
-          '<a class="button secondary" href="' + escapeHtml(githubHref) + '">' +
-            (english ? 'Download from GitHub ↗' : '从 GitHub 下载 ↗') +
-          '</a>' +
         '</div>';
 
       cardsContainer.appendChild(card);
     });
 
-    if (fallbackPanel) fallbackPanel.hidden = true;
     if (statusNote) statusNote.hidden = true;
   }
 
@@ -166,14 +159,13 @@
 
     if (winActions) {
       var websiteHref = (websiteBaseUrl || '') + encodeURIComponent(pkg.name);
-      var githubHref = 'https://github.com/zfdang/remote-buddy-windows/releases/download/' +
-        encodeURIComponent(tag) + '/' + encodeURIComponent(pkg.name);
+      var githubHref = 'https://github.com/zfdang/remote-buddy-windows/releases';
       winActions.innerHTML =
         '<a class="button primary" href="' + escapeHtml(websiteHref) + '" download>' +
           (english ? 'Download from Website ↓' : '从官网下载 ↓') +
         '</a>' +
         '<a class="button secondary" href="' + escapeHtml(githubHref) + '" target="_blank" rel="noopener">' +
-          (english ? 'Download from GitHub ↗' : '从 GitHub 下载 ↗') +
+          (english ? 'GitHub Releases ↗' : '前往 GitHub Releases ↗') +
         '</a>';
     }
   }
@@ -192,7 +184,6 @@
           });
       })
       .catch(function () {
-        if (fallbackPanel) fallbackPanel.hidden = false;
         if (statusNote) statusNote.hidden = true;
       });
   }

@@ -97,18 +97,4 @@ struct ReviewInputBoundaryTests {
         #expect(settings.action(for: .power) == AppSettings.defaultBindings[.power])
         #expect(settings.action(for: .power) != .toggleLongRecording)
     }
-
-    #if DEBUG
-    @Test func developmentFeedRequiresExplicitTestModeAndPreviewOptIn() {
-        let environment = ["REMOTE_BUDDY_UI_TEST_MODE": "1",
-            "REMOTE_BUDDY_UI_TEST_FEED_URL": "http://127.0.0.1:8765/appcast-arm64.xml",
-            "REMOTE_BUDDY_UI_TEST_VERSION": "v26-10-13.099"]
-        #expect(UpdateFeedResolver.testInjectedFeed(environment: environment,
-            assetName: "appcast-arm64.xml", includePreRelease: true) != nil)
-        #expect(UpdateFeedResolver.testInjectedFeed(environment: environment,
-            assetName: "appcast-arm64.xml", includePreRelease: false) == nil)
-        #expect(UpdateFeedResolver.testInjectedFeed(environment: [:],
-            assetName: "appcast-arm64.xml", includePreRelease: true) == nil)
-    }
-    #endif
 }

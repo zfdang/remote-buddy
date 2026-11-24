@@ -120,28 +120,45 @@ struct ProductBoundaryTests {
         }
     }
 
-    @Test func releaseTagsCanBeComparedAndPreviewFallsBack() async {
+    @Test func releaseTagsCanBeCompared() {
         #expect(UpdateVersion.normalized("v26-10-11.021") == "26.10.11.021")
         #expect(UpdateVersion.isNewer("v26-10-11.022", than: "v26-10-11.021"))
-        let stable = URL(string: "https://remote.zfdang.com/appcast-arm64.xml")!
-        let preview = URL(string: "https://remote.zfdang.com/preview/appcast-arm64.xml")!
-        let resolution = await UpdateFeedResolver.resolvePreviewFeed(stableURL: stable, previewURL: preview) { url in
-            if url == preview { throw URLError(.fileDoesNotExist) }
-            return Data(#"<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle"><channel><item><sparkle:version>21</sparkle:version><sparkle:shortVersionString>v26-10-11.021</sparkle:shortVersionString></item></channel></rss>"#.utf8)
-        }
-        #expect(resolution.selected?.url == stable)
-        #expect(resolution.selected?.version == "26.10.11.021")
+        #expect(!UpdateVersion.isNewer("v26-10-11.021", than: "v26-10-11.022"))
     }
 
     @Test func updateFeedOnlyUsesProductHTTPSOrigin() {
         let selection = UpdateFeedSelection(stableFeedURLString: "https://remote.zfdang.com/appcast-arm64.xml")
-        #expect(selection.feedURLString(checksForPreReleaseUpdates: false) == "https://remote.zfdang.com/appcast-arm64.xml")
-        #expect(selection.feedURLString(checksForPreReleaseUpdates: true) == "https://remote.zfdang.com/preview/appcast-arm64.xml")
+        #expect(selection.feedURLString == "https://remote.zfdang.com/appcast-arm64.xml")
         for url in ["http://remote.zfdang.com/appcast-arm64.xml", "https://evil.example/appcast-arm64.xml",
                     "https://remote.zfdang.com/appcast-arm64.xml?redirect=evil", "https://user@remote.zfdang.com/appcast-arm64.xml",
                     "https://remote.zfdang.com:8443/appcast-arm64.xml", "https://remote.zfdang.com/other.xml"] {
-            #expect(UpdateFeedSelection(stableFeedURLString: url).validatedStableFeedURL == nil)
+            let rejected = UpdateFeedSelection(stableFeedURLString: url)
+            #expect(rejected.validatedStableFeedURL == nil)
+            #expect(rejected.feedURLString == nil)
         }
+    }
+
+    @Test func updateCheckPolicyNeverChecksInBackgroundAndFollowsNotificationToggle() {
+        let enabled = UpdateCheckPolicy(receiveUpdateNotifications: true)
+        #expect(!enabled.enablesSparkleAutomaticChecks)
+        #expect(enabled.checksForUpdateInformationOnAboutAppear)
+
+        let disabled = UpdateCheckPolicy(receiveUpdateNotifications: false)
+        #expect(!disabled.enablesSparkleAutomaticChecks)
+        #expect(!disabled.checksForUpdateInformationOnAboutAppear)
+    }
+
+    @Test @MainActor func receiveUpdateNotificationsDefaultsToTrueAndPersists() throws {
+        let suite = "remote-buddy.update-notifications.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let initial = AppSettings(defaults: defaults)
+        #expect(initial.receiveUpdateNotifications)
+
+        initial.receiveUpdateNotifications = false
+        let reloaded = AppSettings(defaults: defaults)
+        #expect(!reloaded.receiveUpdateNotifications)
     }
 
     @Test @MainActor func settingsPersistPreferencesWithoutUsageData() throws {

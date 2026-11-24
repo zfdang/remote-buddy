@@ -9,11 +9,7 @@ extension SettingsView {
     var updateInformationContent: some View {
         switch updateInformation.state {
         case .idle:
-            Text(localization.text("about.version.information_title"))
-                .font(.headline)
-            Text(localization.text("about.version.information_idle"))
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
+            EmptyView()
         case .checking:
             Text(localization.text("about.version.information_title"))
                 .font(.headline)

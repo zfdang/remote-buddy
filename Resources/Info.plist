@@ -45,6 +45,8 @@
 	<string>Copyright © 2026 Remote Buddy contributors; includes GPL-3.0-only upstream code.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>SUEnableAutomaticChecks</key>
+	<false/>
 	<key>SUFeedURL</key>
 	<string>https://remote.zfdang.com/appcast-arm64.xml</string>
 	<key>SUPublicEDKey</key>

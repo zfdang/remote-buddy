@@ -21,7 +21,7 @@ final class AppSettings: ObservableObject {
         static let showDockIcon = "showDockIcon"
         static let showStatusBarIcon = "showStatusBarIcon"
         static let openMainWindowAtLaunch = "openMainWindowAtLaunch"
-        static let checksForPreReleaseUpdates = "checksForPreReleaseUpdates"
+        static let receiveUpdateNotifications = "receiveUpdateNotifications"
         static let diagnosticLoggingEnabled = AppLogger.diagnosticLoggingEnabledKey
         static let voiceFnTapModeEnabled = "voiceFnTapModeEnabled"
         static let voiceKeyMode = "voiceKeyMode"
@@ -196,9 +196,9 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(openMainWindowAtLaunch, forKey: Keys.openMainWindowAtLaunch) }
     }
 
-    @Published var checksForPreReleaseUpdates: Bool {
+    @Published var receiveUpdateNotifications: Bool {
         didSet {
-            defaults.set(checksForPreReleaseUpdates, forKey: Keys.checksForPreReleaseUpdates)
+            defaults.set(receiveUpdateNotifications, forKey: Keys.receiveUpdateNotifications)
         }
     }
 
@@ -494,7 +494,9 @@ final class AppSettings: ObservableObject {
         openMainWindowAtLaunch = defaults.object(forKey: Keys.openMainWindowAtLaunch) == nil
             ? true
             : defaults.bool(forKey: Keys.openMainWindowAtLaunch)
-        checksForPreReleaseUpdates = defaults.bool(forKey: Keys.checksForPreReleaseUpdates)
+        receiveUpdateNotifications = defaults.object(forKey: Keys.receiveUpdateNotifications) == nil
+            ? true
+            : defaults.bool(forKey: Keys.receiveUpdateNotifications)
         diagnosticLoggingEnabled = defaults.object(forKey: Keys.diagnosticLoggingEnabled) == nil
             ? true
             : defaults.bool(forKey: Keys.diagnosticLoggingEnabled)

@@ -15,23 +15,20 @@ extension RemoteBuddyAppDelegate {
     }
 
     func observeUpdatePreferences() {
-        model.settings.$checksForPreReleaseUpdates
+        model.settings.$receiveUpdateNotifications
             .removeDuplicates()
             .dropFirst()
             .receive(on: RunLoop.main)
             .sink { [weak self] isEnabled in
                 guard let self else { return }
                 updateCheckTask?.cancel()
-                resolvedUpdateFeedURLString = nil
                 updateInformation.reset()
-                let policy = UpdateCheckPolicy(checksForPreReleaseUpdates: isEnabled)
+                let policy = UpdateCheckPolicy(receiveUpdateNotifications: isEnabled)
                 if updaterStarted {
                     updater.automaticallyChecksForUpdates =
-                        policy.allowsBackgroundUpdatePrompts
+                        policy.enablesSparkleAutomaticChecks
                 }
-                if policy.startsUpdaterAutomatically {
-                    startUpdaterIfNeeded()
-                    updater.resetUpdateCycleAfterShortDelay()
+                if policy.checksForUpdateInformationOnAboutAppear {
                     refreshUpdateInformation()
                 }
             }
@@ -39,11 +36,7 @@ extension RemoteBuddyAppDelegate {
     }
 
     func configureUpdater() {
-        let checksForPreReleaseUpdates = model.settings.checksForPreReleaseUpdates
-        guard checksForPreReleaseUpdates else {
-            startUpdaterIfNeeded()
-            return
-        }
+        startUpdaterIfNeeded()
     }
 
     @discardableResult
@@ -55,8 +48,8 @@ extension RemoteBuddyAppDelegate {
         }
         updater.automaticallyChecksForUpdates =
             UpdateCheckPolicy(
-                checksForPreReleaseUpdates: model.settings.checksForPreReleaseUpdates
-            ).allowsBackgroundUpdatePrompts
+                receiveUpdateNotifications: model.settings.receiveUpdateNotifications
+            ).enablesSparkleAutomaticChecks
         do { try updater.start() }
         catch {
             updateInformation.setUnavailable()
@@ -68,22 +61,7 @@ extension RemoteBuddyAppDelegate {
     }
 
     func feedURLString(for updater: SPUUpdater) -> String? {
-        let includePreRelease = model.settings.checksForPreReleaseUpdates
-        #if DEBUG
-        if let testFeed = UpdateFeedResolver.testInjectedFeed(
-            environment: ProcessInfo.processInfo.environment,
-            assetName: updateFeedSelection.appcastAssetName,
-            includePreRelease: includePreRelease
-        ) {
-            return testFeed.url.absoluteString
-        }
-        #endif
-        if includePreRelease, let resolvedUpdateFeedURLString {
-            return resolvedUpdateFeedURLString
-        }
-        return updateFeedSelection.feedURLString(
-            checksForPreReleaseUpdates: includePreRelease
-        )
+        updateFeedSelection.feedURLString
     }
 
     @objc func checkForUpdates() {
@@ -100,65 +78,16 @@ extension RemoteBuddyAppDelegate {
         updateCheckTask = Task { [weak self] in
             guard let self else { return }
             updateInformation.beginChecking(timeoutEnabled: purpose.usesInformationTimeout)
-            let includePreRelease = model.settings.checksForPreReleaseUpdates
-            #if DEBUG
-            let testFeed = UpdateFeedResolver.testInjectedFeed(
-                environment: ProcessInfo.processInfo.environment,
-                assetName: updateFeedSelection.appcastAssetName,
-                includePreRelease: includePreRelease
-            )
-            let source = testFeed == nil ? "cloudflare_channel" : "ui_test"
-            #else
-            let source = "cloudflare_channel"
-            #endif
-            resolvedUpdateFeedURLString = nil
-            if includePreRelease {
-                var resolution = UpdateFeedResolver.FeedResolution(stable: nil, preview: nil)
-                #if DEBUG
-                if let testFeed {
-                    resolution = UpdateFeedResolver.FeedResolution(stable: nil, preview: testFeed)
-                }
-                #endif
-                if resolution.selected == nil,
-                   let stableURL = updateFeedSelection.validatedStableFeedURL,
-                   let previewURL = updateFeedSelection.validatedPreReleaseFeedURL {
-                    resolution = await UpdateFeedResolver.resolvePreviewFeed(
-                        stableURL: stableURL,
-                        previewURL: previewURL
-                    )
-                }
-                guard !Task.isCancelled else { return }
-                guard let selectedFeed = resolution.selected else {
-                    updateInformation.setUnavailable()
-                    AppLogger.shared.write(
-                        "UPDATE CHECK prerelease_enabled=true resolved=false " +
-                            "stable_version=unknown preview_version=unknown " +
-                            "selected_channel=unknown source=cloudflare_channel user_alert=false"
-                    )
-                    return
-                }
-                resolvedUpdateFeedURLString = selectedFeed.url.absoluteString
+            guard updateFeedSelection.feedURLString != nil else {
+                updateInformation.setUnavailable()
                 AppLogger.shared.write(
-                    "UPDATE CHECK prerelease_enabled=true resolved=true " +
-                        "stable_version=\(resolution.stable?.version ?? "unknown") " +
-                        "preview_version=\(resolution.preview?.version ?? "unknown") " +
-                        "selected_channel=\(selectedFeed.isPreRelease ? "preview" : "stable") " +
-                        "source=\(source)"
+                    "UPDATE CHECK resolved=false source=cloudflare_channel user_alert=false"
                 )
-            } else {
-                guard updateFeedSelection.feedURLString(checksForPreReleaseUpdates: false) != nil else {
-                    updateInformation.setUnavailable()
-                    AppLogger.shared.write(
-                        "UPDATE CHECK prerelease_enabled=false resolved=false " +
-                            "source=cloudflare_channel user_alert=false"
-                    )
-                    return
-                }
-                AppLogger.shared.write(
-                    "UPDATE CHECK prerelease_enabled=false resolved=true " +
-                        "selected_channel=stable source=cloudflare_channel"
-                )
+                return
             }
+            AppLogger.shared.write(
+                "UPDATE CHECK resolved=true selected_channel=stable source=cloudflare_channel"
+            )
             guard startUpdaterIfNeeded() else { return }
             if updater.sessionInProgress {
                 if case .userInitiated = purpose { updateUserDriver.showUpdateInFocus() }
@@ -227,12 +156,7 @@ extension RemoteBuddyAppDelegate {
     ) {
         if error != nil, packageFallbackCoordinator.consumePendingRetry() {
             DispatchQueue.main.async { [weak self] in
-                guard let self else { return }
-                if updateCheck == .updatesInBackground {
-                    self.updater.checkForUpdatesInBackground()
-                } else {
-                    self.performUpdateCheck(.userInitiated)
-                }
+                self?.performUpdateCheck(.userInitiated)
             }
             return
         }

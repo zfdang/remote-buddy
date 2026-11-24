@@ -527,7 +527,6 @@
 "about.version.update_to" = "Update to %1$@";
 "about.version.recheck" = "Check Again";
 "about.version.information_title" = "What's New";
-"about.version.information_idle" = "Available updates are checked automatically when this page opens.";
 "about.version.checking" = "Checking for available updates…";
 "about.version.up_to_date" = "You're Up to Date";
 "about.version.up_to_date_description" = "You already have the latest version installed.";
@@ -535,8 +534,8 @@
 "about.version.information_unavailable_description" = "Check again later. Your installed version is unaffected.";
 "about.version.release_notes_title" = "What's New in %1$@";
 "about.version.release_notes_unavailable" = "Release notes are not available for this version.";
-"about.version.check_prerelease" = "Include preview updates";
-"about.version.check_prerelease_help" = "Off by default. When enabled, automatic and manual checks also include preview releases before general availability.";
+"about.version.receive_update_notifications" = "Receive update notifications";
+"about.version.check_updates" = "Check for Updates";
 "about.version.history" = "Version History";
 "help.glossary.open" = "Glossary";
 "about.support.github" = "GitHub";
@@ -577,8 +576,6 @@
 "about.preferences.language_description" = "Choose the app interface language.";
 "update.completed.title" = "Remote Buddy Updated";
 "update.completed.message" = "Successfully updated to version %1$@.";
-"update.prerelease.feed_unavailable.title" = "Unable to Check Preview Updates";
-"update.prerelease.feed_unavailable.message" = "The latest preview release information is unavailable. Check your network and try again. Stable updates are unaffected.";
 "onboarding.phase.prepare" = "Prepare";
 "onboarding.phase.setup" = "Set Up";
 "onboarding.phase.try_it" = "Try It";

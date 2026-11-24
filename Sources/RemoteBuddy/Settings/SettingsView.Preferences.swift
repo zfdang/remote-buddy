@@ -240,8 +240,8 @@ extension SettingsView {
         .onAppear {
             guard !SettingsVisualRenderingPolicy.isScreenshotHarness else { return }
             guard UpdateCheckPolicy(
-                checksForPreReleaseUpdates: settings.checksForPreReleaseUpdates
-            ).refreshesAboutInformationOnAppear else { return }
+                receiveUpdateNotifications: settings.receiveUpdateNotifications
+            ).checksForUpdateInformationOnAboutAppear else { return }
             refreshUpdateInformation()
         }
     }
@@ -301,24 +301,25 @@ extension SettingsView {
                     .foregroundStyle(Color.accentColor)
                     .frame(width: 34)
 
-                Text(localization.text("about.version.check_prerelease"))
+                Text(localization.text("about.version.receive_update_notifications"))
                     .font(.subheadline.weight(.semibold))
 
                 Spacer(minLength: 16)
 
-                Toggle("", isOn: $settings.checksForPreReleaseUpdates)
+                Toggle("", isOn: $settings.receiveUpdateNotifications)
                     .labelsHidden()
-                    .accessibilityLabel(localization.text("about.version.check_prerelease"))
+                    .accessibilityLabel(localization.text("about.version.receive_update_notifications"))
                     .toggleStyle(.switch)
                     .font(.system(size: 12))
 
-                Button(action: checkForUpdates) {
+                Button(action: refreshUpdateInformation) {
                     Label(
-                        localization.text("menu.check_for_updates"),
+                        localization.text("about.version.check_updates"),
                         systemImage: "arrow.triangle.2.circlepath"
                     )
                 }
                 .compatibilityButtonStyle(.standard)
+                .disabled(updateInformation.state == .checking)
                 .fixedSize(horizontal: true, vertical: false)
             }
 

@@ -132,7 +132,6 @@ final class RemoteBuddyAppDelegate: NSObject, NSApplicationDelegate, NSMenuDeleg
         stableFeedURLString: Bundle.main.object(forInfoDictionaryKey: "SUFeedURL") as? String
     )
     var updateCheckTask: Task<Void, Never>?
-    var resolvedUpdateFeedURLString: String?
     var packageFallbackCoordinator = UpdatePackageDownloadCoordinator()
     var updaterStarted = false
     var completedUpdateVersion: String?

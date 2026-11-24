@@ -67,11 +67,8 @@ struct UpdateFeedSelection {
         self.stableFeedURLString = stableFeedURLString
     }
 
-    func feedURLString(checksForPreReleaseUpdates: Bool) -> String? {
-        guard let stableFeedURL else { return nil }
-        return checksForPreReleaseUpdates
-            ? preReleaseFeedURL?.absoluteString
-            : stableFeedURL.absoluteString
+    var feedURLString: String? {
+        stableFeedURL?.absoluteString
     }
 
     var appcastAssetName: String {
@@ -82,10 +79,6 @@ struct UpdateFeedSelection {
 
     var validatedStableFeedURL: URL? {
         stableFeedURL
-    }
-
-    var validatedPreReleaseFeedURL: URL? {
-        preReleaseFeedURL
     }
 
     private var stableFeedURL: URL? {
@@ -103,29 +96,17 @@ struct UpdateFeedSelection {
         else { return nil }
         return url
     }
-
-    private var preReleaseFeedURL: URL? {
-        guard let stableFeedURL,
-              var components = URLComponents(url: stableFeedURL, resolvingAgainstBaseURL: false)
-        else { return nil }
-        components.path = "/preview/" + stableFeedURL.lastPathComponent
-        return components.url
-    }
 }
 
 struct UpdateCheckPolicy: Equatable {
-    let checksForPreReleaseUpdates: Bool
+    let receiveUpdateNotifications: Bool
 
-    var startsUpdaterAutomatically: Bool {
-        !checksForPreReleaseUpdates
+    var enablesSparkleAutomaticChecks: Bool {
+        false
     }
 
-    var allowsBackgroundUpdatePrompts: Bool {
-        !checksForPreReleaseUpdates
-    }
-
-    var refreshesAboutInformationOnAppear: Bool {
-        true // Informational feed checks do not enable background install prompts.
+    var checksForUpdateInformationOnAboutAppear: Bool {
+        receiveUpdateNotifications
     }
 }
 

@@ -107,7 +107,7 @@ struct LocalDiagnosticTests {
         #expect(summary.contains("语音工具 / Voice Tool: wechat"))
         #expect(summary.contains("按键模式 / Voice Key Mode: press_and_hold"))
         #expect(summary.contains("日志文件状态 / Log Available: 存在"))
-        #expect(summary.contains("永不上传"))
+        #expect(!summary.contains("Privacy Notice"))
         #expect(!summary.contains("```yaml"))
 
         var writtenSummary: String?

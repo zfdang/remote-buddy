@@ -208,8 +208,7 @@ struct SettingsDiagnosticSnapshot: Equatable {
             "#### 诊断日志 / Runtime Logs",
             "- 日志记录状态 / Logging Enabled: \(runtimeLogEnabled ? "已开启 (Enabled)" : "已关闭 (Disabled)")",
             "- 日志文件状态 / Log Available: \(runtimeLogAvailable ? "存在 (\(formattedLogSize))" : "未找到 (Not Found)")",
-            "- 本地路径 / Log Path: \(runtimeLogPath)",
-            "- 隐私承诺 / Privacy Notice: 诊断日志仅保存在本机，永不上传，绝不含语音、转写文本或剪贴板等隐私数据 (Logs stay on this Mac, are never uploaded, and never contain audio, transcripts, or clipboard contents)."
+            "- 本地路径 / Log Path: \(runtimeLogPath)"
         ]
         return lines.joined(separator: "\n")
     }

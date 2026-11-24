@@ -108,7 +108,7 @@ struct LocalDiagnosticTests {
         #expect(summary.contains("按键模式 / Voice Key Mode: press_and_hold"))
         #expect(summary.contains("日志文件状态 / Log Available: 存在"))
         #expect(summary.contains("永不上传"))
-        #expect(summary.contains("app_version: \"1.2.3\""))
+        #expect(!summary.contains("```yaml"))
 
         var writtenSummary: String?
         var writtenAudit: String?
@@ -283,8 +283,8 @@ struct LocalDiagnosticTests {
             runtimeLogEnabled: false,
             runtimeLogAvailable: false
         )
-        #expect(snapshot.summary.contains("已关闭 (Disabled)"))
-        #expect(snapshot.summary.contains("runtime_log_enabled: false"))
+        #expect(snapshot.summary.contains("日志记录状态 / Logging Enabled: 已关闭 (Disabled)"))
+        #expect(snapshot.summary.contains("日志文件状态 / Log Available: 未找到 (Not Found)"))
 
         let localization = LocalizationStore(settings: settings)
         for key in [

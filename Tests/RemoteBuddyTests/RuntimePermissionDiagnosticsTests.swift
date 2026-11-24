@@ -357,10 +357,10 @@ struct RuntimePermissionDiagnosticsTests {
         )
         let summary = snapshot.summary
         #expect(summary.contains("permission_desynced(bluetooth_unauthorized)"))
-        #expect(summary.contains("runtime_permission_trigger: \"hid_filter_disabled\""))
-        #expect(summary.contains("runtime_permission_updated_at: \"2025-11-13T"))
-        #expect(summary.contains("connection_status: \"bluetooth.status.permission_denied\""))
-        #expect(summary.contains("hid_status: \"button_mapping.error.not_permitted\""))
+        #expect(summary.contains("Permission Diagnosis Trigger: hid_filter_disabled"))
+        #expect(summary.contains("Permission Issue Updated At: 2025-11-13T"))
+        #expect(summary.contains("Bluetooth Connection Status: bluetooth.status.permission_denied"))
+        #expect(summary.contains("Button Mapping Status: button_mapping.error.not_permitted"))
     }
 
     @Test func newPermissionAndDiagnosticLocalizationKeysExistInEnglishAndChinese() throws {

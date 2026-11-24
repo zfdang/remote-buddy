@@ -251,6 +251,19 @@
     <p class="eyebrow">疑难排障</p>
     <h2 class="section-title" id="cat-troubleshooting-title">五、权限、安全与疑难排障</h2>
 
+    <details class="troubleshooting-card" id="macos-gatekeeper">
+      <summary><span class="troubleshooting-question">下载 macOS 安装包（.pkg）后提示“无法打开……无法验证开发者”或“包含恶意软件”怎么办？</span></summary>
+      <div class="troubleshooting-body">
+        <p><strong>这是 macOS 对未经过 Apple 商业公证的开源安装包触发的正常 Gatekeeper 防护提示。</strong>Remote Buddy 为 GPL-3.0-only 开源免费软件，当前未购买收费的 Apple Developer ID 商业开发者证书及向苹果官方服务器提交公证（Notarization），因此通过浏览器下载的 <code>.pkg</code>（包含主安装包与通用卸载包）在直接双击时会被系统拦截。只要你确认包体来自官网镜像（<code>remote.zfdang.com</code>）或官方仓库 <a class="text-link" href="https://github.com/zfdang/remote-buddy/releases">zfdang/remote-buddy Releases ↗</a>，即可放心通过以下任一方式放行安装：</p>
+        <ol>
+          <li><strong>方法一：访达右键「打开」（推荐，适用于多数 macOS 版本）</strong><br>在「访达（Finder）」的「下载」目录中，<strong>按住 <code>Control</code> 键点击（或鼠标右键）</strong><code>.pkg</code> 文件并选择<strong>「打开」</strong>，随后在弹出的确认框中点击<strong>「打开」</strong>即可进入安装向导。（注：macOS 15 Sequoia 及更新系统若右键仍不显示“打开”按钮，请改用下方方法二。）</li>
+          <li><strong>方法二：在「系统设置」中放行（通用，支持 macOS 14 / 15 及以上）</strong><br>先关闭刚才的双击拦截弹窗，打开 Mac 的<strong>「系统设置」→「隐私与安全性」</strong>，向下滚动到<strong>「安全性」</strong>区域，找到“已阻止使用 <code>Remote_Buddy_...pkg</code>……”的提示并点击右侧<strong>「仍要打开」</strong>，输入开机密码或触控 ID 授权后即可继续安装。</li>
+          <li><strong>方法三：终端命令移除隔离属性（命令行用户）</strong><br>在「终端」中运行以下命令清除下载文件的 Quarantine 隔离标记，之后即可直接双击 <code>.pkg</code> 安装（如安装卸载包或特定文件名，请替换为实际文件名）：<br><code>xattr -d com.apple.quarantine ~/Downloads/Remote_Buddy_*.pkg</code></li>
+        </ol>
+        <p>以上放行操作仅需在初次安装时执行一次，安装完成后日常使用和虚拟麦克风驱动运行不会再重复触发此提示。</p>
+      </div>
+    </details>
+
     <details class="troubleshooting-card">
       <summary><span class="troubleshooting-question">为什么软件需要“辅助功能”、“输入监控”和“麦克风驱动”权限？会泄露隐私吗？</span></summary>
       <div class="troubleshooting-body">

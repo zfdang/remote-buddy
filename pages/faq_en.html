@@ -251,6 +251,19 @@
     <p class="eyebrow">SECURITY &amp; HELP</p>
     <h2 class="section-title" id="cat-troubleshooting-title">5. Permissions, Security &amp; Troubleshooting</h2>
 
+    <details class="troubleshooting-card" id="macos-gatekeeper">
+      <summary><span class="troubleshooting-question">macOS says the .pkg installer “cannot be opened because the developer cannot be verified” or “Apple could not verify it is free of malware”. What should I do?</span></summary>
+      <div class="troubleshooting-body">
+        <p><strong>This is standard macOS Gatekeeper behavior for open-source installers that are not Apple-notarized.</strong> Remote Buddy is free, open-source software under GPL-3.0-only and currently does not use a paid Apple Developer ID certificate for Apple notarization. As a result, macOS attaches a quarantine attribute to <code>.pkg</code> files downloaded via a browser (including both the app installer and the universal uninstaller). As long as you downloaded the package from our official mirror (<code>remote.zfdang.com</code>) or <a class="text-link" href="https://github.com/zfdang/remote-buddy/releases">zfdang/remote-buddy Releases ↗</a>, it is safe to install using any of the following methods:</p>
+        <ol>
+          <li><strong>Method 1: Control-click → Open in Finder (Recommended for most macOS versions)</strong><br>Open <strong>Finder</strong> → <strong>Downloads</strong>, hold <strong>Control</strong> and click (or right-click) the <code>.pkg</code> file, select <strong>Open</strong>, and click <strong>Open</strong> again in the confirmation dialog to start the installer. (Note: On macOS 15 Sequoia and newer, if the dialog no longer offers an “Open” button, use Method 2 below.)</li>
+          <li><strong>Method 2: Allow in System Settings (Works on macOS 14, 15, and newer)</strong><br>Dismiss the Gatekeeper warning dialog, open <strong>System Settings → Privacy &amp; Security</strong>, scroll down to the <strong>Security</strong> section, find the message stating that <code>Remote_Buddy_...pkg</code> was blocked, click <strong>Open Anyway</strong>, and authenticate with your password or Touch ID.</li>
+          <li><strong>Method 3: Remove the quarantine attribute in Terminal</strong><br>Run the following command in <strong>Terminal</strong> to clear the quarantine flag, then double-click the <code>.pkg</code> file to install normally (adjust the filename if installing the uninstaller or another filename):<br><code>xattr -d com.apple.quarantine ~/Downloads/Remote_Buddy_*.pkg</code></li>
+        </ol>
+        <p>You only need to approve the installer once during installation; normal app launches and virtual microphone operation will not repeatedly trigger this prompt.</p>
+      </div>
+    </details>
+
     <details class="troubleshooting-card">
       <summary><span class="troubleshooting-question">Why does the app require Accessibility, Input Monitoring, and Microphone Driver permissions?</span></summary>
       <div class="troubleshooting-body">

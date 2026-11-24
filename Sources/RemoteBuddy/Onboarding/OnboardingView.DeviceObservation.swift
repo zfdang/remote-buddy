@@ -26,14 +26,17 @@ extension OnboardingView {
             controlSource: settings.onboardingControlSource,
             voiceBinding: settings.stagedVoiceToolBinding ?? settings.verifiedVoiceToolBinding
         )
+        let logger = AppLogger.shared
+        let summary = snapshot.redactedText
+        let clipboardText = logger.appendingRecentLog(to: summary)
         NSPasteboard.general.clearContents()
-        diagnosticCopySucceeded = NSPasteboard.general.setString(snapshot.redactedText, forType: .string)
-        AppLogger.shared.write(
+        diagnosticCopySucceeded = NSPasteboard.general.setString(clipboardText, forType: .string)
+        logger.write(
             "ONBOARDING DIAGNOSTICS copied step=\(settings.onboardingStep.rawValue) " +
                 "failure=\(failureReason?.rawValue ?? "none")"
         )
-        AppLogger.shared.writeDiagnosticSummary(
-            snapshot.redactedText,
+        logger.writeDiagnosticSummary(
+            summary,
             event: "ONBOARDING DIAGNOSTICS"
         )
     }

@@ -403,7 +403,7 @@
 "diagnostics.logs.enabled.title" = "Enable Troubleshooting Logs";
 "diagnostics.logs.enabled.detail" = "Turn off during normal use to stop writing local log files; enable when troubleshooting issues.";
 "diagnostics.logs.privacy" = "Diagnostic logs stay on this Mac and are never uploaded.";
-"diagnostics.logs.last_entry" = "Open local text logs, or copy environment and diagnostic info for troubleshooting.";
+"diagnostics.logs.last_entry" = "Open local logs or copy diagnostic info with up to 200 recent log lines.";
 "diagnostics.logs.show_in_finder" = "Show Logs in Finder";
 "diagnostics.logs.copy_summary" = "Copy Diagnostic Info";
 "diagnostics.logs.send" = "Send Diagnostics";

@@ -30,6 +30,35 @@ struct LocalDiagnosticTests {
         logger.record(event)
         logger.flush()
         #expect(!FileManager.default.fileExists(atPath: directory.path))
+        #expect(logger.appendingRecentLog(to: "Summary") == "Summary")
+    }
+
+    @Test func copiedDiagnosticsIncludeTheLatestTwoHundredRuntimeLinesAcrossRotation() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let logger = AppLogger(
+            logURL: directory.appendingPathComponent("runtime.log"),
+            maximumFileSize: 8 * 1_024,
+            reportFailure: { _ in }
+        )
+        #expect(logger.appendingRecentLog(to: "Summary") == "Summary")
+
+        logger.write("record=0")
+        #expect(logger.appendingRecentLog(to: "Summary").contains("record=0\n"))
+
+        for number in 1...205 {
+            logger.write("record=\(number)")
+        }
+
+        let copied = logger.appendingRecentLog(to: "Summary")
+        let expectedRecords = (6...205).map { "record=\($0)" }
+        let copiedRecords = copied.split(separator: "\n").compactMap { line in
+            line.split(separator: " ").last.map(String.init)
+        }.filter { $0.hasPrefix("record=") }
+        let files = try FileManager.default.contentsOfDirectory(atPath: directory.path)
+        #expect(files.contains { $0.hasPrefix("runtime.part-") })
+        #expect(copied.hasPrefix("Summary\n\n"))
+        #expect(copiedRecords == expectedRecords)
     }
     @Test func writesStayOnOwnedSessionDescriptorWhenThePathIsReplaced() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)

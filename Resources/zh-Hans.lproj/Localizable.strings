@@ -403,7 +403,7 @@
 "diagnostics.logs.enabled.title" = "启用排错日志";
 "diagnostics.logs.enabled.detail" = "仅在需要排查问题时开启；平时可关闭以停止写入本地日志文件。";
 "diagnostics.logs.privacy" = "诊断日志仅保存在本机，永不上传。";
-"diagnostics.logs.last_entry" = "打开本地文本日志，或复制环境与诊断信息用于排障反馈。";
+"diagnostics.logs.last_entry" = "打开本地日志，或复制诊断信息（最多附带最近 200 行日志）。";
 "diagnostics.logs.show_in_finder" = "在 Finder 中显示日志";
 "diagnostics.logs.copy_summary" = "复制诊断信息";
 "diagnostics.logs.send" = "发送诊断信息";

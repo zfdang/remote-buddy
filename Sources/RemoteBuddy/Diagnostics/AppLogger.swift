@@ -43,6 +43,7 @@ final class AppLogger: PublicDiagnosticEventSink, @unchecked Sendable {
     )
     private static let defaultMaximumFileSize: UInt64 = 10 * 1_024 * 1_024
     private static let fileHeader = Data("Remote Buddy runtime log (UTF-8)\n".utf8)
+    private static let diagnosticLogLineLimit = 200
 
     private let queue = DispatchQueue(label: "RemoteBuddy.logger")
     private let enabledLock: OSAllocatedUnfairLock<Bool>
@@ -59,6 +60,8 @@ final class AppLogger: PublicDiagnosticEventSink, @unchecked Sendable {
     private var oversizedRecordWasReported = false
     private var fileLoggingStopped = false
     private var nextSequence: UInt64 = 0
+    private var recentRecords: [String] = []
+    private var nextRecentRecordIndex = 0
 
     static func defaultLogDirectory(libraries: [URL], home: URL) -> URL {
         let library = libraries.first ?? home.appendingPathComponent("Library", isDirectory: true)
@@ -297,6 +300,16 @@ final class AppLogger: PublicDiagnosticEventSink, @unchecked Sendable {
         queue.sync {}
     }
 
+    func appendingRecentLog(to summary: String) -> String {
+        dispatchPrecondition(condition: .notOnQueue(queue))
+        return queue.sync {
+            guard !recentRecords.isEmpty else { return summary }
+            let orderedRecords = recentRecords[nextRecentRecordIndex...] + recentRecords[..<nextRecentRecordIndex]
+            return summary + "\n\n### 最近运行日志 / Recent Runtime Log\n\n~~~text\n" +
+                orderedRecords.joined() + "~~~"
+        }
+    }
+
     /// Test-only style entry point that writes UTF-8 text.
     func writeSynchronously(_ message: String, at date: Date) {
         guard isEnabled else { return }
@@ -383,6 +396,12 @@ final class AppLogger: PublicDiagnosticEventSink, @unchecked Sendable {
                 try withExclusiveLogLock { try rotateCurrentSession() }
             }
             try appendAtomically(record)
+            if recentRecords.count < Self.diagnosticLogLineLimit {
+                recentRecords.append(line)
+            } else {
+                recentRecords[nextRecentRecordIndex] = line
+                nextRecentRecordIndex = (nextRecentRecordIndex + 1) % Self.diagnosticLogLineLimit
+            }
             nextSequence += 1
         } catch {
             diagnose("log_write_failed", error: error)

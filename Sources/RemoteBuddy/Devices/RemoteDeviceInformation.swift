@@ -7,11 +7,45 @@ struct RemoteDeviceInformation: Equatable {
     var identity: RemoteHIDIdentity?
     var hidVersion: UInt16?
     var capabilities: ATVVCapabilities?
+    var hardwareRevision: String?
 
     static func deviceString(_ data: Data) -> String? {
         guard let value = String(data: data, encoding: .utf8) else { return nil }
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines.union(.controlCharacters))
         return trimmed.isEmpty ? nil : trimmed
+    }
+
+    static func formatLogValue(_ raw: String) -> String {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines.union(.controlCharacters))
+        var collapsed = ""
+        var pendingSpace = false
+        for scalar in trimmed.unicodeScalars {
+            if CharacterSet.newlines.union(.controlCharacters).contains(scalar) {
+                pendingSpace = !collapsed.isEmpty
+            } else {
+                if pendingSpace {
+                    collapsed.append(" ")
+                    pendingSpace = false
+                }
+                collapsed.append(Character(scalar))
+            }
+        }
+        let safe = collapsed.replacingOccurrences(of: "\"", with: "'")
+        return safe.contains(" ") ? "\"\(safe)\"" : safe
+    }
+
+    static func firmwareLogLine(from data: Data) -> String {
+        if let value = deviceString(data) {
+            return "BLE FIRMWARE observed firmwareRevision=\(formatLogValue(value))"
+        }
+        return "BLE FIRMWARE unreadable bytes=\(data.count)"
+    }
+
+    static func hardwareLogLine(from data: Data) -> String {
+        if let value = deviceString(data) {
+            return "BLE HARDWARE observed hardwareRevision=\(formatLogValue(value))"
+        }
+        return "BLE HARDWARE unreadable bytes=\(data.count)"
     }
 
     var identityValue: String? {

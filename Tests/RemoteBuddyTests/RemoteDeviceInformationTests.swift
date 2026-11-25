@@ -85,4 +85,73 @@ struct RemoteDeviceInformationTests {
         )
         #expect(RemoteDeviceInformation().conciseHardwareSummary(using: localization) == nil)
     }
+
+    @Test func formatsPnPLogFieldsAcrossBatchesAndMalformedPayloads() {
+        let v0110 = Data([1, 0xD1, 0x18, 0x50, 0x94, 0x10, 0x01])
+        let v011B = Data([2, 0xD1, 0x18, 0x50, 0x94, 0x1B, 0x01])
+        let vZero = Data([2, 0xD1, 0x18, 0x50, 0x94, 0x00, 0x00])
+        let malformed = Data([1, 0xD1, 0x18])
+
+        #expect(RemoteHIDIdentity.parsePnPInfo(v0110) == RemoteHIDIdentity.PnPInfo(
+            vendorIDSource: 1,
+            identity: .chromecast,
+            productVersion: 0x0110
+        ))
+        #expect(RemoteHIDIdentity.pnpLogFields(from: v0110) == "vendor_source=1 vid=18D1 pid=9450 hid_version=0x0110")
+        #expect(RemoteHIDIdentity.pnpLogFields(from: v011B) == "vendor_source=2 vid=18D1 pid=9450 hid_version=0x011B")
+        #expect(RemoteHIDIdentity.pnpLogFields(from: vZero) == "vendor_source=2 vid=18D1 pid=9450 hid_version=none")
+        #expect(RemoteHIDIdentity.pnpLogFields(from: malformed) == "unreadable raw_bytes=3")
+    }
+
+    @Test func formatsFirmwareAndHardwareRevisionLogLinesSafely() {
+        #expect(RemoteDeviceInformation.firmwareLogLine(from: Data("26.2\0".utf8)) == "BLE FIRMWARE observed firmwareRevision=26.2")
+        #expect(RemoteDeviceInformation.hardwareLogLine(from: Data("PVT/MP\r\n".utf8)) == "BLE HARDWARE observed hardwareRevision=PVT/MP")
+        #expect(RemoteDeviceInformation.hardwareLogLine(from: Data("CR PVT/MP".utf8)) == "BLE HARDWARE observed hardwareRevision=\"CR PVT/MP\"")
+        #expect(RemoteDeviceInformation.firmwareLogLine(from: Data([0xFF, 0xFE])) == "BLE FIRMWARE unreadable bytes=2")
+        #expect(RemoteDeviceInformation.hardwareLogLine(from: Data(" \0\n".utf8)) == "BLE HARDWARE unreadable bytes=3")
+    }
+
+    @Test func formatsHIDDeviceHardwareInfoLogFields() {
+        let complete = HIDDeviceHardwareInfo(
+            identity: .chromecast,
+            versionNumber: 0x0110,
+            maxInputReportSize: 3,
+            reportDescriptorBytes: 57,
+            indexedConsumerLayout: true,
+            modelNumber: "A0",
+            firmwareRevision: "26.2",
+            hardwareRevision: "PVT/MP"
+        )
+        #expect(
+            complete.logFields
+                == "vid=18D1 pid=9450 hid_version=0x0110 max_input_bytes=3 descriptor_bytes=57 indexed_consumer=true model=A0 firmware=26.2 hardware=PVT/MP"
+        )
+
+        let spacedHardware = HIDDeviceHardwareInfo(
+            identity: .chromecast,
+            versionNumber: 0x0110,
+            maxInputReportSize: 3,
+            reportDescriptorBytes: 57,
+            indexedConsumerLayout: true,
+            modelNumber: "A0",
+            firmwareRevision: "26.0",
+            hardwareRevision: "CR PVT/MP"
+        )
+        #expect(
+            spacedHardware.logFields
+                == "vid=18D1 pid=9450 hid_version=0x0110 max_input_bytes=3 descriptor_bytes=57 indexed_consumer=true model=A0 firmware=26.0 hardware=\"CR PVT/MP\""
+        )
+
+        let empty = HIDDeviceHardwareInfo(
+            identity: nil,
+            versionNumber: nil,
+            maxInputReportSize: nil,
+            reportDescriptorBytes: nil,
+            indexedConsumerLayout: nil,
+            modelNumber: nil,
+            firmwareRevision: nil,
+            hardwareRevision: nil
+        )
+        #expect(empty.logFields.isEmpty)
+    }
 }

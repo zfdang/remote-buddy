@@ -348,7 +348,7 @@ extension BluetoothRemoteBridge {
         if let deviceInformationService = peripheral.services?.first(where: {
             $0.uuid == deviceInformationServiceUUID
         }) {
-            peripheral.discoverCharacteristics([modelNumberUUID, pnpIDUUID, firmwareRevisionUUID], for: deviceInformationService)
+            peripheral.discoverCharacteristics([modelNumberUUID, pnpIDUUID, firmwareRevisionUUID, hardwareRevisionUUID], for: deviceInformationService)
         } else if googleCandidate {
             failInitialization(LocalizedMessage("google.remote.unconfirmed_identity"))
         } else {
@@ -453,7 +453,7 @@ extension BluetoothRemoteBridge {
             }
             for characteristic in characteristics where
                 characteristic.uuid == modelNumberUUID || characteristic.uuid == pnpIDUUID ||
-                characteristic.uuid == firmwareRevisionUUID {
+                characteristic.uuid == firmwareRevisionUUID || characteristic.uuid == hardwareRevisionUUID {
                 peripheral.readValue(for: characteristic)
             }
             return
@@ -621,6 +621,7 @@ extension BluetoothRemoteBridge {
             reportedHIDIdentity = RemoteHIDIdentity.fromPnP(data)
             deviceInformation.identity = reportedHIDIdentity
             deviceInformation.hidVersion = RemoteHIDIdentity.productVersionFromPnP(data) ?? deviceInformation.hidVersion
+            AppLogger.shared.write("BLE PNP observed \(RemoteHIDIdentity.pnpLogFields(from: data))")
             if googleCandidate {
                 guard googleReadiness.acceptIdentity(reportedHIDIdentity) else {
                     failInitialization(LocalizedMessage("google.remote.unconfirmed_identity"))
@@ -660,6 +661,12 @@ extension BluetoothRemoteBridge {
         }
         if characteristic.uuid == firmwareRevisionUUID {
             deviceInformation.firmwareRevision = RemoteDeviceInformation.deviceString(data)
+            AppLogger.shared.write(RemoteDeviceInformation.firmwareLogLine(from: data))
+            return
+        }
+        if characteristic.uuid == hardwareRevisionUUID {
+            deviceInformation.hardwareRevision = RemoteDeviceInformation.deviceString(data)
+            AppLogger.shared.write(RemoteDeviceInformation.hardwareLogLine(from: data))
             return
         }
         if characteristic.uuid == batteryLevelUUID {

@@ -66,11 +66,22 @@ extension HIDRemoteMonitor {
         diagnosticLogger("HID DEVICE probing mode=monitored")
     }
 
+    private func hidConnectionMetadataSuffix(for device: IOHIDDevice) -> String {
+        let deviceMetadata = metadata(for: device)
+        let fields = RemoteHIDIdentity.readHardwareInfo(
+            from: device,
+            metadataIdentity: deviceMetadata.identity,
+            reportDescriptor: deviceMetadata.reportDescriptor
+        ).logFields
+        return fields.isEmpty ? "" : " \(fields)"
+    }
+
     func promoteProbedDevice(_ device: IOHIDDevice, fingerprint: String) -> Bool {
         guard let selectedIndex = probedDevices.firstIndex(where: { CFEqual($0, device) }) else {
             return false
         }
         let selectedDevice = probedDevices.remove(at: selectedIndex)
+        let metadataSuffix = hidConnectionMetadataSuffix(for: selectedDevice)
         probedDevices.forEach {
             IOHIDDeviceClose($0, IOOptionBits(kIOHIDOptionsTypeNone))
         }
@@ -84,7 +95,7 @@ extension HIDRemoteMonitor {
                 ? "button_mapping.status.connected_fallback"
                 : "button_mapping.status.connected_system_actions_may_remain"
         ))
-        AppLogger.shared.write("HID CONNECTED mode=probed")
+        AppLogger.shared.write("HID CONNECTED mode=probed\(metadataSuffix)")
         onDeviceConnected?(profileID, fingerprint)
         return true
     }
@@ -131,7 +142,7 @@ extension HIDRemoteMonitor {
             deviceFingerprint = fingerprint
             activeDeviceIsSeized = true
             updateStatus(LocalizedMessage("button_mapping.status.connected"))
-            AppLogger.shared.write("HID CONNECTED mode=seized")
+            AppLogger.shared.write("HID CONNECTED mode=seized\(hidConnectionMetadataSuffix(for: device))")
             onDeviceConnected?(profileID, fingerprint)
             return true
         case let .monitored(seizeAttemptResult):
@@ -145,11 +156,13 @@ extension HIDRemoteMonitor {
                         : "button_mapping.status.connected_system_actions_may_remain"
                 )
             )
+            let metadataSuffix = hidConnectionMetadataSuffix(for: device)
             AppLogger.shared.write(
                 seizeAttemptResult.map {
                     "HID CONNECTED mode=monitored " +
-                        AppLogger.errorFields(domain: "io_return", code: Int($0), fieldPrefix: "seize_error")
-                } ?? "HID CONNECTED mode=monitored reason=t1_passthrough"
+                        AppLogger.errorFields(domain: "io_return", code: Int($0), fieldPrefix: "seize_error") +
+                        metadataSuffix
+                } ?? "HID CONNECTED mode=monitored reason=t1_passthrough\(metadataSuffix)"
             )
             onDeviceConnected?(profileID, fingerprint)
             return true

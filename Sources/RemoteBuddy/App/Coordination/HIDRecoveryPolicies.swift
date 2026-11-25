@@ -141,7 +141,7 @@ enum RuntimePermissionIssue: Equatable {
         case .inputMonitoringPermissionDenied:
             return "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent"
         case .postEventAccessRestricted:
-            return "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
+            return "x-apple.systempreferences:com.apple.preference.security?Privacy"
         case .bluetoothUnavailable:
             return "x-apple.systempreferences:com.apple.BluetoothSettings"
         }

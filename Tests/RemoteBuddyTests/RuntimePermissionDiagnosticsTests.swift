@@ -409,6 +409,23 @@ struct RuntimePermissionDiagnosticsTests {
             #expect(zh != key)
             #expect(en != zh)
         }
+
+        let detailKeys = [
+            "onboarding.recovery.permission.post_event_restricted.detail",
+            "onboarding.recovery.permission.post_event_restricted.detail.with_restart",
+            "permission.post_event_restricted.banner.detail",
+            "permission.post_event_restricted.banner.detail.with_restart"
+        ]
+        for key in detailKeys {
+            store.select(.english)
+            let en = store.text(key)
+            #expect(en.contains("System & App Protection Override"))
+            #expect(en.contains("Accessibility"))
+            store.select(.simplifiedChinese)
+            let zh = store.text(key)
+            #expect(zh.contains("System & App Protection Override"))
+            #expect(zh.contains("辅助功能"))
+        }
     }
 
     @Test func diagnosisDetectsRestrictedPostEventAccessAndSnapshotTracksIt() {
@@ -425,7 +442,7 @@ struct RuntimePermissionDiagnosticsTests {
         #expect(restricted?.diagnosticIdentifier == "post_event_access_restricted")
         #expect(
             restricted?.preferredPrivacySettingsURLString ==
-                "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
+                "x-apple.systempreferences:com.apple.preference.security?Privacy"
         )
 
         #expect(

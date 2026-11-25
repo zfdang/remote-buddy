@@ -481,6 +481,18 @@ struct RuntimePermissionDiagnosticsTests {
             ) == .permissionDesynced(signals: ["bluetooth_unauthorized"])
         )
 
+        #expect(
+            RuntimePermissionDiagnosisPolicy.diagnose(
+                bluetoothGranted: true,
+                inputMonitoringGranted: true,
+                accessibilityGranted: true,
+                postEventAccessGranted: false,
+                connectionStatusKey: BluetoothStatusKeys.off,
+                hidStatusKey: "button_mapping.status.connected",
+                hidFilterFailure: .none
+            ) == .bluetoothUnavailable(statusKey: BluetoothStatusKeys.off)
+        )
+
         let defaulted = HIDPermissionSnapshot(inputMonitoringGranted: true, accessibilityGranted: true)
         let restrictedSnapshot = HIDPermissionSnapshot(
             inputMonitoringGranted: true,

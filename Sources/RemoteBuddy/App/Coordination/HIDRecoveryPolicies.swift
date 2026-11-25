@@ -210,11 +210,11 @@ enum RuntimePermissionDiagnosisPolicy {
         if hidNotPermitted || hidRuntimePermissionDenied {
             return .inputMonitoringPermissionDenied
         }
-        if accessibilityGranted, !resolvedPostEventGranted {
-            return .postEventAccessRestricted
-        }
         if unavailableBluetoothStatusKeys.contains(connectionStatusKey) {
             return .bluetoothUnavailable(statusKey: connectionStatusKey)
+        }
+        if accessibilityGranted, !resolvedPostEventGranted {
+            return .postEventAccessRestricted
         }
         return nil
     }

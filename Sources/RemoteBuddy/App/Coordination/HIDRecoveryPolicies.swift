@@ -5,10 +5,22 @@ import CoreAudio
 import CoreBluetooth
 import Foundation
 
+struct HIDMonitoringPermissions: Equatable {
+    let inputMonitoringGranted: Bool
+    let accessibilityGranted: Bool
+}
+
 struct HIDPermissionSnapshot: Equatable {
     let inputMonitoringGranted: Bool
     let accessibilityGranted: Bool
     let postEventAccessGranted: Bool
+
+    var monitoringPermissions: HIDMonitoringPermissions {
+        HIDMonitoringPermissions(
+            inputMonitoringGranted: inputMonitoringGranted,
+            accessibilityGranted: accessibilityGranted
+        )
+    }
 
     init(
         inputMonitoringGranted: Bool,
@@ -49,7 +61,7 @@ enum HIDPermissionRecoveryPolicy {
               ),
               let previous
         else { return false }
-        return previous != current || (monitoringInterrupted &&
+        return previous.monitoringPermissions != current.monitoringPermissions || (monitoringInterrupted &&
             current.inputMonitoringGranted && current.accessibilityGranted)
     }
 }

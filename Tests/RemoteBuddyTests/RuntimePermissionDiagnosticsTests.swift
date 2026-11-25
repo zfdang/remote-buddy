@@ -663,4 +663,107 @@ struct RuntimePermissionDiagnosticsTests {
             ) == "onboarding.voice_test.success"
         )
     }
+
+    @Test func postEventPermissionChangesRefreshDiagnosisWithoutRebuildingHIDMonitors() throws {
+        let granted = HIDPermissionSnapshot(
+            inputMonitoringGranted: true,
+            accessibilityGranted: true,
+            postEventAccessGranted: true
+        )
+        let restricted = HIDPermissionSnapshot(
+            inputMonitoringGranted: true,
+            accessibilityGranted: true,
+            postEventAccessGranted: false
+        )
+        let denied = HIDPermissionSnapshot(
+            inputMonitoringGranted: true,
+            accessibilityGranted: false,
+            postEventAccessGranted: false
+        )
+
+        #expect(
+            !HIDPermissionRecoveryPolicy.shouldReapplySettings(
+                started: true,
+                customMappingEnabled: true,
+                previous: granted,
+                current: restricted
+            )
+        )
+        #expect(
+            !HIDPermissionRecoveryPolicy.shouldReapplySettings(
+                started: true,
+                customMappingEnabled: true,
+                previous: restricted,
+                current: granted
+            )
+        )
+        #expect(
+            HIDPermissionRecoveryPolicy.shouldReapplySettings(
+                started: true,
+                customMappingEnabled: true,
+                previous: restricted,
+                current: denied
+            )
+        )
+
+        #expect(
+            !BridgeAppModel.shouldReapplyHIDSettingsBeforeVoiceStart(
+                customMappingEnabled: true,
+                mode: .rightOption,
+                fnTapModeEnabled: false,
+                requiresOrderedFn: false,
+                hasHardwareVoiceKey: true,
+                hasMatchingHIDServices: true,
+                isVoiceKeyNeutralized: true,
+                currentServicesMatchDesiredMapping: true,
+                fnTapSessionEnabled: true,
+                monitoringInterrupted: false,
+                monitoringConfigurationApplied: true,
+                appliedPermissionSnapshot: granted,
+                currentPermissionSnapshot: restricted
+            )
+        )
+
+        let suiteName = "runtime-perm-no-hid-rebuild-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        var postEventGranted = true
+        let model = BridgeAppModel(
+            settings: AppSettings(defaults: defaults),
+            permissionSnapshotProvider: {
+                HIDPermissionSnapshot(
+                    inputMonitoringGranted: true,
+                    accessibilityGranted: true,
+                    postEventAccessGranted: postEventGranted
+                )
+            }
+        )
+        let initialConfig = BridgeAppModel.HIDMonitoringConfiguration(
+            customMappingEnabled: true,
+            backOnlyMode: false,
+            powerKeySuppressed: true,
+            waitForMatchingServices: false,
+            allowedLocationIDs: nil,
+            targets: [],
+            compatibleHIDIdentities: [],
+            excludedDiscoveryFingerprints: [],
+            monitoringPermissions: granted.monitoringPermissions
+        )
+        model.started = true
+        model.appliedHIDPermissionSnapshot = granted
+        model.appliedHIDMonitoringConfiguration = initialConfig
+
+        postEventGranted = false
+        model.refreshHIDAfterPermissionChange()
+        #expect(model.runtimePermissionIssue == .postEventAccessRestricted)
+        #expect(model.appliedHIDMonitoringConfiguration == initialConfig)
+        #expect(model.appliedHIDPermissionSnapshot == restricted)
+
+        postEventGranted = true
+        model.refreshHIDAfterPermissionChange()
+        #expect(model.runtimePermissionIssue == nil)
+        #expect(model.appliedHIDMonitoringConfiguration == initialConfig)
+        #expect(model.appliedHIDPermissionSnapshot == granted)
+    }
 }

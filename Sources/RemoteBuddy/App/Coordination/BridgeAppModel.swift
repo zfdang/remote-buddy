@@ -258,7 +258,7 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
         let targets: [HIDMonitorTargetConfiguration]
         let compatibleHIDIdentities: [RemoteHIDIdentity]
         let excludedDiscoveryFingerprints: Set<String>
-        let permissionSnapshot: HIDPermissionSnapshot
+        let monitoringPermissions: HIDMonitoringPermissions
     }
 
     var hidPowerKeySuppressed = false

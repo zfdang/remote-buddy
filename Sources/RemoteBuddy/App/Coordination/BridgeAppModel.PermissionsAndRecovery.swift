@@ -45,7 +45,9 @@ extension BridgeAppModel {
         if !currentServicesMatchDesiredMapping, hasMatchingHIDServices { return true }
         guard customMappingEnabled || needsNeutralization || requiresT1VoiceKeySuppression else { return false }
         if monitoringInterrupted || !monitoringConfigurationApplied { return true }
-        if appliedPermissionSnapshot != currentPermissionSnapshot { return true }
+        if appliedPermissionSnapshot?.monitoringPermissions != currentPermissionSnapshot.monitoringPermissions {
+            return true
+        }
         if !currentServicesMatchDesiredMapping,
            hasMatchingHIDServices || (hasHardwareVoiceKey && needsNeutralization) || requiresT1VoiceKeySuppression {
             return true
@@ -120,7 +122,7 @@ extension BridgeAppModel {
     }
 
     func refreshHIDAfterPermissionChange() {
-        let current = HIDPermissionSnapshot.current
+        let current = permissionSnapshotProvider()
         // Permission polling can stop before the saved snapshot changes. Recover a deferred
         // key-up whenever permission is available and the voice session has already ended.
         if current.accessibilityGranted, !isStreaming, voiceKeyLatch.isHeld {
@@ -137,6 +139,9 @@ extension BridgeAppModel {
             previous: appliedHIDPermissionSnapshot,
             current: current
         ) else {
+            if appliedHIDPermissionSnapshot != nil {
+                appliedHIDPermissionSnapshot = current
+            }
             refreshRuntimePermissionDiagnosis(trigger: "permission_poll")
             return
         }

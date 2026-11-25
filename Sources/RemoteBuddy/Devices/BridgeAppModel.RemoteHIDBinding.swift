@@ -35,6 +35,9 @@ extension BridgeAppModel {
         if bridge.deviceInformation.hidVersion == nil,
            let hidVersion = RemoteHIDIdentity.readVersionNumber(forFingerprint: candidate.binding.fingerprint) {
             bridge.deviceInformation.hidVersion = hidVersion
+            AppLogger.shared.write(
+                "REMOTE HID version_observed hid_version=\(String(format: "0x%04X", hidVersion)) source=iohid"
+            )
         }
         bindCompatibleRemote(candidate, profileID: profileID, select: false)
     }
@@ -74,7 +77,10 @@ extension BridgeAppModel {
         }
         if select { selectRemoteProfile(profileID) }
         if started { applyHIDSettings() }
-        AppLogger.shared.write("REMOTE HID binding_saved custom_identity=\(!candidate.binding.identity.isStandard)")
+        AppLogger.shared.write(
+            "REMOTE HID binding_saved custom_identity=\(!candidate.binding.identity.isStandard) " +
+                String(format: "vid=%04X pid=%04X", candidate.binding.identity.vendorID, candidate.binding.identity.productID)
+        )
         return true
     }
 }

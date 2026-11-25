@@ -13,25 +13,74 @@ struct RemoteHIDIdentity: Codable, Hashable {
         [kIOHIDVendorIDKey: Int(vendorID), kIOHIDProductIDKey: Int(productID)]
     }
 
+    struct PnPInfo: Equatable {
+        let vendorIDSource: UInt8
+        let identity: RemoteHIDIdentity
+        let productVersion: UInt16?
+    }
+
     // Bluetooth DIS PnP ID: namespace byte, then little-endian VID/PID/version.
     // It is only a hint until matched to actual Bluetooth HID metadata.
-    private static func parsePnP(_ data: Data) -> (identity: Self, productVersion: UInt16)? {
+    static func parsePnPInfo(_ data: Data) -> PnPInfo? {
         let bytes = Array(data)
         guard bytes.count == 7, bytes[0] == 1 || bytes[0] == 2 else { return nil }
         let vendor = UInt16(bytes[1]) | UInt16(bytes[2]) << 8
         guard vendor != 0 else { return nil }
         let product = UInt16(bytes[3]) | UInt16(bytes[4]) << 8
         let version = UInt16(bytes[5]) | UInt16(bytes[6]) << 8
-        return (Self(vendorID: vendor, productID: product), version)
+        return PnPInfo(
+            vendorIDSource: bytes[0],
+            identity: Self(vendorID: vendor, productID: product),
+            productVersion: version == 0 ? nil : version
+        )
     }
 
     static func fromPnP(_ data: Data) -> Self? {
-        parsePnP(data)?.identity
+        parsePnPInfo(data)?.identity
     }
 
     static func productVersionFromPnP(_ data: Data) -> UInt16? {
-        guard let version = parsePnP(data)?.productVersion, version != 0 else { return nil }
-        return version
+        parsePnPInfo(data)?.productVersion
+    }
+
+    static func pnpLogFields(from data: Data) -> String {
+        guard let info = parsePnPInfo(data) else {
+            return "unreadable raw_bytes=\(data.count)"
+        }
+        let vid = String(format: "%04X", info.identity.vendorID)
+        let pid = String(format: "%04X", info.identity.productID)
+        let hidVersion = info.productVersion.map { String(format: "0x%04X", $0) } ?? "none"
+        return "vendor_source=\(info.vendorIDSource) vid=\(vid) pid=\(pid) hid_version=\(hidVersion)"
+    }
+
+    private static func trimmedProperty(_ device: IOHIDDevice, key: String) -> String? {
+        guard let raw = IOHIDDeviceGetProperty(device, key as CFString) as? String else { return nil }
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines.union(.controlCharacters))
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    static func readHardwareInfo(
+        from device: IOHIDDevice,
+        metadataIdentity: RemoteHIDIdentity? = nil,
+        reportDescriptor: Data? = nil
+    ) -> HIDDeviceHardwareInfo {
+        let identity = metadataIdentity ?? read(from: device)
+        let versionNumber = readVersionNumber(from: device)
+        let maxInput = (IOHIDDeviceGetProperty(device, kIOHIDMaxInputReportSizeKey as CFString) as? NSNumber)?.intValue
+        let maxInputReportSize = maxInput.flatMap { $0 > 0 ? $0 : nil }
+        let descriptor = reportDescriptor ?? (IOHIDDeviceGetProperty(device, kIOHIDReportDescriptorKey as CFString) as? Data)
+        let reportDescriptorBytes = descriptor.flatMap { $0.isEmpty ? nil : $0.count }
+        let indexedConsumerLayout = descriptor.map { G9N9NProtocol.usesIndexedConsumerLayout($0) }
+        return HIDDeviceHardwareInfo(
+            identity: identity,
+            versionNumber: versionNumber,
+            maxInputReportSize: maxInputReportSize,
+            reportDescriptorBytes: reportDescriptorBytes,
+            indexedConsumerLayout: indexedConsumerLayout,
+            modelNumber: trimmedProperty(device, key: "ModelNumber"),
+            firmwareRevision: trimmedProperty(device, key: "kBTFirmwareRevisionKey"),
+            hardwareRevision: trimmedProperty(device, key: "kBTHardwareRevisionKey")
+        )
     }
 
     static func read(from device: IOHIDDevice) -> Self? {
@@ -60,6 +109,46 @@ struct RemoteHIDIdentity: Codable, Hashable {
             return version
         }
         return nil
+    }
+}
+
+struct HIDDeviceHardwareInfo: Equatable {
+    let identity: RemoteHIDIdentity?
+    let versionNumber: UInt16?
+    let maxInputReportSize: Int?
+    let reportDescriptorBytes: Int?
+    let indexedConsumerLayout: Bool?
+    let modelNumber: String?
+    let firmwareRevision: String?
+    let hardwareRevision: String?
+
+    var logFields: String {
+        var fields: [String] = []
+        if let identity {
+            fields.append(String(format: "vid=%04X pid=%04X", identity.vendorID, identity.productID))
+        }
+        if let versionNumber {
+            fields.append(String(format: "hid_version=0x%04X", versionNumber))
+        }
+        if let maxInputReportSize {
+            fields.append("max_input_bytes=\(maxInputReportSize)")
+        }
+        if let reportDescriptorBytes {
+            fields.append("descriptor_bytes=\(reportDescriptorBytes)")
+        }
+        if let indexedConsumerLayout {
+            fields.append("indexed_consumer=\(indexedConsumerLayout)")
+        }
+        if let modelNumber {
+            fields.append("model=\(RemoteDeviceInformation.formatLogValue(modelNumber))")
+        }
+        if let firmwareRevision {
+            fields.append("firmware=\(RemoteDeviceInformation.formatLogValue(firmwareRevision))")
+        }
+        if let hardwareRevision {
+            fields.append("hardware=\(RemoteDeviceInformation.formatLogValue(hardwareRevision))")
+        }
+        return fields.joined(separator: " ")
     }
 }
 

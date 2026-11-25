@@ -349,6 +349,7 @@ final class BluetoothRemoteBridge: NSObject {
     let modelNumberUUID = CBUUID(string: "2A24")
     let pnpIDUUID = CBUUID(string: "2A50")
     let firmwareRevisionUUID = CBUUID(string: "2A26")
+    let hardwareRevisionUUID = CBUUID(string: "2A27")
 
     var deviceIdentifier: UUID? {
         peripheral?.identifier ?? targetIdentifier

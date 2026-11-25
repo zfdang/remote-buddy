@@ -53,11 +53,13 @@ struct SystemPermissionOverrides: Equatable, Sendable {
     var bluetooth: CBManagerAuthorization?
     var inputMonitoring: Bool?
     var accessibility: Bool?
+    var postEventAccess: Bool? = nil
 
     static let allGranted = SystemPermissionOverrides(
         bluetooth: .allowedAlways,
         inputMonitoring: true,
-        accessibility: true
+        accessibility: true,
+        postEventAccess: true
     )
 }
 
@@ -84,6 +86,7 @@ struct SettingsDiagnosticSnapshot: Equatable {
     let bluetoothGranted: Bool
     let inputMonitoringGranted: Bool
     let accessibilityGranted: Bool
+    let postEventAccessGranted: Bool
     let remoteConnected: Bool
     let remoteModel: String
     let virtualMicrophoneReady: Bool
@@ -110,6 +113,7 @@ struct SettingsDiagnosticSnapshot: Equatable {
         bluetoothGranted: Bool,
         inputMonitoringGranted: Bool,
         accessibilityGranted: Bool,
+        postEventAccessGranted: Bool? = nil,
         remoteConnected: Bool = false,
         remoteModel: String = "none",
         virtualMicrophoneReady: Bool = false,
@@ -135,6 +139,7 @@ struct SettingsDiagnosticSnapshot: Equatable {
         self.bluetoothGranted = bluetoothGranted
         self.inputMonitoringGranted = inputMonitoringGranted
         self.accessibilityGranted = accessibilityGranted
+        self.postEventAccessGranted = postEventAccessGranted ?? accessibilityGranted
         self.remoteConnected = remoteConnected
         self.remoteModel = remoteModel
         self.virtualMicrophoneReady = virtualMicrophoneReady
@@ -190,6 +195,7 @@ struct SettingsDiagnosticSnapshot: Equatable {
             "- 蓝牙 / Bluetooth: \(bluetoothGranted ? "已授权 (Granted)" : "未授权 (Denied)")",
             "- 输入监控 / Input Monitoring: \(inputMonitoringGranted ? "已授权 (Granted)" : "未授权 (Denied)")",
             "- 辅助功能 / Accessibility: \(accessibilityGranted ? "已授权 (Granted)" : "未授权 (Denied)")",
+            "- 全局按键注入 / Post Event Access: \(postEventAccessGranted ? "已授权 (Granted)" : "受限或未授权 (Denied/Restricted)")",
             "- 运行时权限诊断 / Runtime Issue: \(runtimePermissionIssue)",
             "- 权限诊断触发来源 / Permission Diagnosis Trigger: \(runtimePermissionDiagnosisTrigger)",
             "- 权限诊断更新时间 / Permission Issue Updated At: \(runtimePermissionIssueUpdatedAt.map(Self.timestamp) ?? "none")",
@@ -219,6 +225,7 @@ struct SettingsDiagnosticSnapshot: Equatable {
             "bluetooth=\(bluetoothGranted) " +
             "input_monitoring=\(inputMonitoringGranted) " +
             "accessibility=\(accessibilityGranted) " +
+            "post_event=\(postEventAccessGranted) " +
             "remote_connected=\(remoteConnected) " +
             "remote_model=\(remoteModel)"
     }

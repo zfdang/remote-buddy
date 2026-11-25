@@ -89,7 +89,7 @@ extension OnboardingView {
             requestInputMonitoringPermission()
         case .accessibilityPermissionDenied:
             requestAccessibilityPermission()
-        case .permissionDesynced:
+        case .permissionDesynced, .postEventAccessRestricted:
             openPrivacySecuritySettings(
                 urlString: model.runtimePermissionIssue?.preferredPrivacySettingsURLString
                     ?? "x-apple.systempreferences:com.apple.preference.security?Privacy"

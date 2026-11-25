@@ -5,6 +5,7 @@ enum FirstUseFailureReason: String, Codable, Equatable {
     case bluetoothPermissionDenied = "permission.bluetooth_denied"
     case inputMonitoringPermissionDenied = "permission.input_monitoring_denied"
     case accessibilityPermissionDenied = "permission.accessibility_denied"
+    case postEventAccessRestricted = "permission.post_event_restricted"
     case permissionDesynced = "permission.desynced"
     case remoteNotFound = "remote.not_found"
     case remoteButtonNotReady = "remote.button_not_ready"
@@ -27,6 +28,7 @@ enum FirstUseFailureReason: String, Codable, Equatable {
         case .bluetoothPermissionDenied,
              .inputMonitoringPermissionDenied,
              .accessibilityPermissionDenied,
+             .postEventAccessRestricted,
              .permissionDesynced:
             return .permissions
         case .remoteNotFound, .remoteButtonNotReady:
@@ -244,6 +246,10 @@ struct FirstUseDiagnosticContext: Equatable {
            runtimePermissionIssue?.isPermissionDesynced == true {
             return .permissionDesynced
         }
+        if [.controls, .voiceTrigger, .voiceTest].contains(step),
+           runtimePermissionIssue?.isPostEventAccessRestricted == true {
+            return .postEventAccessRestricted
+        }
         if [.remote, .controls, .voiceTrigger, .voiceTest].contains(step),
            let permission = OnboardingFlowPolicy.missingRuntimePermission(
                controlMethod: controlMethod, capabilities: capabilities) {
@@ -262,6 +268,9 @@ struct FirstUseDiagnosticContext: Equatable {
             if !capabilities.accessibilityGranted { return .accessibilityPermissionDenied }
             if runtimePermissionIssue?.isPermissionDesynced == true {
                 return .permissionDesynced
+            }
+            if runtimePermissionIssue?.isPostEventAccessRestricted == true {
+                return .postEventAccessRestricted
             }
             if !hasSelectedAudioUID { return .audioNoOutputDevice }
             if !capabilities.audioOutputSelected { return .audioSelectedDeviceMissing }
@@ -353,6 +362,7 @@ struct FirstUseDiagnosticSnapshot {
     let appLanguage: String
     var controlSource: OnboardingControlSource = .unselected
     var voiceBinding: VoiceToolUserBinding? = nil
+    var postEventAccessGranted: Bool? = nil
     let generatedAt = Date()
 
     var onboardingVoiceKeyPolicy: String {
@@ -410,6 +420,7 @@ struct FirstUseDiagnosticSnapshot {
             "permission_bluetooth=\(capabilities.bluetoothGranted)",
             "permission_input_monitoring=\(capabilities.inputMonitoringGranted)",
             "permission_accessibility=\(capabilities.accessibilityGranted)",
+            "permission_post_event=\(postEventAccessGranted ?? capabilities.accessibilityGranted)",
             "control_connected=\(capabilities.remoteConnected)",
             "control_button_observed=\(capabilities.remoteButtonObserved)",
             "remote_voice_button_press_count=\(context.remoteInput.voiceButtonPressCount)",

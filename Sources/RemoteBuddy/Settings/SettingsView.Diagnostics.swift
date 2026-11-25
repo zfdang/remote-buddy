@@ -61,15 +61,21 @@ extension SettingsView {
                 }
             }
 
-            if let runtimeIssue = model.runtimePermissionIssue, runtimeIssue.isPermissionDesynced {
+            if let runtimeIssue = model.runtimePermissionIssue,
+               runtimeIssue.isPermissionDesynced || runtimeIssue.isPostEventAccessRestricted {
                 Divider().padding(.leading, 48)
                 VStack(alignment: .leading, spacing: 8) {
                     Label {
-                        Text(localization.text(
+                        let detailKey = if runtimeIssue.isPostEventAccessRestricted {
+                            model.canRelaunchApplication
+                                ? "permission.post_event_restricted.banner.detail.with_restart"
+                                : "permission.post_event_restricted.banner.detail"
+                        } else {
                             model.canRelaunchApplication
                                 ? "permission.desync.banner.detail.with_restart"
                                 : "permission.desync.banner.detail"
-                        ))
+                        }
+                        Text(localization.text(detailKey))
                             .font(.system(size: 12))
                             .fixedSize(horizontal: false, vertical: true)
                     } icon: {

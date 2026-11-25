@@ -146,6 +146,7 @@ extension BridgeAppModel {
             "HID PERMISSIONS recovery reason=\(recoveryReason) " +
                 "input=\(previous?.inputMonitoringGranted ?? false)->\(current.inputMonitoringGranted) " +
                 "accessibility=\(previous?.accessibilityGranted ?? false)->\(current.accessibilityGranted) " +
+                "post_event=\(previous?.postEventAccessGranted ?? false)->\(current.postEventAccessGranted) " +
                 "recovery=apply_settings"
         )
 
@@ -269,6 +270,7 @@ extension BridgeAppModel {
             bluetoothGranted: bluetoothGranted,
             inputMonitoringGranted: permissions.inputMonitoringGranted,
             accessibilityGranted: permissions.accessibilityGranted,
+            postEventAccessGranted: permissions.postEventAccessGranted,
             connectionStatusKey: connectionStatus.key,
             hidStatusKey: hidStatus.key,
             hidFilterFailure: hidFilterFailureState
@@ -291,6 +293,7 @@ extension BridgeAppModel {
                         "bt_auth=\(bluetoothGranted) " +
                         "input_monitoring=\(permissions.inputMonitoringGranted) " +
                         "accessibility=\(permissions.accessibilityGranted) " +
+                        "post_event=\(permissions.postEventAccessGranted) " +
                         "connection_status=\(connectionStatus.key) " +
                         "hid_status=\(hidStatus.key) " +
                         "hid_filter_failure=\(hidFilterFailureState)"

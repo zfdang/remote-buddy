@@ -391,7 +391,13 @@ struct RuntimePermissionDiagnosticsTests {
             "onboarding.remote.bluetooth_denied.detail",
             "onboarding.remote.input_not_permitted.title",
             "onboarding.remote.input_not_permitted.detail",
-            "onboarding.remote.bluetooth_unavailable.detail"
+            "onboarding.remote.bluetooth_unavailable.detail",
+            "onboarding.recovery.permission.post_event_restricted.title",
+            "onboarding.recovery.permission.post_event_restricted.detail",
+            "onboarding.recovery.permission.post_event_restricted.detail.with_restart",
+            "permission.post_event_restricted.banner.title",
+            "permission.post_event_restricted.banner.detail",
+            "permission.post_event_restricted.banner.detail.with_restart"
         ]
 
         for key in keys {
@@ -403,5 +409,186 @@ struct RuntimePermissionDiagnosticsTests {
             #expect(zh != key)
             #expect(en != zh)
         }
+    }
+
+    @Test func diagnosisDetectsRestrictedPostEventAccessAndSnapshotTracksIt() {
+        let restricted = RuntimePermissionDiagnosisPolicy.diagnose(
+            bluetoothGranted: true,
+            inputMonitoringGranted: true,
+            accessibilityGranted: true,
+            postEventAccessGranted: false,
+            connectionStatusKey: "connection.status.connected_to_device",
+            hidStatusKey: "button_mapping.status.connected",
+            hidFilterFailure: .none
+        )
+        #expect(restricted == .postEventAccessRestricted)
+        #expect(restricted?.diagnosticIdentifier == "post_event_access_restricted")
+        #expect(
+            restricted?.preferredPrivacySettingsURLString ==
+                "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
+        )
+
+        #expect(
+            RuntimePermissionDiagnosisPolicy.diagnose(
+                bluetoothGranted: true,
+                inputMonitoringGranted: true,
+                accessibilityGranted: false,
+                postEventAccessGranted: false,
+                connectionStatusKey: "connection.status.connected_to_device",
+                hidStatusKey: "button_mapping.status.connected",
+                hidFilterFailure: .none
+            ) == nil
+        )
+
+        #expect(
+            RuntimePermissionDiagnosisPolicy.diagnose(
+                bluetoothGranted: false,
+                inputMonitoringGranted: true,
+                accessibilityGranted: true,
+                postEventAccessGranted: false,
+                connectionStatusKey: BluetoothStatusKeys.permissionDenied,
+                hidStatusKey: "button_mapping.status.connected",
+                hidFilterFailure: .none
+            ) == .bluetoothPermissionDenied
+        )
+
+        #expect(
+            RuntimePermissionDiagnosisPolicy.diagnose(
+                bluetoothGranted: true,
+                inputMonitoringGranted: true,
+                accessibilityGranted: true,
+                postEventAccessGranted: false,
+                connectionStatusKey: BluetoothStatusKeys.permissionDenied,
+                hidStatusKey: "button_mapping.status.connected",
+                hidFilterFailure: .none
+            ) == .permissionDesynced(signals: ["bluetooth_unauthorized"])
+        )
+
+        let defaulted = HIDPermissionSnapshot(inputMonitoringGranted: true, accessibilityGranted: true)
+        let restrictedSnapshot = HIDPermissionSnapshot(
+            inputMonitoringGranted: true,
+            accessibilityGranted: true,
+            postEventAccessGranted: false
+        )
+        #expect(defaulted.postEventAccessGranted)
+        #expect(!restrictedSnapshot.postEventAccessGranted)
+        #expect(defaulted != restrictedSnapshot)
+    }
+
+    @Test func appModelFirstUseAndSettingsDiagnosticsReflectRestrictedPostEventAccess() throws {
+        let suiteName = "runtime-perm-post-event-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        var postEventGranted = false
+        let model = BridgeAppModel(
+            settings: AppSettings(defaults: defaults),
+            permissionSnapshotProvider: {
+                HIDPermissionSnapshot(
+                    inputMonitoringGranted: true,
+                    accessibilityGranted: true,
+                    postEventAccessGranted: postEventGranted
+                )
+            }
+        )
+        model.refreshRuntimePermissionDiagnosis(trigger: "post_event_test", bluetoothGranted: true)
+        #expect(model.runtimePermissionIssue == .postEventAccessRestricted)
+
+        postEventGranted = true
+        model.refreshRuntimePermissionDiagnosis(trigger: "post_event_recovered", bluetoothGranted: true)
+        #expect(model.runtimePermissionIssue == nil)
+
+        let grantedCapabilities = OnboardingCapabilities(
+            bluetoothGranted: true,
+            inputMonitoringGranted: true,
+            accessibilityGranted: true,
+            remoteConnected: true,
+            remoteButtonObserved: true
+        )
+        let restrictedIssue = RuntimePermissionIssue.postEventAccessRestricted
+        #expect(
+            FirstUseDiagnosticContext(
+                step: .permissions,
+                controlMethod: .physicalRemote,
+                capabilities: grantedCapabilities,
+                hasSelectedAudioUID: true,
+                runtimePermissionIssue: restrictedIssue
+            ).failureReason == .postEventAccessRestricted
+        )
+        #expect(
+            FirstUseDiagnosticContext(
+                step: .remote,
+                controlMethod: .physicalRemote,
+                capabilities: grantedCapabilities,
+                hasSelectedAudioUID: true,
+                runtimePermissionIssue: restrictedIssue
+            ).failureReason == nil
+        )
+        #expect(
+            FirstUseDiagnosticContext(
+                step: .voiceTrigger,
+                controlMethod: .physicalRemote,
+                capabilities: grantedCapabilities,
+                hasSelectedAudioUID: true,
+                runtimePermissionIssue: restrictedIssue
+            ).failureReason == .postEventAccessRestricted
+        )
+        #expect(
+            FirstUseDiagnosticContext(
+                step: .controls,
+                controlMethod: .physicalRemote,
+                capabilities: grantedCapabilities,
+                hasSelectedAudioUID: true,
+                runtimePermissionIssue: restrictedIssue
+            ).failureReason == .postEventAccessRestricted
+        )
+
+        var voiceAttempt = FirstUseVoiceAttemptDiagnostic()
+        voiceAttempt.attemptID = 1
+        voiceAttempt.phase = .failed
+        voiceAttempt.result = .externalToolNoCommit
+        let voiceTestContext = FirstUseDiagnosticContext(
+            step: .voiceTest,
+            controlMethod: .physicalRemote,
+            capabilities: grantedCapabilities,
+            hasSelectedAudioUID: true,
+            voiceAttempt: voiceAttempt,
+            runtimePermissionIssue: restrictedIssue
+        )
+        #expect(voiceTestContext.failureReason == .postEventAccessRestricted)
+        #expect(voiceTestContext.failureReason?.recoveryStep == .permissions)
+
+        let firstUseSnapshot = FirstUseDiagnosticSnapshot(
+            appVersion: "1.0",
+            appBuild: "968",
+            systemMajorVersion: 27,
+            architecture: "arm64",
+            voiceTool: .weixin,
+            voiceKeyMode: .rightOption,
+            voiceShortcutName: "Right Option",
+            context: voiceTestContext,
+            voiceAttempt: voiceAttempt,
+            bluetoothStatus: "connection.status.connected_to_device",
+            buttonStatus: "button_mapping.status.connected",
+            audioStatus: "audio.output.current_format",
+            events: [],
+            appLanguage: "zh-Hans",
+            postEventAccessGranted: false
+        )
+        #expect(firstUseSnapshot.redactedText.contains("permission_post_event=false"))
+        #expect(firstUseSnapshot.redactedText.contains("failure=permission.post_event_restricted"))
+        #expect(firstUseSnapshot.redactedText.contains("runtime_permission_issue=post_event_access_restricted"))
+
+        let settingsSnapshot = SettingsDiagnosticSnapshot(
+            appVersion: "1.0",
+            bluetoothGranted: true,
+            inputMonitoringGranted: true,
+            accessibilityGranted: true,
+            postEventAccessGranted: false,
+            runtimeLogAvailable: true,
+            runtimePermissionIssue: "post_event_access_restricted"
+        )
+        #expect(settingsSnapshot.summary.contains("Post Event Access: 受限或未授权 (Denied/Restricted)"))
+        #expect(settingsSnapshot.auditLog.contains("post_event=false"))
     }
 }

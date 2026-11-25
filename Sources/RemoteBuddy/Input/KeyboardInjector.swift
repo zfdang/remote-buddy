@@ -136,6 +136,10 @@ enum KeyboardInjector {
         AXIsProcessTrusted()
     }
 
+    static var isPostEventAccessGranted: Bool {
+        CGPreflightPostEventAccess()
+    }
+
     @discardableResult
     static func requestAccessibilityAccess() -> Bool {
         let options = [

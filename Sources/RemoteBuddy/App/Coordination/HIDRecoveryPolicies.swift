@@ -8,11 +8,23 @@ import Foundation
 struct HIDPermissionSnapshot: Equatable {
     let inputMonitoringGranted: Bool
     let accessibilityGranted: Bool
+    let postEventAccessGranted: Bool
+
+    init(
+        inputMonitoringGranted: Bool,
+        accessibilityGranted: Bool,
+        postEventAccessGranted: Bool? = nil
+    ) {
+        self.inputMonitoringGranted = inputMonitoringGranted
+        self.accessibilityGranted = accessibilityGranted
+        self.postEventAccessGranted = postEventAccessGranted ?? accessibilityGranted
+    }
 
     static var current: HIDPermissionSnapshot {
         HIDPermissionSnapshot(
             inputMonitoringGranted: HIDRemoteMonitor.isInputMonitoringGranted,
-            accessibilityGranted: KeyboardInjector.isAccessibilityTrusted
+            accessibilityGranted: KeyboardInjector.isAccessibilityTrusted,
+            postEventAccessGranted: KeyboardInjector.isPostEventAccessGranted
         )
     }
 }
@@ -89,10 +101,16 @@ enum RuntimePermissionIssue: Equatable {
     case permissionDesynced(signals: [String])
     case bluetoothPermissionDenied
     case inputMonitoringPermissionDenied
+    case postEventAccessRestricted
     case bluetoothUnavailable(statusKey: String)
 
     var isPermissionDesynced: Bool {
         if case .permissionDesynced = self { return true }
+        return false
+    }
+
+    var isPostEventAccessRestricted: Bool {
+        if case .postEventAccessRestricted = self { return true }
         return false
     }
 
@@ -110,6 +128,8 @@ enum RuntimePermissionIssue: Equatable {
             return "x-apple.systempreferences:com.apple.preference.security?Privacy_Bluetooth"
         case .inputMonitoringPermissionDenied:
             return "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent"
+        case .postEventAccessRestricted:
+            return "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
         case .bluetoothUnavailable:
             return "x-apple.systempreferences:com.apple.BluetoothSettings"
         }
@@ -124,6 +144,8 @@ enum RuntimePermissionIssue: Equatable {
             return "bluetooth_permission_denied"
         case .inputMonitoringPermissionDenied:
             return "input_monitoring_permission_denied"
+        case .postEventAccessRestricted:
+            return "post_event_access_restricted"
         case let .bluetoothUnavailable(statusKey):
             return "bluetooth_unavailable(\(statusKey))"
         }
@@ -141,10 +163,12 @@ enum RuntimePermissionDiagnosisPolicy {
         bluetoothGranted: Bool,
         inputMonitoringGranted: Bool,
         accessibilityGranted: Bool,
+        postEventAccessGranted: Bool? = nil,
         connectionStatusKey: String,
         hidStatusKey: String,
         hidFilterFailure: HIDFilterFailureState = .none
     ) -> RuntimePermissionIssue? {
+        let resolvedPostEventGranted = postEventAccessGranted ?? accessibilityGranted
         let bleRuntimeDenied = connectionStatusKey == BluetoothStatusKeys.permissionDenied
         let hidNotPermitted = hidStatusKey == HIDStatusKeys.notPermitted
         let hidRuntimePermissionDenied = hidStatusKey == HIDStatusKeys.inputMonitoringRequired
@@ -173,6 +197,9 @@ enum RuntimePermissionDiagnosisPolicy {
         }
         if hidNotPermitted || hidRuntimePermissionDenied {
             return .inputMonitoringPermissionDenied
+        }
+        if accessibilityGranted, !resolvedPostEventGranted {
+            return .postEventAccessRestricted
         }
         if unavailableBluetoothStatusKeys.contains(connectionStatusKey) {
             return .bluetoothUnavailable(statusKey: connectionStatusKey)

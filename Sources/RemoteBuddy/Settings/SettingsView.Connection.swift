@@ -112,6 +112,13 @@ extension SettingsView {
         case .inputMonitoringPermissionDenied:
             titleText = localization.text("onboarding.remote.input_not_permitted.title")
             detailText = localization.text("onboarding.remote.input_not_permitted.detail")
+        case .postEventAccessRestricted:
+            titleText = localization.text("permission.post_event_restricted.banner.title")
+            detailText = localization.text(
+                canRelaunch
+                    ? "permission.post_event_restricted.banner.detail.with_restart"
+                    : "permission.post_event_restricted.banner.detail"
+            )
         case let .bluetoothUnavailable(statusKey):
             titleText = LocalizedMessage(statusKey).text(using: localization)
             detailText = localization.text("onboarding.remote.bluetooth_unavailable.detail")
@@ -134,7 +141,7 @@ extension SettingsView {
 
                 HStack(spacing: 10) {
                     switch issue {
-                    case .permissionDesynced:
+                    case .permissionDesynced, .postEventAccessRestricted:
                         Button(localization.text("permission.desync.action.open_settings")) {
                             openSettingsURL(issue.preferredPrivacySettingsURLString)
                         }

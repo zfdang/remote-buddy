@@ -326,6 +326,7 @@ struct OnboardingCapabilities: Equatable {
     var voiceSessionEnded = false
     var transcriptionAppeared = false
     var manualTranscriptInputObserved = false
+    var nonTextResponseConfirmed = false
     var testedRemoteButtonCount = 0
     var isTwoKeyCompatibleMode = false
     var compatibleChordConfirmed = false
@@ -458,11 +459,12 @@ enum OnboardingFlowPolicy {
         case .voiceTrigger:
             return true
         case .voiceTest:
+            let outputConfirmed = (voiceTool.supportsNonTextConfirmation && capabilities.nonTextResponseConfirmed) ||
+                (capabilities.transcriptionAppeared && !capabilities.manualTranscriptInputObserved)
             return capabilities.voiceSessionStarted &&
                 capabilities.voiceSamplesReceived &&
                 capabilities.voiceSessionEnded &&
-                capabilities.transcriptionAppeared &&
-                !capabilities.manualTranscriptInputObserved
+                outputConfirmed
         case .controls:
             if capabilities.isTwoKeyCompatibleMode {
                 return capabilities.remoteConnected && capabilities.compatibleChordConfirmed

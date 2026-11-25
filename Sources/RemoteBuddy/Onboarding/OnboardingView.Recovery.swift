@@ -33,6 +33,7 @@ extension OnboardingView {
         case .permissions:
             model.refreshAudioDevices()
         case .voiceTest:
+            nonTextVoiceToolConfirmed = false
             refreshSelectedVoiceToolRuntimeState()
             ensureSelectedVoiceToolRunning()
             resetVoiceTestForRetry()

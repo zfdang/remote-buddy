@@ -349,6 +349,8 @@ struct VoiceTriggerConfigurationTests {
         #expect(key(started: true, samples: true, ended: false) == "onboarding.voice_test.receiving")
         #expect(key(started: true, samples: true, ended: true) == "onboarding.voice_test.waiting_text")
         #expect(key(started: true, samples: true, ended: true, result: .passed) == "onboarding.voice_test.success")
+        #expect(OnboardingView.voiceTestStatusKey(toolReady: true, manualInput: false, result: .passed,
+            sessionStarted: true, samplesReceived: true, sessionEnded: true, nonTextConfirmed: true) == "onboarding.voice_test.success_non_text")
         #expect(key(started: true, samples: true, ended: true, result: .audioDeliveryFailed) == "onboarding.recovery.voice.audio_delivery_failed.title")
     }
 

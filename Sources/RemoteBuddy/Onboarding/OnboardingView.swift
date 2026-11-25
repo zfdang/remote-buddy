@@ -40,6 +40,7 @@ struct OnboardingView: View {
     @State var transcriptCommitRequest = 0
     @State var lastVoiceTranscriptCandidate = ""
     @State var manualTranscriptInputObserved = false
+    @State var nonTextVoiceToolConfirmed = false
     @State var lastRecordedFailure: FirstUseFailureReason?
     @State var inputSourceSwitchResult: OnboardingInputSourceSwitchResult = .notApplicable
     @State var voiceToolAvailability: [OnboardingVoiceTool: OnboardingVoiceToolAvailability] = [:]
@@ -249,6 +250,7 @@ struct OnboardingView: View {
             viewedInputMethodGuideSteps.removeAll()
         }
         .onChange(of: settings.onboardingVoiceTool) { _, _ in
+            nonTextVoiceToolConfirmed = false
             refreshSelectedVoiceToolRuntimeState()
         }
     }
@@ -257,6 +259,9 @@ struct OnboardingView: View {
         toolObservedContent
         .onChange(of: transcript) { _, updatedText in
             captureVoiceTranscriptCandidate(updatedText)
+        }
+        .onChange(of: nonTextVoiceToolConfirmed) { _, confirmed in
+            applyNonTextVoiceConfirmationChange(confirmed)
         }
         .onChange(of: transcriptionAppeared) { _, appeared in
             guard appeared,

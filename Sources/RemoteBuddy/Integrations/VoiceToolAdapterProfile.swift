@@ -51,6 +51,10 @@ enum OnboardingVoiceTool: String, CaseIterable, Codable, Identifiable {
         preferredInputSourceID != nil
     }
 
+    var supportsNonTextConfirmation: Bool {
+        self == .other
+    }
+
     /// Fn taps that start one voice session. macOS Dictation uses "Press 🌐 Twice"
     /// to start and one Fn press to stop.
     var functionKeyStartTapCount: Int {

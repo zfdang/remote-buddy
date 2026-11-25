@@ -163,17 +163,18 @@ enum FirstUseVoiceAttemptPolicy {
         triggerReady: Bool,
         focusReadyAtDeadline: Bool,
         audioDeliveryResult: VoiceAudioDeliveryResult,
-        finalObservation: Bool
+        finalObservation: Bool,
+        nonTextResponseConfirmed: Bool = false
     ) -> FirstUseVoiceAttemptResult {
         if manualInputObserved { return .manualInput }
         if !samplesReceived { return .noSamples }
-        if !triggerReady { return .inputTargetNotReady }
+        if !triggerReady && !nonTextResponseConfirmed { return .inputTargetNotReady }
         if audioDeliveryResult.isConfirmedFailure { return .audioDeliveryFailed }
         if finalObservation,
            audioDeliveryResult != .deliveredToSelectedDevice {
             return .audioDeliveryFailed
         }
-        if transcriptionAppeared,
+        if (transcriptionAppeared || nonTextResponseConfirmed),
            audioDeliveryResult == .deliveredToSelectedDevice {
             return .passed
         }

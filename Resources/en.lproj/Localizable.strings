@@ -595,8 +595,8 @@
 "onboarding.voice_tool.typeless.title" = "Typeless";
 "onboarding.voice_tool.typeless.detail" = "Use Typeless for voice typing.";
 "onboarding.voice_tool.other.title" = "Other Voice App";
-"onboarding.voice_tool.other.detail" = "Use another app that supports voice typing.";
-"onboarding.voice_tool.other.setup_detail" = "The app must support voice typing. In its settings, choose the microphone selected in Remote Buddy and confirm it can enter text in a regular field.";
+"onboarding.voice_tool.other.detail" = "Use another voice typing tool or voice assistant.";
+"onboarding.voice_tool.other.setup_detail" = "Supports voice typing tools or voice assistants such as Siri that do not insert text into fields. Set its microphone (or System Settings → Sound) to Remote Buddy Mic and verify the shortcut activates it.";
 "onboarding.voice_tool.status.not_installed" = "Not installed";
 "onboarding.voice_tool.runtime.not_running" = "%@ is not running. Remote Buddy already tried to open it in the background; choose “Reopen” before testing again.";
 "onboarding.voice_tool.runtime.unknown" = "Choose “Reopen” to start %@ before testing again.";
@@ -731,6 +731,8 @@
 "onboarding.voice_test.tool_not_running" = "Open the selected voice app before starting the test…";
 "onboarding.voice_test.manual_input" = "Keyboard input detected. Try again with the voice button.";
 "onboarding.voice_test.success" = "Voice and text input are confirmed";
+"onboarding.voice_test.success_non_text" = "Voice trigger and audio delivery are confirmed";
+"onboarding.voice_test.non_text_confirm" = "This tool does not insert text into fields (e.g., Siri); I confirmed the voice button triggers it";
 "onboarding.controls.title" = "Try your everyday control buttons";
 "onboarding.controls.detail" = "Press three different control buttons to try navigation, OK, Back, Home, or volume control.";
 "onboarding.controls.xiaomi.detail" = "Press three different control buttons on the Xiaomi remote, such as an arrow, OK, Back, Home, or volume.";

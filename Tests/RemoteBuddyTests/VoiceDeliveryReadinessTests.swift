@@ -137,5 +137,9 @@ struct VoiceDeliveryReadinessTests {
         )
         #expect(OnboardingFlowPolicy.canContinue(from: .voiceTest, voiceTool: .other, capabilities: noNonTextCaps))
         #expect(!OnboardingFlowPolicy.canContinue(from: .voiceTest, voiceTool: .weixin, capabilities: noNonTextCaps))
+
+        var manualInputCaps = noNonTextCaps
+        manualInputCaps.manualTranscriptInputObserved = true
+        #expect(!OnboardingFlowPolicy.canContinue(from: .voiceTest, voiceTool: .other, capabilities: manualInputCaps))
     }
 }

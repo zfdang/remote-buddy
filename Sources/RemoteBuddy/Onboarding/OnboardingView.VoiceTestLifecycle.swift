@@ -147,7 +147,7 @@ extension OnboardingView {
             finalObservation: false,
             nonTextResponseConfirmed: nonTextResponseConfirmed
         )
-        if result == .passed || result == .manualInput || result == .noSamples || result == .audioDeliveryFailed {
+        if result == .manualInput || result == .noSamples || result == .audioDeliveryFailed {
             finishVoiceAttempt(result: result)
         } else {
             // Text may already exist when the key is released. Recheck playback

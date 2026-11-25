@@ -199,7 +199,9 @@ extension OnboardingView {
     }
 
     var nonTextResponseConfirmed: Bool {
-        settings.onboardingVoiceTool.supportsNonTextConfirmation && nonTextVoiceToolConfirmed
+        settings.onboardingVoiceTool.supportsNonTextConfirmation &&
+            nonTextVoiceToolConfirmed &&
+            !manualTranscriptInputObserved
     }
 
     var selectedControlConnected: Bool {

@@ -459,11 +459,12 @@ enum OnboardingFlowPolicy {
         case .voiceTrigger:
             return true
         case .voiceTest:
-            let outputConfirmed = (voiceTool.supportsNonTextConfirmation && capabilities.nonTextResponseConfirmed) ||
-                (capabilities.transcriptionAppeared && !capabilities.manualTranscriptInputObserved)
+            let outputConfirmed = capabilities.transcriptionAppeared ||
+                (voiceTool.supportsNonTextConfirmation && capabilities.nonTextResponseConfirmed)
             return capabilities.voiceSessionStarted &&
                 capabilities.voiceSamplesReceived &&
                 capabilities.voiceSessionEnded &&
+                !capabilities.manualTranscriptInputObserved &&
                 outputConfirmed
         case .controls:
             if capabilities.isTwoKeyCompatibleMode {

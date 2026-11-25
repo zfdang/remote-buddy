@@ -31,6 +31,7 @@ extension OnboardingView {
             voiceSessionEnded: voiceSessionEnded,
             transcriptionAppeared: transcriptionAppeared,
             manualTranscriptInputObserved: manualTranscriptInputObserved,
+            nonTextResponseConfirmed: nonTextResponseConfirmed,
             testedRemoteButtonCount: testedControlButtons.count,
             isTwoKeyCompatibleMode: isChromecastTwoKeyCompatible,
             compatibleChordConfirmed: compatibleChordConfirmed
@@ -51,7 +52,7 @@ extension OnboardingView {
         if settings.onboardingStep == .voiceTest {
             return policyAllowsContinue && settings.isTestingVoiceTrigger &&
                 voiceAttempt.result == .passed &&
-                verifiedTranscriptionAppeared &&
+                (verifiedTranscriptionAppeared || nonTextResponseConfirmed) &&
                 selectedVoiceToolRuntimeReady
         }
         return policyAllowsContinue &&
@@ -195,6 +196,12 @@ extension OnboardingView {
 
     var verifiedTranscriptionAppeared: Bool {
         transcriptionAppeared && !manualTranscriptInputObserved
+    }
+
+    var nonTextResponseConfirmed: Bool {
+        settings.onboardingVoiceTool.supportsNonTextConfirmation &&
+            nonTextVoiceToolConfirmed &&
+            !manualTranscriptInputObserved
     }
 
     var selectedControlConnected: Bool {

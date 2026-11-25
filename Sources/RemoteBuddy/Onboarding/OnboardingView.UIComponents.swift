@@ -40,7 +40,7 @@ extension OnboardingView {
                     "onboarding.side.audio_ready",
                     isComplete: onboardingAudioReady
                 )
-                sideCheck("onboarding.side.transcript", isComplete: verifiedTranscriptionAppeared)
+                sideCheck("onboarding.side.transcript", isComplete: verifiedTranscriptionAppeared || nonTextResponseConfirmed)
             }
         case .controls:
             sidePanel(titleKey: "onboarding.side.controls") {

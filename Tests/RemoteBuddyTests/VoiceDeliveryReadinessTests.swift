@@ -99,4 +99,47 @@ struct VoiceDeliveryReadinessTests {
             samplesReceived: true, transcriptionAppeared: true, triggerReady: true,
             focusReadyAtDeadline: true, audioDeliveryResult: value.result, finalObservation: final)
     }
+
+    @Test func nonTextConfirmationAllowsPassOnlyAfterVerifiedAudioDelivery() {
+        var delivered = attempt()
+        delivered.outputAtObservation.pendingBuffers = 0
+        delivered.outputAtObservation.pendingSamples = 0
+        delivered.outputAtObservation.counters.playedSamples = delivered.receivedSamples
+
+        #expect(FirstUseVoiceAttemptPolicy.terminalResultAfterSession(
+            manualInputObserved: false,
+            samplesReceived: true,
+            transcriptionAppeared: false,
+            triggerReady: false,
+            focusReadyAtDeadline: false,
+            audioDeliveryResult: delivered.result,
+            finalObservation: true,
+            nonTextResponseConfirmed: true
+        ) == .passed)
+
+        var failedAudio = attempt()
+        failedAudio.enqueueFailures = 1
+        #expect(FirstUseVoiceAttemptPolicy.terminalResultAfterSession(
+            manualInputObserved: false,
+            samplesReceived: true,
+            transcriptionAppeared: false,
+            triggerReady: false,
+            focusReadyAtDeadline: false,
+            audioDeliveryResult: failedAudio.result,
+            finalObservation: true,
+            nonTextResponseConfirmed: true
+        ) == .audioDeliveryFailed)
+
+        let noNonTextCaps = OnboardingCapabilities(
+            bluetoothGranted: true, inputMonitoringGranted: true, accessibilityGranted: true,
+            voiceSessionStarted: true, voiceSamplesReceived: true, voiceSessionEnded: true,
+            transcriptionAppeared: false, manualTranscriptInputObserved: false, nonTextResponseConfirmed: true
+        )
+        #expect(OnboardingFlowPolicy.canContinue(from: .voiceTest, voiceTool: .other, capabilities: noNonTextCaps))
+        #expect(!OnboardingFlowPolicy.canContinue(from: .voiceTest, voiceTool: .weixin, capabilities: noNonTextCaps))
+
+        var manualInputCaps = noNonTextCaps
+        manualInputCaps.manualTranscriptInputObserved = true
+        #expect(!OnboardingFlowPolicy.canContinue(from: .voiceTest, voiceTool: .other, capabilities: manualInputCaps))
+    }
 }

@@ -144,7 +144,8 @@ extension OnboardingView {
             triggerReady: voiceAttempt.triggerReady,
             focusReadyAtDeadline: targetReadyAtEnd,
             audioDeliveryResult: voiceAttempt.audioDelivery.result,
-            finalObservation: false
+            finalObservation: false,
+            nonTextResponseConfirmed: nonTextResponseConfirmed
         )
         if result == .manualInput || result == .noSamples || result == .audioDeliveryFailed {
             finishVoiceAttempt(result: result)
@@ -183,7 +184,7 @@ extension OnboardingView {
                       voiceAttempt.phase == .awaitingTranscript,
                       voiceSessionEnded,
                       !manualTranscriptInputObserved,
-                      transcriptionAppeared else {
+                      transcriptionAppeared || nonTextResponseConfirmed else {
                     return
                 }
                 refreshVoiceAttemptObservableState(atDeadline: false)
@@ -210,10 +211,45 @@ extension OnboardingView {
                 triggerReady: voiceAttempt.triggerReady,
                 focusReadyAtDeadline: voiceAttempt.focusReadyAtDeadline == true,
                 audioDeliveryResult: voiceAttempt.audioDelivery.result,
-                finalObservation: true
+                finalObservation: true,
+                nonTextResponseConfirmed: nonTextResponseConfirmed
             )
             finishVoiceAttempt(result: result)
         })
+    }
+
+    func applyNonTextVoiceConfirmationChange(_ confirmed: Bool) {
+        guard settings.onboardingStep == .voiceTest,
+              settings.onboardingVoiceTool.supportsNonTextConfirmation,
+              voiceSessionStarted,
+              voiceSamplesReceived,
+              voiceSessionEnded,
+              !manualTranscriptInputObserved else { return }
+
+        refreshVoiceAttemptObservableState(atDeadline: true)
+        if confirmed {
+            if voiceAttempt.audioDelivery.result == .deliveredToSelectedDevice {
+                if voiceAttempt.phase == .failed {
+                    voiceAttempt.phase = .awaitingTranscript
+                }
+                finishVoiceAttempt(result: .passed)
+            } else if voiceAttempt.phase == .awaitingTranscript {
+                scheduleVoiceCompletionEvaluation(attemptID: voiceAttempt.attemptID)
+            }
+        } else if voiceAttempt.result == .passed && !verifiedTranscriptionAppeared {
+            voiceAttempt.phase = .awaitingTranscript
+            let fallback = FirstUseVoiceAttemptPolicy.terminalResultAfterSession(
+                manualInputObserved: manualTranscriptInputObserved,
+                samplesReceived: voiceSamplesReceived,
+                transcriptionAppeared: transcriptionAppeared,
+                triggerReady: voiceAttempt.triggerReady,
+                focusReadyAtDeadline: voiceAttempt.focusReadyAtDeadline == true,
+                audioDeliveryResult: voiceAttempt.audioDelivery.result,
+                finalObservation: true,
+                nonTextResponseConfirmed: false
+            )
+            finishVoiceAttempt(result: fallback)
+        }
     }
 
     func finishVoiceAttempt(result: FirstUseVoiceAttemptResult) {

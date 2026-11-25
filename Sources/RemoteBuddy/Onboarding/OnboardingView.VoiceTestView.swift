@@ -93,6 +93,17 @@ extension OnboardingView {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
+            if settings.onboardingVoiceTool.supportsNonTextConfirmation {
+                Toggle(isOn: $nonTextVoiceToolConfirmed) {
+                    Text(localization.text("onboarding.voice_test.non_text_confirm"))
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .toggleStyle(.checkbox)
+                .accessibilityIdentifier("onboarding.voice-test.non-text-confirm")
+            }
+
             onboardingGainCard
         }
     }

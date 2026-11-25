@@ -108,12 +108,14 @@ extension OnboardingView {
         localization.text(Self.voiceTestStatusKey(toolReady: selectedVoiceToolRuntimeReady,
             manualInput: manualTranscriptInputObserved, result: voiceAttempt.result,
             sessionStarted: voiceSessionStarted, samplesReceived: voiceSamplesReceived,
-            sessionEnded: voiceSessionEnded, nonTextConfirmed: nonTextResponseConfirmed && !transcriptionAppeared))
+            sessionEnded: voiceSessionEnded, nonTextConfirmed: nonTextResponseConfirmed && !transcriptionAppeared,
+            runtimePermissionIssue: model.runtimePermissionIssue))
     }
 
     static func voiceTestStatusKey(toolReady: Bool, manualInput: Bool, result: FirstUseVoiceAttemptResult,
                                    sessionStarted: Bool, samplesReceived: Bool, sessionEnded: Bool,
-                                   nonTextConfirmed: Bool = false) -> String {
+                                   nonTextConfirmed: Bool = false,
+                                   runtimePermissionIssue: RuntimePermissionIssue? = nil) -> String {
         if !toolReady { return "onboarding.voice_test.tool_not_running" }
         if manualInput { return "onboarding.voice_test.manual_input" }
         if result == .passed {
@@ -121,9 +123,17 @@ extension OnboardingView {
                 ? "onboarding.voice_test.success_non_text"
                 : "onboarding.voice_test.success"
         }
-        if let failure = result.failureReason { return "onboarding.recovery.\(failure.rawValue).title" }
+        if let failure = FirstUseVoiceAttemptPolicy.resolvedFailureReason(
+            result: result,
+            runtimePermissionIssue: runtimePermissionIssue
+        ) {
+            return "onboarding.recovery.\(failure.rawValue).title"
+        }
         if !sessionEnded && (sessionStarted || samplesReceived) { return "onboarding.voice_test.receiving" }
         if sessionEnded && samplesReceived { return "onboarding.voice_test.waiting_text" }
+        if runtimePermissionIssue?.isPostEventAccessRestricted == true {
+            return "onboarding.recovery.\(FirstUseFailureReason.postEventAccessRestricted.rawValue).title"
+        }
         return "onboarding.voice_test.waiting_voice"
     }
 

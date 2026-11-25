@@ -591,4 +591,76 @@ struct RuntimePermissionDiagnosticsTests {
         #expect(settingsSnapshot.summary.contains("Post Event Access: 受限或未授权 (Denied/Restricted)"))
         #expect(settingsSnapshot.auditLog.contains("post_event=false"))
     }
+
+    @Test func voiceTestStatusAndResolvedFailureAlignWithRestrictedPostEventPermission() {
+        #expect(
+            FirstUseVoiceAttemptPolicy.resolvedFailureReason(
+                result: .externalToolNoCommit,
+                runtimePermissionIssue: .postEventAccessRestricted
+            ) == .postEventAccessRestricted
+        )
+        #expect(
+            FirstUseVoiceAttemptPolicy.resolvedFailureReason(
+                result: .externalToolNoCommit,
+                runtimePermissionIssue: .permissionDesynced(signals: ["hid_filter_system_disabled"])
+            ) == .permissionDesynced
+        )
+        #expect(
+            FirstUseVoiceAttemptPolicy.resolvedFailureReason(
+                result: .externalToolNoCommit,
+                runtimePermissionIssue: nil
+            ) == .voiceExternalToolNoCommit
+        )
+        #expect(
+            FirstUseVoiceAttemptPolicy.resolvedFailureReason(
+                result: .passed,
+                runtimePermissionIssue: .postEventAccessRestricted
+            ) == nil
+        )
+
+        #expect(
+            OnboardingView.voiceTestStatusKey(
+                toolReady: true,
+                manualInput: false,
+                result: .externalToolNoCommit,
+                sessionStarted: true,
+                samplesReceived: true,
+                sessionEnded: true,
+                runtimePermissionIssue: .postEventAccessRestricted
+            ) == "onboarding.recovery.permission.post_event_restricted.title"
+        )
+        #expect(
+            OnboardingView.voiceTestStatusKey(
+                toolReady: true,
+                manualInput: false,
+                result: .none,
+                sessionStarted: false,
+                samplesReceived: false,
+                sessionEnded: false,
+                runtimePermissionIssue: .postEventAccessRestricted
+            ) == "onboarding.recovery.permission.post_event_restricted.title"
+        )
+        #expect(
+            OnboardingView.voiceTestStatusKey(
+                toolReady: true,
+                manualInput: false,
+                result: .none,
+                sessionStarted: true,
+                samplesReceived: true,
+                sessionEnded: false,
+                runtimePermissionIssue: .postEventAccessRestricted
+            ) == "onboarding.voice_test.receiving"
+        )
+        #expect(
+            OnboardingView.voiceTestStatusKey(
+                toolReady: true,
+                manualInput: false,
+                result: .passed,
+                sessionStarted: true,
+                samplesReceived: true,
+                sessionEnded: true,
+                runtimePermissionIssue: .postEventAccessRestricted
+            ) == "onboarding.voice_test.success"
+        )
+    }
 }

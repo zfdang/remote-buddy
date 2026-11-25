@@ -183,6 +183,20 @@ enum FirstUseVoiceAttemptPolicy {
         if !focusReadyAtDeadline { return .inputTargetFocusLost }
         return .externalToolNoCommit
     }
+
+    static func resolvedFailureReason(
+        result: FirstUseVoiceAttemptResult,
+        runtimePermissionIssue: RuntimePermissionIssue?
+    ) -> FirstUseFailureReason? {
+        guard result != .none, result != .passed else { return nil }
+        if runtimePermissionIssue?.isPermissionDesynced == true {
+            return .permissionDesynced
+        }
+        if runtimePermissionIssue?.isPostEventAccessRestricted == true {
+            return .postEventAccessRestricted
+        }
+        return result.failureReason
+    }
 }
 
 enum FirstUseRemoteInputKind: String, Equatable {

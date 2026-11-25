@@ -772,6 +772,12 @@
 "onboarding.recovery.permission.accessibility_denied.title" = "还需要操作权限";
 "onboarding.recovery.permission.accessibility_denied.detail" = "允许辅助功能后，才能执行你设置的语音和按键操作。";
 "onboarding.recovery.permission.accessibility_denied.action" = "允许执行操作";
+"onboarding.recovery.permission.post_event_restricted.title" = "系统限制了全局模拟按键权限";
+"onboarding.recovery.permission.post_event_restricted.detail" = "辅助功能显示已开启，但系统仍在拦截全局按键注入（例如在 macOS 27.3+ 的“System & App Protection Override”中仅授权了指定 App）。遥控器语音快捷键和按键映射需要全局发送按键事件，请打开“隐私与安全性”，在 macOS 27.3+ 中进入“System & App Protection Override”（旧版系统为“辅助功能”）为遥控搭子授予完整权限后重试。";
+"onboarding.recovery.permission.post_event_restricted.detail.with_restart" = "辅助功能显示已开启，但系统仍在拦截全局按键注入（例如在 macOS 27.3+ 的“System & App Protection Override”中仅授权了指定 App）。遥控器语音快捷键和按键映射需要全局发送按键事件，请打开“隐私与安全性”，在 macOS 27.3+ 中进入“System & App Protection Override”（旧版系统为“辅助功能”）为遥控搭子授予完整权限；若授权后仍未生效，可尝试重启遥控搭子。";
+"permission.post_event_restricted.banner.title" = "系统限制了全局模拟按键权限";
+"permission.post_event_restricted.banner.detail" = "辅助功能显示已开启，但系统未授予全局按键注入权限（例如在 macOS 27.3+ 的“System & App Protection Override”中仅授权了指定 App）。遥控器语音快捷键和按键映射需要全局发送按键事件，请打开“隐私与安全性”，在 macOS 27.3+ 中进入“System & App Protection Override”（旧版系统为“辅助功能”）为遥控搭子授予完整权限，然后点击“重新检测”。";
+"permission.post_event_restricted.banner.detail.with_restart" = "辅助功能显示已开启，但系统未授予全局按键注入权限（例如在 macOS 27.3+ 的“System & App Protection Override”中仅授权了指定 App）。遥控器语音快捷键和按键映射需要全局发送按键事件，请打开“隐私与安全性”，在 macOS 27.3+ 中进入“System & App Protection Override”（旧版系统为“辅助功能”）为遥控搭子授予完整权限；若授权后仍未生效，可尝试重启遥控搭子。";
 "onboarding.recovery.permission.desynced.title" = "系统权限状态可能需要刷新";
 "onboarding.recovery.permission.desynced.detail" = "系统显示权限已授予，但蓝牙或遥控器按键读取仍被 macOS 拒绝。请打开“隐私与安全性”，将蓝牙、输入监控和辅助功能关闭后重新开启，然后重试。";
 "onboarding.recovery.permission.desynced.detail.with_restart" = "系统显示权限已授予，但蓝牙或遥控器按键读取仍被 macOS 拒绝。请先打开“隐私与安全性”，将蓝牙、输入监控和辅助功能关闭后重新开启；若仍无效，可尝试重启遥控搭子。";

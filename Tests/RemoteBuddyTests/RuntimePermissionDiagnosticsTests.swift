@@ -391,7 +391,13 @@ struct RuntimePermissionDiagnosticsTests {
             "onboarding.remote.bluetooth_denied.detail",
             "onboarding.remote.input_not_permitted.title",
             "onboarding.remote.input_not_permitted.detail",
-            "onboarding.remote.bluetooth_unavailable.detail"
+            "onboarding.remote.bluetooth_unavailable.detail",
+            "onboarding.recovery.permission.post_event_restricted.title",
+            "onboarding.recovery.permission.post_event_restricted.detail",
+            "onboarding.recovery.permission.post_event_restricted.detail.with_restart",
+            "permission.post_event_restricted.banner.title",
+            "permission.post_event_restricted.banner.detail",
+            "permission.post_event_restricted.banner.detail.with_restart"
         ]
 
         for key in keys {
@@ -403,5 +409,390 @@ struct RuntimePermissionDiagnosticsTests {
             #expect(zh != key)
             #expect(en != zh)
         }
+
+        let detailKeys = [
+            "onboarding.recovery.permission.post_event_restricted.detail",
+            "onboarding.recovery.permission.post_event_restricted.detail.with_restart",
+            "permission.post_event_restricted.banner.detail",
+            "permission.post_event_restricted.banner.detail.with_restart"
+        ]
+        for key in detailKeys {
+            store.select(.english)
+            let en = store.text(key)
+            #expect(en.contains("System & App Protection Override"))
+            #expect(en.contains("Accessibility"))
+            store.select(.simplifiedChinese)
+            let zh = store.text(key)
+            #expect(zh.contains("System & App Protection Override"))
+            #expect(zh.contains("辅助功能"))
+        }
+    }
+
+    @Test func diagnosisDetectsRestrictedPostEventAccessAndSnapshotTracksIt() {
+        let restricted = RuntimePermissionDiagnosisPolicy.diagnose(
+            bluetoothGranted: true,
+            inputMonitoringGranted: true,
+            accessibilityGranted: true,
+            postEventAccessGranted: false,
+            connectionStatusKey: "connection.status.connected_to_device",
+            hidStatusKey: "button_mapping.status.connected",
+            hidFilterFailure: .none
+        )
+        #expect(restricted == .postEventAccessRestricted)
+        #expect(restricted?.diagnosticIdentifier == "post_event_access_restricted")
+        #expect(
+            restricted?.preferredPrivacySettingsURLString ==
+                "x-apple.systempreferences:com.apple.preference.security?Privacy"
+        )
+
+        #expect(
+            RuntimePermissionDiagnosisPolicy.diagnose(
+                bluetoothGranted: true,
+                inputMonitoringGranted: true,
+                accessibilityGranted: false,
+                postEventAccessGranted: false,
+                connectionStatusKey: "connection.status.connected_to_device",
+                hidStatusKey: "button_mapping.status.connected",
+                hidFilterFailure: .none
+            ) == nil
+        )
+
+        #expect(
+            RuntimePermissionDiagnosisPolicy.diagnose(
+                bluetoothGranted: false,
+                inputMonitoringGranted: true,
+                accessibilityGranted: true,
+                postEventAccessGranted: false,
+                connectionStatusKey: BluetoothStatusKeys.permissionDenied,
+                hidStatusKey: "button_mapping.status.connected",
+                hidFilterFailure: .none
+            ) == .bluetoothPermissionDenied
+        )
+
+        #expect(
+            RuntimePermissionDiagnosisPolicy.diagnose(
+                bluetoothGranted: true,
+                inputMonitoringGranted: true,
+                accessibilityGranted: true,
+                postEventAccessGranted: false,
+                connectionStatusKey: BluetoothStatusKeys.permissionDenied,
+                hidStatusKey: "button_mapping.status.connected",
+                hidFilterFailure: .none
+            ) == .permissionDesynced(signals: ["bluetooth_unauthorized"])
+        )
+
+        #expect(
+            RuntimePermissionDiagnosisPolicy.diagnose(
+                bluetoothGranted: true,
+                inputMonitoringGranted: true,
+                accessibilityGranted: true,
+                postEventAccessGranted: false,
+                connectionStatusKey: BluetoothStatusKeys.off,
+                hidStatusKey: "button_mapping.status.connected",
+                hidFilterFailure: .none
+            ) == .bluetoothUnavailable(statusKey: BluetoothStatusKeys.off)
+        )
+
+        let defaulted = HIDPermissionSnapshot(inputMonitoringGranted: true, accessibilityGranted: true)
+        let restrictedSnapshot = HIDPermissionSnapshot(
+            inputMonitoringGranted: true,
+            accessibilityGranted: true,
+            postEventAccessGranted: false
+        )
+        #expect(defaulted.postEventAccessGranted)
+        #expect(!restrictedSnapshot.postEventAccessGranted)
+        #expect(defaulted != restrictedSnapshot)
+    }
+
+    @Test func appModelFirstUseAndSettingsDiagnosticsReflectRestrictedPostEventAccess() throws {
+        let suiteName = "runtime-perm-post-event-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        var postEventGranted = false
+        let model = BridgeAppModel(
+            settings: AppSettings(defaults: defaults),
+            permissionSnapshotProvider: {
+                HIDPermissionSnapshot(
+                    inputMonitoringGranted: true,
+                    accessibilityGranted: true,
+                    postEventAccessGranted: postEventGranted
+                )
+            }
+        )
+        model.refreshRuntimePermissionDiagnosis(trigger: "post_event_test", bluetoothGranted: true)
+        #expect(model.runtimePermissionIssue == .postEventAccessRestricted)
+
+        postEventGranted = true
+        model.refreshRuntimePermissionDiagnosis(trigger: "post_event_recovered", bluetoothGranted: true)
+        #expect(model.runtimePermissionIssue == nil)
+
+        let grantedCapabilities = OnboardingCapabilities(
+            bluetoothGranted: true,
+            inputMonitoringGranted: true,
+            accessibilityGranted: true,
+            remoteConnected: true,
+            remoteButtonObserved: true
+        )
+        let restrictedIssue = RuntimePermissionIssue.postEventAccessRestricted
+        #expect(
+            FirstUseDiagnosticContext(
+                step: .permissions,
+                controlMethod: .physicalRemote,
+                capabilities: grantedCapabilities,
+                hasSelectedAudioUID: true,
+                runtimePermissionIssue: restrictedIssue
+            ).failureReason == .postEventAccessRestricted
+        )
+        #expect(
+            FirstUseDiagnosticContext(
+                step: .remote,
+                controlMethod: .physicalRemote,
+                capabilities: grantedCapabilities,
+                hasSelectedAudioUID: true,
+                runtimePermissionIssue: restrictedIssue
+            ).failureReason == nil
+        )
+        #expect(
+            FirstUseDiagnosticContext(
+                step: .voiceTrigger,
+                controlMethod: .physicalRemote,
+                capabilities: grantedCapabilities,
+                hasSelectedAudioUID: true,
+                runtimePermissionIssue: restrictedIssue
+            ).failureReason == .postEventAccessRestricted
+        )
+        #expect(
+            FirstUseDiagnosticContext(
+                step: .controls,
+                controlMethod: .physicalRemote,
+                capabilities: grantedCapabilities,
+                hasSelectedAudioUID: true,
+                runtimePermissionIssue: restrictedIssue
+            ).failureReason == .postEventAccessRestricted
+        )
+
+        var voiceAttempt = FirstUseVoiceAttemptDiagnostic()
+        voiceAttempt.attemptID = 1
+        voiceAttempt.phase = .failed
+        voiceAttempt.result = .externalToolNoCommit
+        let voiceTestContext = FirstUseDiagnosticContext(
+            step: .voiceTest,
+            controlMethod: .physicalRemote,
+            capabilities: grantedCapabilities,
+            hasSelectedAudioUID: true,
+            voiceAttempt: voiceAttempt,
+            runtimePermissionIssue: restrictedIssue
+        )
+        #expect(voiceTestContext.failureReason == .postEventAccessRestricted)
+        #expect(voiceTestContext.failureReason?.recoveryStep == .permissions)
+
+        let firstUseSnapshot = FirstUseDiagnosticSnapshot(
+            appVersion: "1.0",
+            appBuild: "968",
+            systemMajorVersion: 27,
+            architecture: "arm64",
+            voiceTool: .weixin,
+            voiceKeyMode: .rightOption,
+            voiceShortcutName: "Right Option",
+            context: voiceTestContext,
+            voiceAttempt: voiceAttempt,
+            bluetoothStatus: "connection.status.connected_to_device",
+            buttonStatus: "button_mapping.status.connected",
+            audioStatus: "audio.output.current_format",
+            events: [],
+            appLanguage: "zh-Hans",
+            postEventAccessGranted: false
+        )
+        #expect(firstUseSnapshot.redactedText.contains("permission_post_event=false"))
+        #expect(firstUseSnapshot.redactedText.contains("failure=permission.post_event_restricted"))
+        #expect(firstUseSnapshot.redactedText.contains("runtime_permission_issue=post_event_access_restricted"))
+
+        let settingsSnapshot = SettingsDiagnosticSnapshot(
+            appVersion: "1.0",
+            bluetoothGranted: true,
+            inputMonitoringGranted: true,
+            accessibilityGranted: true,
+            postEventAccessGranted: false,
+            runtimeLogAvailable: true,
+            runtimePermissionIssue: "post_event_access_restricted"
+        )
+        #expect(settingsSnapshot.summary.contains("Post Event Access: 受限或未授权 (Denied/Restricted)"))
+        #expect(settingsSnapshot.auditLog.contains("post_event=false"))
+    }
+
+    @Test func voiceTestStatusAndResolvedFailureAlignWithRestrictedPostEventPermission() {
+        #expect(
+            FirstUseVoiceAttemptPolicy.resolvedFailureReason(
+                result: .externalToolNoCommit,
+                runtimePermissionIssue: .postEventAccessRestricted
+            ) == .postEventAccessRestricted
+        )
+        #expect(
+            FirstUseVoiceAttemptPolicy.resolvedFailureReason(
+                result: .externalToolNoCommit,
+                runtimePermissionIssue: .permissionDesynced(signals: ["hid_filter_system_disabled"])
+            ) == .permissionDesynced
+        )
+        #expect(
+            FirstUseVoiceAttemptPolicy.resolvedFailureReason(
+                result: .externalToolNoCommit,
+                runtimePermissionIssue: nil
+            ) == .voiceExternalToolNoCommit
+        )
+        #expect(
+            FirstUseVoiceAttemptPolicy.resolvedFailureReason(
+                result: .passed,
+                runtimePermissionIssue: .postEventAccessRestricted
+            ) == nil
+        )
+
+        #expect(
+            OnboardingView.voiceTestStatusKey(
+                toolReady: true,
+                manualInput: false,
+                result: .externalToolNoCommit,
+                sessionStarted: true,
+                samplesReceived: true,
+                sessionEnded: true,
+                runtimePermissionIssue: .postEventAccessRestricted
+            ) == "onboarding.recovery.permission.post_event_restricted.title"
+        )
+        #expect(
+            OnboardingView.voiceTestStatusKey(
+                toolReady: true,
+                manualInput: false,
+                result: .none,
+                sessionStarted: false,
+                samplesReceived: false,
+                sessionEnded: false,
+                runtimePermissionIssue: .postEventAccessRestricted
+            ) == "onboarding.recovery.permission.post_event_restricted.title"
+        )
+        #expect(
+            OnboardingView.voiceTestStatusKey(
+                toolReady: true,
+                manualInput: false,
+                result: .none,
+                sessionStarted: true,
+                samplesReceived: true,
+                sessionEnded: false,
+                runtimePermissionIssue: .postEventAccessRestricted
+            ) == "onboarding.voice_test.receiving"
+        )
+        #expect(
+            OnboardingView.voiceTestStatusKey(
+                toolReady: true,
+                manualInput: false,
+                result: .passed,
+                sessionStarted: true,
+                samplesReceived: true,
+                sessionEnded: true,
+                runtimePermissionIssue: .postEventAccessRestricted
+            ) == "onboarding.voice_test.success"
+        )
+    }
+
+    @Test func postEventPermissionChangesRefreshDiagnosisWithoutRebuildingHIDMonitors() throws {
+        let granted = HIDPermissionSnapshot(
+            inputMonitoringGranted: true,
+            accessibilityGranted: true,
+            postEventAccessGranted: true
+        )
+        let restricted = HIDPermissionSnapshot(
+            inputMonitoringGranted: true,
+            accessibilityGranted: true,
+            postEventAccessGranted: false
+        )
+        let denied = HIDPermissionSnapshot(
+            inputMonitoringGranted: true,
+            accessibilityGranted: false,
+            postEventAccessGranted: false
+        )
+
+        #expect(
+            !HIDPermissionRecoveryPolicy.shouldReapplySettings(
+                started: true,
+                customMappingEnabled: true,
+                previous: granted,
+                current: restricted
+            )
+        )
+        #expect(
+            !HIDPermissionRecoveryPolicy.shouldReapplySettings(
+                started: true,
+                customMappingEnabled: true,
+                previous: restricted,
+                current: granted
+            )
+        )
+        #expect(
+            HIDPermissionRecoveryPolicy.shouldReapplySettings(
+                started: true,
+                customMappingEnabled: true,
+                previous: restricted,
+                current: denied
+            )
+        )
+
+        #expect(
+            !BridgeAppModel.shouldReapplyHIDSettingsBeforeVoiceStart(
+                customMappingEnabled: true,
+                mode: .rightOption,
+                fnTapModeEnabled: false,
+                requiresOrderedFn: false,
+                hasHardwareVoiceKey: true,
+                hasMatchingHIDServices: true,
+                isVoiceKeyNeutralized: true,
+                currentServicesMatchDesiredMapping: true,
+                fnTapSessionEnabled: true,
+                monitoringInterrupted: false,
+                monitoringConfigurationApplied: true,
+                appliedPermissionSnapshot: granted,
+                currentPermissionSnapshot: restricted
+            )
+        )
+
+        let suiteName = "runtime-perm-no-hid-rebuild-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        var postEventGranted = true
+        let model = BridgeAppModel(
+            settings: AppSettings(defaults: defaults),
+            permissionSnapshotProvider: {
+                HIDPermissionSnapshot(
+                    inputMonitoringGranted: true,
+                    accessibilityGranted: true,
+                    postEventAccessGranted: postEventGranted
+                )
+            }
+        )
+        let initialConfig = BridgeAppModel.HIDMonitoringConfiguration(
+            customMappingEnabled: true,
+            backOnlyMode: false,
+            powerKeySuppressed: true,
+            waitForMatchingServices: false,
+            allowedLocationIDs: nil,
+            targets: [],
+            compatibleHIDIdentities: [],
+            excludedDiscoveryFingerprints: [],
+            monitoringPermissions: granted.monitoringPermissions
+        )
+        model.started = true
+        model.appliedHIDPermissionSnapshot = granted
+        model.appliedHIDMonitoringConfiguration = initialConfig
+
+        postEventGranted = false
+        model.refreshHIDAfterPermissionChange()
+        #expect(model.runtimePermissionIssue == .postEventAccessRestricted)
+        #expect(model.appliedHIDMonitoringConfiguration == initialConfig)
+        #expect(model.appliedHIDPermissionSnapshot == restricted)
+
+        postEventGranted = true
+        model.refreshHIDAfterPermissionChange()
+        #expect(model.runtimePermissionIssue == nil)
+        #expect(model.appliedHIDMonitoringConfiguration == initialConfig)
+        #expect(model.appliedHIDPermissionSnapshot == granted)
     }
 }

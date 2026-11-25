@@ -461,7 +461,7 @@ extension OnboardingView {
                 }
                 .buttonStyle(.borderedProminent)
 
-                if failure == .permissionDesynced, canOfferPermissionRelaunch {
+                if (failure == .permissionDesynced || failure == .postEventAccessRestricted), canOfferPermissionRelaunch {
                     onboardingActionButton(id: "recovery.\(failure.rawValue).restart") {
                         isPermissionRelaunchConfirmationPresented = true
                     } label: {
@@ -498,7 +498,11 @@ extension OnboardingView {
 
     func shouldShowStandaloneRecoveryCard(_ failure: FirstUseFailureReason) -> Bool {
         // The first page owns inline permission and microphone recovery actions.
-        if settings.onboardingStep == .permissions && failure != .permissionDesynced { return false }
+        if settings.onboardingStep == .permissions &&
+           failure != .permissionDesynced &&
+           failure != .postEventAccessRestricted {
+            return false
+        }
         if settings.onboardingStep == .remote,
            settings.onboardingControlMethod == .physicalRemote,
            failure == .remoteNotFound {
@@ -519,7 +523,7 @@ extension OnboardingView {
     }
 
     private func recoveryActionKey(for failure: FirstUseFailureReason) -> String {
-        if failure == .permissionDesynced {
+        if failure == .permissionDesynced || failure == .postEventAccessRestricted {
             return "permission.desync.action.open_settings"
         }
         return "onboarding.recovery.\(failure.rawValue).action"
@@ -530,6 +534,11 @@ extension OnboardingView {
             return canOfferPermissionRelaunch
                 ? "onboarding.recovery.permission.desynced.detail.with_restart"
                 : "onboarding.recovery.permission.desynced.detail"
+        }
+        if failure == .postEventAccessRestricted {
+            return canOfferPermissionRelaunch
+                ? "onboarding.recovery.permission.post_event_restricted.detail.with_restart"
+                : "onboarding.recovery.permission.post_event_restricted.detail"
         }
         guard failure == .remoteNotFound else {
             return "onboarding.recovery.\(failure.rawValue).detail"

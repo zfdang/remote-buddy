@@ -315,7 +315,7 @@ extension BridgeAppModel {
                 includeT1: true
             ),
             excludedDiscoveryFingerprints: settings.excludedForgottenHIDFingerprints(),
-            permissionSnapshot: permissionSnapshotProvider()
+            monitoringPermissions: permissionSnapshotProvider().monitoringPermissions
         )
         if canReuseRunningHIDMonitors(for: desiredConfiguration, forceRestart: forceRestart) {
             hidPowerKeySuppressed = powerKeySuppressed

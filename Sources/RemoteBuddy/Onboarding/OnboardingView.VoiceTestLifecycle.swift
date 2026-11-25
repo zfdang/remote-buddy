@@ -264,7 +264,10 @@ extension OnboardingView {
         }
         voiceAttempt.result = result
         voiceAttempt.phase = result == .passed ? .passed : .failed
-        let failure = result.failureReason
+        let failure = FirstUseVoiceAttemptPolicy.resolvedFailureReason(
+            result: result,
+            runtimePermissionIssue: model.runtimePermissionIssue
+        )
         settings.recordFirstUseEvent(
             result == .passed ? .passed : .blocked,
             step: .voiceTest,

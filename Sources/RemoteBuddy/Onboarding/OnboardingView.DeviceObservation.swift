@@ -26,7 +26,10 @@ extension OnboardingView {
             events: settings.firstUseEvents,
             appLanguage: localization.locale.identifier,
             controlSource: settings.onboardingControlSource,
-            voiceBinding: settings.stagedVoiceToolBinding ?? settings.verifiedVoiceToolBinding
+            voiceBinding: settings.stagedVoiceToolBinding ?? settings.verifiedVoiceToolBinding,
+            postEventAccessGranted: permissionOverrides?.postEventAccess ??
+                permissionOverrides?.accessibility ??
+                KeyboardInjector.isPostEventAccessGranted
         )
         let logger = AppLogger.shared
         let summary = snapshot.redactedText

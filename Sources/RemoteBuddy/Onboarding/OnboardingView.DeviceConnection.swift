@@ -201,7 +201,7 @@ extension OnboardingView {
                 localization.text("onboarding.remote.bluetooth_unavailable.detail"),
                 .orange
             )
-        case nil:
+        case .postEventAccessRestricted, nil:
             return (
                 "dot.radiowaves.left.and.right",
                 localization.text("onboarding.remote.searching"),

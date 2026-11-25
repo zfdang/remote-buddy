@@ -99,6 +99,9 @@ extension SettingsView {
             bluetoothGranted: bluetoothPermissionState == .granted,
             inputMonitoringGranted: inputMonitoringGranted,
             accessibilityGranted: accessibilityGranted,
+            postEventAccessGranted: permissionOverrides?.postEventAccess ??
+                permissionOverrides?.accessibility ??
+                KeyboardInjector.isPostEventAccessGranted,
             remoteConnected: model.isConnected,
             remoteModel: remoteModelDesc,
             virtualMicrophoneReady: virtualMicReady,

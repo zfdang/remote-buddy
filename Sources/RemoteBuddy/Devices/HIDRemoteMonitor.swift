@@ -331,7 +331,7 @@ final class HIDRemoteMonitor {
         let inputGranted = permissions.inputMonitoringGranted
         let accessibilityGranted = permissions.accessibilityGranted
         AppLogger.shared.write(
-            "HID PERMISSIONS input=\(inputGranted) accessibility=\(accessibilityGranted)"
+            "HID PERMISSIONS input=\(inputGranted) accessibility=\(accessibilityGranted) post_event=\(permissions.postEventAccessGranted)"
         )
         guard HIDPermissionGate.canMonitor(
             mappingEnabled: settings.customMappingEnabled || backOnlyMode,

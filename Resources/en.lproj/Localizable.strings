@@ -1273,7 +1273,7 @@
 "onboarding.voice_test.trial_missing" = "The voice test configuration is no longer active. Return to input tool setup before testing again.";
 "onboarding.voice_test.reconfigure" = "Return to Input Tool Setup";
 
-"button_mapping.google.version_notice" = "G9N9N replacements use different hardware versions with varying features. Choose carefully; see the";
+"button_mapping.google.version_notice" = "G9N9N units connect via Standard System HID or Bluetooth Logging Profile (.mobileconfig); see the";
 "button_mapping.google.device_guide" = "device guide ↗";
 
 "connection.empty.title" = "No remotes added";

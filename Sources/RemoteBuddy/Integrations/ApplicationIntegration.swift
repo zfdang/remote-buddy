@@ -153,15 +153,14 @@ final class ApplicationIntegrationController {
         completion: @escaping (VoiceInputDestinationWaitResult) -> Void
     ) -> VoiceInputDestinationWait {
         cancelPending()
-        guard started, let application = frontmost(),
-              let integration = ApplicationIntegration.matching(application.bundleIdentifier),
+        guard started, let target = currentVoiceInputTarget(),
+              let integration = ApplicationIntegration.matching(target.bundleIdentifier),
               settings.isApplicationIntegrationEnabled(integration) else { return .immediate }
-        let target = VoiceInputTarget(bundleIdentifier: application.bundleIdentifier, pid: application.pid)
         onTarget(target)
         generation &+= 1
         let requestID = generation
         pendingCompletion = completion
-        pendingBundleIdentifier = application.bundleIdentifier
+        pendingBundleIdentifier = target.bundleIdentifier
         onStateChange(.waiting)
         let finishFocus: (ApplicationFocusResult, Bool) -> Void = { [weak self] focusResult, timedOut in
             guard let self, self.generation == requestID, self.pendingCompletion != nil else { return }
@@ -173,7 +172,7 @@ final class ApplicationIntegrationController {
             }
         }
         deadline = schedule(VoiceInputPreparationSequence.maximumFocusWait) { finishFocus(.unavailable, true) }
-        let task = focus(integration, application.pid) { finishFocus($0, false) }
+        let task = focus(integration, target.pid) { finishFocus($0, false) }
         if generation == requestID, pendingCompletion != nil { pendingFocus = task }
         else { task.cancel() }
         return .waiting(.mainQueueCancellation { [weak self] in
@@ -182,8 +181,12 @@ final class ApplicationIntegrationController {
         })
     }
 
+    func currentVoiceInputTarget() -> VoiceInputTarget? {
+        frontmost().map { VoiceInputTarget(bundleIdentifier: $0.bundleIdentifier, pid: $0.pid) }
+    }
+
     func isCurrentVoiceInputTarget(_ target: VoiceInputTarget) -> Bool {
-        let current = frontmost()
+        let current = currentVoiceInputTarget()
         return current?.pid == target.pid && current?.bundleIdentifier == target.bundleIdentifier
     }
 

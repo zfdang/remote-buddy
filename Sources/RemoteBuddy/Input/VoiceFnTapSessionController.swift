@@ -346,17 +346,17 @@ final class VoiceFnTapSessionController {
 
     private func beginStartTap(generation sessionGeneration: UInt64) {
         guard phase == .starting(sessionGeneration), generation == sessionGeneration else { return }
-        guard validateStart() else {
-            cancelSessionAwaitingDestination(generation: sessionGeneration)
-            return
-        }
-        startSequenceBegan = true
         performStartTaps(remaining: max(1, startTapCount()), generation: sessionGeneration)
     }
 
     /// Tools such as macOS Dictation start on a double press but stop on one press.
     private func performStartTaps(remaining: Int, generation sessionGeneration: UInt64) {
         guard phase == .starting(sessionGeneration), generation == sessionGeneration else { return }
+        guard validateStart() else {
+            cancelSessionAwaitingDestination(generation: sessionGeneration)
+            return
+        }
+        startSequenceBegan = true
         performTriggerTap(generation: sessionGeneration) { [weak self] success in
             guard let self,
                   self.phase == .starting(sessionGeneration),

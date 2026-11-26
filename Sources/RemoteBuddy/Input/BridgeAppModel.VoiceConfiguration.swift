@@ -9,20 +9,24 @@ extension BridgeAppModel {
     func makeVoiceFnTapSession(
         schedule: @escaping OperationScheduler = ScheduledOperation.mainQueue
     ) -> VoiceFnTapSessionController {
-        var integrationTarget: ApplicationIntegrationController.VoiceInputTarget?
+        var startTarget: ApplicationIntegrationController.VoiceInputTarget?
         return VoiceFnTapSessionController(
             startTapCount: { [weak self] in
                 self?.settings.onboardingVoiceTool.functionKeyStartTapCount ?? 1
             },
             schedule: schedule,
             destinationReadiness: { [weak self] completion in
-                integrationTarget = nil
-                return self?.prepareIntegratedVoiceInputDestination(
-                    completion: completion, onTarget: { integrationTarget = $0 }
-                ) ?? .immediate
+                guard let self else { return .immediate }
+                startTarget = self.settings.onboardingVoiceTool.functionKeyStartTapCount > 1
+                    ? self.applicationIntegrationController.currentVoiceInputTarget() : nil
+                return self.prepareIntegratedVoiceInputDestination(
+                    completion: completion, onTarget: { target in
+                        if startTarget == nil { startTarget = target }
+                    }
+                )
             },
             validateStart: { [weak self] in
-                guard let self, let target = integrationTarget else { return true }
+                guard let self, let target = startTarget else { return true }
                 guard self.applicationIntegrationController.isCurrentVoiceInputTarget(target) else {
                     self.recordApplicationIntegrationStatus(.cancelled(.targetChanged))
                     return false

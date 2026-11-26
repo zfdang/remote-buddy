@@ -220,6 +220,7 @@ extension BridgeAppModel {
                     settings.enabledApplicationIntegrations.isEmpty ? nil : VoicePlaybackQueueCapacity.maximumPreRollSamples)
             }
             var immediateResult: Bool?
+            var integrationTarget: ApplicationIntegrationController.VoiceInputTarget?
             let activationCompleted: (Bool) -> Void = { [weak self] activated in
                 guard let self else { completion(false); return }
                 guard self.voiceKeyActivationGeneration == generation,
@@ -229,11 +230,20 @@ extension BridgeAppModel {
                 let finish = self.pendingVoiceKeyActivationCompletion
                 self.pendingVoiceKeyActivationCompletion = nil
                 defer { self.flushPendingVoiceToolMappingRefresh() }
-                guard activated, !self.isTerminating, !self.audio.suspensionState.isSuspended, self.pendingVoiceKeyMode == mode else {
+                let targetChanged = integrationTarget.map {
+                    !self.applicationIntegrationController.isCurrentVoiceInputTarget($0)
+                } ?? false
+                guard activated, !targetChanged, !self.isTerminating, !self.audio.suspensionState.isSuspended,
+                      self.pendingVoiceKeyMode == mode else {
                     self.pendingVoiceKeyMode = nil
                     if owner == .bluetooth { self.voiceSession.commandAudio.cancel() }
                     self.voiceKeyLatch.rollback(transition, owner: owner)
-                    self.completeApplicationIntegrationVoiceTrigger(started: false)
+                    if targetChanged {
+                        self.preferredInputSourceMonitor.endVoiceSession()
+                        self.recordApplicationIntegrationStatus(.cancelled(.targetChanged))
+                    } else {
+                        self.completeApplicationIntegrationVoiceTrigger(started: false)
+                    }
                     immediateResult = false
                     finish?(false)
                     return
@@ -249,7 +259,9 @@ extension BridgeAppModel {
                 guard result == .ready else { activationCompleted(false); return }
                 self.preferredInputSourceMonitor.beginVoiceSession(completion: activationCompleted)
             }
-            switch applicationIntegrationController.prepareForVoiceInput(completion: prepareSource) {
+            switch applicationIntegrationController.prepareForVoiceInput(
+                onTarget: { integrationTarget = $0 }, completion: prepareSource
+            ) {
             case .immediate: prepareSource(.ready)
             case let .cancelled(reason): prepareSource(.cancelled(reason))
             case .waiting: break

@@ -96,6 +96,10 @@ enum ApplicationIntegrationPreparationState: Equatable {
 @MainActor
 final class ApplicationIntegrationController {
     typealias Focuser = (ApplicationIntegration, pid_t, @escaping (ApplicationFocusResult) -> Void) -> ScheduledOperation
+    struct VoiceInputTarget {
+        let bundleIdentifier: String?
+        let pid: pid_t
+    }
     private let settings: AppSettings
     private let notifications: NotificationCenter
     private let frontmost: () -> (bundleIdentifier: String?, pid: pid_t)?
@@ -144,11 +148,16 @@ final class ApplicationIntegrationController {
 
     /// Focus is optional. A failed/expired attempt is reported and voice continues
     /// in the same application; release, app changes, and shutdown still cancel.
-    func prepareForVoiceInput(completion: @escaping (VoiceInputDestinationWaitResult) -> Void) -> VoiceInputDestinationWait {
+    func prepareForVoiceInput(
+        onTarget: (VoiceInputTarget) -> Void = { _ in },
+        completion: @escaping (VoiceInputDestinationWaitResult) -> Void
+    ) -> VoiceInputDestinationWait {
         cancelPending()
         guard started, let application = frontmost(),
               let integration = ApplicationIntegration.matching(application.bundleIdentifier),
               settings.isApplicationIntegrationEnabled(integration) else { return .immediate }
+        let target = VoiceInputTarget(bundleIdentifier: application.bundleIdentifier, pid: application.pid)
+        onTarget(target)
         generation &+= 1
         let requestID = generation
         pendingCompletion = completion
@@ -156,8 +165,7 @@ final class ApplicationIntegrationController {
         onStateChange(.waiting)
         let finishFocus: (ApplicationFocusResult, Bool) -> Void = { [weak self] focusResult, timedOut in
             guard let self, self.generation == requestID, self.pendingCompletion != nil else { return }
-            let current = self.frontmost()
-            if current?.pid != application.pid || current?.bundleIdentifier != application.bundleIdentifier {
+            if !self.isCurrentVoiceInputTarget(target) {
                 self.finish(requestID: requestID, result: .cancelled(.targetChanged))
             } else {
                 self.finish(requestID: requestID, result: .ready,
@@ -172,6 +180,11 @@ final class ApplicationIntegrationController {
             guard self?.generation == requestID else { return }
             self?.cancelPending()
         })
+    }
+
+    func isCurrentVoiceInputTarget(_ target: VoiceInputTarget) -> Bool {
+        let current = frontmost()
+        return current?.pid == target.pid && current?.bundleIdentifier == target.bundleIdentifier
     }
 
     private func finish(requestID: UInt64, result: VoiceInputDestinationWaitResult,

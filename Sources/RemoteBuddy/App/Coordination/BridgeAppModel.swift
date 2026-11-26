@@ -15,10 +15,6 @@ struct RemoteButtonObservation: Equatable {
         self.buttons = buttons
         self.origin = origin
     }
-
-    static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.profileID == rhs.profileID && lhs.buttons == rhs.buttons
-    }
 }
 
 @MainActor
@@ -81,6 +77,9 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
     var btleServerReportLogSource: BTLEServerReportLogSource?
     var btleServerReportLogGeneration: UInt64 = 0
     var lastBTLEServerLogRedactedAt: TimeInterval = 0
+    var consecutiveUnattributedBTLEServerLogRedactions = 0
+    var lastUnattributedBTLEServerLogRedactionAt: TimeInterval = 0
+    var lastUnattributedBTLEServerLogRedactionReportID: UInt32?
     struct VoiceToolUnavailablePrompt: Equatable {
         enum Reason: Equatable {
             case unavailable

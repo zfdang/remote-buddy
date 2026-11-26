@@ -1331,7 +1331,6 @@
 "connection.device_guide.g9n9n.other_key_stops.detail" = "智能切换免提收音时，若按下任意其他实体按键，硬件会直接停止音频流；请等说完再按其他按键。";
 
 // Opt-in G9N9N Bluetooth logging profile compatibility
-"g9n9n.btle_log.title" = "蓝牙日志全键兼容增强";
 "g9n9n.btle_log.toggle" = "启用蓝牙日志全键兼容（需安装 .mobileconfig 描述文件）";
 "g9n9n.btle_log.subtitle" = "默认关闭。专为 0x011B、26.7 或 26.0 等被 macOS BTLEServer 丢弃短报文的 G9N9N 批次准备，开启并安装描述文件后可解锁全部 14 颗普通按键。";
 "g9n9n.btle_log.status.installed" = "蓝牙日志描述文件已安装";

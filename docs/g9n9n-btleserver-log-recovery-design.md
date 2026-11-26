@@ -90,8 +90,8 @@ Updated input report for ID #2: <private>
 
 在 macOS 上，`log config --status` 需要 root 权限，而 `/usr/bin/profiles list -output stdout-xml` **无需 root 即可读取已安装的描述文件清单**。Remote Buddy 通过以下双信号判断描述文件状态：
 
-1. **静态清单解析**（`BluetoothLoggingProfileService`）：解析 `profiles list -output stdout-xml` 输出的 XML plist，检查是否存在 `PayloadType == "com.apple.system.logging"` 且对 `com.apple.bluetooth`（或全局 `System`）启用了 `Enable-Private-Data = true` 的条目。若系统级范围（`_computerlevel`）出现在输出中且未命中，返回 `.notInstalled` 并阻止持续读取日志；若非 root 查询输出中不包含 `_computerlevel` 作用域（常见于以系统范围安装描述文件后），则保留为 `.unknown`，等待用户点击「重新检测」或进一步按键/脱敏信号验证。
-2. **实时脱敏探测与立即暂停**（`BTLEServerReportLog` + `BridgeAppModel`）：当日志流中收到 `Updated input report for ID #...: <private>` 时，标记 `btleServerLogRedactedObserved = true` 并**立即停止 `/usr/bin/log stream` 子进程**（不再在无有效描述文件时后台空转），同时刷新描述文件状态并提示用户安装后点击「重新检测」恢复读取。
+1. **静态清单解析**（`BluetoothLoggingProfileService`）：解析 `profiles list -output stdout-xml` 输出的 XML plist，检查是否存在 `PayloadType == "com.apple.system.logging"` 且对 `Subsystems["com.apple.bluetooth"]`（`DEFAULT-OPTIONS` 或 `BTLEServer`）同时启用了 `Enable-Private-Data = true` 与 `Level.Enable == "Debug"`（大小写不敏感）的条目（不接受仅配置全局 `System.Enable-Private-Data` 的无关描述文件）。若系统级范围（`_computerlevel`）出现在输出中且未命中，返回 `.notInstalled` 并阻止持续读取日志；若非 root 查询输出中不包含 `_computerlevel` 作用域（常见于以系统范围安装描述文件后），则保留为 `.unknown`，等待用户点击「重新检测」或进一步按键/脱敏信号验证。
+2. **实时脱敏探测与旁证暂停**（`BTLEServerReportLog` + `BridgeAppModel`）：当日志流中收到可直接归属到目标外设（`peripheral != nil`）的 `Updated input report for ID #...: <private>` 时，立即标记 `btleServerLogRedactedObserved = true` 并停止 `/usr/bin/log stream` 子进程；若脱敏事件无直接外设归属（`peripheral == nil`，可能来自其他未启用调试日志的 BLE HID 设备），且静态状态尚未确认 `.installed`，则在首次遇到时异步刷新描述文件状态，并要求**5 秒窗口内连续出现 3 次同 `reportID` 的未归属 `<private>` 报告**后才暂停日志流（收到不同 `reportID`、超窗、有效归属报文、手动「重新检测」或状态确认 `.installed` 时清零计数），避免被无关蓝牙设备误触发暂停。一旦暂停，界面提示用户安装描述文件后点击「重新检测」恢复读取。
 
 ---
 

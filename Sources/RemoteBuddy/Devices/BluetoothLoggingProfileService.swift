@@ -42,12 +42,9 @@ enum BluetoothLoggingProfileService {
                     guard (item["PayloadType"] as? String) == "com.apple.system.logging",
                           let content = item["PayloadContent"] as? [String: Any]
                     else { continue }
-                    if (content["System"] as? [String: Any])?["Enable-Private-Data"] as? Bool == true {
-                        return true
-                    }
                     if let bluetooth = (content["Subsystems"] as? [String: Any])?["com.apple.bluetooth"] as? [String: Any] {
-                        if (bluetooth["DEFAULT-OPTIONS"] as? [String: Any])?["Enable-Private-Data"] as? Bool == true ||
-                            (bluetooth["BTLEServer"] as? [String: Any])?["Enable-Private-Data"] as? Bool == true {
+                        if enablesPrivateDebugLogging(bluetooth["DEFAULT-OPTIONS"] as? [String: Any]) ||
+                            enablesPrivateDebugLogging(bluetooth["BTLEServer"] as? [String: Any]) {
                             return true
                         }
                     }
@@ -55,6 +52,17 @@ enum BluetoothLoggingProfileService {
             }
         }
         return false
+    }
+
+    private static func enablesPrivateDebugLogging(_ options: [String: Any]?) -> Bool {
+        guard let options,
+              (options["Enable-Private-Data"] as? Bool) == true,
+              let level = options["Level"] as? [String: Any],
+              let enableLevel = level["Enable"] as? String
+        else {
+            return false
+        }
+        return enableLevel.caseInsensitiveCompare("Debug") == .orderedSame
     }
 
     static func status(fromProfilesXMLData profilesXMLData: Data) -> BluetoothLoggingProfileStatus {

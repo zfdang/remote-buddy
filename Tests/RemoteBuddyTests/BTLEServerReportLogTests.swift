@@ -294,6 +294,11 @@ struct BTLEServerReportLogTests {
                                         <dict>
                                             <key>Enable-Private-Data</key>
                                             <true/>
+                                            <key>Level</key>
+                                            <dict>
+                                                <key>Enable</key>
+                                                <string>Debug</string>
+                                            </dict>
                                         </dict>
                                     </dict>
                                 </dict>
@@ -306,6 +311,115 @@ struct BTLEServerReportLogTests {
         </plist>
         """.data(using: .utf8)!
         #expect(BluetoothLoggingProfileService.isBluetoothPrivateLoggingInstalled(profilesXMLData: scopedXML))
+
+        let bluetoothWithoutDebugLevelXML = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>_computerlevel</key>
+            <array>
+                <dict>
+                    <key>ProfileItems</key>
+                    <array>
+                        <dict>
+                            <key>PayloadType</key>
+                            <string>com.apple.system.logging</string>
+                            <key>PayloadContent</key>
+                            <dict>
+                                <key>Subsystems</key>
+                                <dict>
+                                    <key>com.apple.bluetooth</key>
+                                    <dict>
+                                        <key>DEFAULT-OPTIONS</key>
+                                        <dict>
+                                            <key>Enable-Private-Data</key>
+                                            <true/>
+                                        </dict>
+                                    </dict>
+                                </dict>
+                            </dict>
+                        </dict>
+                    </array>
+                </dict>
+            </array>
+        </dict>
+        </plist>
+        """.data(using: .utf8)!
+
+        let systemOnlyLoggingXML = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>_computerlevel</key>
+            <array>
+                <dict>
+                    <key>ProfileItems</key>
+                    <array>
+                        <dict>
+                            <key>PayloadType</key>
+                            <string>com.apple.system.logging</string>
+                            <key>PayloadContent</key>
+                            <dict>
+                                <key>System</key>
+                                <dict>
+                                    <key>Enable-Private-Data</key>
+                                    <true/>
+                                </dict>
+                            </dict>
+                        </dict>
+                    </array>
+                </dict>
+            </array>
+        </dict>
+        </plist>
+        """.data(using: .utf8)!
+
+        let btServerDebugCaseInsensitiveXML = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>_computerlevel</key>
+            <array>
+                <dict>
+                    <key>ProfileItems</key>
+                    <array>
+                        <dict>
+                            <key>PayloadType</key>
+                            <string>com.apple.system.logging</string>
+                            <key>PayloadContent</key>
+                            <dict>
+                                <key>Subsystems</key>
+                                <dict>
+                                    <key>com.apple.bluetooth</key>
+                                    <dict>
+                                        <key>BTLEServer</key>
+                                        <dict>
+                                            <key>Enable-Private-Data</key>
+                                            <true/>
+                                            <key>Level</key>
+                                            <dict>
+                                                <key>Enable</key>
+                                                <string>debug</string>
+                                            </dict>
+                                        </dict>
+                                    </dict>
+                                </dict>
+                            </dict>
+                        </dict>
+                    </array>
+                </dict>
+            </array>
+        </dict>
+        </plist>
+        """.data(using: .utf8)!
+        #expect(!BluetoothLoggingProfileService.isBluetoothPrivateLoggingInstalled(profilesXMLData: bluetoothWithoutDebugLevelXML))
+        #expect(BluetoothLoggingProfileService.status(fromProfilesXMLData: bluetoothWithoutDebugLevelXML) == .notInstalled)
+        #expect(!BluetoothLoggingProfileService.isBluetoothPrivateLoggingInstalled(profilesXMLData: systemOnlyLoggingXML))
+        #expect(BluetoothLoggingProfileService.status(fromProfilesXMLData: systemOnlyLoggingXML) == .notInstalled)
+        #expect(BluetoothLoggingProfileService.status(fromProfilesXMLData: btServerDebugCaseInsensitiveXML) == .installed)
 
         let unrelatedComputerLevelXML = """
         <?xml version="1.0" encoding="UTF-8"?>

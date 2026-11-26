@@ -1329,7 +1329,6 @@
 "connection.device_guide.g9n9n.other_key_stops.detail" = "During hands-free streaming, tapping any other physical button makes firmware stop audio immediately—finish speaking before using other keys.";
 
 // Opt-in G9N9N Bluetooth logging profile compatibility
-"g9n9n.btle_log.title" = "Bluetooth Logging Full-Key Compatibility";
 "g9n9n.btle_log.toggle" = "Enable Bluetooth log key recovery (requires .mobileconfig profile)";
 "g9n9n.btle_log.subtitle" = "Off by default. Optional workaround for G9N9N batches (such as 0x011B, FW 26.7, or 26.0) whose short HID reports are dropped by macOS BTLEServer, unlocking all 14 ordinary buttons.";
 "g9n9n.btle_log.status.installed" = "Bluetooth logging profile installed";

@@ -464,8 +464,20 @@ extension BridgeAppModel {
         }
     }
 
+    private enum BTLEServerLogRedactionPolicy {
+        static let unattributedThreshold = 3
+        static let unattributedWindow: TimeInterval = 5.0
+    }
+
+    func resetUnattributedBTLEServerLogRedactionTracking() {
+        consecutiveUnattributedBTLEServerLogRedactions = 0
+        lastUnattributedBTLEServerLogRedactionAt = 0
+        lastUnattributedBTLEServerLogRedactionReportID = nil
+    }
+
     func recheckBluetoothLoggingProfile() {
         btleServerLogRedactedObserved = false
+        resetUnattributedBTLEServerLogRedactionTracking()
         if bluetoothLoggingProfileStatus == .notInstalled {
             bluetoothLoggingProfileStatus = .unknown
         }
@@ -568,6 +580,7 @@ extension BridgeAppModel {
             btleServerReportLogSource = nil
             AppLogger.shared.write("HID BTLE_LOG source=stopped")
         }
+        resetUnattributedBTLEServerLogRedactionTracking()
         if clearingRedactedObservation {
             btleServerLogRedactedObserved = false
         }
@@ -653,6 +666,7 @@ extension BridgeAppModel {
         case let .boundMonitor(fingerprint, _):
             guard let targetMonitor = hidMonitors[fingerprint] else { return }
             btleServerLogRedactedObserved = false
+            resetUnattributedBTLEServerLogRedactionTracking()
             if bluetoothLoggingProfileStatus != .installed {
                 bluetoothLoggingProfileStatus = .installed
             }
@@ -667,19 +681,54 @@ extension BridgeAppModel {
 
     func handleRedactedBTLEServerReport(
         _ observation: BTLEServerReportLog.RedactedObservation,
-        sourceGeneration: UInt64? = nil
+        sourceGeneration: UInt64? = nil,
+        now: TimeInterval = ProcessInfo.processInfo.systemUptime
     ) {
         guard isBTLEServerLogSourceActive(for: sourceGeneration) else { return }
+        guard shouldPauseOnRedactedBTLEServerReport(observation, now: now) else {
+            return
+        }
+        resetUnattributedBTLEServerLogRedactionTracking()
         btleServerLogRedactedObserved = true
         stopBTLEServerLogSource(clearingRedactedObservation: false)
         if bluetoothLoggingProfileStatus != .notInstalled {
             refreshBluetoothLoggingProfileStatus()
         }
-        let now = ProcessInfo.processInfo.systemUptime
         if now - lastBTLEServerLogRedactedAt >= 10 {
             lastBTLEServerLogRedactedAt = now
-            AppLogger.shared.write("HID BTLE_LOG redacted_report_observed id=\(observation.reportID) action=paused")
+            let attribution = observation.peripheral == nil ? "unattributed" : "peripheral"
+            AppLogger.shared.write(
+                "HID BTLE_LOG redacted_report_observed id=\(observation.reportID) attribution=\(attribution) action=paused"
+            )
         }
+    }
+
+    private func shouldPauseOnRedactedBTLEServerReport(
+        _ observation: BTLEServerReportLog.RedactedObservation,
+        now: TimeInterval
+    ) -> Bool {
+        if observation.peripheral != nil {
+            return true
+        }
+        // Unrelated BLE HID traffic can emit unattributed `<private>` lines even after the user
+        // installs the Bluetooth profile; ignore them once `.installed` is confirmed.
+        if bluetoothLoggingProfileStatus == .installed {
+            resetUnattributedBTLEServerLogRedactionTracking()
+            return false
+        }
+        if lastUnattributedBTLEServerLogRedactionReportID == observation.reportID,
+           now - lastUnattributedBTLEServerLogRedactionAt <= BTLEServerLogRedactionPolicy.unattributedWindow {
+            consecutiveUnattributedBTLEServerLogRedactions += 1
+        } else {
+            if lastUnattributedBTLEServerLogRedactionReportID == nil,
+               bluetoothLoggingProfileStatus == .unknown {
+                refreshBluetoothLoggingProfileStatus()
+            }
+            consecutiveUnattributedBTLEServerLogRedactions = 1
+        }
+        lastUnattributedBTLEServerLogRedactionReportID = observation.reportID
+        lastUnattributedBTLEServerLogRedactionAt = now
+        return consecutiveUnattributedBTLEServerLogRedactions >= BTLEServerLogRedactionPolicy.unattributedThreshold
     }
 
     /// Releases HID monitors, event taps, input-source observers, and pending recovery work

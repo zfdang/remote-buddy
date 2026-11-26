@@ -655,4 +655,124 @@ struct G9N9NCompatibilityModeTests {
         #expect(restarted.recordG9N9NNativeIOHIDIntegration(for: googleID))
         #expect(restarted.g9n9nInputMode(for: googleID) == .full)
     }
+
+    @Test func unattributedRedactedReportsRequireCorroborationBeforePausing() throws {
+        let suite = "g9n9n-btle-log-redaction-corroboration-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let settings = AppSettings(defaults: defaults)
+        settings.customMappingEnabled = true
+        settings.onboardingPurpose = .initialSetup
+        let googleBLE = UUID()
+        let googleID = settings.registerBluetoothRemote(identifier: googleBLE, model: .chromecastVoiceRemote)
+        settings.bindHIDFingerprint("fp-g9n9n-redaction", to: googleID)
+        settings.completeOnboarding()
+
+        let model = BridgeAppModel(
+            settings: settings,
+            initialAudioDevices: [],
+            permissionSnapshotProvider: {
+                HIDPermissionSnapshot(inputMonitoringGranted: true, accessibilityGranted: true)
+            }
+        )
+        defer {
+            model.setG9N9NBluetoothLogRecoveryEnabled(false)
+            model.stop()
+        }
+        model.started = true
+        model.setG9N9NBluetoothLogRecoveryEnabled(true)
+        #expect(settings.recordG9N9NBluetoothLogRecoveryIntegration(for: googleID))
+        model.bluetoothLoggingProfileStatus = .notInstalled
+        model.synchronizeBTLEServerLogSource()
+        #expect(model.btleServerReportLogSource == nil)
+
+        // With `.unknown`, a single or alternating unattributed `<private>` event does not pause recovery.
+        model.bluetoothLoggingProfileStatus = .unknown
+        model.synchronizeBTLEServerLogSource()
+        let firstGeneration = model.btleServerReportLogGeneration
+        #expect(model.btleServerReportLogSource != nil)
+
+        model.handleRedactedBTLEServerReport(
+            .init(peripheral: nil, reportID: 2),
+            sourceGeneration: firstGeneration,
+            now: 100.0
+        )
+        #expect(!model.btleServerLogRedactedObserved)
+        #expect(model.btleServerReportLogSource != nil)
+
+        model.handleRedactedBTLEServerReport(
+            .init(peripheral: nil, reportID: 2),
+            sourceGeneration: firstGeneration,
+            now: 101.0
+        )
+        #expect(!model.btleServerLogRedactedObserved)
+
+        // Different reportID resets consecutive count.
+        model.handleRedactedBTLEServerReport(
+            .init(peripheral: nil, reportID: 1),
+            sourceGeneration: firstGeneration,
+            now: 102.0
+        )
+        #expect(!model.btleServerLogRedactedObserved)
+
+        // Gap > 5s resets consecutive count as well.
+        model.handleRedactedBTLEServerReport(
+            .init(peripheral: nil, reportID: 1),
+            sourceGeneration: firstGeneration,
+            now: 108.5
+        )
+        #expect(!model.btleServerLogRedactedObserved)
+        model.handleRedactedBTLEServerReport(
+            .init(peripheral: nil, reportID: 1),
+            sourceGeneration: firstGeneration,
+            now: 109.5
+        )
+        #expect(!model.btleServerLogRedactedObserved)
+
+        // Third consecutive unattributed `<private>` with same reportID within 5s pauses log reading.
+        model.handleRedactedBTLEServerReport(
+            .init(peripheral: nil, reportID: 1),
+            sourceGeneration: firstGeneration,
+            now: 110.5
+        )
+        #expect(model.btleServerLogRedactedObserved)
+        #expect(model.btleServerReportLogSource == nil)
+
+        // Once static profile inspection confirms `.installed`, unattributed `<private>` bursts are ignored.
+        model.recheckBluetoothLoggingProfile()
+        model.bluetoothLoggingProfileStatus = .installed
+        model.synchronizeBTLEServerLogSource()
+        let installedGeneration = model.btleServerReportLogGeneration
+        #expect(model.btleServerReportLogSource != nil)
+
+        for offset in 0..<4 {
+            model.handleRedactedBTLEServerReport(
+                .init(peripheral: nil, reportID: 2),
+                sourceGeneration: installedGeneration,
+                now: 200.0 + Double(offset) * 0.5
+            )
+        }
+        #expect(!model.btleServerLogRedactedObserved)
+        #expect(model.btleServerReportLogSource != nil)
+
+        // Directly attributed `<private>` for the target peripheral still pauses immediately even if status was `.installed`.
+        model.handleRedactedBTLEServerReport(
+            .init(peripheral: googleBLE, reportID: 2),
+            sourceGeneration: installedGeneration,
+            now: 205.0
+        )
+        #expect(model.btleServerLogRedactedObserved)
+        #expect(model.btleServerReportLogSource == nil)
+    }
+
+    @Test func remoteButtonObservationComparesOrigin() {
+        let profileID = UUID()
+        let iohid = RemoteButtonObservation(profileID: profileID, buttons: [.up], origin: .iohid)
+        let btle = RemoteButtonObservation(profileID: profileID, buttons: [.up], origin: .btleServerLog)
+        let iohidSame = RemoteButtonObservation(profileID: profileID, buttons: [.up], origin: .iohid)
+
+        #expect(iohid == iohidSame)
+        #expect(iohid != btle)
+    }
 }

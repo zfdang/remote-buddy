@@ -32,6 +32,12 @@ extension SettingsView {
         saveMappingBinding(configured, button: button, trigger: trigger)
     }
 
+    func setMappingURLString(_ urlString: String?, for button: RemoteButton, trigger: ButtonTrigger) {
+        var configured = mappingConfiguration(for: button, trigger: trigger)
+        configured.urlString = CustomActionURLPolicy.normalizedInput(urlString)
+        saveMappingBinding(configured, button: button, trigger: trigger)
+    }
+
     private var isSelectedChromecastBluetoothLogRecovery: Bool {
         settings.selectedRemoteProfile?.model.isChromecastRemote == true &&
             settings.g9n9nInputMode(for: settings.selectedRemoteProfileID) == .bluetoothLogRecovery

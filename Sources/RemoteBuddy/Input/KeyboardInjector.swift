@@ -209,6 +209,8 @@ enum KeyboardInjector {
         customApplicationFocuser: @escaping CustomApplicationFocuser = {
             focusCustomApplication(application: $0, processIdentifier: $1, requestID: $2)
         },
+        urlString: String? = nil,
+        urlOpener: (URL) -> Bool = { NSWorkspace.shared.open($0) },
         frontmostComposerFocuser: (@escaping @Sendable (Bool) -> Void) -> Bool = focusFrontmostComposer,
         focusInputCompletion: @escaping @Sendable (Bool) -> Void = { _ in },
         accessibilityTrusted: () -> Bool = { isAccessibilityTrusted },
@@ -259,6 +261,15 @@ enum KeyboardInjector {
                 applicationFocuser: customApplicationFocuser
             )
             return true
+        }
+        if action == .openURL {
+            guard let url = CustomActionURLPolicy.validatedURL(from: urlString) else {
+                AppLogger.shared.write("URL ACTION ignored reason=invalid_or_missing")
+                return false
+            }
+            let opened = urlOpener(url)
+            AppLogger.shared.write("URL ACTION open scheme=\(url.scheme ?? "unknown") success=\(opened)")
+            return opened
         }
         if action == .focusInput {
             guard accessibilityTrusted() else { return false }
@@ -421,7 +432,7 @@ enum KeyboardInjector {
                         "modifier_flags=\(eventFlags.rawValue) standalone=false"
                 )
             }
-        case .focusInput, .openCustomApplication, .toggleLongRecording, .openCommonPhrases, .directPassthrough:
+        case .focusInput, .openCustomApplication, .openURL, .toggleLongRecording, .openCommonPhrases, .directPassthrough:
             break
         default:
             // Preset applications are handled before this switch via action.presetApplication.

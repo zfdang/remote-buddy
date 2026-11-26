@@ -44,7 +44,7 @@
       <summary><span class="troubleshooting-question">Remote Buddy 支持哪些遥控器？</span></summary>
       <div class="troubleshooting-body">
         <p>Remote Buddy 并非所有蓝牙遥控器都能通用，而是针对各厂商专有的蓝牙语音传输协议与 HID 报告格式做了深度驱动适配。目前支持情况如下：</p>
-        <p><strong>1. Google Chromecast Voice Remote（型号 G9N9N）：已全面支持 · 首选推荐</strong><br>支持实时语音解码、专属自动保活（最长约 5 分钟连续录音）、14 颗物理按键全功能自定义与电池电量显示。<strong>特别提醒：</strong>市面上的 G9N9N 存在多种不同硬件或固件批次（目前我们已实测过 3 种已知批次），并非所有批次都支持全部 14 键独立映射（部分非标准批次仅能识别 2 键组合码甚至无法录音）。选购前请务必参阅 <a class="text-link" href="g9n9n-compatibility.html">G9N9N 语音与按键兼容性指南 ↗</a>，挑选已验证的推荐批次。</p>
+        <p><strong>1. Google Chromecast Voice Remote（型号 G9N9N）：已全面支持 · 首选推荐</strong><br>支持实时语音解码、专属自动保活（默认 5 分钟自动停麦，可在「通用」中切换为 3 / 5 / 10 分钟）、14 颗物理按键全功能自定义与电池电量显示。<strong>硬件批次兼容说明：</strong>市面上 G9N9N 存在多种 HID / 固件批次（如 <code>0x0110</code> / <code>26.2</code>、<code>0x011B</code>、固件 <code>26.7</code> / <code>26.0</code>），部分批次的普通按键短报文会被 macOS 系统层丢弃。Remote Buddy 现已提供<strong>标准系统 HID（原生免配置）</strong>与可选<strong>蓝牙日志描述文件（<code>.mobileconfig</code>）</strong>两种接入途径，全部已知批次均可完整使用语音键与 14 颗普通按键。详见 <a class="text-link" href="g9n9n-compatibility.html">G9N9N 语音与按键兼容性指南 ↗</a>。</p>
         <p><strong>2. 小米蓝牙遥控器 2 / 2 Pro（型号 RC001 电池版 / RC003 充电版）：已支持</strong><br>支持按住说话与 60 秒录音，支持全按键自定义。</p>
         <p><strong>3. T1 飞鼠键盘语音遥控器（T1-Remote）：已支持</strong><br>须通过蓝牙直连 Mac（非 2.4G 接收器）。支持点按免提、正面 7 颗常用键自定义，背面自带约 45 键迷你全键盘与空中飞鼠。</p>
         <p><strong>4. 计划支持中：</strong>Google TV Streamer Voice Remote（型号 GY3LE）、Apple Siri Remote（如第 3 代 A2854）等已列入跟进规划，暂未开放生产使用。</p>
@@ -56,7 +56,7 @@
       <summary><span class="troubleshooting-question">推荐购买哪款遥控器？</span></summary>
       <div class="troubleshooting-body">
         <p>根据日常使用偏好与预算，我们推荐以下选购策略：</p>
-        <p><strong>1. 首选与性价比之王：Google G9N9N（约 ¥15）</strong><br>在电商平台（如拼多多、淘宝等）价格仅需 15 元左右。语音键正好位于方向圆环正下方，单手大拇指盲操极其舒适自然；原生支持“智能切换”（可点按也可长按），且支持突破 60 秒上限的长录音。使用两节普通 AAA 7号电池，续航持久。<strong>注意：</strong>不同批次的 G9N9N 硬件表现有差异，购买前请参考 <a class="text-link" href="g9n9n-compatibility.html">G9N9N 兼容批次指南 ↗</a> 选购。</p>
+        <p><strong>1. 首选与性价比之王：Google G9N9N（约 ¥11–¥15）</strong><br>在电商平台（如拼多多、淘宝等）价格低至十余元。语音键正好位于方向圆环正下方，单手大拇指盲操极其舒适自然；原生支持“智能切换”（可点按也可长按），且支持突破 60 秒上限的长录音，使用两节普通 AAA 7号电池，续航持久。<strong>说明：</strong>过去容易因为买到短报文批次而在 macOS 上失灵的问题现已解决，Remote Buddy 通过原生标准 HID 或可选蓝牙日志描述文件（<code>.mobileconfig</code>）即可兼容各类常见批次；接入细节请参阅 <a class="text-link" href="g9n9n-compatibility.html">G9N9N 兼容指南 ↗</a>。</p>
         <p><strong>2. 偏好金属质感与内置充电：小米蓝牙遥控器 2 Pro（日常约 ¥60~¥99）</strong><br>铝合金拉丝机身，做工精致高档，底部带 Type-C 充电接口免换电池。缺点是语音键位于右上角，拇指需要向上伸够，且受限于硬件固件单次录音有 60 秒上限。</p>
         <p><strong>3. 大屏操作、移动光标或补敲文字：T1 飞鼠遥控器（约 ¥50）</strong><br>正面具备遥控与语音功能，翻面即是全功能 QWERTY 键盘与 6 轴空鼠陀螺仪，特别适合躺椅或离开办公桌时远距离操作大屏。</p>
       </div>
@@ -92,7 +92,7 @@
       <div class="troubleshooting-body">
         <p><strong>底层原因分析：</strong>小米等电视盒子遥控器的硬件出厂固件原本是为家庭电视设计的。为了极致省电以及防止遥控器掉进沙发缝误压语音键导致电量耗尽，遥控器主控芯片内部硬编码了硬件看门狗定时器：一旦开启录音，<strong>单次音频传输达到约 60 秒时，硬件会自动强行切断蓝牙音频流</strong>。无论电脑端软件如何请求，硬件均不会再吐出音频数据，必须松开按键后重新按下才能开启下一段录音。</p>
         <p><strong>G9N9N 与 T1 为什么没有 60 秒断开限制？</strong></p>
-        <p>G9N9N 与 T1 支持全双工蓝牙双向通信与状态协商。Remote Buddy 为其专门设计了<strong>链路保活包与自动分段续流（Keep-Alive）调度引擎</strong>，在录音进行中定期主动向遥控器发送保活信号，从而彻底绕过了电视固件的超时熔断，单次最长可稳定连续收音约 5 分钟，非常适合会议发言、长篇听写与深度写作。</p>
+        <p>G9N9N 与 T1 支持全双工蓝牙双向通信与状态协商。Remote Buddy 为其专门设计了<strong>链路保活包与自动分段续流（Keep-Alive）调度引擎</strong>，在录音进行中定期主动向遥控器发送保活信号，从而彻底绕过了电视固件的超时熔断；同时为防止忘记结束说话一直耗电，默认会在约 5 分钟时自动停麦（可在「通用」设置中调整为 3 / 5 / 10 分钟），非常适合会议发言、长篇听写与深度写作。</p>
       </div>
     </details>
   </section>
@@ -124,6 +124,33 @@
         <p><strong>官方推荐实践：</strong></p>
         <p>在 Remote Buddy 与你的输入工具中，<strong>强烈建议改用不易冲突的自定义多修饰组合键（例如 <code>Ctrl (⌃) + Option (⌥) + V</code>）</strong>作为语音热键：</p>
         <p>多修饰组合键拥有极高的全局唯一性，几乎不会被系统功能或日常应用程序占用，无需任何繁琐的系统排查设置即可获得长期稳定、开箱即用的触发体验！</p>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">“按键映射”里每个按键都可以设置哪些动作？有什么常见的设置例子？</span></summary>
+      <div class="troubleshooting-body">
+        <p>在「按键映射」页面开启自定义开关后，除语音键外，每颗实体按键的<strong>单击、双击、长按</strong>都可以分别设置不同动作，并且每台遥控器的配置互不干扰、独立保存。</p>
+        <p><strong>目前可为每个键位设置的动作分为以下几类：</strong></p>
+        <ul>
+          <li><strong>基础按键：</strong>如回车、发送（<code>⌘↩</code>）、换行、复制/粘贴、撤销、上下左右光标与页面滚动等高频编辑操作。</li>
+          <li><strong>系统与媒体：</strong>切换应用（<code>⌘Tab</code>）、调度中心、聚焦搜索、播放/暂停、切歌、音量与亮度调节，以及关闭干扰按键等。</li>
+          <li><strong>打开具体 APP：</strong>不仅包含常用预设应用（如 Chrome、微信、Cursor、ChatGPT、Claude、终端等），还可以选<strong>「打开自定义 APP」</strong>添加 Mac 上的任意程序，并可选配置“打开后自动发送快捷键或定位焦点输入框”。</li>
+          <li><strong>常用语：</strong>将某个键设为唤起常用语浮动面板，快速插入邮箱、地址或长提示词。</li>
+          <li><strong>自定义动作：</strong>
+            <ul>
+              <li><strong>自定义快捷键：</strong>录制 Mac 上的任意单个按键或组合键（例如编辑器命令、录屏、全局触发键）。</li>
+              <li><strong>打开网址 / URL Scheme：</strong>填写网页链接（如 <code>https://...</code>）或应用协议（如苹果原生<strong>「快捷指令」</strong>的 <code>shortcuts://run-shortcut?name=名称</code>），一键打开页面或执行多步快捷指令组合动作。</li>
+            </ul>
+          </li>
+          <li><strong>原样透传（方向键可选）：</strong>作为纯方向键直接按下/抬起，0 延迟响应，适合视频播放器长按倍速或光标持续移动。</li>
+        </ul>
+        <p><strong>常见设置示例：</strong></p>
+        <ol>
+          <li><strong>单键秒开常用程序并直接开聊：</strong>把遥控器上的 <code>YouTube</code> 或 <code>Netflix</code> 键单击设为<strong>「打开具体 APP」</strong>（或「打开自定义 APP」选择 <code>Cursor</code> / <code>微信</code>），点一下切过去就能直接按语音键说话。</li>
+          <li><strong>单键打开网页或联动「快捷指令」做组合动作：</strong>把空闲键（例如 <code>信源键</code> 或 <code>返回键</code> 双击）设为<strong>「打开网址 / URL Scheme」</strong>——填入 <code>https://chatgpt.com</code> 即可一键打开网页版；或填入 <code>shortcuts://run-shortcut?name=工作模式</code>，按一下就能运行你编排好的多步「快捷指令」组合动作。</li>
+          <li><strong>用“长按”扩展自定义快捷键：</strong>例如保留 <code>确定键</code> 单击为回车、长按为发送；再把 <code>静音键</code> 长按设为<strong>「自定义快捷键」</strong>（如 <code>⌘Space</code> 或编辑器命令面板 <code>⇧⌘P</code>），让一颗按键同时承担多种高频操作。</li>
+        </ol>
       </div>
     </details>
 

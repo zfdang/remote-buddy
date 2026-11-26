@@ -41,6 +41,7 @@ final class AppSettings: ObservableObject {
         static let buttonBindings = "buttonBindings"
         static let buttonShortcuts = "buttonShortcuts"
         static let buttonApplicationProfileIDs = "buttonApplicationProfileIDs"
+        static let buttonURLs = "buttonURLs"
         static let secondaryButtonBindings = "secondaryButtonBindings"
         static let customApplicationProfiles = "customApplicationProfiles"
         static let remoteDeviceProfiles = "remoteDeviceProfiles"
@@ -117,6 +118,7 @@ final class AppSettings: ObservableObject {
                 var parsedBindings = mappings.parsedButtonBindings
                 var parsedShortcuts = mappings.parsedButtonShortcuts
                 var parsedAppIDs = mappings.parsedButtonApplicationProfileIDs
+                var parsedURLs = mappings.parsedButtonURLs
                 var parsedSecondary = mappings.parsedSecondaryButtonBindings
                 if trigger == .singleClick {
                     parsedBindings[button] = configured.action
@@ -130,6 +132,11 @@ final class AppSettings: ObservableObject {
                     } else {
                         parsedAppIDs.removeValue(forKey: button)
                     }
+                    if let url = CustomActionURLPolicy.normalizedInput(configured.urlString) {
+                        parsedURLs[button] = url
+                    } else {
+                        parsedURLs.removeValue(forKey: button)
+                    }
                 } else {
                     var secondary = parsedSecondary[button] ?? [:]
                     secondary[trigger] = configured
@@ -139,6 +146,7 @@ final class AppSettings: ObservableObject {
                     buttonBindings: parsedBindings,
                     buttonShortcuts: parsedShortcuts,
                     buttonApplicationProfileIDs: parsedAppIDs,
+                    buttonURLs: parsedURLs,
                     secondaryButtonBindings: parsedSecondary
                 )
                 saveRemoteDeviceProfiles()
@@ -155,6 +163,11 @@ final class AppSettings: ObservableObject {
                     buttonApplicationProfileIDs[button] = appID
                 } else {
                     buttonApplicationProfileIDs.removeValue(forKey: button)
+                }
+                if let url = CustomActionURLPolicy.normalizedInput(configured.urlString) {
+                    buttonURLs[button] = url
+                } else {
+                    buttonURLs.removeValue(forKey: button)
                 }
             } else {
                 var secondary = secondaryButtonBindings[button] ?? [:]
@@ -181,6 +194,13 @@ final class AppSettings: ObservableObject {
     @Published var buttonApplicationProfileIDs: [RemoteButton: UUID] {
         didSet {
             saveButtonApplicationProfileIDs()
+            saveSelectedRemoteProfileMappings()
+        }
+    }
+
+    @Published var buttonURLs: [RemoteButton: String] {
+        didSet {
+            saveButtonURLs()
             saveSelectedRemoteProfileMappings()
         }
     }
@@ -417,7 +437,7 @@ final class AppSettings: ObservableObject {
         switch key {
         case "remoteDeviceProfiles": "remote_profiles"
         case "buttonBindings", "buttonShortcuts", "buttonApplicationProfileIDs",
-             "secondaryButtonBindings":
+             "buttonURLs", "secondaryButtonBindings":
             "button_mapping"
         case "customApplicationProfiles": "custom_apps"
         case "onboarding.stagedVoiceBinding": "onboarding"
@@ -494,6 +514,21 @@ final class AppSettings: ObservableObject {
             )
         } else {
             buttonApplicationProfileIDs = [:]
+        }
+
+        if let decoded = Self.decodeSetting(
+            [String: String].self,
+            forKey: Keys.buttonURLs,
+            from: defaults,
+            corrupted: &corruptedKeys
+        ) {
+            buttonURLs = Dictionary(
+                uniqueKeysWithValues: decoded.compactMap { key, value in
+                    RemoteButton(rawValue: key).map { ($0, value) }
+                }
+            )
+        } else {
+            buttonURLs = [:]
         }
 
         let shouldSeedSecondaryBindings = defaults.object(forKey: Keys.secondaryButtonBindings) == nil &&
@@ -614,6 +649,7 @@ final class AppSettings: ObservableObject {
                 }
                 buttonShortcuts = selected.mappings.parsedButtonShortcuts
                 buttonApplicationProfileIDs = selected.mappings.parsedButtonApplicationProfileIDs
+                buttonURLs = selected.mappings.parsedButtonURLs
                 secondaryButtonBindings = selected.mappings.parsedSecondaryButtonBindings
             }
         }

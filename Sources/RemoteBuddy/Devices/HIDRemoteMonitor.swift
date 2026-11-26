@@ -293,7 +293,8 @@ final class HIDRemoteMonitor {
                 shortcut: configured.shortcut,
                 applicationProfile: settings.customApplicationProfile(
                     id: configured.applicationProfileID
-                )
+                ),
+                urlString: configured.urlString
             )
         }
         self.frontmostBundleIdentifier = frontmostBundleIdentifier

@@ -167,6 +167,7 @@ extension AppSettings {
                     buttonBindings = Self.defaultBindings
                     buttonShortcuts = [:]
                     buttonApplicationProfileIDs = [:]
+                    buttonURLs = [:]
                     secondaryButtonBindings = [:]
                 }
             }
@@ -214,6 +215,17 @@ extension AppSettings {
               let profile = remoteDeviceProfiles.first(where: { $0.id == profileID })
         else { return applicationProfileID(for: button) }
         return profile.mappings.parsedButtonApplicationProfileIDs[button]
+    }
+
+    func urlString(for button: RemoteButton) -> String? {
+        buttonURLs[button]
+    }
+
+    func urlString(for button: RemoteButton, profileID: UUID?) -> String? {
+        guard let profileID, profileID != selectedRemoteProfileID,
+              let profile = remoteDeviceProfiles.first(where: { $0.id == profileID })
+        else { return urlString(for: button) }
+        return profile.mappings.parsedButtonURLs[button]
     }
 
     func allowsHoldRepeat(for button: RemoteButton, profileID: UUID? = nil) -> Bool {
@@ -287,7 +299,8 @@ extension AppSettings {
                 return ConfiguredButtonAction(
                     action: bindings[button] ?? .disabled,
                     shortcut: shortcuts[button],
-                    applicationProfileID: profile.mappings.parsedButtonApplicationProfileIDs[button]
+                    applicationProfileID: profile.mappings.parsedButtonApplicationProfileIDs[button],
+                    urlString: profile.mappings.parsedButtonURLs[button]
                 )
             }
             return profile.mappings.parsedSecondaryButtonBindings[button]?[trigger] ??
@@ -298,7 +311,8 @@ extension AppSettings {
             return ConfiguredButtonAction(
                 action: buttonBindings[button] ?? .disabled,
                 shortcut: buttonShortcuts[button],
-                applicationProfileID: applicationProfileID(for: button)
+                applicationProfileID: applicationProfileID(for: button),
+                urlString: urlString(for: button)
             )
         }
         return secondaryButtonBindings[button]?[trigger] ??
@@ -342,6 +356,7 @@ extension AppSettings {
             }
             buttonShortcuts = profile.mappings.parsedButtonShortcuts
             buttonApplicationProfileIDs = profile.mappings.parsedButtonApplicationProfileIDs
+            buttonURLs = profile.mappings.parsedButtonURLs
             secondaryButtonBindings = profile.mappings.parsedSecondaryButtonBindings
         }
     }
@@ -629,12 +644,32 @@ extension AppSettings {
         var bindings = secondaryButtonBindings[button] ?? [:]
         let shortcut = bindings[trigger]?.shortcut
         let applicationProfileID = bindings[trigger]?.applicationProfileID
+        let urlString = bindings[trigger]?.urlString
         bindings[trigger] = ConfiguredButtonAction(
             action: action,
             shortcut: shortcut,
-            applicationProfileID: applicationProfileID
+            applicationProfileID: applicationProfileID,
+            urlString: urlString
         )
         secondaryButtonBindings[button] = bindings.isEmpty ? nil : bindings
+    }
+
+    func setURLString(
+        _ urlString: String?,
+        for button: RemoteButton,
+        trigger: ButtonTrigger
+    ) {
+        let normalized = CustomActionURLPolicy.normalizedInput(urlString)
+        guard trigger != .singleClick else {
+            buttonURLs[button] = normalized
+            return
+        }
+        guard var bindings = secondaryButtonBindings[button], var binding = bindings[trigger] else {
+            return
+        }
+        binding.urlString = normalized
+        bindings[trigger] = binding
+        secondaryButtonBindings[button] = bindings
     }
 
     func setApplicationProfileID(
@@ -677,6 +712,7 @@ extension AppSettings {
             buttonBindings = mappings.parsedButtonBindings
             buttonShortcuts = [:]
             buttonApplicationProfileIDs = [:]
+            buttonURLs = [:]
             secondaryButtonBindings = mappings.parsedSecondaryButtonBindings
         }
         saveSelectedRemoteProfileMappings()

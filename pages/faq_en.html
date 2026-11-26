@@ -44,7 +44,7 @@
       <summary><span class="troubleshooting-question">Which remotes are currently supported by Remote Buddy?</span></summary>
       <div class="troubleshooting-body">
         <p>Remote Buddy is not a generic Bluetooth accessory wrapper; it implements specialized driver stacks for vendor-specific audio transfer protocols and HID input reports. Currently verified and supported models include:</p>
-        <p><strong>1. Google Chromecast Voice Remote (Model G9N9N): Fully Supported · Best Choice</strong><br>Features real-time voice decoding, automated keep-alive packets (~5-minute continuous recording limit), 14 fully customizable physical keys, and battery percentage reporting. <strong>Important Note:</strong> There are multiple hardware and firmware batches of G9N9N remotes in the market (we have tested 3 known batches so far), and not all batches support full independent 14-button mapping (some non-standard units report 2-key chord codes or fail to stream audio). Please read the <a class="text-link" href="g9n9n-compatibility_en.html">G9N9N Voice &amp; Key Compatibility Guide ↗</a> before purchasing to pick a verified batch.</p>
+        <p><strong>1. Google Chromecast Voice Remote (Model G9N9N): Fully Supported · Best Choice</strong><br>Features real-time voice decoding, automated keep-alive packets (auto-stopping after 5 minutes by default, configurable to 3 / 5 / 10 minutes in General settings), 14 fully customizable physical keys, and battery percentage reporting. <strong>Batch Compatibility:</strong> G9N9N units across market batches (such as <code>0x0110</code> / <code>26.2</code>, <code>0x011B</code>, and firmware <code>26.7</code> / <code>26.0</code>) differ in how macOS handles their short HID reports. Remote Buddy now supports all known batches on macOS through either <strong>Standard System HID (native, zero setup)</strong> or an optional <strong>Bluetooth Logging Profile (<code>.mobileconfig</code>)</strong>, unlocking both voice and all 14 buttons. See the <a class="text-link" href="g9n9n-compatibility_en.html">G9N9N Voice &amp; Key Compatibility Guide ↗</a> for details.</p>
         <p><strong>2. Xiaomi Bluetooth Voice Remote 2 / 2 Pro (Models RC001 Battery / RC003 Rechargeable): Supported</strong><br>Standard Hold-to-Talk voice input (up to ~60s hardware limit) and customizable button mappings.</p>
         <p><strong>3. T1 Air Mouse Keyboard Voice Remote (T1-Remote): Supported</strong><br>Connects directly via Bluetooth (not 2.4G dongle). Features Hands-Free Toggle, 7 customizable front buttons, plus a ~45-key QWERTY keyboard and 6-axis air mouse on the back.</p>
         <p><strong>4. Planned for future updates:</strong> Google TV Streamer Voice Remote (GY3LE) and Apple Siri Remote (e.g. 3rd Gen A2854) are in active research and not yet production-ready.</p>
@@ -56,7 +56,7 @@
       <summary><span class="troubleshooting-question">Which remote should I buy?</span></summary>
       <div class="troubleshooting-body">
         <p>Depending on your budget and usage style, we recommend the following options:</p>
-        <p><strong>1. Top Pick &amp; Best Value: Google G9N9N (~$2–$5 / ~¥15)</strong><br>Available widely on online marketplaces at very low cost. The voice button sits right below the D-pad navigation ring, making blind thumb operation effortless. It natively supports Smart Toggle (both tap and hold gestures) and bypasses the 60s recording timeout for long dictation. Powered by two standard AAA batteries with excellent standby life. <strong>Note:</strong> Not all G9N9N units behave identically; check the <a class="text-link" href="g9n9n-compatibility_en.html">G9N9N Batch Guide ↗</a> before purchasing to ensure you select a recommended model.</p>
+        <p><strong>1. Top Pick &amp; Best Value: Google G9N9N (~$2–$5 / ~¥11–¥15)</strong><br>Available widely on online marketplaces at very low cost. The voice button sits right below the D-pad navigation ring, making blind thumb operation effortless. It natively supports Smart Toggle (both tap and hold gestures) and bypasses the 60s recording timeout for long dictation, powered by two standard AAA batteries with excellent standby life. <strong>Note:</strong> Older worries about buying a "bad batch" on macOS are now solved—Remote Buddy supports common G9N9N batches natively via Standard System HID or via an optional Bluetooth Logging Profile (<code>.mobileconfig</code>). See the <a class="text-link" href="g9n9n-compatibility_en.html">G9N9N Compatibility Guide ↗</a> for batch setup details.</p>
         <p><strong>2. Premium Metal Finish &amp; Rechargeable: Xiaomi Remote 2 Pro (~$10–$15 / ~¥60–¥99)</strong><br>Crafted from brushed aluminum with USB Type-C charging. However, the voice button is located in the upper-right corner (requiring more thumb reach), and voice sessions are capped at 60 seconds by its hardware firmware.</p>
         <p><strong>3. Big-Screen Control, Cursor Navigation &amp; Typing: T1 Air Mouse Remote (~$8 / ~¥50)</strong><br>Combines voice triggering with a full-fledged QWERTY keyboard and 6-axis gyroscope air mouse. Perfect for lounging on a sofa or controlling a presentation display from across the room.</p>
       </div>
@@ -92,7 +92,7 @@
       <div class="troubleshooting-body">
         <p><strong>Firmware Mechanism:</strong> TV remotes manufactured for consumer set-top boxes are designed strictly for searching movies or issuing brief commands. To prevent battery drain when a button is accidentally compressed in couch cushions, the internal microcontroller firmware includes a hard-coded watchdog timer: <strong>audio streaming is forcibly terminated after approximately 60 seconds</strong>. Once this timeout triggers, the hardware stops transmitting packets regardless of host requests until the button is released and pressed again.</p>
         <p><strong>Why G9N9N and T1 do not have this 60s restriction:</strong></p>
-        <p>G9N9N and T1 support bidirectional Bluetooth handshakes. Remote Buddy implements an <strong>automated keep-alive packet scheduler</strong> that periodically transmits heartbeat signals to the remote during recording sessions. This prevents firmware sleep triggers, enabling continuous dictation for up to ~5 minutes—ideal for meetings, writing drafts, and lengthy transcriptions.</p>
+        <p>G9N9N and T1 support bidirectional Bluetooth handshakes. Remote Buddy implements an <strong>automated keep-alive packet scheduler</strong> that periodically transmits heartbeat signals to the remote during recording sessions. This prevents firmware sleep triggers while applying a configurable auto-stop cap (5 minutes by default, adjustable to 3 / 5 / 10 minutes in General settings) to avoid draining battery if left running—ideal for meetings, writing drafts, and lengthy transcriptions.</p>
       </div>
     </details>
   </section>
@@ -124,6 +124,33 @@
         <p><strong>Strongly Recommended Best Practice:</strong></p>
         <p>Configure both Remote Buddy and your voice input tool to use a <strong>custom multi-modifier shortcut (such as <code>Ctrl (⌃) + Option (⌥) + V</code>)</strong>:</p>
         <p>Multi-modifier combinations provide exceptional global uniqueness and are virtually never claimed by system defaults or everyday software, ensuring reliable, maintenance-free triggering out of the box.</p>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">What actions can I assign in Button Mapping, and what are some practical examples?</span></summary>
+      <div class="troubleshooting-body">
+        <p>Once custom mapping is enabled on the <strong>Buttons</strong> tab, you can independently customize <strong>Single Press</strong>, <strong>Double Press</strong>, and <strong>Long Press</strong> gestures for every physical key (except the dedicated Voice button). Each remote saves its own configuration independently.</p>
+        <p><strong>Available action categories:</strong></p>
+        <ul>
+          <li><strong>Basic Keys:</strong> Frequent editing and navigation shortcuts such as Return, Send (<code>⌘↩</code>), Shift+Return, Copy/Paste, Undo, cursor arrows, and scrolling.</li>
+          <li><strong>System &amp; Media:</strong> App Switcher (<code>⌘Tab</code>), Mission Control, Spotlight, Play/Pause, Next/Previous Track, system volume and display brightness controls, or disabling unused keys.</li>
+          <li><strong>Open an App:</strong> Pick built-in preset apps (Chrome, WeChat, Cursor, ChatGPT, Claude, Terminal, etc.) or select <strong>Open Custom App</strong> to pick any app installed on your Mac—with optional auto-focus via an app shortcut or saved Accessibility input field.</li>
+          <li><strong>Common Phrases:</strong> Open the floating phrase panel to paste frequent snippets, prompts, or commands in one click.</li>
+          <li><strong>Custom Actions:</strong>
+            <ul>
+              <li><strong>Custom Shortcut:</strong> Record any custom keystroke or multi-modifier keyboard shortcut used by your editor or workflow.</li>
+              <li><strong>Open URL / URL Scheme:</strong> Enter any web link (<code>https://...</code>) or app URL scheme such as Apple Shortcuts (<code>shortcuts://run-shortcut?name=MyShortcut</code>) to launch websites or trigger multi-step workflows safely.</li>
+            </ul>
+          </li>
+          <li><strong>Direct Passthrough (directional keys):</strong> Acts like a physical arrow key with zero gesture delay, ideal for holding Right Arrow to fast-forward video playback or continuous cursor movement.</li>
+        </ul>
+        <p><strong>Common setup examples:</strong></p>
+        <ol>
+          <li><strong>Launch a favorite app with one button:</strong> Map the <code>YouTube</code> or <code>NETFLIX</code> key's single press to <strong>Open an App</strong> (or <strong>Open Custom App</strong> for <code>Cursor</code> or <code>WeChat</code>) so one tap brings it forward ready for voice input.</li>
+          <li><strong>Open a web app or run an Apple Shortcut combo:</strong> Assign a spare key or double press to <strong>Open URL / URL Scheme</strong>—use <code>https://chatgpt.com</code> to jump straight to a site, or <code>shortcuts://run-shortcut?name=WorkMode</code> to execute a multi-step Apple Shortcut workflow.</li>
+          <li><strong>Layer custom shortcuts onto Long Press:</strong> Keep single press intuitive (like OK = Return, Long Press = Send), and map another key's long press to a <strong>Custom Shortcut</strong> such as <code>⇧⌘P</code> or <code>⌘Space</code> to double your shortcuts without cluttering single taps.</li>
+        </ol>
       </div>
     </details>
 

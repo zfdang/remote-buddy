@@ -22,6 +22,7 @@ extension BridgeAppModel {
                 configured.action,
                 shortcut: configured.shortcut,
                 applicationProfile: applicationProfile,
+                urlString: configured.urlString,
                 focusInputCompletion: { [weak self] succeeded in
                     guard let requestID else { return }
                     if Thread.isMainThread {

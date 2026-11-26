@@ -183,6 +183,10 @@ extension SettingsView {
             return settings.customApplicationProfile(id: configured.applicationProfileID)?.displayName
                 ?? localization.text("custom_application.not_configured")
         }
+        if configured.action == .openURL {
+            return CustomActionURLPolicy.summaryLabel(for: configured.urlString)
+                ?? localization.text("open_url.not_configured")
+        }
         if detailed {
             return configured.action.detailedDisplayName(using: localization)
         }

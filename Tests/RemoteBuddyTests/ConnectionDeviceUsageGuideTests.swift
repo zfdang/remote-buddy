@@ -79,7 +79,7 @@ struct ConnectionDeviceUsageGuideTests {
             makeProfile(model: .t1Remote, customName: "T1"),
             makeProfile(model: .chromecastVoiceRemote, customName: "G9N9N", voiceButtonMode: .smartToggle),
             makeProfile(model: .chromecastVoiceRemote, customName: "G9N9N", voiceButtonMode: .holdToTalk),
-        ].compactMap(ConnectionDeviceUsageGuide.make(for:))
+        ].compactMap { ConnectionDeviceUsageGuide.make(for: $0) }
 
         var keys: Set<String> = ["connection.device_guide.title"]
         for guide in guides {
@@ -100,6 +100,38 @@ struct ConnectionDeviceUsageGuideTests {
             #expect(!english.isEmpty && english != key)
             #expect(!chinese.isEmpty && chinese != key)
             #expect(english != chinese)
+        }
+    }
+
+    @Test @MainActor func safetyLimitItemsFormatConfiguredMinutesInBothLanguages() throws {
+        let suite = "connection-guide-duration-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let localization = LocalizationStore(settings: AppSettings(defaults: defaults))
+
+        for profile in [
+            makeProfile(model: .t1Remote, customName: "T1"),
+            makeProfile(model: .chromecastVoiceRemote, customName: "G9N9N", voiceButtonMode: .smartToggle),
+        ] {
+            let guide = try #require(ConnectionDeviceUsageGuide.make(
+                for: profile,
+                voiceAutoStopDuration: .tenMinutes
+            ))
+            let itemsWithMinutes = guide.items.filter { $0.titleArguments == ["10"] && $0.detailArguments == ["10"] }
+            #expect(itemsWithMinutes.count == 1)
+            let item = try #require(itemsWithMinutes.first)
+
+            localization.select(.english)
+            let englishTitle = LocalizedMessage(item.titleKey, arguments: item.titleArguments).text(using: localization)
+            let englishDetail = LocalizedMessage(item.detailKey, arguments: item.detailArguments).text(using: localization)
+            #expect(englishTitle.contains("10"))
+            #expect(englishDetail.contains("10"))
+
+            localization.select(.simplifiedChinese)
+            let chineseTitle = LocalizedMessage(item.titleKey, arguments: item.titleArguments).text(using: localization)
+            let chineseDetail = LocalizedMessage(item.detailKey, arguments: item.detailArguments).text(using: localization)
+            #expect(chineseTitle.contains("10"))
+            #expect(chineseDetail.contains("10"))
         }
     }
 }

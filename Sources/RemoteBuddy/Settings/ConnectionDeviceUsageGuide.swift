@@ -4,7 +4,25 @@ struct ConnectionDeviceUsageItem: Equatable, Identifiable {
     let symbol: String
     let tint: Color
     let titleKey: String
+    let titleArguments: [String]
     let detailKey: String
+    let detailArguments: [String]
+
+    init(
+        symbol: String,
+        tint: Color,
+        titleKey: String,
+        titleArguments: [String] = [],
+        detailKey: String,
+        detailArguments: [String] = []
+    ) {
+        self.symbol = symbol
+        self.tint = tint
+        self.titleKey = titleKey
+        self.titleArguments = titleArguments
+        self.detailKey = detailKey
+        self.detailArguments = detailArguments
+    }
 
     var id: String { titleKey }
 }
@@ -17,14 +35,20 @@ struct ConnectionDeviceUsageGuide: Equatable {
     let badgeTint: Color
     let items: [ConnectionDeviceUsageItem]
 
-    static func make(for profile: RemoteDeviceProfile) -> Self? {
+    static func make(
+        for profile: RemoteDeviceProfile,
+        voiceAutoStopDuration: VoiceAutoStopDuration = .fiveMinutes
+    ) -> Self? {
         switch profile.model {
         case .rc001, .rc003:
             return xiaomiGuide()
         case .t1Remote:
-            return t1Guide()
+            return t1Guide(minutes: voiceAutoStopDuration.minutes)
         case .chromecastVoiceRemote:
-            return chromecastGuide(voiceMode: profile.effectiveG9N9NVoiceButtonMode)
+            return chromecastGuide(
+                voiceMode: profile.effectiveG9N9NVoiceButtonMode,
+                minutes: voiceAutoStopDuration.minutes
+            )
         case .appleSiriRemoteA2540, .appleSiriRemoteA2854, .unknown:
             return nil
         }
@@ -52,8 +76,9 @@ struct ConnectionDeviceUsageGuide: Equatable {
         )
     }
 
-    private static func t1Guide() -> Self {
-        Self(
+    private static func t1Guide(minutes: Int) -> Self {
+        let minuteText = String(minutes)
+        return Self(
             badgeKey: "connection.device_guide.badge.t1_toggle",
             badgeSymbol: "waveform",
             badgeTint: .indigo,
@@ -62,7 +87,9 @@ struct ConnectionDeviceUsageGuide: Equatable {
                     symbol: "waveform",
                     tint: .indigo,
                     titleKey: "connection.device_guide.t1.voice.title",
-                    detailKey: "connection.device_guide.t1.voice.detail"
+                    titleArguments: [minuteText],
+                    detailKey: "connection.device_guide.t1.voice.detail",
+                    detailArguments: [minuteText]
                 ),
                 ConnectionDeviceUsageItem(
                     symbol: "sparkles",
@@ -74,7 +101,8 @@ struct ConnectionDeviceUsageGuide: Equatable {
         )
     }
 
-    private static func chromecastGuide(voiceMode: G9N9NVoiceButtonMode) -> Self {
+    private static func chromecastGuide(voiceMode: G9N9NVoiceButtonMode, minutes: Int) -> Self {
+        let minuteText = String(minutes)
         var items = [
             ConnectionDeviceUsageItem(
                 symbol: "record.circle.fill",
@@ -86,7 +114,9 @@ struct ConnectionDeviceUsageGuide: Equatable {
                 symbol: "timer",
                 tint: .green,
                 titleKey: "connection.device_guide.g9n9n.limit.title",
-                detailKey: "connection.device_guide.g9n9n.limit.detail"
+                titleArguments: [minuteText],
+                detailKey: "connection.device_guide.g9n9n.limit.detail",
+                detailArguments: [minuteText]
             ),
         ]
         if voiceMode == .smartToggle {
@@ -218,12 +248,12 @@ struct ConnectionDeviceUsageSection: View {
                             .foregroundStyle(item.tint)
                             .frame(width: 14)
                         (
-                            Text(localization.text(item.titleKey))
+                            Text(LocalizedMessage(item.titleKey, arguments: item.titleArguments).text(using: localization))
                                 .fontWeight(.semibold)
                                 .foregroundStyle(.primary)
                             + Text(" · ")
                                 .foregroundStyle(.tertiary)
-                            + Text(localization.text(item.detailKey))
+                            + Text(LocalizedMessage(item.detailKey, arguments: item.detailArguments).text(using: localization))
                                 .foregroundStyle(.secondary)
                         )
                         .font(.caption)

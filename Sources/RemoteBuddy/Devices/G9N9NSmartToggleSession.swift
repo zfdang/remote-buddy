@@ -7,7 +7,7 @@ import Foundation
 struct G9N9NSmartToggleState: Equatable {
     static let holdThreshold: TimeInterval = 0.7
     static let reopenTimeout: TimeInterval = 5
-    static let maximumHandsFreeDuration: TimeInterval = 300
+    static let maximumHandsFreeDuration: TimeInterval = VoiceAutoStopDuration.fiveMinutes.timeInterval
 
     enum Phase: Equatable {
         case idle

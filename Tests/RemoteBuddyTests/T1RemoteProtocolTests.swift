@@ -797,6 +797,79 @@ struct T1RemoteProtocolTests {
         #expect(!bridge.hasPendingVoiceWork)
     }
 
+    @Test @MainActor func atvvKeepaliveRespectsConfiguredVoiceAutoStopDuration() async throws {
+        @MainActor
+        final class SpyDelegate: BluetoothRemoteBridgeDelegate {
+            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didChange state: BluetoothBridgeState) {}
+            func bluetoothBridgeDidStartVoice(_ bridge: BluetoothRemoteBridge) {}
+            func bluetoothBridgeDidStopVoice(_ bridge: BluetoothRemoteBridge) {}
+            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didDecode samples: [Int16]) {}
+            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didUpdateBatteryLevel level: Int?) {}
+            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didIdentifyRemoteModel model: RemoteModel) {}
+            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didUpdatePowerState state: RemotePowerState?) {}
+            func bluetoothBridgeDeviceNameDidChange(_ bridge: BluetoothRemoteBridge) {}
+        }
+
+        let suite = "t1-atvv-keepalive-duration-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = AppSettings(defaults: defaults)
+        settings.voiceAutoStopDuration = .threeMinutes
+
+        let clock = ControlledTestScheduler()
+        let spy = SpyDelegate()
+        let audioQueue = DispatchQueue(label: "t1.atvv.duration.test.audio")
+        let audioPipeline = BluetoothAudioPipeline(queue: audioQueue)
+        func flushAudio() async {
+            await withCheckedContinuation { continuation in
+                audioQueue.async {
+                    DispatchQueue.main.async {
+                        continuation.resume()
+                    }
+                }
+            }
+        }
+
+        var writtenCommands: [Data] = []
+        let bridge = BluetoothRemoteBridge(
+            settings: settings,
+            delegate: spy,
+            targetIdentifier: UUID(),
+            allowsT1Remote: true,
+            audioPipeline: audioPipeline,
+            scheduleMicrophoneClose: clock.voiceSchedule
+        )
+        defer { bridge.stop() }
+        bridge.testingControlWriteHandler = { data in
+            writtenCommands.append(data)
+            return true
+        }
+        bridge.simulateT1ReadyStateForTesting(nowUptime: { Double(clock.now) / 1_000 })
+
+        // 3-minute setting caps keepalive at 18 extensions (180s), then sends MIC_CLOSE at 190s.
+        bridge.simulateControlPacketForTesting(Data([0x04, 0x03, 0x02, 0x01]))
+        await flushAudio()
+        clock.advance(to: 190_000)
+        await flushAudio()
+        #expect(writtenCommands.filter { $0 == Data([0x0E, 0x01]) }.count == 18)
+        #expect(writtenCommands.filter { $0 == Data([0x0D, 0x01]) }.count == 1)
+
+        bridge.simulateControlPacketForTesting(Data([0x00]))
+        await flushAudio()
+
+        // 10-minute setting extends up to 60 MIC_EXTEND packets before MIC_CLOSE at 610s.
+        writtenCommands.removeAll()
+        settings.voiceAutoStopDuration = .tenMinutes
+        clock.advance(to: clock.now + 1_000)
+        bridge.simulateControlPacketForTesting(Data([0x04, 0x03, 0x02, 0x02]))
+        await flushAudio()
+        let secondStart = clock.now
+        clock.advance(to: secondStart + 610_000)
+        await flushAudio()
+        #expect(writtenCommands.filter { $0 == Data([0x0E, 0x02]) }.count == 60)
+        #expect(writtenCommands.filter { $0 == Data([0x0D, 0x02]) }.count == 1)
+    }
+
     @Test @MainActor func t1MonitorObservesDPadAndOKPassthroughWithoutExecutingCustomActions() throws {
         // Decoder exposes unmodified OK (0x28) and arrows (0x4F..0x52) only as passthrough observation,
         // keeping decodeHIDReport empty and ignoring modified rear-keyboard chords (e.g. Shift+Enter).

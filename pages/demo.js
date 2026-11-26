@@ -54,7 +54,7 @@ button.addEventListener('blur', stop);
         title: '遥控器连接',
         badge: '多设备管理',
         windowTitle: '遥控器连接 · Remote Buddy',
-        src: 'assets/screenshots/connection-zh.jpg?v=261126screens',
+        src: 'assets/screenshots/connection-zh.jpg?v=261126timeout',
         alt: 'Remote Buddy 遥控器连接界面：已添加的小米与 G9N9N 遥控器、电量、麦克风增益、G9N9N 智能切换/按住说话选择及各机型使用指南',
         desc: '查看已添加遥控器的连接状态、电量、按键接入方式与设备参数，为每台设备单独调节麦克风增益（0–24 dB）；可切换 G9N9N 语音键触发方式，并直接查阅各机型语音限制与状态灯等使用指南。'
       },
@@ -181,7 +181,7 @@ button.addEventListener('blur', stop);
         title: 'Devices',
         badge: 'Multi-device',
         windowTitle: 'Devices · Remote Buddy',
-        src: 'assets/screenshots/connection-en.jpg?v=261126screens',
+        src: 'assets/screenshots/connection-en.jpg?v=261126timeout',
         alt: 'Remote Buddy Devices interface: Xiaomi and G9N9N remotes, battery level, microphone gain, G9N9N Smart Toggle / Hold to Talk switch, and usage tips',
         desc: 'Check connection status, battery level, button integration path, and hardware details for each remote, and set per-device microphone gain (0–24 dB). Switch G9N9N voice button mode and review model-specific voice limits and LED indicators.'
       },

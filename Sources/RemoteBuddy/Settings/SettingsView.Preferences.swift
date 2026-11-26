@@ -122,6 +122,27 @@ extension SettingsView {
                         .frame(width: 300)
                     }
                 }
+
+                aboutSection(titleKey: "settings.general.voice_behavior") {
+                    preferenceRow(
+                        symbol: "timer",
+                        titleKey: "about.preferences.voice_auto_stop_duration",
+                        detailKey: "about.preferences.voice_auto_stop_duration_help"
+                    ) {
+                        Picker(
+                            localization.text("about.preferences.voice_auto_stop_duration"),
+                            selection: $settings.voiceAutoStopDuration
+                        ) {
+                            ForEach(VoiceAutoStopDuration.allCases) { duration in
+                                Text(localization.text(duration.titleKey)).tag(duration)
+                            }
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.segmented)
+                        .frame(width: 300)
+                        .accessibilityIdentifier("general-voice-auto-stop-picker")
+                    }
+                }
             }
 
         }

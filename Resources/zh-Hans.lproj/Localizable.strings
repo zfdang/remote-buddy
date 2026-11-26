@@ -485,6 +485,12 @@
 "voice_tool.unavailable.alert.open_settings" = "前往输入法集成";
 "settings.general.display_group" = "应用显示";
 "settings.general.language_group" = "语言";
+"settings.general.voice_behavior" = "语音收音";
+"about.preferences.voice_auto_stop_duration" = "单次自动停麦时间";
+"about.preferences.voice_auto_stop_duration_help" = "为防止忘记结束收音而持续耗电，G9N9N、T1 等支持免提或保活的遥控器到达该时长后会自动停麦（默认 5 分钟）。";
+"about.preferences.voice_auto_stop_duration.3m" = "3 分钟";
+"about.preferences.voice_auto_stop_duration.5m" = "5 分钟";
+"about.preferences.voice_auto_stop_duration.10m" = "10 分钟";
 "settings.overview.ready" = "权限与麦克风均已就绪";
 "settings.overview.missing_requirements" = "待设置：%@";
 "settings.overview.open_section" = "打开%@设置";
@@ -1318,14 +1324,14 @@
 "connection.device_guide.xiaomi.voice.detail" = "按住语音键说话、松开立即停麦；硬件固件会在松手瞬间停止推送音频，因此无法改为按一下开启或智能切换。";
 "connection.device_guide.xiaomi.limit.title" = "单次按住上限约 60 秒";
 "connection.device_guide.xiaomi.limit.detail" = "遥控器硬件会在连续按住约 60 秒时自动断流；如需连续口述更久，松手后重新按住即可继续。";
-"connection.device_guide.t1.voice.title" = "按一下开始、再按一次停止（约 5 分钟安全上限）";
-"connection.device_guide.t1.voice.detail" = "轻按语音键并松手即可免提说话，再按一次语音键停止；系统会在后台自动保活收音，最长约 5 分钟自动停麦以防忘记关麦耗电。";
+"connection.device_guide.t1.voice.title" = "按一下开始、再按一次停止（约 %1$@ 分钟安全上限）";
+"connection.device_guide.t1.voice.detail" = "轻按语音键并松手即可免提说话，再按一次语音键停止；系统会在后台自动保活收音，最长约 %1$@ 分钟自动停麦以防忘记关麦耗电（可在“通用”中设置）。";
 "connection.device_guide.t1.hold_compat.title" = "自动兼容按住说话类语音输入法";
 "connection.device_guide.t1.hold_compat.detail" = "收音期间遥控搭子会全程替您按住语音工具快捷键并在停麦时松开，无需持续按住遥控器。";
 "connection.device_guide.g9n9n.led.title" = "底部白灯常亮表示正在传输语音";
 "connection.device_guide.g9n9n.led.detail" = "无论智能切换还是长按说话，只要遥控器麦克风正在开启传输语音，底部白色指示灯就会亮起，停止后熄灭。";
-"connection.device_guide.g9n9n.limit.title" = "两种模式均突破 60 秒（单次上限约 5 分钟）";
-"connection.device_guide.g9n9n.limit.detail" = "已自动启用硬件保活，智能切换与按住说话均可连续说超 60 秒，并在约 5 分钟时自动停麦以防忘记关麦耗尽电量。";
+"connection.device_guide.g9n9n.limit.title" = "两种模式均突破 60 秒（单次上限约 %1$@ 分钟）";
+"connection.device_guide.g9n9n.limit.detail" = "已自动启用硬件保活，智能切换与按住说话均可连续说超 60 秒，并在约 %1$@ 分钟时自动停麦以防忘记关麦耗尽电量（可在“通用”中设置）。";
 "connection.device_guide.g9n9n.other_key_stops.title" = "免提期间按其他键会结束收音";
 "connection.device_guide.g9n9n.other_key_stops.detail" = "智能切换免提收音时，若按下任意其他实体按键，硬件会直接停止音频流；请等说完再按其他按键。";
 

@@ -85,7 +85,7 @@ enum StatusItemPresentation: String, Equatable {
             } else {
                 baseArtwork.draw(in: rect)
             }
-            let dotRect = NSRect(x: 15.8, y: 16.0, width: 5.2, height: 5.2)
+            let dotRect = NSRect(x: 16.4, y: 17.5, width: 4.0, height: 4.0)
             NSColor.systemRed.setFill()
             NSBezierPath(ovalIn: dotRect).fill()
             return true

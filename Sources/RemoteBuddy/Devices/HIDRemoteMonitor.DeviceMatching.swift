@@ -317,7 +317,7 @@ extension HIDRemoteMonitor {
             diagnosticLogger("HID REPORT rejected reason=\(reason)")
             return
         }
-        if let rejectReason = shouldRejectBTLEServerLogGoogleReport() {
+        if let rejectReason = shouldRejectBTLEServerLogGoogleReport(reportID: reportID, data: data) {
             diagnosticLogger("HID GOOGLE report dropped reason=\(rejectReason) source=\(reportSource)")
             return
         }

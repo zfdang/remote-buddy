@@ -84,7 +84,7 @@ extension HIDRemoteMonitor {
         lastGoogleReportByOrigin.removeAll()
     }
 
-    func shouldRejectBTLEServerLogGoogleReport() -> String? {
+    func shouldRejectBTLEServerLogGoogleReport(reportID: UInt32, data: Data) -> String? {
         guard currentReportIsGoogle, currentReportOrigin == .btleServerLog else { return nil }
         if nativeGoogleIOHIDObserved {
             return "native_iohid_verified"
@@ -94,6 +94,17 @@ extension HIDRemoteMonitor {
            let profile = settings.remoteDeviceProfiles.first(where: { $0.id == profileID && $0.model.isChromecastRemote }),
            profile.effectiveG9N9NInputMode == .full {
             return "native_full_mode"
+        }
+        if let descriptor = currentReportDescriptor {
+            if G9N9NProtocol.usesIndexedConsumerLayout(descriptor) {
+                guard reportID == 1, (1...2).contains(data.count) else {
+                    return "descriptor_report_mismatch"
+                }
+            } else {
+                guard reportID == 2, data.count == 2 else {
+                    return "descriptor_report_mismatch"
+                }
+            }
         }
         return nil
     }
@@ -127,7 +138,7 @@ extension HIDRemoteMonitor {
     }
 
     func parseAndProcess(reportID: UInt32, data: Data, source: String) {
-        if let rejectReason = shouldRejectBTLEServerLogGoogleReport() {
+        if let rejectReason = shouldRejectBTLEServerLogGoogleReport(reportID: reportID, data: data) {
             diagnosticLogger("HID GOOGLE report dropped reason=\(rejectReason) source=\(source)")
             return
         }
@@ -366,8 +377,13 @@ extension HIDRemoteMonitor {
             )
         }
         activeUsages = usages
+        let pressedButtons = RemoteButton.buttons(for: pressed)
         if currentReportOrigin == .btleServerLog {
             btleLogActiveUsages.formUnion(pressed)
+            btleLogPendingGestureButtons.formUnion(pressedButtons)
+        } else if currentReportOrigin == .iohid {
+            btleLogActiveUsages.subtract(pressed)
+            btleLogPendingGestureButtons.subtract(pressedButtons)
         }
         for usage in released {
             usageExpiryTokens.removeValue(forKey: usage)

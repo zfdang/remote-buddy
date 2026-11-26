@@ -450,23 +450,31 @@ extension BridgeAppModel {
         synchronizeBTLEServerLogSource()
     }
 
+    func applyBluetoothLoggingProfileStatus(_ status: BluetoothLoggingProfileStatus) {
+        bluetoothLoggingProfileStatus = status
+        synchronizeBTLEServerLogSource()
+    }
+
     func refreshBluetoothLoggingProfileStatus() {
-        Task { [weak self] in
-            let status = await BluetoothLoggingProfileService.detectInstalledStatus()
+        bluetoothLoggingProfileRefreshTask?.cancel()
+        bluetoothLoggingProfileStatusGeneration &+= 1
+        let generation = bluetoothLoggingProfileStatusGeneration
+        let provider = bluetoothLoggingProfileStatusProvider
+        bluetoothLoggingProfileRefreshTask = Task { [weak self] in
+            let status = await provider()
             await MainActor.run {
-                guard let self else { return }
-                self.bluetoothLoggingProfileStatus = status
-                if status == .installed {
-                    self.btleServerLogRedactedObserved = false
-                }
-                self.synchronizeBTLEServerLogSource()
+                guard let self,
+                      !Task.isCancelled,
+                      self.bluetoothLoggingProfileStatusGeneration == generation
+                else { return }
+                self.bluetoothLoggingProfileRefreshTask = nil
+                self.applyBluetoothLoggingProfileStatus(status)
             }
         }
     }
 
     private enum BTLEServerLogRedactionPolicy {
-        static let unattributedThreshold = 3
-        static let unattributedWindow: TimeInterval = 5.0
+        static let unattributedRefreshInterval: TimeInterval = 10.0
     }
 
     func resetUnattributedBTLEServerLogRedactionTracking() {
@@ -478,13 +486,11 @@ extension BridgeAppModel {
     func recheckBluetoothLoggingProfile() {
         btleServerLogRedactedObserved = false
         resetUnattributedBTLEServerLogRedactionTracking()
-        if bluetoothLoggingProfileStatus == .notInstalled {
-            bluetoothLoggingProfileStatus = .unknown
-        }
+        bluetoothLoggingProfileStatus = .unknown
+        stopBTLEServerLogSource(clearingRedactedObservation: true)
         for bridge in connections.bridges.values {
             learnSelectedRemoteHIDIdentity(bridge)
         }
-        synchronizeBTLEServerLogSource()
         refreshBluetoothLoggingProfileStatus()
     }
 
@@ -497,15 +503,17 @@ extension BridgeAppModel {
         AppLogger.shared.write("SETTINGS G9N9N_BTLE_LOG enabled=\(enabled)")
         if enabled {
             btleServerLogRedactedObserved = false
-            if bluetoothLoggingProfileStatus == .notInstalled {
-                bluetoothLoggingProfileStatus = .unknown
-            }
+            resetUnattributedBTLEServerLogRedactionTracking()
+            bluetoothLoggingProfileStatus = .unknown
+            stopBTLEServerLogSource(clearingRedactedObservation: true)
             for bridge in connections.bridges.values {
                 learnSelectedRemoteHIDIdentity(bridge)
             }
-            synchronizeBTLEServerLogSource()
             refreshBluetoothLoggingProfileStatus()
         } else {
+            bluetoothLoggingProfileStatusGeneration &+= 1
+            bluetoothLoggingProfileRefreshTask?.cancel()
+            bluetoothLoggingProfileRefreshTask = nil
             stopBTLEServerLogSource(clearingRedactedObservation: true)
         }
     }
@@ -580,6 +588,7 @@ extension BridgeAppModel {
             btleServerReportLogSource = nil
             AppLogger.shared.write("HID BTLE_LOG source=stopped")
         }
+        hidMonitors.values.forEach { $0.cancelBTLEServerLogInteractions() }
         resetUnattributedBTLEServerLogRedactionTracking()
         if clearingRedactedObservation {
             btleServerLogRedactedObserved = false
@@ -613,7 +622,7 @@ extension BridgeAppModel {
             settings.customMappingEnabled &&
             permissions.inputMonitoringGranted &&
             permissions.accessibilityGranted &&
-            bluetoothLoggingProfileStatus != .notInstalled &&
+            bluetoothLoggingProfileStatus == .installed &&
             !btleServerLogRedactedObserved &&
             !chromecastPeripherals.isEmpty
         guard shouldRun else {
@@ -710,25 +719,19 @@ extension BridgeAppModel {
         if observation.peripheral != nil {
             return true
         }
+        if lastUnattributedBTLEServerLogRedactionReportID == nil ||
+            now - lastUnattributedBTLEServerLogRedactionAt >= BTLEServerLogRedactionPolicy.unattributedRefreshInterval {
+            lastUnattributedBTLEServerLogRedactionReportID = observation.reportID
+            lastUnattributedBTLEServerLogRedactionAt = now
+            refreshBluetoothLoggingProfileStatus()
+        }
         // Unrelated BLE HID traffic can emit unattributed `<private>` lines even after the user
-        // installs the Bluetooth profile; ignore them once `.installed` is confirmed.
-        if bluetoothLoggingProfileStatus == .installed {
-            resetUnattributedBTLEServerLogRedactionTracking()
-            return false
+        // installs the Bluetooth profile; ignore them while `.installed` remains confirmed.
+        guard bluetoothLoggingProfileStatus == .installed else {
+            return true
         }
-        if lastUnattributedBTLEServerLogRedactionReportID == observation.reportID,
-           now - lastUnattributedBTLEServerLogRedactionAt <= BTLEServerLogRedactionPolicy.unattributedWindow {
-            consecutiveUnattributedBTLEServerLogRedactions += 1
-        } else {
-            if lastUnattributedBTLEServerLogRedactionReportID == nil,
-               bluetoothLoggingProfileStatus == .unknown {
-                refreshBluetoothLoggingProfileStatus()
-            }
-            consecutiveUnattributedBTLEServerLogRedactions = 1
-        }
-        lastUnattributedBTLEServerLogRedactionReportID = observation.reportID
-        lastUnattributedBTLEServerLogRedactionAt = now
-        return consecutiveUnattributedBTLEServerLogRedactions >= BTLEServerLogRedactionPolicy.unattributedThreshold
+        consecutiveUnattributedBTLEServerLogRedactions = 0
+        return false
     }
 
     /// Releases HID monitors, event taps, input-source observers, and pending recovery work

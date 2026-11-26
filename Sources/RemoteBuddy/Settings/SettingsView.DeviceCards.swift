@@ -225,21 +225,17 @@ struct G9N9NSupportBadge: View {
     @EnvironmentObject var localization: LocalizationStore
 
     var body: some View {
-        let (icon, tint, key): (String, Color, String) = switch mode {
-        case .full:
-            ("checkmark.circle.fill", .green, "remote.device.full_support_badge")
-        case .bluetoothLogRecovery:
-            ("doc.badge.gearshape.fill", .blue, "remote.device.btle_log_support_badge")
+        if mode == .full {
+            HStack(spacing: 4) {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(Color.green)
+                Text(localization.text("remote.device.full_support_badge"))
+                    .foregroundStyle(.secondary)
+            }
+            .font(.system(size: 11, weight: .medium))
+            .padding(.horizontal, 7)
+            .padding(.vertical, 2)
+            .background(Color.green.opacity(0.12), in: Capsule())
         }
-        HStack(spacing: 4) {
-            Image(systemName: icon)
-                .foregroundStyle(tint)
-            Text(localization.text(key))
-                .foregroundStyle(.secondary)
-        }
-        .font(.system(size: 11, weight: .medium))
-        .padding(.horizontal, 7)
-        .padding(.vertical, 2)
-        .background(tint.opacity(0.12), in: Capsule())
     }
 }

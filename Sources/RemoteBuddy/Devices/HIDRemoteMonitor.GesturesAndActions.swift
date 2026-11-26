@@ -291,10 +291,45 @@ extension HIDRemoteMonitor {
         longPressTimerTokens.removeAll()
         longPressTimers.values.forEach { $0.cancel() }
         longPressTimers.removeAll()
+        btleLogPendingGestureButtons.removeAll()
         gestureRecognizer.reset()
     }
 
     func cancelMappingInteractions() { resetInputState() }
+
+    func cancelBTLEServerLogInteractions() {
+        lastGoogleReportByOrigin.removeValue(forKey: .btleServerLog)
+        guard !btleLogActiveUsages.isEmpty || !btleLogPendingGestureButtons.isEmpty else {
+            return
+        }
+        let affectedUsages = btleLogActiveUsages
+        let affectedButtons = btleLogPendingGestureButtons.union(RemoteButton.buttons(for: affectedUsages))
+        btleLogActiveUsages.removeAll()
+        btleLogPendingGestureButtons.removeAll()
+        for usage in affectedUsages {
+            activeUsages.remove(usage)
+            cancelRepeat(for: usage)
+            usageExpiryTokens.removeValue(forKey: usage)
+            usageExpiryTimers.removeValue(forKey: usage)?.cancel()
+            usageHardCeilingTimers.removeValue(forKey: usage)?.cancel()
+            suppressedUntilReleasedUsages.remove(usage)
+            suppressedUsageExpiryTimers.removeValue(forKey: usage)?.cancel()
+            nativePassthroughUsages.remove(usage)
+            if directPassthroughUsages.remove(usage) != nil,
+               let button = RemoteButton.usageMap[usage],
+               let keyCode = button.directionKeyCode {
+                _ = nativeKeyStatePoster(keyCode, false, [])
+            }
+        }
+        for button in affectedButtons {
+            gestureRecognizer.cancel(button)
+            cancelDoubleClickTimeout(for: button)
+            cancelLongPressTimeout(for: button)
+            finishNonRepeatablePress(button)
+        }
+        appSwitcherCoordinator.finishIfActive(reason: "btle_log_stopped", confirmed: false)
+        emitActiveButtons()
+    }
 
     func cancelPendingButtonActions() {
         repeatTimers.values.forEach { $0.cancel() }

@@ -145,7 +145,7 @@
         </div>
         <ul class="device-specs">
           <li><strong>原生通道绝不被日志干扰</strong>：已被验证为原生完全支持的设备始终只通过公开 <code>IOHID</code> 响应，即使同时开启了蓝牙日志恢复开关也绝不重复按键。</li>
-          <li><strong>默认不读取系统私有调试日志，无效时自动暂停</strong>：针对 <code>0x011B</code>、<code>26.7</code> 等被 macOS <code>BTLEServer</code> 丢弃短报文的批次，应用默认完全关闭日志读取；仅当用户主动开启开关、设备完成 HID 指纹绑定且安装了仅限定 <code>com.apple.bluetooth</code> 子系统的内置 <code>.mobileconfig</code> 后才会尝试在内存中恢复；一旦检测到 <code>&lt;private&gt;</code> 脱敏或描述文件未安装，日志读取会立即暂停，直到安装确认并点击「重新检测」。</li>
+          <li><strong>默认不读取系统私有调试日志，确认安装才启动</strong>：针对 <code>0x011B</code>、<code>26.7</code> 等被 macOS <code>BTLEServer</code> 丢弃短报文的批次，应用默认完全关闭日志读取；仅当用户主动开启开关、设备完成 HID 指纹绑定、通过系统配置检测明确确认已安装限定 <code>com.apple.bluetooth</code> 子系统的内置 <code>.mobileconfig</code> 后才会启动限定 <code>subsystem == &quot;com.apple.bluetooth&quot;</code> 的内存日志流；状态未知（<code>.unknown</code>）、未安装或检测到已归属 <code>&lt;private&gt;</code> 脱敏时均保持停止，直到安装确认并点击「重新检测」。</li>
           <li><strong>更多资料</strong>：查看其他支持的遥控器对比请访问 <a class="text-link" href="device.html">支持设备页面 →</a>；如需查阅详细字节级真机测试记录，可参考仓库内的 <a class="text-link" href="https://github.com/zfdang/remote-buddy/blob/main/docs/g9n9n-hardware-debugging.md">G9N9N 真机测试记录（GitHub）↗</a>、<a class="text-link" href="https://github.com/zfdang/remote-buddy/issues/256">社区反馈 #256（0x0110 / FW 26.0）↗</a> 与 <a class="text-link" href="https://github.com/brightac/remote-buddy/issues/7">社区报告 #7（0x011B）↗</a>。</li>
         </ul>
       </article>

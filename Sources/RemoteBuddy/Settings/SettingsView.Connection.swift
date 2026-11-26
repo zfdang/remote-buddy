@@ -337,9 +337,16 @@ extension SettingsView {
             "connection.g9n9n.btle_log_support_notice"
         }
         return VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                g9n9nSupportBadge(for: mode)
-                    .fixedSize()
+            if mode == .full {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    g9n9nSupportBadge(for: mode)
+                        .fixedSize()
+                    Text(localization.text(noticeKey))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            } else {
                 Text(localization.text(noticeKey))
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -347,7 +354,7 @@ extension SettingsView {
             }
             if mode == .bluetoothLogRecovery &&
                 (!settings.g9n9nBluetoothLogRecoveryEnabled ||
-                    model.bluetoothLoggingProfileStatus == .notInstalled ||
+                    model.bluetoothLoggingProfileStatus != .installed ||
                     model.btleServerLogRedactedObserved) {
                 HStack(alignment: .top, spacing: 6) {
                     Image(systemName: "exclamationmark.triangle.fill")

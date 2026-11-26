@@ -53,14 +53,26 @@ struct BTLEServerReportLogTests {
         )
     }
 
-    @Test func parsesNdjsonTimestamp() {
-        let line = #"{"timestamp":"2026-11-18 23:39:30.485000+0800","eventMessage":"Updated input report for ID #2: {length = 2, bytes = 0x2402}"}"#
+    @Test func parsesNdjsonTimestampAndRequiresBluetoothSubsystem() {
+        #expect(BTLEServerReportLog.predicate.contains(#"subsystem == "com.apple.bluetooth""#))
+        let line = #"{"subsystem":"com.apple.bluetooth","timestamp":"2026-11-18 23:39:30.485000+0800","eventMessage":"Updated input report for ID #2: {length = 2, bytes = 0x2402}"}"#
         guard case let .report(parsed, time)? = BTLEServerReportLog.parse(ndjsonLine: line) else {
             Issue.record("not parsed")
             return
         }
         #expect(parsed == .init(reportID: 2, data: Data([0x24, 0x02])))
         #expect(abs(time - 1_795_016_370.485) < 0.001)
+
+        let dispatchLine = #"{"subsystem":"com.apple.bluetooth","timestamp":"2026-11-18 23:39:30.480000+0800","eventMessage":"Dispatching GATT notification for device \"11111111-2222-3333-4444-555555555555\" to session \"com.apple.BTLEServer-central-634-17\""}"#
+        #expect(
+            BTLEServerReportLog.parse(ndjsonLine: dispatchLine)
+                == .indication(peripheral: remote, timestamp: 1_795_016_370.480)
+        )
+
+        let otherSubsystemLine = #"{"subsystem":"com.apple.other","timestamp":"2026-11-18 23:39:30.485000+0800","eventMessage":"Updated input report for ID #2: {length = 2, bytes = 0x2402}"}"#
+        let missingSubsystemLine = #"{"timestamp":"2026-11-18 23:39:30.485000+0800","eventMessage":"Updated input report for ID #2: {length = 2, bytes = 0x2402}"}"#
+        #expect(BTLEServerReportLog.parse(ndjsonLine: otherSubsystemLine) == nil)
+        #expect(BTLEServerReportLog.parse(ndjsonLine: missingSubsystemLine) == nil)
     }
 
     @Test func forwardsOnlyReportsAttributedToConfiguredRemotesAndIsolatesMultipleRemotes() {
@@ -477,5 +489,143 @@ struct BTLEServerReportLogTests {
         let bluetooth = try #require((logging["Subsystems"] as? [String: Any])?["com.apple.bluetooth"] as? [String: Any])
         let defaults = try #require(bluetooth["DEFAULT-OPTIONS"] as? [String: Any])
         #expect((defaults["Enable-Private-Data"] as? Bool) == true)
+    }
+
+    @Test func missingDispatchTrafficTaintsWindowAndHeldRemotesAndValidatesG9N9NPayloads() {
+        #expect(BTLEServerReportLog.isValidG9N9NShortReport(.init(reportID: 1, data: Data([0x03]))))
+        #expect(BTLEServerReportLog.isValidG9N9NShortReport(.init(reportID: 2, data: Data([0x42, 0x00]))))
+        #expect(BTLEServerReportLog.isValidG9N9NShortReport(.init(reportID: 2, data: Data([0x00, 0x00]))))
+        #expect(!BTLEServerReportLog.isValidG9N9NShortReport(.init(reportID: 2, data: Data([0x99, 0x99]))))
+        #expect(!BTLEServerReportLog.isValidG9N9NShortReport(.init(reportID: 1, data: Data([0x12]))))
+
+        var attributor = BTLEServerReportLog.Attributor()
+
+        // Missing-dispatch unknown 2-byte report taints a currently held target and blocks dispatch-less release.
+        _ = attributor.accept(indication(remote, at: 10.00), peripherals: [remote])
+        #expect(
+            attributor.accept(report("2: {length = 2, bytes = 0x4200}", at: 10.01), peripherals: [remote])
+                == .report(.init(peripheral: remote, reportID: 2, data: Data([0x42, 0x00])))
+        )
+        #expect(attributor.accept(report("2: {length = 2, bytes = 0x9999}", at: 10.20), peripherals: [remote]) == nil)
+        #expect(attributor.accept(report("2: {length = 2, bytes = 0x0000}", at: 10.25), peripherals: [remote]) == nil)
+
+        // Missing-dispatch G9N9N-shaped non-zero press also taints the immediate 100 ms correlation window.
+        _ = attributor.accept(indication(remote, at: 20.00), peripherals: [remote])
+        #expect(attributor.accept(report("2: {length = 2, bytes = 0x4200}", at: 20.01), peripherals: [remote]) != nil)
+        #expect(attributor.accept(report("2: {length = 2, bytes = 0x4300}", at: 20.05), peripherals: [remote]) == nil)
+        _ = attributor.accept(indication(remote, at: 20.06), peripherals: [remote])
+        #expect(attributor.accept(report("2: {length = 2, bytes = 0x4100}", at: 20.07), peripherals: [remote]) == nil)
+        // Dispatch-less release for remote held press is also blocked after unattributed press taint.
+        #expect(attributor.accept(report("2: {length = 2, bytes = 0x0000}", at: 20.20), peripherals: [remote]) == nil)
+    }
+
+    @Test func profileServiceParsesSystemProfilerXMLNonRoot() {
+        let installedXML = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <array>
+            <dict>
+                <key>_dataType</key>
+                <string>SPConfigurationProfileDataType</string>
+                <key>_items</key>
+                <array>
+                    <dict>
+                        <key>_name</key>
+                        <string>Device Configuration Profiles</string>
+                        <key>_items</key>
+                        <array>
+                            <dict>
+                                <key>spconfigprofile_profile_identifier</key>
+                                <string>com.zfdang.remote-buddy.g9n9n-bluetooth-logging</string>
+                                <key>_items</key>
+                                <array>
+                                    <dict>
+                                        <key>_name</key>
+                                        <string>com.apple.system.logging</string>
+                                        <key>spconfigprofile_payload_data</key>
+                                        <string>{
+            Subsystems = {
+                "com.apple.bluetooth" = {
+                    "DEFAULT-OPTIONS" = {
+                        "Enable-Private-Data" = 1;
+                        Level = {
+                            Enable = Debug;
+                        };
+                    };
+                };
+            };
+        }</string>
+                                    </dict>
+                                </array>
+                            </dict>
+                        </array>
+                    </dict>
+                </array>
+            </dict>
+        </array>
+        </plist>
+        """.data(using: .utf8)!
+        #expect(BluetoothLoggingProfileService.status(fromSystemProfilerXMLData: installedXML) == .installed)
+
+        let missingDebugXML = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <array>
+            <dict>
+                <key>_dataType</key>
+                <string>SPConfigurationProfileDataType</string>
+                <key>_items</key>
+                <array>
+                    <dict>
+                        <key>_items</key>
+                        <array>
+                            <dict>
+                                <key>_items</key>
+                                <array>
+                                    <dict>
+                                        <key>_name</key>
+                                        <string>com.apple.system.logging</string>
+                                        <key>spconfigprofile_payload_data</key>
+                                        <string>{
+            Subsystems = {
+                "com.apple.bluetooth" = {
+                    "DEFAULT-OPTIONS" = {
+                        "Enable-Private-Data" = 1;
+                    };
+                };
+            };
+        }</string>
+                                    </dict>
+                                </array>
+                            </dict>
+                        </array>
+                    </dict>
+                </array>
+            </dict>
+        </array>
+        </plist>
+        """.data(using: .utf8)!
+        #expect(BluetoothLoggingProfileService.status(fromSystemProfilerXMLData: missingDebugXML) == .notInstalled)
+
+        let noLoggingProfilesXML = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <array>
+            <dict>
+                <key>_dataType</key>
+                <string>SPConfigurationProfileDataType</string>
+            </dict>
+        </array>
+        </plist>
+        """.data(using: .utf8)!
+        #expect(BluetoothLoggingProfileService.status(fromSystemProfilerXMLData: noLoggingProfilesXML) == .notInstalled)
+
+        let unrelatedXML = "<plist version=\"1.0\"><array><dict><key>_dataType</key><string>SPHardwareDataType</string></dict></array></plist>"
+            .data(using: .utf8)!
+        #expect(BluetoothLoggingProfileService.status(fromSystemProfilerXMLData: unrelatedXML) == .unknown)
+        #expect(BluetoothLoggingProfileService.status(fromSystemProfilerXMLData: Data()) == .unknown)
     }
 }

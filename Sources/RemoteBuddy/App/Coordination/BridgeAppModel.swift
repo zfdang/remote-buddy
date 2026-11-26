@@ -76,6 +76,11 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
     @Published var btleServerLogRedactedObserved = false
     var btleServerReportLogSource: BTLEServerReportLogSource?
     var btleServerReportLogGeneration: UInt64 = 0
+    var bluetoothLoggingProfileStatusGeneration: UInt64 = 0
+    var bluetoothLoggingProfileRefreshTask: Task<Void, Never>?
+    var bluetoothLoggingProfileStatusProvider: @Sendable () async -> BluetoothLoggingProfileStatus = {
+        await BluetoothLoggingProfileService.detectInstalledStatus()
+    }
     var lastBTLEServerLogRedactedAt: TimeInterval = 0
     var consecutiveUnattributedBTLEServerLogRedactions = 0
     var lastUnattributedBTLEServerLogRedactionAt: TimeInterval = 0
@@ -383,6 +388,9 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
         applicationIntegrationController.start()
         startAudioSubsystem()
         applyHIDSettings()
+        if settings.g9n9nBluetoothLogRecoveryEnabled {
+            refreshBluetoothLoggingProfileStatus()
+        }
         refreshRemoteDeviceNames(reason: .startup)
         terminationObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.willTerminateNotification,

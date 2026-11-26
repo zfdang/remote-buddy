@@ -39,22 +39,53 @@ enum BTLEServerReportLog {
     }
 
     static let predicate =
+        "subsystem == \"com.apple.bluetooth\" AND (" +
         "(process == \"BTLEServer\" AND eventMessage BEGINSWITH \"Updated input report for ID #\") OR " +
         "(process == \"bluetoothd\" AND " +
         "(eventMessage BEGINSWITH \"Dispatching GATT indication for device\" OR " +
         "eventMessage BEGINSWITH \"Dispatching GATT notification for device\") " +
-        "AND eventMessage CONTAINS \"BTLEServer\")"
+        "AND eventMessage CONTAINS \"BTLEServer\"))"
 
     /// Maximum gap between bluetoothd's dispatch line and BTLEServer's report line.
     /// Observed gaps reach ~46 ms; keep a tight 100 ms correlation window to reduce
     /// cross-device overlap risk.
     static let attributionWindow: TimeInterval = 0.1
 
-    /// Returns true only for BLE report shapes emitted by G9N9N ordinary button reports
-    /// (Report ID 1 with 1-2 byte payload, or Report ID 2 with 2-byte consumer payload).
+    /// Returns true only for BLE report shapes and button payloads emitted by G9N9N
+    /// ordinary button reports (Report ID 1 with 1-2 byte indexed payload, or Report ID 2
+    /// with 2-byte little-endian consumer payload).
     static func isValidG9N9NShortReport(_ report: Report) -> Bool {
-        (report.reportID == 1 && (1...2).contains(report.data.count)) ||
-            (report.reportID == 2 && report.data.count == 2)
+        switch report.reportID {
+        case 1:
+            guard (1...2).contains(report.data.count) else { return false }
+            if report.data.allSatisfy({ $0 == 0 }) {
+                return true
+            }
+            for byte in report.data where byte != 0 {
+                guard let decoded = G9N9NProtocol.usages(
+                    reportID: 1,
+                    data: Data([byte]),
+                    descriptor: G9N9NProtocol.indexedConsumerDescriptor,
+                    payloadOnly: true
+                ),
+                decoded.count == 1,
+                let usage = decoded.first,
+                RemoteButton.usageMap[usage] != nil
+                else {
+                    return false
+                }
+            }
+            return true
+        case 2:
+            guard report.data.count == 2 else { return false }
+            if report.data == Data([0, 0]) {
+                return true
+            }
+            let usage = UInt16(report.data[0]) | (UInt16(report.data[1]) << 8)
+            return G9N9NProtocol.consumerButtons[usage] != nil
+        default:
+            return false
+        }
     }
 
     private static let indicationPattern = try! NSRegularExpression(
@@ -80,10 +111,11 @@ enum BTLEServerReportLog {
         }
     }
 
-    /// Parses one `log stream --style ndjson` line.
+    /// Parses one `log stream --style ndjson` line from `com.apple.bluetooth`.
     static func parse(ndjsonLine: String) -> Line? {
         guard let raw = ndjsonLine.data(using: .utf8),
               let object = try? JSONSerialization.jsonObject(with: raw) as? [String: Any],
+              (object["subsystem"] as? String) == "com.apple.bluetooth",
               let message = object["eventMessage"] as? String,
               let timestampText = object["timestamp"] as? String,
               let timestamp = parseTimestamp(timestampText)
@@ -148,17 +180,30 @@ enum BTLEServerReportLog {
         private var pendingIndications: [(peripheral: UUID, timestamp: TimeInterval)] = []
         private var heldByPeripheral: [UUID: HeldState] = [:]
         private var lastActivityByPeripheral: [UUID: TimeInterval] = [:]
+        private var lastUnattributedReportAt: TimeInterval?
 
         private mutating func pruneExpired(before timestamp: TimeInterval, peripherals: Set<UUID>) {
             pendingIndications.removeAll { timestamp - $0.timestamp > BTLEServerReportLog.attributionWindow }
             lastActivityByPeripheral = lastActivityByPeripheral.filter {
                 abs(timestamp - $0.value) <= BTLEServerReportLog.attributionWindow
             }
+            if let lastUnattributedReportAt,
+               abs(timestamp - lastUnattributedReportAt) > BTLEServerReportLog.attributionWindow {
+                self.lastUnattributedReportAt = nil
+            }
             heldByPeripheral = heldByPeripheral.filter { peripheral, held in
                 peripherals.contains(peripheral) &&
                     timestamp >= held.pressedAt &&
                     timestamp - held.pressedAt <= Self.maxMissingDispatchReleaseWindow
             }
+        }
+
+        private mutating func recordUnattributedReportTaint(at timestamp: TimeInterval) {
+            lastUnattributedReportAt = timestamp
+            for heldPeripheral in heldByPeripheral.keys {
+                heldByPeripheral[heldPeripheral]?.taintedByOtherPeripheral = true
+            }
+            pendingIndications.removeAll()
         }
 
         mutating func prunePeripherals(keeping peripherals: Set<UUID>) {
@@ -234,10 +279,7 @@ enum BTLEServerReportLog {
                             pendingIndications.remove(at: removeIndex)
                         }
                     } else {
-                        for heldPeripheral in heldByPeripheral.keys {
-                            heldByPeripheral[heldPeripheral]?.taintedByOtherPeripheral = true
-                        }
-                        pendingIndications.removeAll()
+                        recordUnattributedReportTaint(at: timestamp)
                     }
                     return nil
                 }
@@ -254,6 +296,7 @@ enum BTLEServerReportLog {
                         pendingIndications.remove(at: removeIndex)
                     }
                     guard !hasConcurrentActivity(fromOtherThan: matched.peripheral, around: timestamp),
+                          lastUnattributedReportAt.map({ abs(timestamp - $0) > BTLEServerReportLog.attributionWindow }) ?? true,
                           peripherals.contains(matched.peripheral)
                     else { return nil }
                     track(report, for: matched.peripheral, at: timestamp)
@@ -263,8 +306,11 @@ enum BTLEServerReportLog {
                         data: report.data
                     ))
                 }
-                guard report.data.allSatisfy({ $0 == 0 }),
-                      heldByPeripheral.count == 1,
+                guard report.data.allSatisfy({ $0 == 0 }) else {
+                    recordUnattributedReportTaint(at: timestamp)
+                    return nil
+                }
+                guard heldByPeripheral.count == 1,
                       let (candidate, held) = heldByPeripheral.first,
                       peripherals.contains(candidate),
                       !held.taintedByOtherPeripheral,

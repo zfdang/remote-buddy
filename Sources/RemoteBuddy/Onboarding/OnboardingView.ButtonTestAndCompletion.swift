@@ -217,16 +217,11 @@ extension OnboardingView {
                     completionSummaryLine("appletvremote.gen4", "onboarding.summary.remote", value: name)
                 }
                 if summary.g9n9nInputMode == .bluetoothLogRecovery {
-                    HStack(alignment: .center, spacing: 10) {
-                        Image(systemName: "doc.badge.gearshape")
-                            .foregroundStyle(Color.accentColor)
-                            .frame(width: 22)
-                        Text(localization.text("onboarding.summary.g9n9n_mode"))
-                            .foregroundStyle(.secondary)
-                        Spacer(minLength: 12)
-                        G9N9NSupportBadge(mode: .bluetoothLogRecovery)
-                    }
-                    .accessibilityElement(children: .combine)
+                    completionSummaryLine(
+                        "doc.badge.gearshape",
+                        "onboarding.summary.g9n9n_mode",
+                        value: localization.text("connection.g9n9n.integration.btle_log_profile")
+                    )
                 }
                 if let verified = summary.buttonsVerified {
                     let valueKey = verified ? "onboarding.summary.passed" : "onboarding.summary.not_tested"

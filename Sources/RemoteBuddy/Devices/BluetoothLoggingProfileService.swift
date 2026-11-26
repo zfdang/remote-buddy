@@ -54,15 +54,84 @@ enum BluetoothLoggingProfileService {
         return false
     }
 
+    private static func isTruthyFlag(_ value: Any?) -> Bool {
+        if let flag = value as? Bool {
+            return flag
+        }
+        if let number = value as? NSNumber {
+            return number.boolValue
+        }
+        if let text = value as? String {
+            switch text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+            case "1", "true", "yes":
+                return true
+            default:
+                return false
+            }
+        }
+        return false
+    }
+
     private static func enablesPrivateDebugLogging(_ options: [String: Any]?) -> Bool {
         guard let options,
-              (options["Enable-Private-Data"] as? Bool) == true,
+              isTruthyFlag(options["Enable-Private-Data"]),
               let level = options["Level"] as? [String: Any],
               let enableLevel = level["Enable"] as? String
         else {
             return false
         }
         return enableLevel.caseInsensitiveCompare("Debug") == .orderedSame
+    }
+
+    private static func enablesBluetoothPrivateDebugLogging(inPayloadContent content: [String: Any]) -> Bool {
+        guard let bluetooth = (content["Subsystems"] as? [String: Any])?["com.apple.bluetooth"] as? [String: Any] else {
+            return false
+        }
+        return enablesPrivateDebugLogging(bluetooth["DEFAULT-OPTIONS"] as? [String: Any]) ||
+            enablesPrivateDebugLogging(bluetooth["BTLEServer"] as? [String: Any])
+    }
+
+    static func status(fromSystemProfilerXMLData xmlData: Data) -> BluetoothLoggingProfileStatus {
+        guard !xmlData.isEmpty,
+              let root = try? PropertyListSerialization.propertyList(
+                  from: xmlData,
+                  options: [],
+                  format: nil
+              ) as? [[String: Any]],
+              root.contains(where: { ($0["_dataType"] as? String) == "SPConfigurationProfileDataType" })
+        else {
+            return .unknown
+        }
+        for entry in root where (entry["_dataType"] as? String) == "SPConfigurationProfileDataType" {
+            let scopes = entry["_items"] as? [[String: Any]] ?? []
+            for scope in scopes {
+                let profiles = scope["_items"] as? [[String: Any]] ?? []
+                for profile in profiles {
+                    let payloads = profile["_items"] as? [[String: Any]] ?? []
+                    for payload in payloads {
+                        guard (payload["_name"] as? String) == "com.apple.system.logging" else { continue }
+                        let content: [String: Any]?
+                        if let dict = payload["spconfigprofile_payload_data"] as? [String: Any] {
+                            content = dict
+                        } else if let text = payload["spconfigprofile_payload_data"] as? String,
+                                  let data = text.data(using: .utf8),
+                                  let parsed = try? PropertyListSerialization.propertyList(
+                                      from: data,
+                                      options: [],
+                                      format: nil
+                                  ) as? [String: Any] {
+                            content = parsed
+                        } else {
+                            content = nil
+                        }
+                        if let content, enablesBluetoothPrivateDebugLogging(inPayloadContent: content) {
+                            return .installed
+                        }
+                    }
+                }
+            }
+        }
+        return .notInstalled
     }
 
     static func status(fromProfilesXMLData profilesXMLData: Data) -> BluetoothLoggingProfileStatus {
@@ -84,23 +153,44 @@ enum BluetoothLoggingProfileService {
         return plist.keys.contains("_computerlevel") ? .notInstalled : .unknown
     }
 
+    private static func runProcess(_ executablePath: String, arguments: [String]) -> Data? {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: executablePath)
+        process.arguments = arguments
+        let stdout = Pipe()
+        process.standardOutput = stdout
+        process.standardError = FileHandle.nullDevice
+        do {
+            try process.run()
+        } catch {
+            return nil
+        }
+        let data = stdout.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+        guard process.terminationStatus == 0 else { return nil }
+        return data
+    }
+
     static func detectInstalledStatus() async -> BluetoothLoggingProfileStatus {
         await Task.detached(priority: .utility) {
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/profiles")
-            process.arguments = ["list", "-output", "stdout-xml"]
-            let stdout = Pipe()
-            process.standardOutput = stdout
-            process.standardError = FileHandle.nullDevice
-            do {
-                try process.run()
-            } catch {
-                return .unknown
+            // `system_profiler SPConfigurationProfileDataType -xml` reports both device-level
+            // and user-level configuration profiles without requiring root privileges.
+            if let profilerData = runProcess(
+                "/usr/sbin/system_profiler",
+                arguments: ["SPConfigurationProfileDataType", "-xml"]
+            ) {
+                let profilerStatus = status(fromSystemProfilerXMLData: profilerData)
+                if profilerStatus != .unknown {
+                    return profilerStatus
+                }
             }
-            let data = stdout.fileHandleForReading.readDataToEndOfFile()
-            process.waitUntilExit()
-            guard process.terminationStatus == 0 else { return .unknown }
-            return status(fromProfilesXMLData: data)
+            if let profilesData = runProcess(
+                "/usr/bin/profiles",
+                arguments: ["list", "-output", "stdout-xml"]
+            ) {
+                return status(fromProfilesXMLData: profilesData)
+            }
+            return .unknown
         }.value
     }
 

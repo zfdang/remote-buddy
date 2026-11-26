@@ -31,7 +31,7 @@ G9N9N 兼容款众多，同为 VID/PID `18D1:9450`、DIS 型号 `A0` 甚至同�
 在“按键映射”选择 G9N9N 并开启开关后，无论是原生 `IOHID` 还是蓝牙日志描述文件恢复接入：
 
 - 方向、OK、返回、主页、静音、音量加减、YouTube、Netflix、输入源和电源共 14 颗普通按键均可配置单击、双击、长按与单键常用语。YouTube 默认上一首，Netflix 默认下一首，输入源默认播放／暂停；均支持自定义。
-- 设备卡片与硬件信息网格会明确标出该设备通过「标准系统 HID（原生）」还是「蓝牙日志描述文件 (.mobileconfig)」实现按键接入。
+- 设备硬件信息网格会明确标出该设备通过「标准系统 HID（原生）」还是「蓝牙日志描述文件 (.mobileconfig)」实现按键接入。
 
 语音键始终固定用于遥控器麦克风，电量服务有读数时设备卡片显示电量百分比。
 
@@ -44,4 +44,4 @@ G9N9N 兼容款众多，同为 VID/PID `18D1:9450`、DIS 型号 `A0` 甚至同�
 ## 硬件与报告边界
 
 - **原生设备不受日志恢复干扰**：已确认为原生完全支持的设备始终仅走公开 `IOHID` 通道，即使同时开启了蓝牙日志开关也不会通过日志分支重复按键。
-- **可选蓝牙日志全键兼容（`.mobileconfig`，默认关闭）**：针对 `0x011B`、`26.7` 等被 macOS `BTLEServer` 丢弃短报文的待验收批次，仅当用户主动开启该开关、设备完成 `HID` 指纹绑定、手动安装内置 `RemoteBuddy-G9N9N-BluetoothLogging.mobileconfig`（仅针对 `com.apple.bluetooth` 子系统启用 `Enable-Private-Data`，不开启全局系统私有日志、不落盘）后才会恢复内存中的短报文；一旦检测到 `<private>` 脱敏或状态为未安装，应用会立即停止 `/usr/bin/log stream` 读取直到用户安装并点击「重新检测」。技术原理、归属边界与真机验收清单见 [G9N9N 蓝牙日志按键恢复设计文档](g9n9n-btleserver-log-recovery-design.md)。
+- **可选蓝牙日志全键兼容（`.mobileconfig`，默认关闭）**：针对 `0x011B`、`26.7` 等被 macOS `BTLEServer` 丢弃短报文的待验收批次，仅当用户主动开启该开关、设备完成 `HID` 指纹绑定、手动安装内置 `RemoteBuddy-G9N9N-BluetoothLogging.mobileconfig`（仅针对 `com.apple.bluetooth` 子系统启用 `Enable-Private-Data` 与 `Debug` 级别，不开启全局系统私有日志、不落盘）且静态检测明确确认描述文件为已安装（`.installed`）后才会启动仅限定 `subsystem == "com.apple.bluetooth"` 的 `/usr/bin/log stream`；若查询受限返回未知状态（`.unknown`）、检测到未安装、或监测到已归属的 `<private>` 脱敏报告，日志读取会保持停止或立即暂停，直到用户安装确认并点击「重新检测」。注意：由于 `BTLEServer` 日志行本身不含外设 UUID，若另一台拥有完全相同 G9N9N 报告长度/编码的蓝牙 HID 设备在 `100 ms` 窗口内恰好缺失 `bluetoothd` 派发行，系统统一日志层面仍无法区分。技术原理、归属边界与真机验收清单见 [G9N9N 蓝牙日志按键恢复设计文档](g9n9n-btleserver-log-recovery-design.md)。

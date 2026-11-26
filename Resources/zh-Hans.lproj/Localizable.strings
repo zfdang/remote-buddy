@@ -1275,7 +1275,7 @@
 "onboarding.voice_test.trial_missing" = "本次语音测试配置已失效，请返回输入工具重新配置后再测试。";
 "onboarding.voice_test.reconfigure" = "返回配置输入工具";
 
-"button_mapping.google.version_notice" = "G9N9N 兼容款众多，不同硬件版本的功能支持可能不同，购买时请注意挑选硬件版本，详见";
+"button_mapping.google.version_notice" = "G9N9N 现已支持标准系统 HID 与蓝牙日志（.mobileconfig）两种接入方式，详见";
 "button_mapping.google.device_guide" = "设备指南 ↗";
 
 "connection.empty.title" = "尚未添加遥控器";

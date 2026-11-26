@@ -23,18 +23,84 @@ struct ConfiguredButtonAction: Codable, Equatable {
     var action: ButtonAction
     var shortcut: CustomKeyboardShortcut?
     var applicationProfileID: UUID?
+    var urlString: String?
 
     init(
         action: ButtonAction,
         shortcut: CustomKeyboardShortcut?,
-        applicationProfileID: UUID? = nil
+        applicationProfileID: UUID? = nil,
+        urlString: String? = nil
     ) {
         self.action = action
         self.shortcut = shortcut
         self.applicationProfileID = applicationProfileID
+        self.urlString = urlString
     }
 
     static let disabled = ConfiguredButtonAction(action: .disabled, shortcut: nil)
+}
+
+enum CustomActionURLPolicy {
+    private static let blockedSchemes: Set<String> = [
+        "file", "javascript", "data", "vbscript",
+    ]
+    private static let allowedCharacterSet = CharacterSet.urlQueryAllowed.union(
+        CharacterSet(charactersIn: ":/?#[]@!$&'()*+,;=%")
+    )
+
+    static func normalizedInput(_ raw: String?) -> String? {
+        guard let raw else { return nil }
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    static func validatedURL(from raw: String?) -> URL? {
+        guard let trimmed = normalizedInput(raw) else { return nil }
+        let candidate = URL(string: trimmed)
+            ?? trimmed.addingPercentEncoding(withAllowedCharacters: allowedCharacterSet).flatMap(URL.init(string:))
+        guard let url = candidate,
+              let scheme = url.scheme?.lowercased(),
+              !blockedSchemes.contains(scheme),
+              isValidScheme(scheme)
+        else { return nil }
+
+        if scheme == "http" || scheme == "https" {
+            guard let host = url.host, !host.isEmpty else { return nil }
+            return url
+        }
+        let hasHost = !(url.host?.isEmpty ?? true)
+        let hasPathOrQuery = !url.path.isEmpty || !(url.query?.isEmpty ?? true)
+        guard hasHost || hasPathOrQuery || !url.absoluteString.hasSuffix("://") && url.absoluteString.count > scheme.count + 1 else {
+            return nil
+        }
+        return url
+    }
+
+    static func summaryLabel(for raw: String?) -> String? {
+        guard let url = validatedURL(from: raw) else {
+            return normalizedInput(raw)
+        }
+        let scheme = url.scheme?.lowercased()
+        if scheme == "shortcuts",
+           let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+           let shortcutName = components.queryItems?.first(where: { $0.name == "name" })?.value,
+           !shortcutName.isEmpty {
+            return "shortcuts: \(shortcutName)"
+        }
+        if (scheme == "http" || scheme == "https"), let host = url.host, !host.isEmpty {
+            return host
+        }
+        return url.absoluteString
+    }
+
+    private static func isValidScheme(_ scheme: String) -> Bool {
+        guard let first = scheme.unicodeScalars.first,
+              CharacterSet.letters.contains(first) else { return false }
+        let validBody = CharacterSet.letters
+            .union(.decimalDigits)
+            .union(CharacterSet(charactersIn: "+.-"))
+        return scheme.unicodeScalars.allSatisfy(validBody.contains)
+    }
 }
 
 
@@ -145,6 +211,7 @@ enum ButtonAction: String, CaseIterable, Codable, Identifiable {
     case openCustomApplication
     // Custom & passthrough
     case customShortcut
+    case openURL
     case repeatSingleClick
     case directPassthrough = "direct_passthrough"
 
@@ -202,6 +269,7 @@ enum ButtonAction: String, CaseIterable, Codable, Identifiable {
         case .brightnessUp: return localization.text("action.brightness_up")
         case .brightnessDown: return localization.text("action.brightness_down")
         case .customShortcut: return localization.text("action.custom_shortcut")
+        case .openURL: return localization.text("action.open_url")
         case .openCustomApplication: return localization.text("action.open_custom_application")
         case .openCommonPhrases: return localization.text("action.open_common_phrases")
         case .openRemoteBuddy: return localization.text("action.open_remote_mic")
@@ -328,7 +396,7 @@ enum ButtonAction: String, CaseIterable, Codable, Identifiable {
             return .commonPhrases
         case .openCustomApplication:
             return .applications
-        case .customShortcut, .repeatSingleClick:
+        case .customShortcut, .openURL, .repeatSingleClick:
             return .custom
         default:
             preconditionFailure("Unhandled non-preset ButtonAction category: \(self)")

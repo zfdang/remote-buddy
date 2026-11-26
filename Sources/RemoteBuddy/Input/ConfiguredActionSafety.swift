@@ -15,7 +15,7 @@ extension ButtonAction {
              .spaceLeft, .spaceRight, .lockScreen, .screenshot, .contextMenu, .focusInput,
              .volumeUp, .volumeDown, .volumeMute, .brightnessUp, .brightnessDown,
              .playPause, .previousCommandLeft, .nextCommandRight,
-             .toggleLongRecording, .openCommonPhrases, .openCustomApplication,
+             .toggleLongRecording, .openCommonPhrases, .openCustomApplication, .openURL,
              .repeatSingleClick:
             return false
         default:

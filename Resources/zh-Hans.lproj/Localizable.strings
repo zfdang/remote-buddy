@@ -218,6 +218,14 @@
 "action.custom_shortcut" = "自定义快捷键";
 "action.focus_input" = "聚焦输入框";
 "action.open_custom_application" = "打开自定义 APP";
+"action.open_url" = "打开网址 / URL Scheme";
+"open_url.input_title" = "目标网址或 URL Scheme";
+"open_url.placeholder" = "https://example.com 或 shortcuts://run-shortcut?name=快捷指令名称";
+"open_url.help" = "支持网页链接（https://）或应用协议（如 shortcuts://run-shortcut?name=...）。可借由系统「快捷指令」实现安全的多步组合动作。";
+"open_url.invalid_hint" = "请输入有效的网址或协议链接（例如 https://... 或 shortcuts://...），暂不支持本地 file:// 等危险协议。";
+"open_url.shortcuts_template" = "填入快捷指令模板";
+"open_url.not_configured" = "未设置网址";
+"open_url.test" = "测试打开";
 "action.toggle_long_recording" = "切换持续录音";
 "action.open_remote_mic" = "打开遥控搭子";
 "action.open_codex" = "打开 Codex";

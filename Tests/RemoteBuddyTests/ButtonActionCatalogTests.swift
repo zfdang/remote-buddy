@@ -146,4 +146,71 @@ struct ButtonActionCatalogTests {
         )
         #expect(openedURL == URL(fileURLWithPath: "/Applications/WorkBuddy AI.app"))
     }
+
+    @Test @MainActor func openURLActionValidatesPersistsAndOpensWithoutAccessibility() throws {
+        #expect(ButtonAction.openURL.category == .custom)
+        #expect(ButtonAction.openURL.requiresNonSecureInput == false)
+
+        #expect(CustomActionURLPolicy.validatedURL(from: " https://remote.zfdang.com ")?.absoluteString == "https://remote.zfdang.com")
+        #expect(CustomActionURLPolicy.validatedURL(from: "shortcuts://run-shortcut?name=Morning Brief") != nil)
+        #expect(CustomActionURLPolicy.validatedURL(from: "shortcuts://run-shortcut?name=早安工作流") != nil)
+        #expect(CustomActionURLPolicy.summaryLabel(for: "https://remote.zfdang.com/docs") == "remote.zfdang.com")
+        #expect(CustomActionURLPolicy.summaryLabel(for: "shortcuts://run-shortcut?name=早安") == "shortcuts: 早安")
+
+        for unsafeOrInvalid in [nil, "", "   ", "https://", "http://", "file:///etc/passwd", "javascript:alert(1)", "data:text/html,test", "not a url"] {
+            #expect(CustomActionURLPolicy.validatedURL(from: unsafeOrInvalid) == nil)
+        }
+
+        var launchedURLs: [URL] = []
+        #expect(KeyboardInjector.send(
+            .openURL,
+            urlString: "shortcuts://run-shortcut?name=Test%20Flow",
+            urlOpener: {
+                launchedURLs.append($0)
+                return true
+            },
+            accessibilityTrusted: { false }
+        ))
+        #expect(launchedURLs == [URL(string: "shortcuts://run-shortcut?name=Test%20Flow")!])
+
+        #expect(!KeyboardInjector.send(
+            .openURL,
+            urlString: "file:///bin/sh",
+            urlOpener: {
+                launchedURLs.append($0)
+                return true
+            },
+            accessibilityTrusted: { true }
+        ))
+        #expect(launchedURLs.count == 1)
+
+        // Verify per-remote & secondary-trigger URL persistence across reload.
+        let suite = "open-url-settings-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let settings = AppSettings(defaults: defaults)
+        let profileID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+        settings.selectRemoteProfile(profileID)
+        settings.setBaseBinding(
+            ConfiguredButtonAction(action: .openURL, shortcut: nil, urlString: "https://example.com"),
+            for: .home,
+            trigger: .singleClick,
+            profileID: profileID
+        )
+        settings.setBaseBinding(
+            ConfiguredButtonAction(action: .openURL, shortcut: nil, urlString: "shortcuts://run-shortcut?name=Combo"),
+            for: .home,
+            trigger: .doubleClick,
+            profileID: profileID
+        )
+
+        let reloaded = AppSettings(defaults: defaults)
+        let single = reloaded.configuredAction(for: .home, trigger: .singleClick)
+        let double = reloaded.configuredAction(for: .home, trigger: .doubleClick)
+        #expect(single.action == .openURL)
+        #expect(single.urlString == "https://example.com")
+        #expect(double.action == .openURL)
+        #expect(double.urlString == "shortcuts://run-shortcut?name=Combo")
+    }
 }

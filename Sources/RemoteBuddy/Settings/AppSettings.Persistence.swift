@@ -38,6 +38,13 @@ extension AppSettings {
         encodeAndSave(raw, forKey: Keys.buttonApplicationProfileIDs)
     }
 
+    func saveButtonURLs() {
+        let raw = Dictionary(
+            uniqueKeysWithValues: buttonURLs.map { ($0.key.rawValue, $0.value) }
+        )
+        encodeAndSave(raw, forKey: Keys.buttonURLs)
+    }
+
     func saveSecondaryBindings() {
         let raw = Dictionary(uniqueKeysWithValues: secondaryButtonBindings.map { button, bindings in
             (
@@ -57,6 +64,7 @@ extension AppSettings {
             buttonBindings: buttonBindings,
             buttonShortcuts: buttonShortcuts,
             buttonApplicationProfileIDs: buttonApplicationProfileIDs,
+            buttonURLs: buttonURLs,
             secondaryButtonBindings: secondaryButtonBindings
         )
     }

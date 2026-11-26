@@ -218,6 +218,14 @@
 "action.custom_shortcut" = "Custom Shortcut";
 "action.focus_input" = "Focus Input Field";
 "action.open_custom_application" = "Open Custom App";
+"action.open_url" = "Open URL / URL Scheme";
+"open_url.input_title" = "Target URL or URL Scheme";
+"open_url.placeholder" = "https://example.com or shortcuts://run-shortcut?name=MyShortcut";
+"open_url.help" = "Supports web URLs (https://) and app schemes such as shortcuts://run-shortcut?name=..., letting you run Apple Shortcuts for safe multi-step workflows.";
+"open_url.invalid_hint" = "Enter a valid URL or app scheme (such as https://... or shortcuts://...). Local file:// and script schemes are blocked.";
+"open_url.shortcuts_template" = "Use Shortcuts Template";
+"open_url.not_configured" = "No URL set";
+"open_url.test" = "Test Open";
 "action.toggle_long_recording" = "Toggle Continuous Recording";
 "action.open_remote_mic" = "Open Remote Buddy";
 "action.open_codex" = "Open Codex";

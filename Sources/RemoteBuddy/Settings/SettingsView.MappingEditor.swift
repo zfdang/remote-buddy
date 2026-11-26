@@ -90,6 +90,14 @@ extension SettingsView {
                             configured: configured
                         )
                     }
+
+                    if currentCategory == .custom, configured.action == .openURL {
+                        inlineURLEditor(
+                            button: button,
+                            trigger: trigger,
+                            configured: configured
+                        )
+                    }
                 }
 
                 if trigger == .doubleClick && configured.action != .disabled {
@@ -307,6 +315,67 @@ extension SettingsView {
         .padding(12)
         .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 10))
 
+    }
+
+    @ViewBuilder
+    private func inlineURLEditor(
+        button: RemoteButton,
+        trigger: ButtonTrigger,
+        configured: ConfiguredButtonAction
+    ) -> some View {
+        let rawInput = configured.urlString ?? ""
+        let trimmed = CustomActionURLPolicy.normalizedInput(rawInput)
+        let validatedURL = CustomActionURLPolicy.validatedURL(from: rawInput)
+        VStack(alignment: .leading, spacing: 10) {
+            Text(localization.text("open_url.input_title"))
+                .font(.system(size: 14, weight: .semibold))
+
+            TextField(
+                localization.text("open_url.placeholder"),
+                text: Binding(
+                    get: { configured.urlString ?? "" },
+                    set: { setMappingURLString($0, for: button, trigger: trigger) }
+                )
+            )
+            .textFieldStyle(.roundedBorder)
+            .font(.system(size: 13))
+            .accessibilityIdentifier("button-mapping.open-url-field")
+
+            if trimmed != nil && validatedURL == nil {
+                Label(localization.text("open_url.invalid_hint"), systemImage: "exclamationmark.triangle.fill")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.red)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text(localization.text("open_url.help"))
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            HStack(spacing: 8) {
+                Button(localization.text("open_url.shortcuts_template")) {
+                    setMappingURLString("shortcuts://run-shortcut?name=", for: button, trigger: trigger)
+                }
+                .compatibilityButtonStyle(.standard)
+
+                Spacer()
+
+                Button(localization.text("common.action.clear")) {
+                    setMappingURLString(nil, for: button, trigger: trigger)
+                }
+                .compatibilityButtonStyle(.standard)
+                .disabled(trimmed == nil)
+
+                Button(localization.text("open_url.test")) {
+                    _ = KeyboardInjector.send(.openURL, urlString: configured.urlString)
+                }
+                .compatibilityButtonStyle(.prominent)
+                .disabled(validatedURL == nil)
+            }
+        }
+        .padding(12)
+        .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 10))
     }
 
     @ViewBuilder

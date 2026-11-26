@@ -176,6 +176,8 @@ struct BluetoothDiscoveryPromotionTests {
         #expect(model.removeRemoteDevice(firstProfile))
         #expect(!model.shouldDiscoverNewBluetoothRemotes)
         SettingsPageBehavior.beginDeviceSetup(settings: settings)
+        settings.setOnboardingControlSource(.xiaomiRemote)
+        settings.setOnboardingStep(.remote)
         #expect(model.shouldDiscoverNewBluetoothRemotes)
 
         // Adding a replacement remote creates a clean profile with default mappings and gain.
@@ -184,7 +186,9 @@ struct BluetoothDiscoveryPromotionTests {
         #expect(replacementProfile != firstProfile)
         #expect(settings.gainDB(for: replacementProfile) != 18)
         #expect(settings.configuredAction(for: .ok, trigger: .singleClick, profileID: replacementProfile).action != .commandCopy)
-        settings.completeOnboarding()
+        settings.selectRemoteProfile(replacementProfile)
+        settings.setOnboardingStep(.complete)
+        model.completeOnboardingSetup()
         #expect(!model.shouldDiscoverNewBluetoothRemotes)
 
         // Removing the final remaining profiles re-enables discovery automatically.

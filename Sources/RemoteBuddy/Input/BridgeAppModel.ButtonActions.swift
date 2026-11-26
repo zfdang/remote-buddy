@@ -13,7 +13,7 @@ extension BridgeAppModel {
         )
         if configured.action == .openCustomApplication {
             guard let profile = applicationProfile,
-                NSWorkspace.shared.urlForApplication(withBundleIdentifier: profile.bundleIdentifier) != nil
+                KeyboardInjector.resolveCustomApplicationURL(profile) != nil
             else { return false }
         }
         let sendAction: (UInt64?) -> Bool = { [weak self] requestID in

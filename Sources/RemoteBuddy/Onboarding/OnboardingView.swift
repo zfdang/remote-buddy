@@ -28,6 +28,7 @@ struct OnboardingView: View {
     @State var requestedRemoteConnectionRecovery = false
     @State var testedControlButtons = Set<RemoteButton>()
     @State var chromecastSingleKeyObserved = false
+    @State var chromecastBluetoothLogCardExpanded = false
     @State var observedRemoteProfileID: UUID?
     @State var hidBindingProfile: RemoteDeviceProfile?
     @State var voiceSessionStarted = false

@@ -21,6 +21,7 @@ extension OnboardingView {
         case .remote:
             observedRemoteButtons.removeAll()
             chromecastSingleKeyObserved = false
+            chromecastBluetoothLogCardExpanded = false
             remoteInputDiagnostic = remoteInputDiagnosticOverride ?? FirstUseRemoteInputDiagnostic()
             requestedRemoteConnectionRecovery = false
             secureInputWaitStartedAtUptime = nil

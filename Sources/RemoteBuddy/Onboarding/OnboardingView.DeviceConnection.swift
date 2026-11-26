@@ -126,7 +126,10 @@ extension OnboardingView {
             model.selectOnboardingRemoteIfNeeded()
             learnSelectedHIDIdentity()
         }
-        .onChange(of: settings.selectedRemoteProfileID) { _, _ in learnSelectedHIDIdentity() }
+        .onChange(of: settings.selectedRemoteProfileID) { _, _ in
+            chromecastBluetoothLogCardExpanded = false
+            learnSelectedHIDIdentity()
+        }
         .onChange(of: selectedControlConnected) { _, connected in
             if connected { learnSelectedHIDIdentity() }
         }
@@ -234,19 +237,61 @@ extension OnboardingView {
     }
 
     private var chromecastBluetoothLogRecoveryCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(localization.text("onboarding.remote.chromecast.btle_log_prompt"))
+        let isExpanded = chromecastBluetoothLogCardExpanded || settings.g9n9nBluetoothLogRecoveryEnabled
+        return VStack(alignment: .leading, spacing: 8) {
+            Button {
+                chromecastBluetoothLogCardExpanded = !isExpanded
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 12)
+                    Text(localization.text("onboarding.remote.chromecast.btle_log_disclosure"))
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if isExpanded {
+                Text(localization.text("onboarding.remote.chromecast.btle_log_prompt"))
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                G9N9NBluetoothLoggingSection(model: model, settings: settings)
+
+                if settings.g9n9nBluetoothLogRecoveryEnabled,
+                   selectedControlConnected,
+                   let profile = settings.selectedRemoteProfile,
+                   profile.model.isChromecastRemote,
+                   profile.hidFingerprint == nil {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(alignment: .top, spacing: 6) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.orange)
+                            Text(localization.text("g9n9n.btle_log.hid_binding_missing"))
+                                .font(.caption)
+                                .foregroundStyle(.primary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        Button(localization.text("remote.hid_binding.open")) {
+                            hidBindingProfile = profile
+                        }
+                        .compatibilityButtonStyle(.standard)
+                        .controlSize(.small)
+                    }
+                }
+
+                Link(
+                    localization.text("connection.g9n9n.compatibility_doc_link"),
+                    destination: AppLinks.g9n9nCompatibilityGuide(for: localization.locale)
+                )
                 .font(.system(size: 12))
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            G9N9NBluetoothLoggingSection(model: model, settings: settings)
-
-            Link(
-                localization.text("connection.g9n9n.compatibility_doc_link"),
-                destination: AppLinks.g9n9nCompatibilityGuide(for: localization.locale)
-            )
-            .font(.system(size: 12))
+            }
         }
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)

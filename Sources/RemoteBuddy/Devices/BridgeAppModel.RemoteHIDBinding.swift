@@ -29,9 +29,14 @@ extension BridgeAppModel {
                   Self.canLearnHIDIdentity(model: profile.model, source: settings.onboardingControlSource)
             else { return }
         }
-        guard let name = bridge.currentSystemDeviceName(),
-              let candidate = RemoteHIDCandidate.identified(identity: identity, expectedName: name,
-                  among: RemoteHIDCandidate.available()) else { return }
+        let unboundCandidates = availableCandidatesExcludingOtherProfiles(for: profileID)
+        guard let candidate = Self.resolveHIDCandidate(
+            forModel: profile.model,
+            identity: identity,
+            expectedName: bridge.currentSystemDeviceName(),
+            availableCandidates: unboundCandidates,
+            boundFingerprints: []
+        ) else { return }
         if bridge.deviceInformation.hidVersion == nil,
            let hidVersion = RemoteHIDIdentity.readVersionNumber(forFingerprint: candidate.binding.fingerprint) {
             bridge.deviceInformation.hidVersion = hidVersion
@@ -40,6 +45,41 @@ extension BridgeAppModel {
             )
         }
         bindCompatibleRemote(candidate, profileID: profileID, select: false)
+    }
+
+    private func availableCandidatesExcludingOtherProfiles(for profileID: UUID) -> [RemoteHIDCandidate] {
+        let otherBoundFingerprints = Set(
+            settings.remoteDeviceProfiles
+                .filter { $0.id != profileID }
+                .compactMap(\.hidFingerprint)
+        )
+        return RemoteHIDCandidate.available().filter { !otherBoundFingerprints.contains($0.id) }
+    }
+
+    static func resolveHIDCandidate(
+        forModel model: RemoteModel,
+        identity: RemoteHIDIdentity,
+        expectedName: String?,
+        availableCandidates: [RemoteHIDCandidate],
+        boundFingerprints: Set<String>
+    ) -> RemoteHIDCandidate? {
+        let unboundCandidates = availableCandidates.filter { !boundFingerprints.contains($0.id) }
+        if let matched = RemoteHIDCandidate.identified(
+            identity: identity,
+            expectedName: expectedName,
+            among: unboundCandidates
+        ) {
+            return matched
+        }
+        // When a Chromecast remote's macOS Bluetooth name differs from its HID name
+        // (or has not resolved yet), fall back to a unique unbound standard 18D1:9450 candidate.
+        guard model.isChromecastRemote, identity == .chromecast else {
+            return nil
+        }
+        let chromecastMatches = RemoteHIDCandidate.unambiguous(unboundCandidates).filter {
+            $0.binding.identity == .chromecast
+        }
+        return chromecastMatches.count == 1 ? chromecastMatches.first : nil
     }
 
     static func canLearnHIDIdentity(model: RemoteModel, source: OnboardingControlSource) -> Bool {

@@ -1284,6 +1284,7 @@
 "onboarding.remote.chromecast.full_ready_detail" = "Single-key report received: native Full Support active (Voice key and all 14 buttons work).";
 "onboarding.remote.chromecast.btle_log_ready_detail" = "Single-key input received via Bluetooth logging profile: Voice key and all 14 buttons are ready.";
 "onboarding.remote.chromecast.btle_log_prompt" = "G9N9N uses two integration paths: press OK alone for native Full Support; if single presses do not respond (e.g. 0x011B / 26.7 / 26.0 batches), enable Bluetooth log key recovery below and install the profile.";
+"onboarding.remote.chromecast.btle_log_disclosure" = "Single key not responding? Enable Bluetooth Log Compatibility (Optional)";
 
 "onboarding.summary.g9n9n_mode" = "G9N9N Support Mode";
 
@@ -1336,6 +1337,7 @@
 "g9n9n.btle_log.action.install_profile" = "Install Profile";
 "g9n9n.btle_log.action.open_device_management" = "Device Management";
 "g9n9n.btle_log.action.recheck" = "Recheck";
+"g9n9n.btle_log.hid_binding_missing" = "This remote is not bound to an HID device yet. Select its HID device below before pressing OK.";
 "g9n9n.btle_log.privacy_note" = "Privacy & scope: This unsigned profile enables private logging only for com.apple.bluetooth so Remote Buddy can recover dropped reports from your paired G9N9N. Other devices are ignored, logs are not persisted or uploaded, and you can remove the profile or turn off this toggle anytime.";
 "connection.device.button_integration" = "Button Integration";
 "connection.g9n9n.integration.native_hid" = "Standard System HID";

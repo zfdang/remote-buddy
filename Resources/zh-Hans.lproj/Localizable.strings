@@ -1286,6 +1286,7 @@
 "onboarding.remote.chromecast.full_ready_detail" = "已收到单键输入：当前 G9N9N 处于原生完全支持模式，支持全部 14 颗普通按键与语音键。";
 "onboarding.remote.chromecast.btle_log_ready_detail" = "已通过蓝牙日志描述文件收到单键输入：全部 14 颗普通按键与语音键均可使用。";
 "onboarding.remote.chromecast.btle_log_prompt" = "G9N9N 提供两种接入方式：单按 OK 正常识别时自动走原生完全支持；若单键无响应（如 0x011B / 26.7 / 26.0 批次），请开启下方蓝牙日志全键兼容并安装描述文件。";
+"onboarding.remote.chromecast.btle_log_disclosure" = "单键无反应？开启蓝牙日志全键兼容（可选）";
 
 "onboarding.summary.g9n9n_mode" = "G9N9N 支持模式";
 
@@ -1338,6 +1339,7 @@
 "g9n9n.btle_log.action.install_profile" = "安装描述文件";
 "g9n9n.btle_log.action.open_device_management" = "打开设备管理";
 "g9n9n.btle_log.action.recheck" = "重新检测";
+"g9n9n.btle_log.hid_binding_missing" = "当前尚未关联到该遥控器的 HID 设备，请先点击下方按钮选择对应的遥控器 HID 设备后，再按 OK 测试。";
 "g9n9n.btle_log.privacy_note" = "隐私与范围：描述文件未签名，仅对 com.apple.bluetooth 子系统开启私有日志以便恢复您已绑定 G9N9N 遥控器的丢弃按键；不会读取其他设备、不落盘、不上传，随时可在“设备管理”中移除或关闭上方开关。";
 "connection.device.button_integration" = "按键接入方式";
 "connection.g9n9n.integration.native_hid" = "标准系统 HID（原生）";

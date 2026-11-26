@@ -857,16 +857,16 @@ struct T1RemoteProtocolTests {
         bridge.simulateControlPacketForTesting(Data([0x00]))
         await flushAudio()
 
-        // 10-minute setting extends up to 60 MIC_EXTEND packets before MIC_CLOSE at 610s.
+        // 30-minute setting extends up to 180 MIC_EXTEND packets before MIC_CLOSE at 1810s.
         writtenCommands.removeAll()
-        settings.voiceAutoStopDuration = .tenMinutes
+        settings.voiceAutoStopDuration = .thirtyMinutes
         clock.advance(to: clock.now + 1_000)
         bridge.simulateControlPacketForTesting(Data([0x04, 0x03, 0x02, 0x02]))
         await flushAudio()
         let secondStart = clock.now
-        clock.advance(to: secondStart + 610_000)
+        clock.advance(to: secondStart + 1_810_000)
         await flushAudio()
-        #expect(writtenCommands.filter { $0 == Data([0x0E, 0x02]) }.count == 60)
+        #expect(writtenCommands.filter { $0 == Data([0x0E, 0x02]) }.count == 180)
         #expect(writtenCommands.filter { $0 == Data([0x0D, 0x02]) }.count == 1)
     }
 

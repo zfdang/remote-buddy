@@ -38,7 +38,7 @@ button.addEventListener('blur', stop);
         title: '通用设置',
         badge: '偏好设置',
         windowTitle: '通用设置 · Remote Buddy',
-        src: 'assets/screenshots/general-zh.jpg?v=261126screens',
+        src: 'assets/screenshots/general-zh.jpg?v=261126gen',
         alt: 'Remote Buddy 通用设置界面：三项状态概览、向导入口与分组偏好',
         desc: '查看权限与麦克风、遥控器连接和输入法集成三项状态，点击卡片直达对应设置。下方可重新运行向导，或调整应用显示、启动行为和语言。'
       },
@@ -165,7 +165,7 @@ button.addEventListener('blur', stop);
         title: 'General Settings',
         badge: 'Preferences',
         windowTitle: 'General Settings · Remote Buddy',
-        src: 'assets/screenshots/general-en.jpg?v=261126screens',
+        src: 'assets/screenshots/general-en.jpg?v=261126gen',
         alt: 'Remote Buddy General Settings interface: three status cards, setup wizard entry, and grouped preferences',
         desc: 'Review permissions & microphone, connected remotes, and input integration in three status cards. Open settings from each card, restart setup, or adjust display, launch, and language preferences.'
       },

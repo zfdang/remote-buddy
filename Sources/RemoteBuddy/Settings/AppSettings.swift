@@ -7,6 +7,8 @@ enum VoiceAutoStopDuration: Int, CaseIterable, Codable, Identifiable {
     case threeMinutes = 3
     case fiveMinutes = 5
     case tenMinutes = 10
+    case fifteenMinutes = 15
+    case thirtyMinutes = 30
 
     static let keepaliveIntervalSeconds = 10
 
@@ -26,6 +28,10 @@ enum VoiceAutoStopDuration: Int, CaseIterable, Codable, Identifiable {
             return "about.preferences.voice_auto_stop_duration.5m"
         case .tenMinutes:
             return "about.preferences.voice_auto_stop_duration.10m"
+        case .fifteenMinutes:
+            return "about.preferences.voice_auto_stop_duration.15m"
+        case .thirtyMinutes:
+            return "about.preferences.voice_auto_stop_duration.30m"
         }
     }
 }

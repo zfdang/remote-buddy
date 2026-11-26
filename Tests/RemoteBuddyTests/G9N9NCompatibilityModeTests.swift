@@ -992,4 +992,298 @@ struct G9N9NCompatibilityModeTests {
         #expect(iohid == iohidSame)
         #expect(iohid != btle)
     }
+
+    @Test func periodicProfileVerificationStopsBackgroundSourceWithoutRemoteInput() async throws {
+        let suite = "g9n9n-periodic-verify-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let settings = AppSettings(defaults: defaults)
+        settings.customMappingEnabled = true
+        let googleBLE = UUID()
+        let googleID = settings.registerBluetoothRemote(identifier: googleBLE, model: .chromecastVoiceRemote)
+        settings.setG9N9NInputMode(.bluetoothLogRecovery, for: googleID)
+        settings.bindHIDFingerprint("fp-g9n9n-periodic", to: googleID)
+        settings.completeOnboarding()
+
+        let providerState = OSAllocatedUnfairLock(initialState: BluetoothLoggingProfileStatus.installed)
+        let model = BridgeAppModel(
+            settings: settings,
+            initialAudioDevices: [],
+            permissionSnapshotProvider: {
+                HIDPermissionSnapshot(inputMonitoringGranted: true, accessibilityGranted: true)
+            }
+        )
+        model.bluetoothLoggingProfileCheckIntervalNanoseconds = 20_000_000
+        model.bluetoothLoggingProfileStatusProvider = {
+            providerState.withLock { $0 }
+        }
+        defer {
+            model.setG9N9NBluetoothLogRecoveryEnabled(false)
+            model.stop()
+        }
+        model.started = true
+        model.setG9N9NBluetoothLogRecoveryEnabled(true)
+        await model.bluetoothLoggingProfileRefreshTask?.value
+        #expect(model.bluetoothLoggingProfileStatus == .installed)
+        #expect(model.btleServerReportLogSource != nil)
+
+        // Removing the profile with ZERO subsequent remote reports still stops the log source.
+        providerState.withLock { $0 = .notInstalled }
+        for _ in 0..<40 where model.btleServerReportLogSource != nil {
+            try await Task.sleep(nanoseconds: 25_000_000)
+        }
+        #expect(model.bluetoothLoggingProfileStatus == .notInstalled)
+        #expect(model.btleServerReportLogSource == nil)
+
+        // Becoming `.unknown` while running also fails closed without waiting for remote input.
+        providerState.withLock { $0 = .installed }
+        model.recheckBluetoothLoggingProfile()
+        await model.bluetoothLoggingProfileRefreshTask?.value
+        #expect(model.btleServerReportLogSource != nil)
+
+        providerState.withLock { $0 = .unknown }
+        for _ in 0..<40 where model.btleServerReportLogSource != nil {
+            try await Task.sleep(nanoseconds: 25_000_000)
+        }
+        #expect(model.bluetoothLoggingProfileStatus == .unknown)
+        #expect(model.btleServerReportLogSource == nil)
+    }
+
+    @Test func attributedReportsDoNotResetRedactionRefreshThrottleAndConcurrentRefreshesCoalesce() async throws {
+        let suite = "g9n9n-redaction-throttle-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let settings = AppSettings(defaults: defaults)
+        settings.customMappingEnabled = true
+        let googleBLE = UUID()
+        let googleID = settings.registerBluetoothRemote(identifier: googleBLE, model: .chromecastVoiceRemote)
+        settings.setG9N9NInputMode(.bluetoothLogRecovery, for: googleID)
+        settings.bindHIDFingerprint("fp-g9n9n-throttle", to: googleID)
+        settings.completeOnboarding()
+
+        let monitor = HIDRemoteMonitor(
+            settings: settings,
+            allowsG9N9N: true,
+            profileID: googleID,
+            targetFingerprint: "fp-g9n9n-throttle",
+            runtimePermissions: { true },
+            nativeSuppressionAvailable: { true },
+            actionPerformer: { _, _, _ in true },
+            diagnosticLogger: { _ in }
+        )
+        monitor.connectSimulatedDevice(fingerprint: "fp-g9n9n-throttle", profileID: googleID, isSeized: true)
+        defer { monitor.disconnectSimulatedDevice() }
+
+        let providerCalls = OSAllocatedUnfairLock(initialState: 0)
+        let model = BridgeAppModel(
+            settings: settings,
+            initialAudioDevices: [],
+            permissionSnapshotProvider: {
+                HIDPermissionSnapshot(inputMonitoringGranted: true, accessibilityGranted: true)
+            }
+        )
+        model.bluetoothLoggingProfileStatusProvider = {
+            providerCalls.withLock { $0 += 1 }
+            return .installed
+        }
+        defer {
+            model.hidMonitors.removeAll()
+            model.setG9N9NBluetoothLogRecoveryEnabled(false)
+            model.stop()
+        }
+        model.started = true
+        model.hidMonitors["fp-g9n9n-throttle"] = monitor
+        model.setG9N9NBluetoothLogRecoveryEnabled(true)
+        await model.bluetoothLoggingProfileRefreshTask?.value
+        let baseline = providerCalls.withLock { $0 }
+        let generation = model.btleServerReportLogGeneration
+
+        // Unattributed redaction triggers 1 refresh at t=100.
+        model.handleRedactedBTLEServerReport(
+            .init(peripheral: nil, reportID: 2),
+            sourceGeneration: generation,
+            now: 100.0
+        )
+        await model.bluetoothLoggingProfileRefreshTask?.value
+        #expect(providerCalls.withLock { $0 } == baseline + 1)
+
+        // Normal attributed report must NOT reset the 10-second throttle window.
+        model.handleAttributedBTLEServerReport(
+            .init(peripheral: googleBLE, reportID: 2, data: Data([0x41, 0x00])),
+            sourceGeneration: generation
+        )
+        model.handleAttributedBTLEServerReport(
+            .init(peripheral: googleBLE, reportID: 2, data: Data([0x00, 0x00])),
+            sourceGeneration: generation
+        )
+        model.handleRedactedBTLEServerReport(
+            .init(peripheral: nil, reportID: 2),
+            sourceGeneration: generation,
+            now: 103.0
+        )
+        await model.bluetoothLoggingProfileRefreshTask?.value
+        #expect(providerCalls.withLock { $0 } == baseline + 1)
+
+        // After >=10 seconds, the next unattributed redaction refreshes again.
+        model.handleRedactedBTLEServerReport(
+            .init(peripheral: nil, reportID: 2),
+            sourceGeneration: generation,
+            now: 110.5
+        )
+        await model.bluetoothLoggingProfileRefreshTask?.value
+        #expect(providerCalls.withLock { $0 } == baseline + 2)
+
+        // Concurrent refresh requests coalesce into a single in-flight query.
+        let gate = OSAllocatedUnfairLock<CheckedContinuation<BluetoothLoggingProfileStatus, Never>?>(initialState: nil)
+        model.bluetoothLoggingProfileStatusProvider = {
+            providerCalls.withLock { $0 += 1 }
+            return await withCheckedContinuation { continuation in
+                gate.withLock { $0 = continuation }
+            }
+        }
+        let beforeCoalesce = providerCalls.withLock { $0 }
+        model.refreshBluetoothLoggingProfileStatus(coalescingIfInFlight: true)
+        model.refreshBluetoothLoggingProfileStatus(coalescingIfInFlight: true)
+        for _ in 0..<20 where gate.withLock({ $0 == nil }) {
+            try await Task.sleep(nanoseconds: 5_000_000)
+        }
+        #expect(providerCalls.withLock { $0 } == beforeCoalesce + 1)
+        gate.withLock { $0 }?.resume(returning: .installed)
+        await model.bluetoothLoggingProfileRefreshTask?.value
+    }
+
+    @Test func disablingBluetoothLogRecoveryClearsFinishedGesturesAndPreservesOtherRemotesAppSwitcher() async throws {
+        let suite = "g9n9n-switcher-isolation-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let settings = AppSettings(defaults: defaults)
+        settings.customMappingEnabled = true
+        let googleID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+        let nativeID = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
+        settings.setG9N9NInputMode(.bluetoothLogRecovery, for: googleID)
+        settings.bindHIDFingerprint("fp-g9n9n-switcher", to: googleID)
+        settings.bindHIDFingerprint("fp-native-switcher", to: nativeID)
+        settings.setBaseBinding(
+            ConfiguredButtonAction(action: .space, shortcut: nil),
+            for: .ok,
+            trigger: .singleClick,
+            profileID: googleID
+        )
+        settings.setBaseBinding(
+            ConfiguredButtonAction(action: .escape, shortcut: nil),
+            for: .mute,
+            trigger: .doubleClick,
+            profileID: googleID
+        )
+        settings.setBaseBinding(
+            ConfiguredButtonAction(action: .appSwitcher, shortcut: nil),
+            for: .home,
+            trigger: .singleClick,
+            profileID: nativeID
+        )
+        settings.setBaseBinding(
+            ConfiguredButtonAction(action: .appSwitcher, shortcut: nil),
+            for: .home,
+            trigger: .singleClick,
+            profileID: googleID
+        )
+        settings.completeOnboarding()
+
+        let scheduler = ControlledTestScheduler()
+        let coordinator = HIDAppSwitcherCoordinator(
+            session: KeyboardInjector.AppSwitcherSession(
+                hardwareFlags: { [] },
+                keyStatePoster: { _, _, _, _ in true }
+            ),
+            scheduler: scheduler,
+            frontmostBundleIdentifier: { "test.editor" },
+            diagnosticLogger: { _ in }
+        )
+
+        let logMonitor = HIDRemoteMonitor(
+            settings: settings,
+            allowsG9N9N: true,
+            profileID: googleID,
+            targetFingerprint: "fp-g9n9n-switcher",
+            scheduler: scheduler,
+            runtimePermissions: { true },
+            nativeSuppressionAvailable: { true },
+            actionPerformer: { _, _, _ in true },
+            diagnosticLogger: { _ in },
+            appSwitcherCoordinator: coordinator
+        )
+        logMonitor.connectSimulatedDevice(fingerprint: "fp-g9n9n-switcher", profileID: googleID, isSeized: true)
+        defer { logMonitor.disconnectSimulatedDevice() }
+
+        let nativeMonitor = HIDRemoteMonitor(
+            settings: settings,
+            allowsG9N9N: false,
+            allowsT1Remote: false,
+            profileID: nativeID,
+            targetFingerprint: "fp-native-switcher",
+            scheduler: scheduler,
+            runtimePermissions: { true },
+            nativeSuppressionAvailable: { true },
+            actionPerformer: { _, _, _ in true },
+            diagnosticLogger: { _ in },
+            appSwitcherCoordinator: coordinator
+        )
+        nativeMonitor.connectSimulatedDevice(fingerprint: "fp-native-switcher", profileID: nativeID, isSeized: true)
+        defer { nativeMonitor.disconnectSimulatedDevice() }
+
+        let model = BridgeAppModel(
+            settings: settings,
+            initialAudioDevices: [],
+            permissionSnapshotProvider: {
+                HIDPermissionSnapshot(inputMonitoringGranted: true, accessibilityGranted: true)
+            }
+        )
+        model.appSwitcherCoordinator = coordinator
+        model.bluetoothLoggingProfileStatusProvider = { .installed }
+        defer {
+            model.hidMonitors.removeAll()
+            model.setG9N9NBluetoothLogRecoveryEnabled(false)
+            model.stop()
+        }
+        model.started = true
+        model.hidMonitors["fp-g9n9n-switcher"] = logMonitor
+        model.hidMonitors["fp-native-switcher"] = nativeMonitor
+        model.setG9N9NBluetoothLogRecoveryEnabled(true)
+        await model.bluetoothLoggingProfileRefreshTask?.value
+
+        // 1. Log remote presses and releases OK -> finished gesture clears btleLogPendingGestureButtons.
+        logMonitor.handleSimulatedGoogleReport(reportID: 2, data: Data([0x41, 0x00]), source: "btle_log", origin: .btleServerLog)
+        logMonitor.handleSimulatedGoogleReport(reportID: 2, data: Data([0x00, 0x00]), source: "btle_log", origin: .btleServerLog)
+        #expect(logMonitor.btleLogPendingGestureButtons.isEmpty)
+
+        // 2. Even when the log remote STILL has a pending gesture timeout (double-click on Mute),
+        //    opening App Switcher from the native remote and then disabling BTLE log recovery
+        //    must cancel the log remote's pending gesture WITHOUT closing the native remote's switcher.
+        logMonitor.handleSimulatedGoogleReport(reportID: 2, data: Data([0xE2, 0x00]), source: "btle_log", origin: .btleServerLog)
+        logMonitor.handleSimulatedGoogleReport(reportID: 2, data: Data([0x00, 0x00]), source: "btle_log", origin: .btleServerLog)
+        #expect(logMonitor.btleLogPendingGestureButtons == [.mute])
+
+        let homeUsage = RemoteButton.home.hidUsage
+        nativeMonitor.handleSimulatedReport(reportID: 1, data: Data([UInt8(homeUsage & 255), UInt8(homeUsage >> 8)]), source: "device")
+        nativeMonitor.handleSimulatedReport(reportID: 1, data: Data([0x00, 0x00]), source: "device")
+        #expect(coordinator.isActive)
+
+        model.setG9N9NBluetoothLogRecoveryEnabled(false)
+        #expect(logMonitor.btleLogPendingGestureButtons.isEmpty)
+        #expect(coordinator.isActive)
+
+        coordinator.finishIfActive(reason: "test_cleanup", confirmed: false)
+
+        // 3. When the BTLE log remote ITSELF owns the active App Switcher, disabling log recovery closes it.
+        model.setG9N9NBluetoothLogRecoveryEnabled(true)
+        await model.bluetoothLoggingProfileRefreshTask?.value
+        logMonitor.handleSimulatedGoogleReport(reportID: 2, data: Data([0x23, 0x02]), source: "btle_log", origin: .btleServerLog)
+        logMonitor.handleSimulatedGoogleReport(reportID: 2, data: Data([0x00, 0x00]), source: "btle_log", origin: .btleServerLog)
+        #expect(coordinator.isActive)
+        model.setG9N9NBluetoothLogRecoveryEnabled(false)
+        #expect(!coordinator.isActive)
+    }
 }

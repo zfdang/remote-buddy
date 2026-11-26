@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import os
 
 enum BluetoothLoggingProfileStatus: String, Equatable, Sendable {
     case unknown
@@ -83,9 +84,46 @@ enum BluetoothLoggingProfileService {
         return enableLevel.caseInsensitiveCompare("Debug") == .orderedSame
     }
 
-    private static func enablesBluetoothPrivateDebugLogging(inPayloadContent content: [String: Any]) -> Bool {
-        guard let bluetooth = (content["Subsystems"] as? [String: Any])?["com.apple.bluetooth"] as? [String: Any] else {
+    private static func arrayItems(in dict: [String: Any]) -> [[String: Any]]? {
+        guard let rawItems = dict["_items"] else {
+            return []
+        }
+        return rawItems as? [[String: Any]]
+    }
+
+    private static func parseSystemProfilerPayloadData(_ rawValue: Any?) -> [String: Any]? {
+        if let dict = rawValue as? [String: Any] {
+            return dict
+        }
+        if let text = rawValue as? String,
+           let data = text.data(using: .utf8),
+           let parsed = try? PropertyListSerialization.propertyList(
+               from: data,
+               options: [],
+               format: nil
+           ) as? [String: Any] {
+            return parsed
+        }
+        return nil
+    }
+
+    private static func inspectBluetoothLoggingSupport(inPayloadContent content: [String: Any]) -> Bool? {
+        guard let rawSubsystems = content["Subsystems"] else {
             return false
+        }
+        guard let subsystems = rawSubsystems as? [String: Any] else {
+            return nil
+        }
+        guard let rawBluetooth = subsystems["com.apple.bluetooth"] else {
+            return false
+        }
+        guard let bluetooth = rawBluetooth as? [String: Any] else {
+            return nil
+        }
+        for key in ["DEFAULT-OPTIONS", "BTLEServer"] {
+            if let entry = bluetooth[key], !(entry is [String: Any]) {
+                return nil
+            }
         }
         return enablesPrivateDebugLogging(bluetooth["DEFAULT-OPTIONS"] as? [String: Any]) ||
             enablesPrivateDebugLogging(bluetooth["BTLEServer"] as? [String: Any])
@@ -97,41 +135,52 @@ enum BluetoothLoggingProfileService {
                   from: xmlData,
                   options: [],
                   format: nil
-              ) as? [[String: Any]],
-              root.contains(where: { ($0["_dataType"] as? String) == "SPConfigurationProfileDataType" })
+              ) as? [[String: Any]]
         else {
             return .unknown
         }
-        for entry in root where (entry["_dataType"] as? String) == "SPConfigurationProfileDataType" {
-            let scopes = entry["_items"] as? [[String: Any]] ?? []
+        let entries = root.filter { ($0["_dataType"] as? String) == "SPConfigurationProfileDataType" }
+        guard !entries.isEmpty else {
+            return .unknown
+        }
+        var sawIndeterminateLoggingData = false
+        for entry in entries {
+            guard let scopes = arrayItems(in: entry) else {
+                sawIndeterminateLoggingData = true
+                continue
+            }
             for scope in scopes {
-                let profiles = scope["_items"] as? [[String: Any]] ?? []
+                guard let profiles = arrayItems(in: scope) else {
+                    sawIndeterminateLoggingData = true
+                    continue
+                }
                 for profile in profiles {
-                    let payloads = profile["_items"] as? [[String: Any]] ?? []
+                    guard let payloads = arrayItems(in: profile) else {
+                        sawIndeterminateLoggingData = true
+                        continue
+                    }
                     for payload in payloads {
-                        guard (payload["_name"] as? String) == "com.apple.system.logging" else { continue }
-                        let content: [String: Any]?
-                        if let dict = payload["spconfigprofile_payload_data"] as? [String: Any] {
-                            content = dict
-                        } else if let text = payload["spconfigprofile_payload_data"] as? String,
-                                  let data = text.data(using: .utf8),
-                                  let parsed = try? PropertyListSerialization.propertyList(
-                                      from: data,
-                                      options: [],
-                                      format: nil
-                                  ) as? [String: Any] {
-                            content = parsed
-                        } else {
-                            content = nil
+                        guard let rawName = payload["_name"] as? String else {
+                            if payload["_name"] != nil {
+                                sawIndeterminateLoggingData = true
+                            }
+                            continue
                         }
-                        if let content, enablesBluetoothPrivateDebugLogging(inPayloadContent: content) {
+                        guard rawName == "com.apple.system.logging" else { continue }
+                        guard let content = parseSystemProfilerPayloadData(payload["spconfigprofile_payload_data"]),
+                              let supportsBluetoothLogging = inspectBluetoothLoggingSupport(inPayloadContent: content)
+                        else {
+                            sawIndeterminateLoggingData = true
+                            continue
+                        }
+                        if supportsBluetoothLogging {
                             return .installed
                         }
                     }
                 }
             }
         }
-        return .notInstalled
+        return sawIndeterminateLoggingData ? .unknown : .notInstalled
     }
 
     static func status(fromProfilesXMLData profilesXMLData: Data) -> BluetoothLoggingProfileStatus {
@@ -153,13 +202,20 @@ enum BluetoothLoggingProfileService {
         return plist.keys.contains("_computerlevel") ? .notInstalled : .unknown
     }
 
-    private static func runProcess(_ executablePath: String, arguments: [String]) -> Data? {
+    private static func runProcess(
+        _ executablePath: String,
+        arguments: [String],
+        activeProcess: OSAllocatedUnfairLock<Process?>? = nil
+    ) -> Data? {
+        guard !Task.isCancelled else { return nil }
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executablePath)
         process.arguments = arguments
         let stdout = Pipe()
         process.standardOutput = stdout
         process.standardError = FileHandle.nullDevice
+        activeProcess?.withLock { $0 = process }
+        defer { activeProcess?.withLock { if $0 === process { $0 = nil } } }
         do {
             try process.run()
         } catch {
@@ -167,31 +223,52 @@ enum BluetoothLoggingProfileService {
         }
         let data = stdout.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
-        guard process.terminationStatus == 0 else { return nil }
+        guard !Task.isCancelled, process.terminationStatus == 0 else { return nil }
         return data
     }
 
+    static func resolveInstalledStatus(
+        systemProfilerData: () -> Data?,
+        profilesData: () -> Data?
+    ) -> BluetoothLoggingProfileStatus {
+        // `system_profiler SPConfigurationProfileDataType -xml` reports both device-level
+        // and user-level configuration profiles without requiring root privileges.
+        if let profilerData = systemProfilerData() {
+            let profilerStatus = status(fromSystemProfilerXMLData: profilerData)
+            if profilerStatus != .unknown {
+                return profilerStatus
+            }
+        }
+        if let profilesData = profilesData() {
+            return status(fromProfilesXMLData: profilesData)
+        }
+        return .unknown
+    }
+
     static func detectInstalledStatus() async -> BluetoothLoggingProfileStatus {
-        await Task.detached(priority: .utility) {
-            // `system_profiler SPConfigurationProfileDataType -xml` reports both device-level
-            // and user-level configuration profiles without requiring root privileges.
-            if let profilerData = runProcess(
-                "/usr/sbin/system_profiler",
-                arguments: ["SPConfigurationProfileDataType", "-xml"]
-            ) {
-                let profilerStatus = status(fromSystemProfilerXMLData: profilerData)
-                if profilerStatus != .unknown {
-                    return profilerStatus
-                }
-            }
-            if let profilesData = runProcess(
-                "/usr/bin/profiles",
-                arguments: ["list", "-output", "stdout-xml"]
-            ) {
-                return status(fromProfilesXMLData: profilesData)
-            }
-            return .unknown
-        }.value
+        let activeProcess = OSAllocatedUnfairLock<Process?>(initialState: nil)
+        return await withTaskCancellationHandler {
+            await Task.detached(priority: .utility) {
+                resolveInstalledStatus(
+                    systemProfilerData: {
+                        runProcess(
+                            "/usr/sbin/system_profiler",
+                            arguments: ["SPConfigurationProfileDataType", "-xml"],
+                            activeProcess: activeProcess
+                        )
+                    },
+                    profilesData: {
+                        runProcess(
+                            "/usr/bin/profiles",
+                            arguments: ["list", "-output", "stdout-xml"],
+                            activeProcess: activeProcess
+                        )
+                    }
+                )
+            }.value
+        } onCancel: {
+            activeProcess.withLock { $0 }?.terminate()
+        }
     }
 
     @MainActor

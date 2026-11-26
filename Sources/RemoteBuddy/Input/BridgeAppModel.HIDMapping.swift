@@ -455,10 +455,16 @@ extension BridgeAppModel {
         synchronizeBTLEServerLogSource()
     }
 
-    func refreshBluetoothLoggingProfileStatus() {
+    func refreshBluetoothLoggingProfileStatus(coalescingIfInFlight: Bool = true) {
+        if coalescingIfInFlight,
+           bluetoothLoggingProfileRefreshTask != nil,
+           bluetoothLoggingProfileRefreshInFlightGeneration == bluetoothLoggingProfileStatusGeneration {
+            return
+        }
         bluetoothLoggingProfileRefreshTask?.cancel()
         bluetoothLoggingProfileStatusGeneration &+= 1
         let generation = bluetoothLoggingProfileStatusGeneration
+        bluetoothLoggingProfileRefreshInFlightGeneration = generation
         let provider = bluetoothLoggingProfileStatusProvider
         bluetoothLoggingProfileRefreshTask = Task { [weak self] in
             let status = await provider()
@@ -468,6 +474,7 @@ extension BridgeAppModel {
                       self.bluetoothLoggingProfileStatusGeneration == generation
                 else { return }
                 self.bluetoothLoggingProfileRefreshTask = nil
+                self.bluetoothLoggingProfileRefreshInFlightGeneration = nil
                 self.applyBluetoothLoggingProfileStatus(status)
             }
         }
@@ -477,21 +484,42 @@ extension BridgeAppModel {
         static let unattributedRefreshInterval: TimeInterval = 10.0
     }
 
-    func resetUnattributedBTLEServerLogRedactionTracking() {
-        consecutiveUnattributedBTLEServerLogRedactions = 0
-        lastUnattributedBTLEServerLogRedactionAt = 0
-        lastUnattributedBTLEServerLogRedactionReportID = nil
+    func startBluetoothLoggingProfileMonitorIfNeeded() {
+        guard bluetoothLoggingProfileMonitorTask == nil else { return }
+        let interval = bluetoothLoggingProfileCheckIntervalNanoseconds
+        bluetoothLoggingProfileMonitorTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: interval)
+                guard !Task.isCancelled else { break }
+                let shouldContinue = await MainActor.run { [weak self] () -> Bool in
+                    guard let self, self.isBTLEServerLogSourceActive(for: nil) else {
+                        return false
+                    }
+                    self.refreshBluetoothLoggingProfileStatus(coalescingIfInFlight: true)
+                    return true
+                }
+                if !shouldContinue { break }
+            }
+            await MainActor.run { [weak self] in
+                self?.bluetoothLoggingProfileMonitorTask = nil
+            }
+        }
+    }
+
+    func stopBluetoothLoggingProfileMonitor() {
+        bluetoothLoggingProfileMonitorTask?.cancel()
+        bluetoothLoggingProfileMonitorTask = nil
     }
 
     func recheckBluetoothLoggingProfile() {
         btleServerLogRedactedObserved = false
-        resetUnattributedBTLEServerLogRedactionTracking()
+        lastUnattributedRedactionProfileRefreshAt = nil
         bluetoothLoggingProfileStatus = .unknown
         stopBTLEServerLogSource(clearingRedactedObservation: true)
         for bridge in connections.bridges.values {
             learnSelectedRemoteHIDIdentity(bridge)
         }
-        refreshBluetoothLoggingProfileStatus()
+        refreshBluetoothLoggingProfileStatus(coalescingIfInFlight: false)
     }
 
     func setG9N9NBluetoothLogRecoveryEnabled(_ enabled: Bool) {
@@ -503,17 +531,18 @@ extension BridgeAppModel {
         AppLogger.shared.write("SETTINGS G9N9N_BTLE_LOG enabled=\(enabled)")
         if enabled {
             btleServerLogRedactedObserved = false
-            resetUnattributedBTLEServerLogRedactionTracking()
+            lastUnattributedRedactionProfileRefreshAt = nil
             bluetoothLoggingProfileStatus = .unknown
             stopBTLEServerLogSource(clearingRedactedObservation: true)
             for bridge in connections.bridges.values {
                 learnSelectedRemoteHIDIdentity(bridge)
             }
-            refreshBluetoothLoggingProfileStatus()
+            refreshBluetoothLoggingProfileStatus(coalescingIfInFlight: false)
         } else {
             bluetoothLoggingProfileStatusGeneration &+= 1
             bluetoothLoggingProfileRefreshTask?.cancel()
             bluetoothLoggingProfileRefreshTask = nil
+            bluetoothLoggingProfileRefreshInFlightGeneration = nil
             stopBTLEServerLogSource(clearingRedactedObservation: true)
         }
     }
@@ -583,13 +612,13 @@ extension BridgeAppModel {
 
     func stopBTLEServerLogSource(clearingRedactedObservation: Bool) {
         btleServerReportLogGeneration &+= 1
+        stopBluetoothLoggingProfileMonitor()
         if btleServerReportLogSource != nil {
             btleServerReportLogSource?.stop()
             btleServerReportLogSource = nil
             AppLogger.shared.write("HID BTLE_LOG source=stopped")
         }
         hidMonitors.values.forEach { $0.cancelBTLEServerLogInteractions() }
-        resetUnattributedBTLEServerLogRedactionTracking()
         if clearingRedactedObservation {
             btleServerLogRedactedObserved = false
         }
@@ -632,6 +661,7 @@ extension BridgeAppModel {
         }
         if let existing = btleServerReportLogSource {
             existing.updatePeripherals(chromecastPeripherals)
+            startBluetoothLoggingProfileMonitorIfNeeded()
             return
         }
         btleServerReportLogGeneration &+= 1
@@ -656,6 +686,7 @@ extension BridgeAppModel {
         )
         btleServerReportLogSource = source
         source.start()
+        startBluetoothLoggingProfileMonitorIfNeeded()
     }
 
     func handleAttributedBTLEServerReport(
@@ -675,7 +706,6 @@ extension BridgeAppModel {
         case let .boundMonitor(fingerprint, _):
             guard let targetMonitor = hidMonitors[fingerprint] else { return }
             btleServerLogRedactedObserved = false
-            resetUnattributedBTLEServerLogRedactionTracking()
             if bluetoothLoggingProfileStatus != .installed {
                 bluetoothLoggingProfileStatus = .installed
             }
@@ -697,11 +727,10 @@ extension BridgeAppModel {
         guard shouldPauseOnRedactedBTLEServerReport(observation, now: now) else {
             return
         }
-        resetUnattributedBTLEServerLogRedactionTracking()
         btleServerLogRedactedObserved = true
         stopBTLEServerLogSource(clearingRedactedObservation: false)
         if bluetoothLoggingProfileStatus != .notInstalled {
-            refreshBluetoothLoggingProfileStatus()
+            refreshBluetoothLoggingProfileStatus(coalescingIfInFlight: true)
         }
         if now - lastBTLEServerLogRedactedAt >= 10 {
             lastBTLEServerLogRedactedAt = now
@@ -719,19 +748,16 @@ extension BridgeAppModel {
         if observation.peripheral != nil {
             return true
         }
-        if lastUnattributedBTLEServerLogRedactionReportID == nil ||
-            now - lastUnattributedBTLEServerLogRedactionAt >= BTLEServerLogRedactionPolicy.unattributedRefreshInterval {
-            lastUnattributedBTLEServerLogRedactionReportID = observation.reportID
-            lastUnattributedBTLEServerLogRedactionAt = now
-            refreshBluetoothLoggingProfileStatus()
+        let shouldRefresh = lastUnattributedRedactionProfileRefreshAt.map {
+            now - $0 >= BTLEServerLogRedactionPolicy.unattributedRefreshInterval
+        } ?? true
+        if shouldRefresh {
+            lastUnattributedRedactionProfileRefreshAt = now
+            refreshBluetoothLoggingProfileStatus(coalescingIfInFlight: true)
         }
         // Unrelated BLE HID traffic can emit unattributed `<private>` lines even after the user
         // installs the Bluetooth profile; ignore them while `.installed` remains confirmed.
-        guard bluetoothLoggingProfileStatus == .installed else {
-            return true
-        }
-        consecutiveUnattributedBTLEServerLogRedactions = 0
-        return false
+        return bluetoothLoggingProfileStatus != .installed
     }
 
     /// Releases HID monitors, event taps, input-source observers, and pending recovery work

@@ -568,6 +568,7 @@ extension HIDRemoteMonitor {
             }
             cancelRepeat(for: usage)
             if let button = RemoteButton.usageMap[usage] {
+                defer { clearBTLELogPendingGestureIfFinished(for: button) }
                 if onRuntimeButton?(profileID, button, .release) == true {
                     if usedDirectPassthrough, let keyCode = button.directionKeyCode {
                         _ = nativeKeyStatePoster(keyCode, false, [])

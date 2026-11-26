@@ -183,6 +183,14 @@ extension HIDRemoteMonitor {
         longPressTimers.removeValue(forKey: button)?.cancel()
     }
 
+    func clearBTLELogPendingGestureIfFinished(for button: RemoteButton) {
+        guard !btleLogActiveUsages.contains(button.hidUsage),
+              !activeUsages.contains(button.hidUsage),
+              !gestureRecognizer.isTracking(button)
+        else { return }
+        btleLogPendingGestureButtons.remove(button)
+    }
+
     func scheduleDoubleClickTimeout(for button: RemoteButton) {
         cancelDoubleClickTimeout(for: button)
         let token = UUID()
@@ -195,6 +203,7 @@ extension HIDRemoteMonitor {
             self.doubleClickTimerTokens.removeValue(forKey: button)
             self.doubleClickTimers.removeValue(forKey: button)
             _ = self.processGestureCommands(self.gestureRecognizer.doubleClickTimedOut(button))
+            self.clearBTLELogPendingGestureIfFinished(for: button)
         }
         doubleClickTimers[button] = timer
     }
@@ -211,6 +220,7 @@ extension HIDRemoteMonitor {
             self.longPressTimerTokens.removeValue(forKey: button)
             self.longPressTimers.removeValue(forKey: button)
             _ = self.processGestureCommands(self.gestureRecognizer.longPressTimedOut(button))
+            self.clearBTLELogPendingGestureIfFinished(for: button)
         }
         longPressTimers[button] = timer
     }
@@ -273,15 +283,31 @@ extension HIDRemoteMonitor {
         for button: RemoteButton,
         trigger: ButtonTrigger
     ) -> Bool {
-        appSwitcherCoordinator.trigger(
+        let submitted = appSwitcherCoordinator.trigger(
             for: button,
             trigger: trigger,
             owner: switcherOwnerToken
         )
+        if appSwitcherCoordinator.isOwned(by: switcherOwnerToken) {
+            if submitted {
+                btleLogOwnsAppSwitcher = (currentReportOrigin == .btleServerLog)
+            }
+        } else {
+            btleLogOwnsAppSwitcher = false
+        }
+        return submitted
     }
 
     func handleAppSwitcherControlPress(_ button: RemoteButton) -> Bool {
-        appSwitcherCoordinator.handleControlPress(button, owner: switcherOwnerToken)
+        let handled = appSwitcherCoordinator.handleControlPress(button, owner: switcherOwnerToken)
+        if handled {
+            if appSwitcherCoordinator.isOwned(by: switcherOwnerToken) {
+                btleLogOwnsAppSwitcher = (currentReportOrigin == .btleServerLog)
+            } else {
+                btleLogOwnsAppSwitcher = false
+            }
+        }
+        return handled
     }
 
     func resetGestureRecognition() {
@@ -292,6 +318,7 @@ extension HIDRemoteMonitor {
         longPressTimers.values.forEach { $0.cancel() }
         longPressTimers.removeAll()
         btleLogPendingGestureButtons.removeAll()
+        btleLogOwnsAppSwitcher = false
         gestureRecognizer.reset()
     }
 
@@ -299,7 +326,9 @@ extension HIDRemoteMonitor {
 
     func cancelBTLEServerLogInteractions() {
         lastGoogleReportByOrigin.removeValue(forKey: .btleServerLog)
-        guard !btleLogActiveUsages.isEmpty || !btleLogPendingGestureButtons.isEmpty else {
+        let ownsActiveBTLESwitcher = btleLogOwnsAppSwitcher &&
+            appSwitcherCoordinator.isOwned(by: switcherOwnerToken)
+        guard !btleLogActiveUsages.isEmpty || !btleLogPendingGestureButtons.isEmpty || ownsActiveBTLESwitcher else {
             return
         }
         let affectedUsages = btleLogActiveUsages
@@ -327,7 +356,14 @@ extension HIDRemoteMonitor {
             cancelLongPressTimeout(for: button)
             finishNonRepeatablePress(button)
         }
-        appSwitcherCoordinator.finishIfActive(reason: "btle_log_stopped", confirmed: false)
+        if ownsActiveBTLESwitcher {
+            appSwitcherCoordinator.finishIfActive(
+                forOwner: switcherOwnerToken,
+                reason: "btle_log_stopped",
+                confirmed: false
+            )
+        }
+        btleLogOwnsAppSwitcher = false
         emitActiveButtons()
     }
 

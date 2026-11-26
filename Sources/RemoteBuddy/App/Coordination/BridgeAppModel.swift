@@ -78,13 +78,14 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
     var btleServerReportLogGeneration: UInt64 = 0
     var bluetoothLoggingProfileStatusGeneration: UInt64 = 0
     var bluetoothLoggingProfileRefreshTask: Task<Void, Never>?
+    var bluetoothLoggingProfileRefreshInFlightGeneration: UInt64?
+    var bluetoothLoggingProfileMonitorTask: Task<Void, Never>?
+    var bluetoothLoggingProfileCheckIntervalNanoseconds: UInt64 = 10_000_000_000
     var bluetoothLoggingProfileStatusProvider: @Sendable () async -> BluetoothLoggingProfileStatus = {
         await BluetoothLoggingProfileService.detectInstalledStatus()
     }
     var lastBTLEServerLogRedactedAt: TimeInterval = 0
-    var consecutiveUnattributedBTLEServerLogRedactions = 0
-    var lastUnattributedBTLEServerLogRedactionAt: TimeInterval = 0
-    var lastUnattributedBTLEServerLogRedactionReportID: UInt32?
+    var lastUnattributedRedactionProfileRefreshAt: TimeInterval?
     struct VoiceToolUnavailablePrompt: Equatable {
         enum Reason: Equatable {
             case unavailable
@@ -251,7 +252,7 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
     var g9n9nSmartToggleReopenTimer: DispatchSourceTimer?
     var g9n9nSmartToggleDeadlineTimer: DispatchSourceTimer?
     let hidEventSuppressor: KeyboardEventSuppressor
-    let appSwitcherCoordinator = HIDAppSwitcherCoordinator()
+    var appSwitcherCoordinator = HIDAppSwitcherCoordinator()
     let permissionSnapshotProvider: () -> HIDPermissionSnapshot
     var onboardingWindowIsActive: () -> Bool
     var hidMonitoringInterrupted = false
@@ -460,6 +461,11 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
         clearApplicationIntegrationStatus()
         commonPhrases.close(reason: "app_stop")
         preferredInputSourceMonitor.stop()
+        bluetoothLoggingProfileStatusGeneration &+= 1
+        bluetoothLoggingProfileRefreshTask?.cancel()
+        bluetoothLoggingProfileRefreshTask = nil
+        bluetoothLoggingProfileRefreshInFlightGeneration = nil
+        stopBluetoothLoggingProfileMonitor()
         pendingHIDServiceMappingRefresh = false
         hidServiceMappingRefreshGeneration &+= 1
         guard started else {

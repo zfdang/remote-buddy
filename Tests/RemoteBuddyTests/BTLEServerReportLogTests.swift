@@ -628,4 +628,129 @@ struct BTLEServerReportLogTests {
         #expect(BluetoothLoggingProfileService.status(fromSystemProfilerXMLData: unrelatedXML) == .unknown)
         #expect(BluetoothLoggingProfileService.status(fromSystemProfilerXMLData: Data()) == .unknown)
     }
+
+    @Test func unparseableSystemProfilerLoggingPayloadStaysUnknownAndFallsBackToProfiles() {
+        let unparseableLoggingXML = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <array>
+            <dict>
+                <key>_dataType</key>
+                <string>SPConfigurationProfileDataType</string>
+                <key>_items</key>
+                <array>
+                    <dict>
+                        <key>_name</key>
+                        <string>spconfigprofile_section_deviceconfigprofiles</string>
+                        <key>_items</key>
+                        <array>
+                            <dict>
+                                <key>_items</key>
+                                <array>
+                                    <dict>
+                                        <key>_name</key>
+                                        <string>com.apple.system.logging</string>
+                                        <key>spconfigprofile_payload_data</key>
+                                        <string>not a valid plist {</string>
+                                    </dict>
+                                </array>
+                            </dict>
+                        </array>
+                    </dict>
+                </array>
+            </dict>
+        </array>
+        </plist>
+        """.data(using: .utf8)!
+
+        let malformedSubsystemsXML = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <array>
+            <dict>
+                <key>_dataType</key>
+                <string>SPConfigurationProfileDataType</string>
+                <key>_items</key>
+                <array>
+                    <dict>
+                        <key>_items</key>
+                        <array>
+                            <dict>
+                                <key>_items</key>
+                                <array>
+                                    <dict>
+                                        <key>_name</key>
+                                        <string>com.apple.system.logging</string>
+                                        <key>spconfigprofile_payload_data</key>
+                                        <dict>
+                                            <key>Subsystems</key>
+                                            <string>unexpected-format</string>
+                                        </dict>
+                                    </dict>
+                                </array>
+                            </dict>
+                        </array>
+                    </dict>
+                </array>
+            </dict>
+        </array>
+        </plist>
+        """.data(using: .utf8)!
+
+        let fallbackInstalledProfilesXML = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>_computerlevel</key>
+            <array>
+                <dict>
+                    <key>ProfileItems</key>
+                    <array>
+                        <dict>
+                            <key>PayloadType</key>
+                            <string>com.apple.system.logging</string>
+                            <key>PayloadContent</key>
+                            <dict>
+                                <key>Subsystems</key>
+                                <dict>
+                                    <key>com.apple.bluetooth</key>
+                                    <dict>
+                                        <key>DEFAULT-OPTIONS</key>
+                                        <dict>
+                                            <key>Enable-Private-Data</key>
+                                            <true/>
+                                            <key>Level</key>
+                                            <dict>
+                                                <key>Enable</key>
+                                                <string>Debug</string>
+                                            </dict>
+                                        </dict>
+                                    </dict>
+                                </dict>
+                            </dict>
+                        </dict>
+                    </array>
+                </dict>
+            </array>
+        </dict>
+        </plist>
+        """.data(using: .utf8)!
+
+        #expect(BluetoothLoggingProfileService.status(fromSystemProfilerXMLData: unparseableLoggingXML) == .unknown)
+        #expect(BluetoothLoggingProfileService.status(fromSystemProfilerXMLData: malformedSubsystemsXML) == .unknown)
+
+        var fallbackCalls = 0
+        let resolved = BluetoothLoggingProfileService.resolveInstalledStatus(
+            systemProfilerData: { unparseableLoggingXML },
+            profilesData: {
+                fallbackCalls += 1
+                return fallbackInstalledProfilesXML
+            }
+        )
+        #expect(fallbackCalls == 1)
+        #expect(resolved == .installed)
+    }
 }

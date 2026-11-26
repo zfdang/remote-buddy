@@ -18,6 +18,10 @@ final class HIDAppSwitcherCoordinator {
         session.isActive
     }
 
+    func isOwned(by owner: UUID) -> Bool {
+        isActive && ownerToken == owner
+    }
+
     init(
         session: KeyboardInjector.AppSwitcherSession = KeyboardInjector.AppSwitcherSession(),
         scheduler: HIDRemoteScheduling = DispatchHIDRemoteScheduler(),
@@ -128,6 +132,11 @@ final class HIDAppSwitcherCoordinator {
 
     func finishIfActive(reason: String, confirmed: Bool) {
         guard isActive else { return }
+        finishLifecycle(reason: reason, confirmed: confirmed)
+    }
+
+    func finishIfActive(forOwner owner: UUID, reason: String, confirmed: Bool) {
+        guard isOwned(by: owner) else { return }
         finishLifecycle(reason: reason, confirmed: confirmed)
     }
 

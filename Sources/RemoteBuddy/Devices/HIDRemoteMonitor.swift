@@ -122,6 +122,7 @@ final class HIDRemoteMonitor {
     var currentReportOrigin: HIDReportOrigin = .iohid
     var btleLogActiveUsages = Set<UInt16>()
     var btleLogPendingGestureButtons = Set<RemoteButton>()
+    var btleLogOwnsAppSwitcher = false
     var nativeGoogleIOHIDObserved = false
     var lastGoogleReportByOrigin: [HIDReportOrigin: (reportID: UInt32, usages: Set<UInt16>, time: TimeInterval)] = [:]
     var currentReportIsT1 = false

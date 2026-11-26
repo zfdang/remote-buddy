@@ -5,14 +5,35 @@ import Testing
 struct MacOSDictationToolTests {
     private func session(
         clock: ControlledTestScheduler,
+        validateStart: @escaping () -> Bool = { true },
         edges: @escaping (Bool) -> Void,
         samples: @escaping ([Int16]) -> Void = { _ in }
     ) -> VoiceFnTapSessionController {
         let session = VoiceFnTapSessionController(startTapCount: { 2 }, schedule: clock.voiceSchedule,
+            validateStart: validateStart,
             setTriggerPressed: { edges($0); return true }, enqueueAudio: samples,
             drainAudio: { _, done in done() }, onFailure: { _ in Issue.record("Unexpected failure") })
         session.setEnabled(true)
         return session
+    }
+
+    @Test func changingTargetBetweenStartTapsCancelsWithoutPostingTheSecondTap() {
+        let clock = ControlledTestScheduler()
+        var targetIsCurrent = true
+        var edges: [Bool] = []
+        var samples: [[Int16]] = []
+        let session = session(clock: clock, validateStart: { targetIsCurrent },
+            edges: { edges.append($0) }, samples: { samples.append($0) })
+        #expect(session.startVoice())
+        #expect(session.receive([1, 2]))
+        clock.advance(to: 280)
+        #expect(edges == [true, false])
+        targetIsCurrent = false
+        clock.advance(to: 540)
+        #expect(edges == [true, false])
+        #expect(samples.isEmpty)
+        #expect(session.phase == .idle)
+        #expect(session.isEnabled)
     }
 
     @Test func doublePressStartsAndOnePressStops() {

@@ -29,6 +29,89 @@ struct VoiceInputActivationTests {
         })
     }
 
+    @Test(arguments: [false, true])
+    func foregroundSwitchAfterFocusCancelsVoiceStart(tapMode: Bool) throws {
+        let (model, defaults, suite) = try makeModel()
+        defer { defaults.removePersistentDomain(forName: suite) }
+        model.settings.setApplicationIntegration(.chatGPT, enabled: true)
+        useReadyDestination(model)
+        var foreground = ("com.openai.codex", pid_t(42))
+        var focusDone: ((ApplicationFocusResult) -> Void)?
+        var sourceDone: ((Bool) -> Void)?
+        var edges: [Bool] = []
+        let center = NotificationCenter()
+        let controller = ApplicationIntegrationController(settings: model.settings, notifications: center,
+            frontmost: { foreground }, focus: { _, _, done in
+                focusDone = done
+                return ScheduledOperation {}
+            }, onStateChange: { model.recordApplicationIntegrationStatus($0) })
+        model.applicationIntegrationController = controller
+        controller.start()
+        defer { controller.stop() }
+
+        let target = try #require(OnboardingVoiceTool.weixin.preferredInputSourceID)
+        var inputSource = "previous"
+        model.preferredInputSourceMonitor = PreferredInputSourceMonitor(
+            voiceTool: { .weixin }, prepareInputSource: { _ in inputSource = target; return .selected },
+            currentInputSourceID: { inputSource }, restoreInputSource: { inputSource = $0; return .selected },
+            waitForInputSourceActivation: { _, _, _, done in sourceDone = done },
+            installMonitor: { _ in nil }, logger: { _ in })
+        if tapMode {
+            model.voiceTapTrigger = VoiceTapTrigger(selectedMode: { .function }, setKey: { _, down in
+                edges.append(down)
+                return true
+            })
+            model.voiceFnTapSession = model.makeVoiceFnTapSession()
+            model.voiceFnTapSession.setEnabled(true)
+            #expect(model.voiceFnTapSession.startVoice())
+        } else {
+            #expect(model.updateVoiceKeyState(streaming: true, forceSoftware: true, owner: .bluetooth,
+                keySetter: { _, down in edges.append(down); return true }))
+        }
+        let focus = try #require(focusDone)
+        focus(.preserved)
+        let activate = try #require(sourceDone)
+        foreground = ("com.apple.TextEdit", 43)
+        center.post(name: NSWorkspace.didActivateApplicationNotification, object: nil)
+        activate(true)
+
+        #expect(edges.isEmpty)
+        #expect(model.applicationIntegrationStatus == .cancelled(.targetChanged))
+        #expect(inputSource == "previous")
+        #expect(!model.voiceKeyLatch.isHeld)
+        #expect(model.voiceFnTapSession.phase == .idle)
+    }
+
+    @Test func dictationRechecksNonIntegratedForegroundBeforeSecondTap() throws {
+        let (model, defaults, suite) = try makeModel()
+        defer { defaults.removePersistentDomain(forName: suite) }
+        model.settings.setOnboardingVoiceTool(.macosDictation)
+        model.settings.setAllApplicationIntegrations(enabled: false)
+        useReadyDestination(model)
+        var foreground = ("com.apple.TextEdit", pid_t(42))
+        model.applicationIntegrationController = ApplicationIntegrationController(settings: model.settings,
+            frontmost: { foreground })
+        model.preferredInputSourceMonitor = PreferredInputSourceMonitor(
+            voiceTool: { .macosDictation }, installMonitor: { _ in nil }, logger: { _ in })
+        var edges: [Bool] = []
+        model.voiceTapTrigger = VoiceTapTrigger(selectedMode: { .function }, setKey: { _, down in
+            edges.append(down)
+            return true
+        })
+        let clock = ControlledTestScheduler()
+        model.voiceFnTapSession = model.makeVoiceFnTapSession(schedule: clock.voiceSchedule)
+        model.voiceFnTapSession.setEnabled(true)
+        #expect(model.voiceFnTapSession.startVoice())
+        clock.advance(to: 280)
+        #expect(edges == [true, false])
+
+        foreground = ("com.apple.Notes", 43)
+        clock.advance(to: 540)
+        #expect(edges == [true, false])
+        #expect(model.voiceFnTapSession.phase == .idle)
+        #expect(model.applicationIntegrationStatus == .cancelled(.targetChanged))
+    }
+
     @Test func tapPreparationWaitsForWeixinAndDoubaoAndCancelsLateActivation() throws {
         for tool in [OnboardingVoiceTool.weixin, .doubao] {
             let (model, defaults, suite) = try makeModel()

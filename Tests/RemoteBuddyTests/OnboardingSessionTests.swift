@@ -226,8 +226,7 @@ struct OnboardingSessionTests {
             #expect(settings.selectedRemoteProfileID == original)
             #expect(settings.gainDB == 6)
             #expect(settings.buttonBindings == originalBindings)
-            #expect(settings.remoteDeviceProfiles.contains { $0.id == added })
-            #expect(settings.gainDB(for: added) == 15)
+            #expect(settings.remoteDeviceProfiles.map(\.id) == [original])
         }
     }
 }

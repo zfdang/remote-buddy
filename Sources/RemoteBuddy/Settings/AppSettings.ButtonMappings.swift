@@ -141,16 +141,16 @@ extension AppSettings {
     }
 
     @discardableResult
-    func removeRemoteProfile(_ profileID: UUID) -> Bool {
+    func removeRemoteProfile(_ profileID: UUID, rememberAsForgotten: Bool = true) -> Bool {
         guard let profile = remoteDeviceProfiles.first(where: { $0.id == profileID }) else { return false }
-        if let identifier = profile.bluetoothIdentifier {
+        if rememberAsForgotten, let identifier = profile.bluetoothIdentifier {
             defaults.set(forgottenBluetoothIdentifiers.union([identifier]).map(\.uuidString),
                          forKey: "forgottenRemoteBluetoothIdentifiers")
             var models = forgottenBluetoothModels
             models[identifier.uuidString] = profile.model.rawValue
             defaults.set(models, forKey: Self.forgottenBluetoothModelsKey)
         }
-        if let fingerprint = profile.hidFingerprint {
+        if rememberAsForgotten, let fingerprint = profile.hidFingerprint {
             defaults.set(Array(forgottenHIDFingerprints.union([fingerprint])),
                          forKey: "forgottenRemoteHIDFingerprints")
             var models = forgottenHIDModels
@@ -247,12 +247,14 @@ extension AppSettings {
             return secondary[button]?[.doubleClick] ?? .disabled
         case .longPress:
             return secondary[button]?[.longPress] ??
-                defaultSecondaryAction(for: button, trigger: .longPress)
+                defaultSecondaryAction(for: button, trigger: .longPress, singleClick: buttonBindings[button])
         }
     }
 
-    private func defaultSecondaryAction(for button: RemoteButton, trigger: ButtonTrigger) -> ConfiguredButtonAction {
-        guard trigger == .longPress,
+    private func defaultSecondaryAction(
+        for button: RemoteButton, trigger: ButtonTrigger, singleClick: ButtonAction?
+    ) -> ConfiguredButtonAction {
+        guard trigger == .longPress, singleClick != .openURL,
               [.up, .down, .left, .right, .power, .volumeUp, .volumeDown].contains(button)
         else { return .disabled }
         return ConfiguredButtonAction(action: .repeatSingleClick, shortcut: nil)
@@ -304,7 +306,7 @@ extension AppSettings {
                 )
             }
             return profile.mappings.parsedSecondaryButtonBindings[button]?[trigger] ??
-                defaultSecondaryAction(for: button, trigger: trigger)
+                defaultSecondaryAction(for: button, trigger: trigger, singleClick: bindings[button])
         }
 
         if trigger == .singleClick {
@@ -316,7 +318,7 @@ extension AppSettings {
             )
         }
         return secondaryButtonBindings[button]?[trigger] ??
-            defaultSecondaryAction(for: button, trigger: trigger)
+            defaultSecondaryAction(for: button, trigger: trigger, singleClick: buttonBindings[button])
     }
 
     func configuredAction(for button: RemoteButton, trigger: ButtonTrigger) -> ConfiguredButtonAction {

@@ -148,12 +148,49 @@ struct RemoteRemovalTests {
         settings.setOnboardingStep(.remote)
         let confirmedT1 = settings.registerBluetoothRemote(identifier: t1ID, model: .t1Remote)
         #expect(settings.bindCompatibleHID(.init(identity: .t1Remote, fingerprint: "t1-fp"), to: confirmedT1))
+        settings.selectRemoteProfile(confirmedT1)
         settings.completeOnboarding()
 
         #expect(Set(settings.remoteDeviceProfiles.map(\.id)) == [existingProfile, confirmedT1])
         #expect(settings.forgottenBluetoothIdentifiers == [xiaomiID])
         #expect(settings.forgottenHIDFingerprints == ["xiaomi-fp"])
         model.connections.stopAll()
+    }
+
+    @Test func freshSetupCandidateIsRemovedOnExitAndCanBeAddedAgain() throws {
+        let suite = "remote-removal-fresh-candidate-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = AppSettings(defaults: defaults)
+        let existing = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
+        settings.selectRemoteProfile(existing)
+        settings.completeOnboarding()
+        let model = BridgeAppModel(settings: settings, initialAudioDevices: [])
+        defer { model.connections.stopAll() }
+        let t1 = UUID()
+
+        SettingsPageBehavior.beginDeviceSetup(settings: settings)
+        settings.setOnboardingControlSource(.t1Remote)
+        settings.setOnboardingStep(.remote)
+        let candidate = settings.registerBluetoothRemote(identifier: t1, model: .t1Remote)
+        settings.selectRemoteProfile(candidate)
+        model.connections.bridges[t1] = BluetoothRemoteBridge(settings: settings, delegate: model, targetIdentifier: t1)
+        model.dismissOnboardingSetup()
+
+        let reloaded = AppSettings(defaults: defaults)
+        #expect(reloaded.remoteDeviceProfiles.map(\.id) == [existing])
+        #expect(reloaded.selectedRemoteProfileID == existing)
+        #expect(!reloaded.forgottenBluetoothIdentifiers.contains(t1))
+        #expect(model.connections.bridges[t1] == nil)
+
+        SettingsPageBehavior.beginDeviceSetup(settings: settings)
+        settings.setOnboardingControlSource(.t1Remote)
+        settings.setOnboardingStep(.remote)
+        let confirmed = settings.registerBluetoothRemote(identifier: t1, model: .t1Remote)
+        settings.selectRemoteProfile(confirmed)
+        settings.setOnboardingStep(.complete)
+        model.completeOnboardingSetup()
+        #expect(AppSettings(defaults: defaults).remoteDeviceProfiles.map(\.id) == [existing, confirmed])
     }
 
     @Test func completingOnboardingUnforgetsOnlySelectedTransientRemoteAndTearsDownUnconfirmedPeers() throws {

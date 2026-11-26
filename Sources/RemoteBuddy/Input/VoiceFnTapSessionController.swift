@@ -41,6 +41,7 @@ final class VoiceFnTapSessionController {
     private let maximumPreRollSampleCount: Int
     private let schedule: Scheduler
     private let destinationReadiness: DestinationReadiness
+    private let validateStart: () -> Bool
     private let setTriggerPressed: TriggerSetter
     private let enqueueAudio: AudioEnqueuer
     private let enqueuePreRollAudio: AudioEnqueuer
@@ -98,6 +99,7 @@ final class VoiceFnTapSessionController {
         maximumPreRollSampleCount: Int = VoicePlaybackQueueCapacity.maximumPreRollSamples,
         schedule: @escaping Scheduler = ScheduledOperation.mainQueue,
         destinationReadiness: @escaping DestinationReadiness = { _ in .immediate },
+        validateStart: @escaping () -> Bool = { true },
         setTriggerPressed: @escaping TriggerSetter,
         enqueueAudio: @escaping AudioEnqueuer,
         drainAudio: @escaping AudioDrainer,
@@ -115,6 +117,7 @@ final class VoiceFnTapSessionController {
         self.maximumPreRollSampleCount = maximumPreRollSampleCount
         self.schedule = schedule
         self.destinationReadiness = destinationReadiness
+        self.validateStart = validateStart
         self.setTriggerPressed = setTriggerPressed
         self.enqueueAudio = enqueueAudio
         self.enqueuePreRollAudio = enqueuePreRollAudio ?? enqueueAudio
@@ -343,13 +346,17 @@ final class VoiceFnTapSessionController {
 
     private func beginStartTap(generation sessionGeneration: UInt64) {
         guard phase == .starting(sessionGeneration), generation == sessionGeneration else { return }
-        startSequenceBegan = true
         performStartTaps(remaining: max(1, startTapCount()), generation: sessionGeneration)
     }
 
     /// Tools such as macOS Dictation start on a double press but stop on one press.
     private func performStartTaps(remaining: Int, generation sessionGeneration: UInt64) {
         guard phase == .starting(sessionGeneration), generation == sessionGeneration else { return }
+        guard validateStart() else {
+            cancelSessionAwaitingDestination(generation: sessionGeneration)
+            return
+        }
+        startSequenceBegan = true
         performTriggerTap(generation: sessionGeneration) { [weak self] success in
             guard let self,
                   self.phase == .starting(sessionGeneration),

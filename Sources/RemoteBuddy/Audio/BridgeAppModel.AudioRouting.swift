@@ -765,8 +765,11 @@ extension BridgeAppModel {
                 "includes_hardware_change=\(coalesced.includesHardwareChange) " +
                 "state={\(self.audio.output.diagnosticState())}"
         )
-        let apply = configureOutput ?? { self.applyAudioSettings(reason: "recovery_\(effectiveReason)", completion: $0) }
-        apply { [weak self] _ in
+        let recordingGeneration = longRecordingGeneration
+        let apply = configureOutput ?? {
+            self.configureVirtualAudioOutput(reason: "recovery_\(effectiveReason)", completion: $0)
+        }
+        apply { [weak self] configured in
             guard let self,
                   self.audio.recoveryGeneration == generation
             else { return }
@@ -781,6 +784,11 @@ extension BridgeAppModel {
                 completedSnapshot.boundToSelectedDevice == true &&
                 !completedAudibility.requiresAudibilityRepair
             self.isAudioOutputReady = ready
+            // A successful rebind can precede a healthy diagnostic snapshot.
+            if !configured, !ready, self.longRecordingGeneration == recordingGeneration,
+               self.audio.activeConfigurationGeneration == nil {
+                self.stopLongRecording(reason: "audio_recovery_failed")
+            }
             diagnosticLog(
                 "AUDIO RECOVERY operation_id=\(generation) phase=completed " +
                     "result=\(ready ? "ready" : "degraded") reason=\(effectiveReason) " +
@@ -803,8 +811,8 @@ extension BridgeAppModel {
         diagnosticLog: (String) -> Void
     ) -> Bool {
         guard !shouldKeepVirtualAudioActive else { return false }
-        // Match applyAudioSettings: once source demand ends, retain the existing
-        // bounded drain instead of rebuilding an engine or reporting a failure.
+        // Once source demand ends, retain the existing bounded drain instead
+        // of rebuilding an engine or reporting a failure.
         let draining = snapshot.pendingBuffers > 0
         if draining { releaseVirtualAudioOutputIfUnused(reason: "recovery_\(reason)") }
         diagnosticLog(

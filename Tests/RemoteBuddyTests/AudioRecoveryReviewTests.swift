@@ -5,6 +5,49 @@ import Testing
 @Suite("Audio recovery review regressions")
 @MainActor
 struct AudioRecoveryReviewTests {
+    @Test func automaticRecoveryDoesNotStopContinuousRecordingBeforeRebinding() throws {
+        let suite = UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let model = BridgeAppModel(settings: AppSettings(defaults: defaults), initialAudioDevices: [])
+        model.started = true
+        defer {
+            model.started = false
+            model.finishLongRecording(reason: "test_cleanup")
+        }
+        model.longRecordingRequested = true
+        let recordingGeneration = model.longRecordingGeneration
+        let stopped = VirtualAudioOutputDiagnosticSnapshot(engineRunning: false,
+            playerPlaying: false, boundToSelectedDevice: nil, pendingBuffers: 0, pendingSamples: 0)
+        model.completeAudioRecoveryDeviceRefresh(generation: 0, reason: "engine_configuration_change",
+            details: "", devices: [], outputSnapshot: stopped, diagnosticLog: { _ in })
+        #expect(model.audio.activeConfigurationGeneration != nil)
+        #expect(model.longRecordingRequested)
+        #expect(model.longRecordingGeneration == recordingGeneration)
+    }
+
+    @Test(arguments: [true, false])
+    func continuousRecordingStopsOnlyOnFailedRebindWhenOutputIsNotReady(configured: Bool) throws {
+        let suite = UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let model = BridgeAppModel(settings: AppSettings(defaults: defaults), initialAudioDevices: [])
+        model.started = true
+        defer {
+            model.started = false
+            model.finishLongRecording(reason: "test_cleanup")
+        }
+        model.longRecordingRequested = true
+        model.isAudioOutputReady = true
+        let recordingGeneration = model.longRecordingGeneration
+        model.completeAudioRecoveryDeviceRefresh(generation: 0, reason: "engine_configuration_change",
+            details: "", devices: [], configureOutput: { complete in complete(configured) },
+            diagnosticLog: { _ in })
+        #expect(!model.isAudioOutputReady)
+        #expect(model.longRecordingRequested == configured)
+        #expect((model.longRecordingGeneration == recordingGeneration) == configured)
+    }
+
     @Test func lateEngineNotificationAfterReleaseDoesNotReconfigureOrReportDegraded() throws {
         let suite = UUID().uuidString
         let values = try #require(UserDefaults(suiteName: suite))

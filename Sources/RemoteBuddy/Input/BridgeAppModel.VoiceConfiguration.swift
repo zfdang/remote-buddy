@@ -9,13 +9,29 @@ extension BridgeAppModel {
     func makeVoiceFnTapSession(
         schedule: @escaping OperationScheduler = ScheduledOperation.mainQueue
     ) -> VoiceFnTapSessionController {
-        VoiceFnTapSessionController(
+        var startTarget: ApplicationIntegrationController.VoiceInputTarget?
+        return VoiceFnTapSessionController(
             startTapCount: { [weak self] in
                 self?.settings.onboardingVoiceTool.functionKeyStartTapCount ?? 1
             },
             schedule: schedule,
             destinationReadiness: { [weak self] completion in
-                self?.prepareIntegratedVoiceInputDestination(completion: completion) ?? .immediate
+                guard let self else { return .immediate }
+                startTarget = self.settings.onboardingVoiceTool.functionKeyStartTapCount > 1
+                    ? self.applicationIntegrationController.currentVoiceInputTarget() : nil
+                return self.prepareIntegratedVoiceInputDestination(
+                    completion: completion, onTarget: { target in
+                        if startTarget == nil { startTarget = target }
+                    }
+                )
+            },
+            validateStart: { [weak self] in
+                guard let self, let target = startTarget else { return true }
+                guard self.applicationIntegrationController.isCurrentVoiceInputTarget(target) else {
+                    self.recordApplicationIntegrationStatus(.cancelled(.targetChanged))
+                    return false
+                }
+                return true
             },
             setTriggerPressed: { [weak self, trigger = voiceTapTrigger] pressed in
                 let submitted = trigger.setPressed(pressed)
@@ -65,7 +81,8 @@ extension BridgeAppModel {
     /// Cancelling the returned wait is silent because the Fn session owns stop.
     func prepareIntegratedVoiceInputDestination(
         completion: @escaping (VoiceInputDestinationWaitResult) -> Void,
-        schedule: @escaping OperationScheduler = ScheduledOperation.mainQueue
+        schedule: @escaping OperationScheduler = ScheduledOperation.mainQueue,
+        onTarget: @escaping (ApplicationIntegrationController.VoiceInputTarget) -> Void = { _ in }
     ) -> VoiceInputDestinationWait {
         clearApplicationIntegrationStatus()
         let report: (VoiceInputDestinationWaitResult) -> Void = { [weak self] result in
@@ -76,7 +93,10 @@ extension BridgeAppModel {
         }
         let sequence = VoiceInputPreparationSequence(schedule: schedule)
         let wait = sequence.start(stages: [
-            { [weak self] done in self?.applicationIntegrationController.prepareForVoiceInput(completion: done) ?? .cancelled(.superseded) },
+            { [weak self] done in
+                self?.applicationIntegrationController.prepareForVoiceInput(onTarget: onTarget, completion: done)
+                    ?? .cancelled(.superseded)
+            },
             { [weak self] done in self?.prepareTapInputSource(completion: done) ?? .cancelled(.superseded) },
             { [weak self] done in self?.voiceInputDestinationCoordinator.waitUntilReady(completion: done) ?? .cancelled(.superseded) },
         ], completion: report)

@@ -164,21 +164,21 @@ extension BridgeAppModel {
 
     @discardableResult
     func removeRemoteDevice(_ profileID: UUID) -> Bool {
-        performRemoveRemoteDevice(profileID, allowWhenVoiceBusy: false)
+        performRemoveRemoteDevice(profileID, discardingSetupCandidate: false)
     }
 
     @discardableResult
-    private func performRemoveRemoteDevice(_ profileID: UUID, allowWhenVoiceBusy: Bool) -> Bool {
-        if !allowWhenVoiceBusy {
+    private func performRemoveRemoteDevice(_ profileID: UUID, discardingSetupCandidate: Bool) -> Bool {
+        if !discardingSetupCandidate {
             guard !isVoiceConfigurationBusy else { return false }
         }
         guard let profile = settings.remoteDeviceProfiles.first(where: { $0.id == profileID }) else {
             return false
         }
-        if allowWhenVoiceBusy {
+        if discardingSetupCandidate {
             cancelVoiceActivityForRemoval(of: profile)
         }
-        guard settings.removeRemoteProfile(profileID) else { return false }
+        guard settings.removeRemoteProfile(profileID, rememberAsForgotten: !discardingSetupCandidate) else { return false }
         if let identifier = profile.bluetoothIdentifier {
             if let bridge = connections.bridges.removeValue(forKey: identifier) {
                 bridge.stop()
@@ -258,13 +258,13 @@ extension BridgeAppModel {
 
     func removeUncommittedOnboardingRemotes() {
         for profileID in settings.uncommittedOnboardingRemoteProfileIDs() {
-            _ = performRemoveRemoteDevice(profileID, allowWhenVoiceBusy: true)
+            _ = performRemoveRemoteDevice(profileID, discardingSetupCandidate: true)
         }
     }
 
     func completeOnboardingSetup() {
         for profileID in settings.unconfirmedTransientRemoteProfileIDs() {
-            _ = performRemoveRemoteDevice(profileID, allowWhenVoiceBusy: true)
+            _ = performRemoveRemoteDevice(profileID, discardingSetupCandidate: true)
         }
         settings.completeOnboarding()
         applyHIDSettings()
@@ -272,6 +272,7 @@ extension BridgeAppModel {
     }
 
     func dismissOnboardingSetup() {
+        guard settings.canDismissOnboarding else { return }
         removeUncommittedOnboardingRemotes()
         settings.dismissOnboarding()
         if let profileID = settings.selectedRemoteProfileID {

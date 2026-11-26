@@ -6,14 +6,19 @@ import CoreBluetooth
 import Foundation
 
 extension BridgeAppModel {
-    func performExternalConfiguredAction(_ configured: ConfiguredButtonAction) -> Bool {
+    func performExternalConfiguredAction(
+        _ configured: ConfiguredButtonAction,
+        customApplicationOpener: @escaping KeyboardInjector.CustomApplicationOpener = {
+            KeyboardInjector.openCustomApplication(at: $0, application: $1, completion: $2)
+        }
+    ) -> Bool {
         guard !audio.suspensionState.isSuspended else { return false }
         let applicationProfile = settings.customApplicationProfile(
             id: configured.applicationProfileID
         )
         if configured.action == .openCustomApplication {
             guard let profile = applicationProfile,
-                NSWorkspace.shared.urlForApplication(withBundleIdentifier: profile.bundleIdentifier) != nil
+                KeyboardInjector.resolveCustomApplicationURL(profile) != nil
             else { return false }
         }
         let sendAction: (UInt64?) -> Bool = { [weak self] requestID in
@@ -22,6 +27,7 @@ extension BridgeAppModel {
                 configured.action,
                 shortcut: configured.shortcut,
                 applicationProfile: applicationProfile,
+                customApplicationOpener: customApplicationOpener,
                 urlString: configured.urlString,
                 focusInputCompletion: { [weak self] succeeded in
                     guard let requestID else { return }

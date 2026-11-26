@@ -121,11 +121,7 @@ extension SettingsView {
         }
         guard let profile = settings.customApplicationProfile(id: profileID) else { return }
         customApplicationLearningStates[profileID] = .recording
-        let savedURL = URL(fileURLWithPath: profile.applicationPath)
-        let applicationURL = Bundle(url: savedURL)?.bundleIdentifier == profile.bundleIdentifier
-            ? savedURL
-            : NSWorkspace.shared.urlForApplication(withBundleIdentifier: profile.bundleIdentifier)
-        guard let applicationURL else {
+        guard let applicationURL = KeyboardInjector.resolveCustomApplicationURL(profile) else {
             customApplicationLearningStates[profileID] = .applicationMissing
             return
         }

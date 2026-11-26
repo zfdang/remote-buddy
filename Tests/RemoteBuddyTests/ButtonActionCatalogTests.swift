@@ -1,5 +1,7 @@
+import AppKit
 import CoreGraphics
 import Foundation
+import os
 import Testing
 @testable import RemoteBuddy
 
@@ -145,6 +147,35 @@ struct ButtonActionCatalogTests {
             applicationFocuser: { _, _, _, _ in }
         )
         #expect(openedURL == URL(fileURLWithPath: "/Applications/WorkBuddy AI.app"))
+    }
+
+    @Test @MainActor func remoteActionOpensCustomAppFromSavedPathBeforeLaunchServicesRegistration() throws {
+        let bundleID = "com.example.remote-buddy-test.\(UUID().uuidString.lowercased())"
+        let defaults = try #require(UserDefaults(suiteName: bundleID))
+        defer { defaults.removePersistentDomain(forName: bundleID) }
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(bundleID, isDirectory: true)
+        let app = directory.appendingPathComponent("Custom.app", isDirectory: true)
+        let contents = app.appendingPathComponent("Contents", isDirectory: true)
+        try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let info = ["CFBundleIdentifier": bundleID, "CFBundlePackageType": "APPL"]
+        let plist = try PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0)
+        try plist.write(to: contents.appendingPathComponent("Info.plist"))
+        #expect(NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) == nil)
+
+        let settings = AppSettings(defaults: defaults)
+        let profileID = settings.addCustomApplicationProfile(.init(displayName: "Custom",
+            bundleIdentifier: bundleID, applicationPath: app.path))
+        let model = BridgeAppModel(settings: settings, initialAudioDevices: [])
+        let openedPath = OSAllocatedUnfairLock(initialState: Optional<String>.none)
+        #expect(model.performExternalConfiguredAction(
+            .init(action: .openCustomApplication, shortcut: nil, applicationProfileID: profileID),
+            customApplicationOpener: { url, _, completion in
+                openedPath.withLock { $0 = url.path }
+                completion(nil, nil)
+            }
+        ))
+        #expect(openedPath.withLock { $0 } == app.path)
     }
 
     @Test @MainActor func openURLActionValidatesPersistsAndOpensWithoutAccessibility() throws {

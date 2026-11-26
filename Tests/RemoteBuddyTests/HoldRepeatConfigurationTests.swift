@@ -69,6 +69,21 @@ struct HoldRepeatConfigurationTests {
         }
     }
 
+    @Test func openingURLDoesNotInheritDefaultHoldRepeat() throws {
+        try withSettings { settings in
+            settings.setBaseBinding(.init(action: .openURL, shortcut: nil, urlString: "https://example.com"),
+                for: .up, trigger: .singleClick, profileID: nil)
+            let clock = ControlledTestScheduler(), events = Events()
+            let monitor = monitor(settings, clock: clock, events: events)
+            defer { monitor.disconnectSimulatedDevice() }
+            press(.up, on: monitor)
+            clock.advance(to: 600)
+            release(monitor)
+            #expect(events.actions == [.openURL])
+            #expect(settings.defaultAction(for: .up, trigger: .longPress) == .disabled)
+        }
+    }
+
     @Test(arguments: RemoteButton.xiaomiCases)
     func everyPhysicalButtonCanRepeatAndStopsOnRelease(button: RemoteButton) throws {
         try withSettings { settings in

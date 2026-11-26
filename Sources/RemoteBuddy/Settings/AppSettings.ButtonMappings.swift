@@ -247,12 +247,14 @@ extension AppSettings {
             return secondary[button]?[.doubleClick] ?? .disabled
         case .longPress:
             return secondary[button]?[.longPress] ??
-                defaultSecondaryAction(for: button, trigger: .longPress)
+                defaultSecondaryAction(for: button, trigger: .longPress, singleClick: buttonBindings[button])
         }
     }
 
-    private func defaultSecondaryAction(for button: RemoteButton, trigger: ButtonTrigger) -> ConfiguredButtonAction {
-        guard trigger == .longPress,
+    private func defaultSecondaryAction(
+        for button: RemoteButton, trigger: ButtonTrigger, singleClick: ButtonAction?
+    ) -> ConfiguredButtonAction {
+        guard trigger == .longPress, singleClick != .openURL,
               [.up, .down, .left, .right, .power, .volumeUp, .volumeDown].contains(button)
         else { return .disabled }
         return ConfiguredButtonAction(action: .repeatSingleClick, shortcut: nil)
@@ -304,7 +306,7 @@ extension AppSettings {
                 )
             }
             return profile.mappings.parsedSecondaryButtonBindings[button]?[trigger] ??
-                defaultSecondaryAction(for: button, trigger: trigger)
+                defaultSecondaryAction(for: button, trigger: trigger, singleClick: bindings[button])
         }
 
         if trigger == .singleClick {
@@ -316,7 +318,7 @@ extension AppSettings {
             )
         }
         return secondaryButtonBindings[button]?[trigger] ??
-            defaultSecondaryAction(for: button, trigger: trigger)
+            defaultSecondaryAction(for: button, trigger: trigger, singleClick: buttonBindings[button])
     }
 
     func configuredAction(for button: RemoteButton, trigger: ButtonTrigger) -> ConfiguredButtonAction {

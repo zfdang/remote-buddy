@@ -47,27 +47,32 @@ enum G9N9NProtocol {
         descriptor?.starts(with: indexedConsumerDescriptor) ?? false
     }
 
-    /// Two-key compatibility chord supported on short-report G9N9N units:
-    /// OK pressed simultaneously with any navigation arrow emits Return/Enter.
-    static func isEnterChord(_ usages: Set<UInt16>) -> Bool {
-        guard usages.count == 2, usages.contains(RemoteButton.ok.hidUsage) else { return false }
-        return [RemoteButton.up, .down, .left, .right].contains { usages.contains($0.hidUsage) }
-    }
-
 
 
     /// Known Consumer Control layouts, with or without their report-ID byte.
     /// Malformed or unrelated reports are ignored; unknown usages in a valid
     /// Consumer Control snapshot do not discard known key edges.
-    static func usages(reportID: UInt32, data: Data, descriptor: Data? = nil) -> Set<UInt16>? {
+    static func usages(
+        reportID: UInt32,
+        data: Data,
+        descriptor: Data? = nil,
+        payloadOnly: Bool = false
+    ) -> Set<UInt16>? {
         if usesIndexedConsumerLayout(descriptor) {
             guard reportID == 1 else { return nil }
-            // A zero-only shortened snapshot can only release keys.
-            if data == Data([0]) { return [] }
-            var bytes = Array(data)
-            if bytes.count == 3, bytes.first == 1 { bytes.removeFirst() }
-            guard bytes.count == 2,
-                  bytes.allSatisfy({ Int($0) <= indexedConsumerUsages.count }) else { return nil }
+            let bytes: [UInt8]
+            if payloadOnly {
+                bytes = Array(data)
+                guard bytes.count == 1 || bytes.count == 2 else { return nil }
+            } else {
+                // A zero-only shortened snapshot can only release keys.
+                if data == Data([0]) { return [] }
+                var parsed = Array(data)
+                if parsed.count == 3, parsed.first == 1 { parsed.removeFirst() }
+                guard parsed.count == 2 else { return nil }
+                bytes = parsed
+            }
+            guard bytes.allSatisfy({ Int($0) <= indexedConsumerUsages.count }) else { return nil }
             return Set(bytes.compactMap { index -> UInt16? in
                 guard index != 0,
                       let button = consumerButtons[indexedConsumerUsages[Int(index) - 1]] else { return nil }
@@ -76,7 +81,7 @@ enum G9N9NProtocol {
         }
         guard reportID == 2 else { return nil }
         var bytes = Array(data)
-        if bytes.count % 2 == 1, bytes.first == 2 { bytes.removeFirst() }
+        if !payloadOnly, bytes.count % 2 == 1, bytes.first == 2 { bytes.removeFirst() }
         guard !bytes.isEmpty, bytes.count % 2 == 0 else { return nil }
         var usages = Set<UInt16>()
         for offset in stride(from: 0, to: bytes.count, by: 2) {

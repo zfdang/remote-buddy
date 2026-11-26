@@ -157,6 +157,72 @@ struct CompatibleRemoteBindingTests {
         #expect(RemoteHIDCandidate.identified(identity: alternate, expectedName: "Bedroom", among: candidates + [duplicateName]) == nil)
     }
 
+    @Test func chromecastStandardIdentityFallsBackToSingleUnboundCandidateOnNameMismatch() {
+        let renamedGoogle = RemoteHIDCandidate(
+            binding: .init(identity: .chromecast, fingerprint: "fp-google-1"),
+            name: "Chromecast Remote"
+        )
+        let otherGoogle = RemoteHIDCandidate(
+            binding: .init(identity: .chromecast, fingerprint: "fp-google-2"),
+            name: "Chromecast Remote"
+        )
+        let renamedXiaomi = RemoteHIDCandidate(
+            binding: .init(identity: .xiaomi, fingerprint: "fp-xiaomi-1"),
+            name: "Mi RC003"
+        )
+
+        // Single unbound standard 18D1:9450 G9N9N resolves even when system Bluetooth name was customized or nil.
+        #expect(
+            BridgeAppModel.resolveHIDCandidate(
+                forModel: .chromecastVoiceRemote,
+                identity: .chromecast,
+                expectedName: "Living Room Renamed",
+                availableCandidates: [renamedGoogle, renamedXiaomi],
+                boundFingerprints: []
+            ) == renamedGoogle
+        )
+        #expect(
+            BridgeAppModel.resolveHIDCandidate(
+                forModel: .chromecastVoiceRemote,
+                identity: .chromecast,
+                expectedName: nil,
+                availableCandidates: [renamedGoogle],
+                boundFingerprints: []
+            ) == renamedGoogle
+        )
+
+        // When two 18D1:9450 candidates exist, binding one to another profile disambiguates the remaining unit.
+        #expect(
+            BridgeAppModel.resolveHIDCandidate(
+                forModel: .chromecastVoiceRemote,
+                identity: .chromecast,
+                expectedName: "Renamed",
+                availableCandidates: [renamedGoogle, otherGoogle],
+                boundFingerprints: []
+            ) == nil
+        )
+        #expect(
+            BridgeAppModel.resolveHIDCandidate(
+                forModel: .chromecastVoiceRemote,
+                identity: .chromecast,
+                expectedName: "Renamed",
+                availableCandidates: [renamedGoogle, otherGoogle],
+                boundFingerprints: [otherGoogle.id]
+            ) == renamedGoogle
+        )
+
+        // Non-Chromecast models continue requiring explicit name match.
+        #expect(
+            BridgeAppModel.resolveHIDCandidate(
+                forModel: .rc003,
+                identity: .xiaomi,
+                expectedName: "Renamed Xiaomi",
+                availableCandidates: [renamedXiaomi],
+                boundFingerprints: []
+            ) == nil
+        )
+    }
+
     @Test func replacingWhitelistRestoresMappingsWhileOldServicesAreStillReachable() throws {
         let suite = "compatible-mapper-" + UUID().uuidString
         let defaults = try #require(UserDefaults(suiteName: suite))

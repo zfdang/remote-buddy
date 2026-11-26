@@ -28,9 +28,7 @@ struct OnboardingView: View {
     @State var requestedRemoteConnectionRecovery = false
     @State var testedControlButtons = Set<RemoteButton>()
     @State var chromecastSingleKeyObserved = false
-    @State var chromecastTwoKeyDetectedWithoutSingleKey = false
-    @State var pendingChromecastComboButtons = Set<RemoteButton>()
-    @State var compatibleChordConfirmed = false
+    @State var chromecastBluetoothLogCardExpanded = false
     @State var observedRemoteProfileID: UUID?
     @State var hidBindingProfile: RemoteDeviceProfile?
     @State var voiceSessionStarted = false
@@ -159,6 +157,9 @@ struct OnboardingView: View {
                 routeConnectedPhysicalRemoteIfNeeded()
             case .remote:
                 prepareSelectedControlConnection()
+                if settings.g9n9nBluetoothLogRecoveryEnabled {
+                    model.refreshBluetoothLoggingProfileStatus()
+                }
             case .voiceTrigger:
                 break
             case .complete:

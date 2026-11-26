@@ -187,7 +187,6 @@ extension AppSettings {
     }
 
     func setAction(_ action: ButtonAction, for button: RemoteButton) {
-        guard allowsMappingEdits(for: selectedRemoteProfileID) else { return }
         buttonBindings[button] = action
     }
 
@@ -203,7 +202,6 @@ extension AppSettings {
     }
 
     func setShortcut(_ shortcut: CustomKeyboardShortcut?, for button: RemoteButton) {
-        guard allowsMappingEdits(for: selectedRemoteProfileID) else { return }
         buttonShortcuts[button] = shortcut
     }
 
@@ -383,10 +381,6 @@ extension AppSettings {
         return profile.effectiveG9N9NInputMode
     }
 
-    func allowsMappingEdits(for profileID: UUID?) -> Bool {
-        g9n9nInputMode(for: profileID ?? selectedRemoteProfileID) != .twoKeyCompatibility
-    }
-
     func setG9N9NInputMode(_ mode: G9N9NInputMode, for profileID: UUID?) {
         // Hardware compatibility mode can only be determined during initial or add-device setup.
         guard !isOnboardingComplete, onboardingPurpose != .integration,
@@ -396,6 +390,29 @@ extension AppSettings {
         let stored: G9N9NInputMode? = mode == .full ? nil : mode
         guard remoteDeviceProfiles[index].g9n9nInputMode != stored else { return }
         remoteDeviceProfiles[index].g9n9nInputMode = stored
+    }
+
+    @discardableResult
+    func recordG9N9NBluetoothLogRecoveryIntegration(for profileID: UUID?) -> Bool {
+        guard g9n9nBluetoothLogRecoveryEnabled,
+              let profileID,
+              let index = remoteDeviceProfiles.firstIndex(where: { $0.id == profileID }),
+              remoteDeviceProfiles[index].model.isChromecastRemote,
+              remoteDeviceProfiles[index].effectiveG9N9NInputMode != .bluetoothLogRecovery
+        else { return false }
+        remoteDeviceProfiles[index].g9n9nInputMode = .bluetoothLogRecovery
+        return true
+    }
+
+    @discardableResult
+    func recordG9N9NNativeIOHIDIntegration(for profileID: UUID?) -> Bool {
+        guard let profileID,
+              let index = remoteDeviceProfiles.firstIndex(where: { $0.id == profileID }),
+              remoteDeviceProfiles[index].model.isChromecastRemote,
+              remoteDeviceProfiles[index].effectiveG9N9NInputMode == .bluetoothLogRecovery
+        else { return false }
+        remoteDeviceProfiles[index].g9n9nInputMode = nil
+        return true
     }
 
     func g9n9nVoiceButtonMode(for profileID: UUID?) -> G9N9NVoiceButtonMode {
@@ -604,7 +621,6 @@ extension AppSettings {
     }
 
     func setAction(_ action: ButtonAction, for button: RemoteButton, trigger: ButtonTrigger) {
-        guard allowsMappingEdits(for: selectedRemoteProfileID) else { return }
         guard trigger != .singleClick else {
             setAction(action, for: button)
             return
@@ -626,7 +642,6 @@ extension AppSettings {
         for button: RemoteButton,
         trigger: ButtonTrigger
     ) {
-        guard allowsMappingEdits(for: selectedRemoteProfileID) else { return }
         guard trigger != .singleClick else {
             buttonApplicationProfileIDs[button] = applicationProfileID
             return
@@ -644,7 +659,6 @@ extension AppSettings {
         for button: RemoteButton,
         trigger: ButtonTrigger
     ) {
-        guard allowsMappingEdits(for: selectedRemoteProfileID) else { return }
         guard trigger != .singleClick else {
             setShortcut(shortcut, for: button)
             return
@@ -658,7 +672,6 @@ extension AppSettings {
     }
 
     func resetBindings() {
-        guard allowsMappingEdits(for: selectedRemoteProfileID) else { return }
         withResettingBindings {
             let mappings = Self.defaultMappings(for: selectedRemoteProfile?.model ?? .unknown)
             buttonBindings = mappings.parsedButtonBindings

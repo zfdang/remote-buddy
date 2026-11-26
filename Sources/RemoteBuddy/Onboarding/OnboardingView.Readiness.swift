@@ -10,11 +10,6 @@ extension OnboardingView {
         }
     }
 
-    var isChromecastTwoKeyCompatible: Bool {
-        settings.onboardingControlSource == .chromecastRemote &&
-            settings.g9n9nInputMode(for: settings.selectedRemoteProfileID) == .twoKeyCompatibility
-    }
-
     var capabilities: OnboardingCapabilities {
         OnboardingCapabilities(
             systemFunctionKeyAvailable: systemFunctionKeyAvailable,
@@ -32,9 +27,7 @@ extension OnboardingView {
             transcriptionAppeared: transcriptionAppeared,
             manualTranscriptInputObserved: manualTranscriptInputObserved,
             nonTextResponseConfirmed: nonTextResponseConfirmed,
-            testedRemoteButtonCount: testedControlButtons.count,
-            isTwoKeyCompatibleMode: isChromecastTwoKeyCompatible,
-            compatibleChordConfirmed: compatibleChordConfirmed
+            testedRemoteButtonCount: testedControlButtons.count
         )
     }
 

@@ -265,44 +265,31 @@ enum OnboardingVoiceToolRuntimePolicy {
 }
 
 enum ChromecastOnboardingStepOutcome: Equatable {
-    case recordFullMode(buttons: Set<RemoteButton>)
-    case recordCompatibilityMode(buttons: Set<RemoteButton>)
-    case awaitCompatibilityOptIn(buttons: Set<RemoteButton>)
-    case controlsChordConfirmed(buttons: Set<RemoteButton>)
-    case controlsNonChordObserved(buttons: Set<RemoteButton>)
+    case recordSingleKey(buttons: Set<RemoteButton>)
+    case awaitSingleKey(buttons: Set<RemoteButton>)
+    case controlsObserved(buttons: Set<RemoteButton>)
 }
 
-enum ChromecastCompatibilityDetection {
-    /// Distinguishes full single-key G9N9N units from partial two-key units without auto-enabling
-    /// compatibility mode: multi-key reports before single-key proof require explicit user opt-in.
+enum ChromecastOnboardingDetection {
+    /// G9N9N setup accepts only full single-key verification (either native IOHID
+    /// or recovered via the opt-in `.mobileconfig` Bluetooth logging profile).
     static func evaluate(
         step: OnboardingStep,
         buttons: Set<RemoteButton>,
-        singleKeyObserved: Bool,
-        compatibilityModeEnabled: Bool
+        singleKeyObserved: Bool
     ) -> ChromecastOnboardingStepOutcome {
         if step == .remote {
-            if buttons.count == 1 {
-                return .recordFullMode(buttons: buttons)
+            if buttons.count == 1 || singleKeyObserved {
+                return .recordSingleKey(buttons: buttons)
             }
-            if singleKeyObserved {
-                return .recordFullMode(buttons: buttons)
-            }
-            if compatibilityModeEnabled {
-                return .recordCompatibilityMode(buttons: buttons)
-            }
-            return .awaitCompatibilityOptIn(buttons: buttons)
+            return .awaitSingleKey(buttons: buttons)
         }
-        if compatibilityModeEnabled,
-           G9N9NProtocol.isEnterChord(Set(buttons.map(\.hidUsage))) {
-            return .controlsChordConfirmed(buttons: buttons)
-        }
-        return .controlsNonChordObserved(buttons: buttons)
+        return .controlsObserved(buttons: buttons)
     }
 
-    /// Show the two-mode explanation & explicit opt-in checkbox upfront on `.remote`
-    /// until single-key input confirms a Fully Supported G9N9N unit.
-    static func shouldShowCompatibilityOptInCard(
+    /// Show the two-path explanation & opt-in Bluetooth logging profile card on `.remote`
+    /// until single-key input confirms a working G9N9N unit.
+    static func shouldShowBluetoothLogRecoveryCard(
         step: OnboardingStep,
         source: OnboardingControlSource,
         singleKeyObserved: Bool
@@ -328,8 +315,6 @@ struct OnboardingCapabilities: Equatable {
     var manualTranscriptInputObserved = false
     var nonTextResponseConfirmed = false
     var testedRemoteButtonCount = 0
-    var isTwoKeyCompatibleMode = false
-    var compatibleChordConfirmed = false
 }
 
 enum OnboardingAudioSelectionPolicy {
@@ -467,9 +452,6 @@ enum OnboardingFlowPolicy {
                 !capabilities.manualTranscriptInputObserved &&
                 outputConfirmed
         case .controls:
-            if capabilities.isTwoKeyCompatibleMode {
-                return capabilities.remoteConnected && capabilities.compatibleChordConfirmed
-            }
             return capabilities.remoteConnected && capabilities.testedRemoteButtonCount >= 3
         case .complete:
             return true

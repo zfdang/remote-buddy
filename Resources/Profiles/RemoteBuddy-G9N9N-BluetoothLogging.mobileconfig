@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>PayloadContent</key>
+	<array>
+		<dict>
+			<key>PayloadDisplayName</key>
+			<string>Bluetooth Subsystem Private Logging</string>
+			<key>PayloadEnabled</key>
+			<true/>
+			<key>PayloadIdentifier</key>
+			<string>com.zfdang.remote-buddy.g9n9n-bluetooth-logging.logging</string>
+			<key>PayloadType</key>
+			<string>com.apple.system.logging</string>
+			<key>PayloadUUID</key>
+			<string>3E9A6C1F-8B2D-4C7A-A5E1-9F4B2D8C6E31</string>
+			<key>PayloadVersion</key>
+			<integer>1</integer>
+			<key>Subsystems</key>
+			<dict>
+				<key>com.apple.bluetooth</key>
+				<dict>
+					<key>DEFAULT-OPTIONS</key>
+					<dict>
+						<key>Enable-Private-Data</key>
+						<true/>
+						<key>Level</key>
+						<dict>
+							<key>Enable</key>
+							<string>Debug</string>
+						</dict>
+					</dict>
+				</dict>
+			</dict>
+		</dict>
+	</array>
+	<key>PayloadDescription</key>
+	<string>Enables private data in macOS Unified Logs only for the com.apple.bluetooth subsystem so Remote Buddy can recover short G9N9N Bluetooth remote key reports dropped by BTLEServer. You can inspect or remove this profile anytime in System Settings → General → Device Management.</string>
+	<key>PayloadDisplayName</key>
+	<string>Remote Buddy — G9N9N Bluetooth Logging</string>
+	<key>PayloadIdentifier</key>
+	<string>com.zfdang.remote-buddy.g9n9n-bluetooth-logging</string>
+	<key>PayloadOrganization</key>
+	<string>Remote Buddy</string>
+	<key>PayloadRemovalDisallowed</key>
+	<false/>
+	<key>PayloadScope</key>
+	<string>System</string>
+	<key>PayloadType</key>
+	<string>Configuration</string>
+	<key>PayloadUUID</key>
+	<string>8C7E2B4A-5F1D-4A9E-9C3B-1D6F8A2E4B70</string>
+	<key>PayloadVersion</key>
+	<integer>1</integer>
+</dict>
+</plist>

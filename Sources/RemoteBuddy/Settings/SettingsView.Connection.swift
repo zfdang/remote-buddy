@@ -64,6 +64,9 @@ extension SettingsView {
         }
         .onAppear {
             model.refreshVoiceKeyCompatibilityWarning()
+            if settings.g9n9nBluetoothLogRecoveryEnabled {
+                model.refreshBluetoothLoggingProfileStatus()
+            }
             if permissionOverrides == nil {
                 model.refreshRuntimePermissionDiagnosis(trigger: "settings_connection_appear")
             }
@@ -244,15 +247,16 @@ extension SettingsView {
         information: RemoteDeviceInformation?,
         chromecastSupportMode: G9N9NInputMode?
     ) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            if let information {
-                connectionDeviceInformation(information)
+        let readings = connectionDeviceReadings(information)
+        return VStack(alignment: .leading, spacing: 10) {
+            if !readings.isEmpty {
+                connectionDeviceInformation(readings)
             }
-            if let information, chromecastSupportMode != nil, !connectionDeviceReadings(information).isEmpty {
+            if !readings.isEmpty, chromecastSupportMode != nil {
                 Divider()
             }
             if let chromecastSupportMode {
-                g9n9nHardwareSupportSection(for: chromecastSupportMode)
+                connectionIntegrationModeRow(for: chromecastSupportMode)
             }
         }
         .padding(12)
@@ -264,8 +268,10 @@ extension SettingsView {
         }
     }
 
-    private func connectionDeviceReadings(_ information: RemoteDeviceInformation) -> [(String, String)] {
-        let protocolSummary: String? = switch (information.protocolVersion, information.capabilities) {
+    private func connectionDeviceReadings(
+        _ information: RemoteDeviceInformation?
+    ) -> [(String, String)] {
+        let protocolSummary: String? = switch (information?.protocolVersion, information?.capabilities) {
         case let (.some(version), .some(capabilities)):
             "\(version) · \(LocalizedMessage("connection.device.frame_bytes", arguments: [String(capabilities.frameSize)]).text(using: localization))"
         case let (.some(version), .none):
@@ -276,21 +282,20 @@ extension SettingsView {
             nil
         }
         let readings: [(String, String?)] = [
-            ("connection.device.model", information.modelNumber),
-            ("connection.device.identity", information.identityValue),
-            ("connection.device.hid_version", information.hidVersionValue),
-            ("connection.device.firmware", information.firmwareRevision),
+            ("connection.device.model", information?.modelNumber),
+            ("connection.device.identity", information?.identityValue),
+            ("connection.device.hid_version", information?.hidVersionValue),
+            ("connection.device.firmware", information?.firmwareRevision),
             ("connection.device.protocol", protocolSummary),
-            ("connection.device.audio", information.audioFormat),
+            ("connection.device.audio", information?.audioFormat),
         ]
         return readings.compactMap { key, value in
             value.map { (key, $0) }
         }
     }
 
-    private func connectionDeviceInformation(_ information: RemoteDeviceInformation) -> some View {
-        let available = connectionDeviceReadings(information)
-        return LazyVGrid(
+    private func connectionDeviceInformation(_ available: [(String, String)]) -> some View {
+        LazyVGrid(
             columns: Array(repeating: GridItem(.flexible(), alignment: .leading), count: 3),
             alignment: .leading,
             spacing: 10
@@ -311,34 +316,32 @@ extension SettingsView {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func g9n9nHardwareSupportSection(for mode: G9N9NInputMode) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                g9n9nSupportBadge(for: mode)
-                    .fixedSize()
-                Text(localization.text(
-                    mode == .twoKeyCompatibility
-                        ? "connection.g9n9n.partial_support_notice"
-                        : "connection.g9n9n.full_support_notice"
-                ))
+    private func connectionIntegrationModeRow(for mode: G9N9NInputMode) -> some View {
+        let valueKey = switch mode {
+        case .full:
+            "connection.g9n9n.integration.native_hid"
+        case .bluetoothLogRecovery:
+            "connection.g9n9n.integration.btle_log_profile"
+        }
+        let isBluetoothLogInactive = mode == .bluetoothLogRecovery &&
+            (!settings.g9n9nBluetoothLogRecoveryEnabled ||
+                model.bluetoothLoggingProfileStatus != .installed ||
+                model.btleServerLogRedactedObserved)
+        return HStack(alignment: .center, spacing: 8) {
+            Text(localization.text("connection.device.button_integration"))
                 .font(.caption)
                 .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-            }
-            if mode == .twoKeyCompatibility {
-                HStack(spacing: 12) {
-                    Link(
-                        localization.text("connection.g9n9n.compatibility_doc_link"),
-                        destination: AppLinks.g9n9nCompatibilityGuide(for: localization.locale)
-                    )
-                    Link(
-                        localization.text("onboarding.chromecast.replace_hardware_link"),
-                        destination: AppLinks.devices(for: localization.locale)
-                    )
-                }
-                .font(.caption)
+            Text(localization.text(valueKey))
+                .font(.system(size: 12, weight: .medium))
+                .textSelection(.enabled)
+            if isBluetoothLogInactive {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                    .help(localization.text("connection.g9n9n.btle_log_inactive_warning"))
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder

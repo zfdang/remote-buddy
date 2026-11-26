@@ -6,13 +6,9 @@ struct CommonPhraseSettingsView: View {
     @ObservedObject private var clipboardPaste = CommonPhraseClipboardPaste.shared
     @ObservedObject var store: CommonPhraseStore
     var remoteModel: RemoteModel? = nil
-    var g9n9nInputMode: G9N9NInputMode = .full
     var onReturn: () -> Void = {}
     private var phraseButtons: [RemoteButton] { CommonPhraseStore.buttons(for: remoteModel) }
     private var extraRows: [[RemoteButton?]] { CommonPhraseStore.extraButtonRows(for: remoteModel) }
-    private var isChromecastPartialSupport: Bool {
-        remoteModel?.isChromecastRemote == true && g9n9nInputMode == .twoKeyCompatibility
-    }
     @EnvironmentObject private var localization: LocalizationStore
     @State private var selectedButton: RemoteButton?
     @State private var selectedID: String?
@@ -70,18 +66,6 @@ struct CommonPhraseSettingsView: View {
                     .font(.system(size: 12))
                 }
             }.padding(.horizontal, 22).padding(.vertical, 14)
-            if remoteModel?.isChromecastRemote == true && g9n9nInputMode == .twoKeyCompatibility {
-                HStack(spacing: 8) {
-                    Image(systemName: "info.circle.fill")
-                        .foregroundStyle(.orange)
-                    Text(localization.text("common_phrases.g9n9n_partial_notice"))
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
-                    Spacer(minLength: 0)
-                }
-                .padding(.horizontal, 22)
-                .padding(.bottom, 10)
-            }
             GeometryReader { geometry in
                 let available = geometry.size.width - 44 - 28
                 let padWidth = min(300, max(230, available * 0.34))
@@ -89,8 +73,6 @@ struct CommonPhraseSettingsView: View {
                 HStack(alignment: .top, spacing: 14) {
                     assignmentColumn(diameter: padWidth - 28)
                         .frame(width: padWidth)
-                        .disabled(isChromecastPartialSupport)
-                        .opacity(isChromecastPartialSupport ? 0.5 : 1)
                     libraryColumn.frame(width: libraryWidth)
                     editorColumn.frame(maxWidth: .infinity)
                 }
@@ -100,7 +82,6 @@ struct CommonPhraseSettingsView: View {
         .disabled(importing)
         .font(.system(size: 13)).textFieldStyle(.roundedBorder)
         .onAppear {
-            if isChromecastPartialSupport { selectedButton = nil }
             if selectedID == nil { select(store.archive.entries.first) }
             AppLogger.shared.write("COMMON_PHRASES EDITOR phase=opened result=visible")
         }
@@ -110,12 +91,7 @@ struct CommonPhraseSettingsView: View {
             AppLogger.shared.write("COMMON_PHRASES EDITOR phase=closed result=hidden")
         }
         .onChange(of: remoteModel) { _, newModel in
-            selectedButton = isChromecastPartialSupport ? nil : Self.reconciledSelection(selectedButton, for: newModel)
-        }
-        .onChange(of: g9n9nInputMode) { _, newMode in
-            if remoteModel?.isChromecastRemote == true && newMode == .twoKeyCompatibility {
-                selectedButton = nil
-            }
+            selectedButton = Self.reconciledSelection(selectedButton, for: newModel)
         }
     }
 
@@ -373,8 +349,7 @@ struct CommonPhraseSettingsView: View {
     }
 
     private func selectPosition(_ button: RemoteButton) {
-        guard !isChromecastPartialSupport,
-              let validButton = Self.reconciledSelection(button, for: remoteModel) else {
+        guard let validButton = Self.reconciledSelection(button, for: remoteModel) else {
             selectedButton = nil
             return
         }
@@ -387,8 +362,7 @@ struct CommonPhraseSettingsView: View {
 
     private func choosePhrase(_ phrase: CommonPhrase) {
         select(phrase)
-        guard !isChromecastPartialSupport,
-              let validButton = Self.reconciledSelection(selectedButton, for: remoteModel) else {
+        guard let validButton = Self.reconciledSelection(selectedButton, for: remoteModel) else {
             selectedButton = nil
             return
         }

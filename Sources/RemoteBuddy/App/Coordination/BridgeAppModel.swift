@@ -8,6 +8,13 @@ import Foundation
 struct RemoteButtonObservation: Equatable {
     let profileID: UUID?
     let buttons: Set<RemoteButton>
+    let origin: HIDReportOrigin
+
+    init(profileID: UUID?, buttons: Set<RemoteButton>, origin: HIDReportOrigin = .iohid) {
+        self.profileID = profileID
+        self.buttons = buttons
+        self.origin = origin
+    }
 }
 
 @MainActor
@@ -65,6 +72,20 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
     @Published var activeVoiceSource: RemoteInputSource?
     @Published var voiceShortcutStatus = LocalizedMessage("voice_button.status.preparing")
     @Published var voiceKeyCompatibilityWarning: VoiceKeyCompatibilityWarning?
+    @Published var bluetoothLoggingProfileStatus: BluetoothLoggingProfileStatus = .unknown
+    @Published var btleServerLogRedactedObserved = false
+    var btleServerReportLogSource: BTLEServerReportLogSource?
+    var btleServerReportLogGeneration: UInt64 = 0
+    var bluetoothLoggingProfileStatusGeneration: UInt64 = 0
+    var bluetoothLoggingProfileRefreshTask: Task<Void, Never>?
+    var bluetoothLoggingProfileRefreshInFlightGeneration: UInt64?
+    var bluetoothLoggingProfileMonitorTask: Task<Void, Never>?
+    var bluetoothLoggingProfileCheckIntervalNanoseconds: UInt64 = 10_000_000_000
+    var bluetoothLoggingProfileStatusProvider: @Sendable () async -> BluetoothLoggingProfileStatus = {
+        await BluetoothLoggingProfileService.detectInstalledStatus()
+    }
+    var lastBTLEServerLogRedactedAt: TimeInterval = 0
+    var lastUnattributedRedactionProfileRefreshAt: TimeInterval?
     struct VoiceToolUnavailablePrompt: Equatable {
         enum Reason: Equatable {
             case unavailable
@@ -231,7 +252,7 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
     var g9n9nSmartToggleReopenTimer: DispatchSourceTimer?
     var g9n9nSmartToggleDeadlineTimer: DispatchSourceTimer?
     let hidEventSuppressor: KeyboardEventSuppressor
-    let appSwitcherCoordinator = HIDAppSwitcherCoordinator()
+    var appSwitcherCoordinator = HIDAppSwitcherCoordinator()
     let permissionSnapshotProvider: () -> HIDPermissionSnapshot
     var onboardingWindowIsActive: () -> Bool
     var hidMonitoringInterrupted = false
@@ -368,6 +389,9 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
         applicationIntegrationController.start()
         startAudioSubsystem()
         applyHIDSettings()
+        if settings.g9n9nBluetoothLogRecoveryEnabled {
+            refreshBluetoothLoggingProfileStatus()
+        }
         refreshRemoteDeviceNames(reason: .startup)
         terminationObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.willTerminateNotification,
@@ -421,8 +445,9 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
         settings.setG9N9NInputMode(mode, for: targetID)
         for monitor in Array(hidMonitors.values) + (discoveryHIDMonitor.map { [$0] } ?? [])
         where monitor.profileID == nil || monitor.profileID == targetID {
-            monitor.clearTransientInputStateForCompatibility()
+            monitor.clearTransientInputState(emitEmptyActiveButtons: false)
         }
+        synchronizeBTLEServerLogSource()
         AppLogger.shared.write("REMOTE HID g9n9n_mode=\(mode.rawValue) profile=\(targetID.uuidString)")
     }
 
@@ -436,6 +461,11 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
         clearApplicationIntegrationStatus()
         commonPhrases.close(reason: "app_stop")
         preferredInputSourceMonitor.stop()
+        bluetoothLoggingProfileStatusGeneration &+= 1
+        bluetoothLoggingProfileRefreshTask?.cancel()
+        bluetoothLoggingProfileRefreshTask = nil
+        bluetoothLoggingProfileRefreshInFlightGeneration = nil
+        stopBluetoothLoggingProfileMonitor()
         pendingHIDServiceMappingRefresh = false
         hidServiceMappingRefreshGeneration &+= 1
         guard started else {
@@ -455,6 +485,7 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
         voiceSession.end()
         releaseVoiceKeyIfNeeded()
         stopHIDMonitors()
+        stopBTLEServerLogSource(clearingRedactedObservation: true)
         isAudioOutputReady = false
         isAudioOutputVerified = false
         // Stop is serialized with configurations on the engine queue. Enumeration no

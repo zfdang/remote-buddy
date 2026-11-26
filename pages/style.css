@@ -26,7 +26,7 @@
 
 .buying-photos .compare-photo-card img{height:auto;max-height:none;aspect-ratio:3/4;object-fit:contain}
 
-#supported-devices .downloads-head .lead-sub{max-width:none}
+.downloads-head .lead-sub,.compare-section .lead-sub{max-width:none}
 
 /* Unified Multi-Platform Downloads Layout */
 .platform-switcher{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:0 0 32px}

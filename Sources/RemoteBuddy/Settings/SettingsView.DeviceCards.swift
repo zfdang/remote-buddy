@@ -132,14 +132,6 @@ extension SettingsView {
         }
     }
 
-    var partialSupportBadge: some View {
-        g9n9nSupportBadge(for: .twoKeyCompatibility)
-    }
-
-    func g9n9nSupportBadge(for mode: G9N9NInputMode) -> some View {
-        G9N9NSupportBadge(mode: mode)
-    }
-
     private func remoteConnectionLabel(connected: Bool) -> some View {
         HStack(spacing: 4) {
             Image(systemName: connected ? "checkmark.circle.fill" : "circle")
@@ -221,26 +213,5 @@ extension SettingsView {
     private func remoteSystemName(_ profile: RemoteDeviceProfile) -> String {
         model.systemDeviceName(for: profile)
             ?? localization.text("remote.device.system_name_unknown")
-    }
-}
-
-struct G9N9NSupportBadge: View {
-    let mode: G9N9NInputMode
-    @EnvironmentObject var localization: LocalizationStore
-
-    var body: some View {
-        let isFull = mode == .full
-        HStack(spacing: 4) {
-            Image(systemName: isFull ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
-                .foregroundStyle(isFull ? Color.green : Color.orange)
-            Text(localization.text(
-                isFull ? "remote.device.full_support_badge" : "remote.device.partial_support_badge"
-            ))
-            .foregroundStyle(.secondary)
-        }
-        .font(.system(size: 11, weight: .medium))
-        .padding(.horizontal, 7)
-        .padding(.vertical, 2)
-        .background((isFull ? Color.green : Color.orange).opacity(0.12), in: Capsule())
     }
 }

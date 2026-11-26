@@ -46,6 +46,34 @@ struct G9N9NProtocolTests {
         #expect(active.isEmpty)
     }
 
+    @Test @MainActor func crossOriginDeduplicationMatchesReport1AcrossIOHIDAndBTLEServerLog() throws {
+        let suite = "google-dedupe-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = AppSettings(defaults: defaults)
+        settings.customMappingEnabled = true
+        let profileID = UUID()
+        var performed: [RemoteButton] = []
+        let monitor = HIDRemoteMonitor(
+            settings: settings,
+            profileID: profileID,
+            runtimePermissions: { true },
+            actionPerformer: { button, _, _ in performed.append(button); return true },
+            diagnosticLogger: { _ in }
+        )
+        monitor.connectSimulatedDevice(fingerprint: "dedupe-google", profileID: profileID)
+        defer { monitor.disconnectSimulatedDevice() }
+        let descriptor = G9N9NProtocol.indexedConsumerDescriptor
+        // IOHID delivers 3 bytes with report ID 1; BTLEServer log delivers 2-byte payload.
+        monitor.handleSimulatedGoogleReport(
+            reportID: 1, data: Data([1, 3, 0]), descriptor: descriptor, source: "device", origin: .iohid
+        )
+        monitor.handleSimulatedGoogleReport(
+            reportID: 1, data: Data([3, 0]), descriptor: descriptor, source: "btle_log", origin: .btleServerLog
+        )
+        #expect(performed == [.up])
+    }
+
     @Test(arguments: [(true, false), (false, true), (true, true)])
     func hidMatchingExcludesUnrelatedDevices(options: (Bool, Bool)) throws {
         let (xiaomi, google) = options

@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import Testing
 @testable import RemoteBuddy
@@ -217,6 +218,93 @@ struct HoldRepeatConfigurationTests {
             settings.resetBindings()
             #expect(settings.allowsHoldRepeat(for: .power, profileID: first))
             #expect(settings.configuredAction(for: .power, trigger: .longPress, profileID: second).action == .escape)
+        }
+    }
+
+    @Test func arrowsRecoveredFromBTLEServerLogAreInjectedInsteadOfPassedThrough() throws {
+        try withSettings { settings in
+            let clock = ControlledTestScheduler(), events = Events()
+            let monitor = monitor(settings, clock: clock, events: events, seized: false)
+            defer { monitor.disconnectSimulatedDevice() }
+            // G9N9N Report 2 Consumer Control codes: left = 0x0044, right = 0x0045.
+            monitor.handleSimulatedGoogleReport(
+                reportID: 2, data: Data([0x44, 0x00]), source: "device", origin: .iohid
+            )
+            monitor.handleSimulatedGoogleReport(
+                reportID: 2, data: Data([0x00, 0x00]), source: "device", origin: .iohid
+            )
+            clock.advance(to: 1_000)
+            // macOS delivers the native arrow itself for IOHID reports.
+            #expect(events.actions == [])
+
+            // Reset between origins so the 150ms real-time deduplicator treats this as a distinct session.
+            monitor.disconnectSimulatedDevice()
+            monitor.connectSimulatedDevice(fingerprint: "hold-test-btle", profileID: monitor.profileID, isSeized: false)
+            monitor.handleSimulatedGoogleReport(
+                reportID: 2, data: Data([0x44, 0x00]), source: "btle_log", origin: .btleServerLog
+            )
+            monitor.handleSimulatedGoogleReport(
+                reportID: 2, data: Data([0x00, 0x00]), source: "btle_log", origin: .btleServerLog
+            )
+            monitor.handleSimulatedGoogleReport(
+                reportID: 2, data: Data([0x45, 0x00]), source: "btle_log", origin: .btleServerLog
+            )
+            monitor.handleSimulatedGoogleReport(
+                reportID: 2, data: Data([0x00, 0x00]), source: "btle_log", origin: .btleServerLog
+            )
+            clock.advance(to: 2_000)
+            // Log-recovered reports never reached macOS, so Remote Buddy must inject the arrows.
+            #expect(events.actions == [.arrowLeft, .arrowRight])
+        }
+    }
+
+    @Test func btleServerLogReportsNeverArmNativeEventSuppressorOnPressReleaseOrRecovery() throws {
+        try withSettings { settings in
+            settings.customMappingEnabled = true
+            let clock = ControlledTestScheduler(), events = Events()
+            let suppressor = KeyboardEventSuppressor()
+            let profile = UUID()
+            let monitor = HIDRemoteMonitor(
+                settings: settings,
+                profileID: profile,
+                eventSuppressor: suppressor,
+                ownsEventSuppressor: false,
+                scheduler: clock,
+                runtimePermissions: { true },
+                nativeSuppressionAvailable: { true },
+                actionPerformer: { _, trigger, configured in
+                    events.triggers.append(trigger)
+                    events.actions.append(configured.action)
+                    return true
+                },
+                frontmostBundleIdentifier: { "test.editor" },
+                diagnosticLogger: { _ in }
+            )
+            monitor.connectSimulatedDevice(fingerprint: "btle-suppressor-test", profileID: profile, isSeized: false)
+            defer { monitor.disconnectSimulatedDevice() }
+
+            // G9N9N Report 2 Consumer Control code for OK = 0x0041 (OK defers singleClick until release due to default long-press).
+            monitor.handleSimulatedGoogleReport(
+                reportID: 2, data: Data([0x41, 0x00]), source: "btle_log", origin: .btleServerLog
+            )
+            let okKeyDown = try #require(CGEvent(keyboardEventSource: nil, virtualKey: 36, keyDown: true))
+            #expect(!suppressor.handle(type: .keyDown, event: okKeyDown))
+
+            // Normal release from btle_log emits OK and must not arm up-edge suppression.
+            monitor.handleSimulatedGoogleReport(
+                reportID: 2, data: Data([0x00, 0x00]), source: "btle_log", origin: .btleServerLog
+            )
+            #expect(events.actions == [.returnKey])
+            let okKeyUp = try #require(CGEvent(keyboardEventSource: nil, virtualKey: 36, keyDown: false))
+            #expect(!suppressor.handle(type: .keyUp, event: okKeyUp))
+
+            // Missing-release timeout recovery for a btle_log hold must also never arm suppression.
+            monitor.handleSimulatedGoogleReport(
+                reportID: 2, data: Data([0x41, 0x00]), source: "btle_log", origin: .btleServerLog
+            )
+            clock.advance(to: HIDRemoteTiming.missingReleaseTimeoutMilliseconds + 100)
+            #expect(!suppressor.handle(type: .keyDown, event: okKeyDown))
+            #expect(!suppressor.handle(type: .keyUp, event: okKeyUp))
         }
     }
 }

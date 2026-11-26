@@ -1280,44 +1280,14 @@
 "connection.empty.detail" = "Click Add Device in the top-right corner to connect your remote.";
 "connection.action.device_comparison" = "Compare & Buy Remotes ↗";
 
-"onboarding.remote.chromecast.combo_needs_opt_in.title" = "Two-key combo detected — confirm Partial Support mode";
-"onboarding.remote.chromecast.combo_needs_opt_in.detail" = "A two-key combination arrived without a single-key report. Check Partial Support below if single presses never register, or release and press OK alone for Full Support.";
-"onboarding.remote.chromecast.compat_waiting_detail" = "Partial support (compatibility) mode enabled. Hold Up + OK (or any arrow + OK) together to confirm input.";
-"onboarding.remote.chromecast.compat_ready_detail" = "Two-key input confirmed (Partial support: Voice key works; only Arrow + OK emits Enter).";
-"onboarding.remote.chromecast.single_waiting_detail" = "Press OK on its own first for Full Support. If single presses never register, see the two-mode instructions below.";
-"onboarding.remote.chromecast.full_ready_detail" = "Single-key report received: Full Support active (Voice key and all 14 buttons work).";
-"onboarding.remote.chromecast.compat_prompt_highlighted" = "Two modes: Full (single key) vs. Partial (two-key only). Check below if single presses never respond:";
-"onboarding.remote.chromecast.compat_prompt" = "Two modes: press OK alone for Full Support, or hold Up + OK and check below if single keys fail:";
-"onboarding.remote.chromecast.compat_checkbox" = "Use Partial Support mode (single keys undetectable; two-key e.g. Up + OK works)";
-"onboarding.remote.chromecast.compat_scope_summary" = "Partial support limits: 1. Hold-to-talk Voice works normally; 2. Only Arrow + OK emits Enter; individual single buttons are unsupported.";
-
-"onboarding.controls.chromecast.compat.title" = "Confirm Two-Key Enter Combination";
-"onboarding.controls.chromecast.compat.detail" = "This G9N9N is in Partial Support (two-key compatibility) mode. Single-key presses are dropped by macOS, so confirm the Enter chord works.";
-"onboarding.controls.chromecast.compat.waiting_title" = "Hold Up + OK (or any Arrow + OK) together";
-"onboarding.controls.chromecast.compat.waiting_detail" = "Once recognized, setup can continue without testing single buttons.";
-"onboarding.controls.chromecast.compat.confirmed_title" = "Confirmed Arrow + OK combination";
-"onboarding.controls.chromecast.compat.confirmed_detail" = "In daily use, pressing Up + OK (or any Arrow + OK) together sends Return/Enter.";
-"onboarding.controls.chromecast.compat.limit_voice" = "Voice button: press and hold to speak, release to stop";
-"onboarding.controls.chromecast.compat.limit_enter" = "Only supported key action: Arrow + OK -> Return/Enter";
-"onboarding.controls.chromecast.compat.limit_others" = "All 14 individual single buttons, double-click/long-press, and phrase hotkeys are unavailable";
-"onboarding.controls.chromecast.compat.switch_to_full" = "My remote works with single presses; re-check full mode";
-"onboarding.side.compatible_chord" = "Arrow + OK confirmed";
+"onboarding.remote.chromecast.single_waiting_detail" = "Press OK on its own first for native Full Support. If single presses do not register, enable Bluetooth log key recovery below and install the logging profile.";
+"onboarding.remote.chromecast.full_ready_detail" = "Single-key report received: native Full Support active (Voice key and all 14 buttons work).";
+"onboarding.remote.chromecast.btle_log_ready_detail" = "Single-key input received via Bluetooth logging profile: Voice key and all 14 buttons are ready.";
+"onboarding.remote.chromecast.btle_log_prompt" = "G9N9N uses two integration paths: press OK alone for native Full Support; if single presses do not respond (e.g. 0x011B / 26.7 / 26.0 batches), enable Bluetooth log key recovery below and install the profile.";
+"onboarding.remote.chromecast.btle_log_disclosure" = "Single key not responding? Enable Bluetooth Log Compatibility (Optional)";
 
 "onboarding.summary.g9n9n_mode" = "G9N9N Support Mode";
-"onboarding.summary.g9n9n_partial_mode" = "Partially Supported Hardware (Two-Key Compatibility)";
-"onboarding.summary.partial_buttons_passed" = "Voice works; Arrow + OK sends Enter";
 
-"button_mapping.google.partial_subtitle" = "Partial support (two-key compatibility): Voice works; only Arrow + OK emits Return/Enter";
-"button_mapping.google.partial.card_title" = "Partial Support Mode (Two-Key Compatibility)";
-"button_mapping.google.partial.card_detail" = "This G9N9N hardware/firmware revision sends 1-byte single-key reports that macOS drops before IOHID. Limited support is active:";
-"button_mapping.google.partial.voice_rule" = "1. Voice button (Google Assistant): hold to speak and release to stop";
-"button_mapping.google.partial.enter_rule" = "2. Arrow + OK (e.g. Up + OK): sends Return/Enter once when pressed together (requires mapping enabled above)";
-"button_mapping.google.partial.unsupported_rule" = "3. Modifying any button mapping, individual buttons, double-click/long-press, and phrase assignments are disabled in this mode";
-"button_mapping.google.partial.setup_only_hint" = "Compatibility mode is locked during initial or Add Device setup and is read-only here. If you replace the hardware unit, remove it in Connection and run Add Device again.";
-"remote.device.full_support_badge" = "Fully Supported Hardware";
-"remote.device.partial_support_badge" = "Partially Supported Hardware";
-"connection.g9n9n.full_support_notice" = "Voice button and all 14 standard buttons work and can be customized.";
-"connection.g9n9n.partial_support_notice" = "Voice works; only Arrow + OK emits Return/Enter and mappings cannot be modified. Since functionality is heavily limited, replacing with a verified fully supported remote or hardware revision is recommended; after replacing, remove this device and run Add Device.";
 "connection.g9n9n.compatibility_doc_link" = "Read G9N9N Compatibility Docs ↗";
 "connection.g9n9n.voice_button_mode.title" = "Voice Button Mode";
 "connection.g9n9n.voice_button_mode.hold" = "Hold to Talk";
@@ -1325,9 +1295,6 @@
 "connection.g9n9n.voice_button_mode.hold_help" = "Hold the Google Assistant voice button to speak and release to stop.";
 "connection.g9n9n.voice_button_mode.smart_toggle_help" = "Tap and release to keep speaking hands-free, then press again to stop (~0.2s mic reopen pause after tap); holding over 0.7s stops on release.";
 "button_mapping.voice.settings_button" = "Open Voice Integration";
-"common_phrases.g9n9n_partial_notice" = "The selected G9N9N is in Partial Support (two-key compatibility) mode, which only supports Voice and Arrow + OK for Enter; single-key common phrases are unavailable.";
-"onboarding.chromecast.replace_hardware_advice" = "Partial Support mode omits most button features and is intended only as a fallback. Replace with a verified macOS-compatible remote unit for full support.";
-"onboarding.chromecast.replace_hardware_link" = "See verified devices & buying guide ↗";
 
 // Tencent Chatterfly hold-to-talk integration
 "onboarding.voice_tool.chatterfly.title" = "Tencent Chatterfly";
@@ -1359,3 +1326,21 @@
 "connection.device_guide.g9n9n.limit.detail" = "Automatic hardware keepalive lets both Smart Toggle and Hold-to-Talk stream past 60s, capped at ~5 minutes per session to prevent accidental battery drain.";
 "connection.device_guide.g9n9n.other_key_stops.title" = "Pressing another button stops hands-free listening";
 "connection.device_guide.g9n9n.other_key_stops.detail" = "During hands-free streaming, tapping any other physical button makes firmware stop audio immediately—finish speaking before using other keys.";
+
+// Opt-in G9N9N Bluetooth logging profile compatibility
+"g9n9n.btle_log.toggle" = "Enable Bluetooth log key recovery (requires .mobileconfig profile)";
+"g9n9n.btle_log.subtitle" = "Off by default. Optional workaround for G9N9N batches (such as 0x011B, FW 26.7, or 26.0) whose short HID reports are dropped by macOS BTLEServer, unlocking all 14 ordinary buttons.";
+"g9n9n.btle_log.status.installed" = "Bluetooth logging profile installed";
+"g9n9n.btle_log.status.not_installed" = "Bluetooth logging profile not detected";
+"g9n9n.btle_log.status.unknown" = "Unable to confirm system logging profile status (possibly due to query permissions); log reading stays disabled until confirmed. Click Recheck after installing.";
+"g9n9n.btle_log.redacted_warning" = "Intercepted remote reports were seen, but payloads are still redacted as <private>, so log reading has paused. Open the bundled profile, install it in System Settings → General → Device Management, then click Recheck.";
+"g9n9n.btle_log.action.install_profile" = "Install Profile";
+"g9n9n.btle_log.action.open_device_management" = "Device Management";
+"g9n9n.btle_log.action.recheck" = "Recheck";
+"g9n9n.btle_log.hid_binding_missing" = "This remote is not bound to an HID device yet. Select its HID device below before pressing OK.";
+"g9n9n.btle_log.privacy_note" = "Privacy & scope: This unsigned profile enables private logging only for com.apple.bluetooth so Remote Buddy can recover dropped reports from your paired G9N9N. Other devices are ignored, logs are not persisted or uploaded, and you can remove the profile or turn off this toggle anytime.";
+"connection.device.button_integration" = "Button Integration";
+"connection.g9n9n.integration.native_hid" = "Standard System HID";
+"connection.g9n9n.integration.btle_log_profile" = "Bluetooth Logging Profile (.mobileconfig)";
+"connection.g9n9n.btle_log_inactive_warning" = "This remote uses the Bluetooth logging profile, but recovery is currently turned off, the profile is not confirmed installed, or payloads are still redacted as <private>; ordinary buttons may not respond until restored.";
+"button_mapping.google.btle_log_subtitle" = "All 14 ordinary buttons and common phrases are recovered via your installed .mobileconfig Bluetooth logging profile; Voice stays dedicated to the microphone.";

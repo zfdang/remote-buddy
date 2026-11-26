@@ -320,6 +320,7 @@ extension BridgeAppModel {
         if canReuseRunningHIDMonitors(for: desiredConfiguration, forceRestart: forceRestart) {
             hidPowerKeySuppressed = powerKeySuppressed
             hidAllowedLocationIDs = allowedLocationIDs
+            synchronizeBTLEServerLogSource()
             return
         }
 
@@ -373,6 +374,7 @@ extension BridgeAppModel {
             hidMonitoringInterrupted = false
             appliedHIDMonitoringConfiguration = desiredConfiguration
         }
+        synchronizeBTLEServerLogSource()
         refreshRuntimePermissionDiagnosis(trigger: "hid_monitors_started")
     }
 
@@ -445,6 +447,317 @@ extension BridgeAppModel {
         discoveryHIDMonitor = nil
         activeRemoteButtons = []
         lastObservedRemoteButtonReport = nil
+        synchronizeBTLEServerLogSource()
+    }
+
+    func applyBluetoothLoggingProfileStatus(_ status: BluetoothLoggingProfileStatus) {
+        bluetoothLoggingProfileStatus = status
+        synchronizeBTLEServerLogSource()
+    }
+
+    func refreshBluetoothLoggingProfileStatus(coalescingIfInFlight: Bool = true) {
+        if coalescingIfInFlight,
+           bluetoothLoggingProfileRefreshTask != nil,
+           bluetoothLoggingProfileRefreshInFlightGeneration == bluetoothLoggingProfileStatusGeneration {
+            return
+        }
+        bluetoothLoggingProfileRefreshTask?.cancel()
+        bluetoothLoggingProfileStatusGeneration &+= 1
+        let generation = bluetoothLoggingProfileStatusGeneration
+        bluetoothLoggingProfileRefreshInFlightGeneration = generation
+        let provider = bluetoothLoggingProfileStatusProvider
+        bluetoothLoggingProfileRefreshTask = Task { [weak self] in
+            let status = await provider()
+            await MainActor.run {
+                guard let self,
+                      !Task.isCancelled,
+                      self.bluetoothLoggingProfileStatusGeneration == generation
+                else { return }
+                self.bluetoothLoggingProfileRefreshTask = nil
+                self.bluetoothLoggingProfileRefreshInFlightGeneration = nil
+                self.applyBluetoothLoggingProfileStatus(status)
+            }
+        }
+    }
+
+    private enum BTLEServerLogRedactionPolicy {
+        static let unattributedRefreshInterval: TimeInterval = 10.0
+    }
+
+    func startBluetoothLoggingProfileMonitorIfNeeded() {
+        guard bluetoothLoggingProfileMonitorTask == nil else { return }
+        let interval = bluetoothLoggingProfileCheckIntervalNanoseconds
+        bluetoothLoggingProfileMonitorTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: interval)
+                guard !Task.isCancelled else { break }
+                let shouldContinue = await MainActor.run { [weak self] () -> Bool in
+                    guard let self, self.isBTLEServerLogSourceActive(for: nil) else {
+                        return false
+                    }
+                    self.refreshBluetoothLoggingProfileStatus(coalescingIfInFlight: true)
+                    return true
+                }
+                if !shouldContinue { break }
+            }
+            await MainActor.run { [weak self] in
+                self?.bluetoothLoggingProfileMonitorTask = nil
+            }
+        }
+    }
+
+    func stopBluetoothLoggingProfileMonitor() {
+        bluetoothLoggingProfileMonitorTask?.cancel()
+        bluetoothLoggingProfileMonitorTask = nil
+    }
+
+    func recheckBluetoothLoggingProfile() {
+        btleServerLogRedactedObserved = false
+        lastUnattributedRedactionProfileRefreshAt = nil
+        bluetoothLoggingProfileStatus = .unknown
+        stopBTLEServerLogSource(clearingRedactedObservation: true)
+        for bridge in connections.bridges.values {
+            learnSelectedRemoteHIDIdentity(bridge)
+        }
+        refreshBluetoothLoggingProfileStatus(coalescingIfInFlight: false)
+    }
+
+    func setG9N9NBluetoothLogRecoveryEnabled(_ enabled: Bool) {
+        guard settings.g9n9nBluetoothLogRecoveryEnabled != enabled else {
+            synchronizeBTLEServerLogSource()
+            return
+        }
+        settings.g9n9nBluetoothLogRecoveryEnabled = enabled
+        AppLogger.shared.write("SETTINGS G9N9N_BTLE_LOG enabled=\(enabled)")
+        if enabled {
+            btleServerLogRedactedObserved = false
+            lastUnattributedRedactionProfileRefreshAt = nil
+            bluetoothLoggingProfileStatus = .unknown
+            stopBTLEServerLogSource(clearingRedactedObservation: true)
+            for bridge in connections.bridges.values {
+                learnSelectedRemoteHIDIdentity(bridge)
+            }
+            refreshBluetoothLoggingProfileStatus(coalescingIfInFlight: false)
+        } else {
+            bluetoothLoggingProfileStatusGeneration &+= 1
+            bluetoothLoggingProfileRefreshTask?.cancel()
+            bluetoothLoggingProfileRefreshTask = nil
+            bluetoothLoggingProfileRefreshInFlightGeneration = nil
+            stopBTLEServerLogSource(clearingRedactedObservation: true)
+        }
+    }
+
+    enum BTLEServerLogDispatchTarget: Equatable {
+        case boundMonitor(fingerprint: String, profileID: UUID)
+        case drop(reason: String)
+    }
+
+    static func btleLogRecoveryTargetPeripherals(
+        profiles: [RemoteDeviceProfile],
+        isOnboardingComplete: Bool,
+        onboardingControlSource: OnboardingControlSource,
+        selectedProfileID: UUID?
+    ) -> Set<UUID> {
+        var targets = Set(
+            profiles
+                .filter {
+                    $0.model.isChromecastRemote &&
+                        $0.hidFingerprint != nil &&
+                        $0.effectiveG9N9NInputMode == .bluetoothLogRecovery
+                }
+                .compactMap(\.bluetoothIdentifier)
+        )
+        if !isOnboardingComplete,
+           onboardingControlSource == .chromecastRemote,
+           let selectedProfileID,
+           let selected = profiles.first(where: {
+               $0.id == selectedProfileID &&
+                   $0.model.isChromecastRemote &&
+                   $0.hidFingerprint != nil
+           }),
+           let bluetoothID = selected.bluetoothIdentifier {
+            targets.insert(bluetoothID)
+        }
+        return targets
+    }
+
+    static func resolveBTLEServerLogDispatchTarget(
+        peripheral: UUID,
+        profiles: [RemoteDeviceProfile],
+        boundMonitorFingerprints: Set<String>,
+        isOnboardingComplete: Bool,
+        onboardingControlSource: OnboardingControlSource,
+        selectedProfileID: UUID?
+    ) -> BTLEServerLogDispatchTarget {
+        guard let profile = profiles.first(where: {
+            $0.model.isChromecastRemote && $0.bluetoothIdentifier == peripheral
+        }) else {
+            return .drop(reason: "no_matching_profile")
+        }
+        let eligible = profile.effectiveG9N9NInputMode == .bluetoothLogRecovery ||
+            (!isOnboardingComplete &&
+                onboardingControlSource == .chromecastRemote &&
+                profile.id == selectedProfileID)
+        guard eligible else {
+            return .drop(reason: "native_full_mode")
+        }
+        guard let fingerprint = profile.hidFingerprint else {
+            return .drop(reason: "unbound_hid_profile")
+        }
+        guard boundMonitorFingerprints.contains(fingerprint) else {
+            return .drop(reason: "bound_monitor_unavailable")
+        }
+        return .boundMonitor(fingerprint: fingerprint, profileID: profile.id)
+    }
+
+    func stopBTLEServerLogSource(clearingRedactedObservation: Bool) {
+        btleServerReportLogGeneration &+= 1
+        stopBluetoothLoggingProfileMonitor()
+        if btleServerReportLogSource != nil {
+            btleServerReportLogSource?.stop()
+            btleServerReportLogSource = nil
+            AppLogger.shared.write("HID BTLE_LOG source=stopped")
+        }
+        hidMonitors.values.forEach { $0.cancelBTLEServerLogInteractions() }
+        if clearingRedactedObservation {
+            btleServerLogRedactedObserved = false
+        }
+    }
+
+    func isBTLEServerLogSourceActive(for sourceGeneration: UInt64?) -> Bool {
+        guard started,
+              settings.g9n9nBluetoothLogRecoveryEnabled,
+              settings.customMappingEnabled,
+              !audio.suspensionState.suspendsHIDMonitoring,
+              btleServerReportLogSource != nil
+        else { return false }
+        if let sourceGeneration {
+            return sourceGeneration == btleServerReportLogGeneration
+        }
+        return true
+    }
+
+    func synchronizeBTLEServerLogSource() {
+        let permissions = permissionSnapshotProvider()
+        let chromecastPeripherals = Self.btleLogRecoveryTargetPeripherals(
+            profiles: settings.remoteDeviceProfiles,
+            isOnboardingComplete: settings.isOnboardingComplete,
+            onboardingControlSource: settings.onboardingControlSource,
+            selectedProfileID: settings.selectedRemoteProfileID
+        )
+        let shouldRun = started &&
+            settings.g9n9nBluetoothLogRecoveryEnabled &&
+            !audio.suspensionState.suspendsHIDMonitoring &&
+            settings.customMappingEnabled &&
+            permissions.inputMonitoringGranted &&
+            permissions.accessibilityGranted &&
+            bluetoothLoggingProfileStatus == .installed &&
+            !btleServerLogRedactedObserved &&
+            !chromecastPeripherals.isEmpty
+        guard shouldRun else {
+            let shouldClearRedacted = !started || !settings.g9n9nBluetoothLogRecoveryEnabled
+            stopBTLEServerLogSource(clearingRedactedObservation: shouldClearRedacted)
+            return
+        }
+        if let existing = btleServerReportLogSource {
+            existing.updatePeripherals(chromecastPeripherals)
+            startBluetoothLoggingProfileMonitorIfNeeded()
+            return
+        }
+        btleServerReportLogGeneration &+= 1
+        let generation = btleServerReportLogGeneration
+        let source = BTLEServerReportLogSource(
+            peripherals: chromecastPeripherals,
+            diagnosticLogger: { message in
+                DispatchQueue.main.async {
+                    AppLogger.shared.write(message)
+                }
+            },
+            onReport: { [weak self] attributed in
+                MainActor.assumeIsolated {
+                    self?.handleAttributedBTLEServerReport(attributed, sourceGeneration: generation)
+                }
+            },
+            onRedactedReport: { [weak self] observation in
+                MainActor.assumeIsolated {
+                    self?.handleRedactedBTLEServerReport(observation, sourceGeneration: generation)
+                }
+            }
+        )
+        btleServerReportLogSource = source
+        source.start()
+        startBluetoothLoggingProfileMonitorIfNeeded()
+    }
+
+    func handleAttributedBTLEServerReport(
+        _ attributed: BTLEServerReportLog.AttributedReport,
+        sourceGeneration: UInt64? = nil
+    ) {
+        guard isBTLEServerLogSourceActive(for: sourceGeneration) else { return }
+        let dispatchTarget = Self.resolveBTLEServerLogDispatchTarget(
+            peripheral: attributed.peripheral,
+            profiles: settings.remoteDeviceProfiles,
+            boundMonitorFingerprints: Set(hidMonitors.keys),
+            isOnboardingComplete: settings.isOnboardingComplete,
+            onboardingControlSource: settings.onboardingControlSource,
+            selectedProfileID: settings.selectedRemoteProfileID
+        )
+        switch dispatchTarget {
+        case let .boundMonitor(fingerprint, _):
+            guard let targetMonitor = hidMonitors[fingerprint] else { return }
+            btleServerLogRedactedObserved = false
+            if bluetoothLoggingProfileStatus != .installed {
+                bluetoothLoggingProfileStatus = .installed
+            }
+            targetMonitor.handleBTLEServerLogReport(reportID: attributed.reportID, data: attributed.data)
+        case let .drop(reason):
+            if reason == "unbound_hid_profile", let bridge = connections.bridges[attributed.peripheral] {
+                learnSelectedRemoteHIDIdentity(bridge)
+            }
+            AppLogger.shared.write("HID BTLE_LOG report_unrouted reason=\(reason) id=\(attributed.reportID)")
+        }
+    }
+
+    func handleRedactedBTLEServerReport(
+        _ observation: BTLEServerReportLog.RedactedObservation,
+        sourceGeneration: UInt64? = nil,
+        now: TimeInterval = ProcessInfo.processInfo.systemUptime
+    ) {
+        guard isBTLEServerLogSourceActive(for: sourceGeneration) else { return }
+        guard shouldPauseOnRedactedBTLEServerReport(observation, now: now) else {
+            return
+        }
+        btleServerLogRedactedObserved = true
+        stopBTLEServerLogSource(clearingRedactedObservation: false)
+        if bluetoothLoggingProfileStatus != .notInstalled {
+            refreshBluetoothLoggingProfileStatus(coalescingIfInFlight: true)
+        }
+        if now - lastBTLEServerLogRedactedAt >= 10 {
+            lastBTLEServerLogRedactedAt = now
+            let attribution = observation.peripheral == nil ? "unattributed" : "peripheral"
+            AppLogger.shared.write(
+                "HID BTLE_LOG redacted_report_observed id=\(observation.reportID) attribution=\(attribution) action=paused"
+            )
+        }
+    }
+
+    private func shouldPauseOnRedactedBTLEServerReport(
+        _ observation: BTLEServerReportLog.RedactedObservation,
+        now: TimeInterval
+    ) -> Bool {
+        if observation.peripheral != nil {
+            return true
+        }
+        let shouldRefresh = lastUnattributedRedactionProfileRefreshAt.map {
+            now - $0 >= BTLEServerLogRedactionPolicy.unattributedRefreshInterval
+        } ?? true
+        if shouldRefresh {
+            lastUnattributedRedactionProfileRefreshAt = now
+            refreshBluetoothLoggingProfileStatus(coalescingIfInFlight: true)
+        }
+        // Unrelated BLE HID traffic can emit unattributed `<private>` lines even after the user
+        // installs the Bluetooth profile; ignore them while `.installed` remains confirmed.
+        return bluetoothLoggingProfileStatus != .installed
     }
 
     /// Releases HID monitors, event taps, input-source observers, and pending recovery work
@@ -622,12 +935,39 @@ extension BridgeAppModel {
             guard let self, profileID == self.settings.selectedRemoteProfileID else { return }
             self.activeRemoteButtons = buttons
         }
-        monitor.onObservedButtonReport = { [weak self] profileID, buttons in
+        monitor.onObservedButtonReport = { [weak self, weak monitor] profileID, buttons in
             guard let self, !buttons.isEmpty else { return }
+            let origin = monitor?.currentReportOrigin ?? .iohid
+            if let profileID, buttons.count == 1 {
+                if origin == .btleServerLog {
+                    if self.settings.recordG9N9NBluetoothLogRecoveryIntegration(for: profileID) {
+                        self.synchronizeBTLEServerLogSource()
+                        AppLogger.shared.write(
+                            "REMOTE HID g9n9n_mode=bluetooth_log_recovery reason=btle_log_observed profile=\(profileID.uuidString)"
+                        )
+                    }
+                } else if origin == .iohid,
+                          self.settings.recordG9N9NNativeIOHIDIntegration(for: profileID) {
+                    self.synchronizeBTLEServerLogSource()
+                    AppLogger.shared.write(
+                        "REMOTE HID g9n9n_mode=full reason=native_iohid_observed profile=\(profileID.uuidString)"
+                    )
+                }
+            }
             self.lastObservedRemoteButtonReport = RemoteButtonObservation(
                 profileID: profileID,
-                buttons: buttons
+                buttons: buttons,
+                origin: origin
             )
+        }
+        monitor.onNativeGoogleIOHIDVerified = { [weak self] profileID in
+            guard let self else { return }
+            if let profileID, self.settings.recordG9N9NNativeIOHIDIntegration(for: profileID) {
+                AppLogger.shared.write(
+                    "REMOTE HID g9n9n_mode=full reason=native_iohid_verified profile=\(profileID.uuidString)"
+                )
+            }
+            self.synchronizeBTLEServerLogSource()
         }
         monitor.onButtonPressed = { [weak self, weak monitor] profileID, fingerprint, button in
             guard let self, let monitor else {

@@ -784,6 +784,7 @@ extension BridgeAppModel {
                 completedSnapshot.boundToSelectedDevice == true &&
                 !completedAudibility.requiresAudibilityRepair
             self.isAudioOutputReady = ready
+            // A successful rebind can precede a healthy diagnostic snapshot.
             if !configured, !ready, self.longRecordingGeneration == recordingGeneration,
                self.audio.activeConfigurationGeneration == nil {
                 self.stopLongRecording(reason: "audio_recovery_failed")

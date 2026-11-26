@@ -27,7 +27,7 @@ struct AudioRecoveryReviewTests {
     }
 
     @Test(arguments: [true, false])
-    func continuousRecordingFollowsTheResultOfAutomaticRecovery(configured: Bool) throws {
+    func continuousRecordingStopsOnlyOnFailedRebindWhenOutputIsNotReady(configured: Bool) throws {
         let suite = UUID().uuidString
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
@@ -38,10 +38,14 @@ struct AudioRecoveryReviewTests {
             model.finishLongRecording(reason: "test_cleanup")
         }
         model.longRecordingRequested = true
+        model.isAudioOutputReady = true
+        let recordingGeneration = model.longRecordingGeneration
         model.completeAudioRecoveryDeviceRefresh(generation: 0, reason: "engine_configuration_change",
             details: "", devices: [], configureOutput: { complete in complete(configured) },
             diagnosticLog: { _ in })
+        #expect(!model.isAudioOutputReady)
         #expect(model.longRecordingRequested == configured)
+        #expect((model.longRecordingGeneration == recordingGeneration) == configured)
     }
 
     @Test func lateEngineNotificationAfterReleaseDoesNotReconfigureOrReportDegraded() throws {

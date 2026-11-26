@@ -388,6 +388,11 @@ extension OnboardingView {
            failure == .remoteNotFound {
             return false
         }
+        if settings.onboardingStep == .remote,
+           settings.onboardingControlSource == .chromecastRemote,
+           failure == .remoteButtonNotReady {
+            return false
+        }
         return true
     }
 

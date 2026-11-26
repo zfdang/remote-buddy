@@ -56,25 +56,25 @@
           </tr>
           <tr>
             <th scope="row"><strong>DIS <code>A0</code> / 固件 <code>26.7</code>（已抓包）<br>与 <code>HID 0x0110</code> / 固件 <code>26.0</code></strong><br><span class="device-model-code">CR PVT/MP · 社区反馈 <a class="text-link" href="https://github.com/zfdang/remote-buddy/issues/256">#256 ↗</a></span></th>
-            <td><span class="device-status is-supported">描述文件兼容</span></td>
-            <td><code>26.7</code> 为 Report ID <code>1</code>、单键仅发 <strong>1 字节</strong>（<code>03</code> / <code>00</code>）；<code>0x0110 / 26.0</code> 最大输入报告 3 字节。</td>
+            <td><span class="device-status is-partial">待真机验收</span></td>
+            <td><code>26.7</code> 为 Report ID <code>1</code>、单键仅发 <strong>1 字节</strong>（<code>03</code> / <code>00</code>）；<code>0x0110 / 26.0</code> 最大输入报告 3 字节（<strong>原始 BLE 报文尚待抓包确认</strong>）。</td>
             <td>单键与松开在 <code>BTLEServer</code> 层被丢弃，无法通过原生 <code>IOHID</code> 完整识别。</td>
-            <td><strong>蓝牙日志描述文件恢复（<code>.mobileconfig</code>）</strong>：默认关闭；在设置或向导主动开启开关并安装内置 <code>.mobileconfig</code> 后，解锁语音键与全部 14 颗普通按键。</td>
+            <td><strong>蓝牙日志描述文件恢复（<code>.mobileconfig</code>，待真机验收）</strong>：默认关闭；ATVV 语音可用。开启开关、完成 HID 绑定并安装内置 <code>.mobileconfig</code> 后计划解锁普通按键（<code>26.0</code> 需抓包确认报告格式，各批均待真机逐键验收）。如无法安装描述文件，原双键兼容模式已退役，建议换用原生完全支持批次。</td>
           </tr>
           <tr>
             <th scope="row"><strong>HID 版本 <code>0x011B</code></strong><br><span class="device-model-code">社区实测反馈</span></th>
-            <td><span class="device-status is-supported">描述文件兼容</span></td>
+            <td><span class="device-status is-partial">待真机验收</span></td>
             <td>Report ID <code>2</code>（小端 16-bit consumer usage），描述符声明不含 ID 为 3 字节，固件实际仅发送 <strong>2 字节</strong>（如按下 <code>42 00</code>、松开 <code>00 00</code>）。</td>
             <td>因实际长度与描述符不符，所有普通按键报告均在 macOS <code>BTLEServer</code> 层被丢弃，公开 <code>IOHID</code> 收不到任何普通按键。</td>
-            <td><strong>蓝牙日志描述文件恢复（<code>.mobileconfig</code>）</strong>：默认关闭；在设置或向导主动开启开关并安装内置 <code>.mobileconfig</code> 后，解锁语音键与全部 14 颗普通按键。</td>
+            <td><strong>蓝牙日志描述文件恢复（<code>.mobileconfig</code>，待真机验收）</strong>：默认关闭；ATVV 语音可用。开启开关、完成 HID 绑定并安装内置 <code>.mobileconfig</code> 后计划解锁全部 14 颗普通按键（目前基于社区样本协议实现，待物理遥控器逐键验收按下、松开与映射输出）。</td>
           </tr>
         </tbody>
       </table>
     </div>
 
     <div class="download-note" id="notice">
-      <strong>两种接入方式说明：</strong>
-      Remote Buddy 现对 G9N9N 仅保留<strong>原生完全支持（Standard System HID）</strong>与<strong>蓝牙日志描述文件恢复（<code>.mobileconfig</code>）</strong>两种方式，不再保留部分支持/双键兼容模式。连上 Mac 后可在 <strong>设置 → 遥控器连接 → 硬件信息</strong>查看当前设备的「按键接入方式」、<code>HID 版本</code> 与固件版本。若不愿安装描述文件，建议选购原生完全支持批次（例如维护者实购验证的 <code>0x0110 / 固件 26.2</code> 样机：<a class="text-link" href="https://mobile.yangkeduo.com/goods.html?ps=wI005ehWCi">拼多多参考链接（实购约 ¥15）↗</a>），详见 <a class="text-link" href="device.html">支持设备与选购指南 →</a>。
+      <strong>两种接入方式与退役说明：</strong>
+      Remote Buddy 现对 G9N9N 仅保留<strong>原生完全支持（Standard System HID）</strong>与<strong>蓝牙日志描述文件恢复（<code>.mobileconfig</code>）</strong>两种方式，已退役旧版部分支持（方向键 + OK）双键兼容模式。若非原生批次用户无法安装系统描述文件，首次向导将停留在单键检测等待状态（仅语音可用）。连上 Mac 后可在 <strong>设置 → 遥控器连接 → 硬件信息</strong>查看当前设备的「按键接入方式」、<code>HID 版本</code> 与固件版本；若希望免描述文件开箱即用，建议选购维护者已实测原生支持的批次（例如 <code>0x0110 / 固件 26.2</code> 样机：<a class="text-link" href="https://mobile.yangkeduo.com/goods.html?ps=wI005ehWCi">拼多多参考链接（实购约 ¥15）↗</a>），详见 <a class="text-link" href="device.html">支持设备与选购指南 →</a>。
     </div>
   </section>
 
@@ -145,7 +145,7 @@
         </div>
         <ul class="device-specs">
           <li><strong>原生通道绝不被日志干扰</strong>：已被验证为原生完全支持的设备始终只通过公开 <code>IOHID</code> 响应，即使同时开启了蓝牙日志恢复开关也绝不重复按键。</li>
-          <li><strong>默认不读取系统私有调试日志，支持按需显式开启</strong>：针对 <code>0x011B</code>、<code>26.7</code> 等被 macOS <code>BTLEServer</code> 丢弃短报文的批次，应用默认完全关闭日志读取；仅当用户主动开启开关并在「系统设置 → 通用 → 设备管理」安装仅限定 <code>com.apple.bluetooth</code> 子系统的内置 <code>.mobileconfig</code> 后，才会在内存中恢复已明确绑定 G9N9N 的丢弃按键（随时可移除或关闭）。</li>
+          <li><strong>默认不读取系统私有调试日志，无效时自动暂停</strong>：针对 <code>0x011B</code>、<code>26.7</code> 等被 macOS <code>BTLEServer</code> 丢弃短报文的批次，应用默认完全关闭日志读取；仅当用户主动开启开关、设备完成 HID 指纹绑定且安装了仅限定 <code>com.apple.bluetooth</code> 子系统的内置 <code>.mobileconfig</code> 后才会尝试在内存中恢复；一旦检测到 <code>&lt;private&gt;</code> 脱敏或描述文件未安装，日志读取会立即暂停，直到安装确认并点击「重新检测」。</li>
           <li><strong>更多资料</strong>：查看其他支持的遥控器对比请访问 <a class="text-link" href="device.html">支持设备页面 →</a>；如需查阅详细字节级真机测试记录，可参考仓库内的 <a class="text-link" href="https://github.com/zfdang/remote-buddy/blob/main/docs/g9n9n-hardware-debugging.md">G9N9N 真机测试记录（GitHub）↗</a>、<a class="text-link" href="https://github.com/zfdang/remote-buddy/issues/256">社区反馈 #256（0x0110 / FW 26.0）↗</a> 与 <a class="text-link" href="https://github.com/brightac/remote-buddy/issues/7">社区报告 #7（0x011B）↗</a>。</li>
         </ul>
       </article>

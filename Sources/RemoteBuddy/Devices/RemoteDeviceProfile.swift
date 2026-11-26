@@ -134,6 +134,19 @@ struct RemoteDeviceProfile: Codable, Equatable, Identifiable {
         model.isChromecastRemote ? (g9n9nVoiceButtonMode ?? .smartToggle) : .holdToTalk
     }
 
+    enum CodingKeys: String, CodingKey {
+        case id
+        case model
+        case customName
+        case bluetoothIdentifier
+        case hidFingerprint
+        case gainDB
+        case compatibleHIDBinding
+        case g9n9nInputMode
+        case g9n9nVoiceButtonMode
+        case mappings
+    }
+
     init(
         id: UUID = UUID(),
         model: RemoteModel = .unknown,
@@ -156,5 +169,28 @@ struct RemoteDeviceProfile: Codable, Equatable, Identifiable {
         self.g9n9nInputMode = g9n9nInputMode
         self.g9n9nVoiceButtonMode = g9n9nVoiceButtonMode
         self.mappings = mappings
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(UUID.self, forKey: .id)
+        self.model = try container.decode(RemoteModel.self, forKey: .model)
+        self.customName = try container.decode(String.self, forKey: .customName)
+        self.bluetoothIdentifier = try container.decodeIfPresent(UUID.self, forKey: .bluetoothIdentifier)
+        self.hidFingerprint = try container.decodeIfPresent(String.self, forKey: .hidFingerprint)
+        self.gainDB = try container.decodeIfPresent(Double.self, forKey: .gainDB)
+        self.compatibleHIDBinding = try container.decodeIfPresent(RemoteHIDBinding.self, forKey: .compatibleHIDBinding)
+        // Tolerate retired input modes (e.g. legacy "two_key_compatibility") per-profile
+        // instead of failing decoding of the entire remoteDeviceProfiles array.
+        if let rawMode = try container.decodeIfPresent(String.self, forKey: .g9n9nInputMode) {
+            self.g9n9nInputMode = G9N9NInputMode(rawValue: rawMode)
+        } else {
+            self.g9n9nInputMode = nil
+        }
+        self.g9n9nVoiceButtonMode = try container.decodeIfPresent(
+            G9N9NVoiceButtonMode.self,
+            forKey: .g9n9nVoiceButtonMode
+        )
+        self.mappings = try container.decode(RemoteDeviceMappings.self, forKey: .mappings)
     }
 }

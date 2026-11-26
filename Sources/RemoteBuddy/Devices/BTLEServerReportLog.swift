@@ -46,8 +46,16 @@ enum BTLEServerReportLog {
         "AND eventMessage CONTAINS \"BTLEServer\")"
 
     /// Maximum gap between bluetoothd's dispatch line and BTLEServer's report line.
-    /// Observed gaps reach ~46 ms, so leave comfortable headroom.
-    static let attributionWindow: TimeInterval = 0.2
+    /// Observed gaps reach ~46 ms; keep a tight 100 ms correlation window to reduce
+    /// cross-device overlap risk.
+    static let attributionWindow: TimeInterval = 0.1
+
+    /// Returns true only for BLE report shapes emitted by G9N9N ordinary button reports
+    /// (Report ID 1 with 1-2 byte payload, or Report ID 2 with 2-byte consumer payload).
+    static func isValidG9N9NShortReport(_ report: Report) -> Bool {
+        (report.reportID == 1 && (1...2).contains(report.data.count)) ||
+            (report.reportID == 2 && report.data.count == 2)
+    }
 
     private static let indicationPattern = try! NSRegularExpression(
         pattern: #"^Dispatching GATT (?:indication|notification) for device "([0-9A-Fa-f-]{36})" to session "#
@@ -141,11 +149,21 @@ enum BTLEServerReportLog {
         private var heldByPeripheral: [UUID: HeldState] = [:]
         private var lastActivityByPeripheral: [UUID: TimeInterval] = [:]
 
-        private mutating func pruneExpired(before timestamp: TimeInterval) {
+        private mutating func pruneExpired(before timestamp: TimeInterval, peripherals: Set<UUID>) {
             pendingIndications.removeAll { timestamp - $0.timestamp > BTLEServerReportLog.attributionWindow }
             lastActivityByPeripheral = lastActivityByPeripheral.filter {
                 abs(timestamp - $0.value) <= BTLEServerReportLog.attributionWindow
             }
+            heldByPeripheral = heldByPeripheral.filter { peripheral, held in
+                peripherals.contains(peripheral) &&
+                    timestamp >= held.pressedAt &&
+                    timestamp - held.pressedAt <= Self.maxMissingDispatchReleaseWindow
+            }
+        }
+
+        mutating func prunePeripherals(keeping peripherals: Set<UUID>) {
+            heldByPeripheral = heldByPeripheral.filter { peripherals.contains($0.key) }
+            pendingIndications.removeAll { !peripherals.contains($0.peripheral) }
         }
 
         private func hasConcurrentActivity(fromOtherThan peripheral: UUID, around timestamp: TimeInterval) -> Bool {
@@ -163,7 +181,7 @@ enum BTLEServerReportLog {
         mutating func accept(_ line: Line, peripherals: Set<UUID>) -> AttributedEvent? {
             switch line {
             case let .indication(peripheral, timestamp):
-                pruneExpired(before: timestamp)
+                pruneExpired(before: timestamp, peripherals: peripherals)
                 for heldPeripheral in heldByPeripheral.keys where heldPeripheral != peripheral {
                     heldByPeripheral[heldPeripheral]?.taintedByOtherPeripheral = true
                 }
@@ -172,7 +190,7 @@ enum BTLEServerReportLog {
                 return nil
 
             case let .redactedReport(reportID, timestamp):
-                pruneExpired(before: timestamp)
+                pruneExpired(before: timestamp, peripherals: peripherals)
                 let valid = pendingIndications.filter {
                     let delta = timestamp - $0.timestamp
                     return delta >= -0.005 && delta <= BTLEServerReportLog.attributionWindow
@@ -203,10 +221,25 @@ enum BTLEServerReportLog {
                 return .redacted(RedactedObservation(peripheral: nil, reportID: reportID))
 
             case let .report(report, timestamp):
-                pruneExpired(before: timestamp)
+                pruneExpired(before: timestamp, peripherals: peripherals)
                 let valid = pendingIndications.filter {
                     let delta = timestamp - $0.timestamp
                     return delta >= -0.005 && delta <= BTLEServerReportLog.attributionWindow
+                }
+                guard BTLEServerReportLog.isValidG9N9NShortReport(report) else {
+                    if valid.count == 1, !peripherals.contains(valid[0].peripheral) {
+                        if let removeIndex = pendingIndications.firstIndex(where: {
+                            $0.peripheral == valid[0].peripheral && $0.timestamp == valid[0].timestamp
+                        }) {
+                            pendingIndications.remove(at: removeIndex)
+                        }
+                    } else {
+                        for heldPeripheral in heldByPeripheral.keys {
+                            heldByPeripheral[heldPeripheral]?.taintedByOtherPeripheral = true
+                        }
+                        pendingIndications.removeAll()
+                    }
+                    return nil
                 }
                 if !valid.isEmpty {
                     let distinct = Set(valid.map(\.peripheral))
@@ -269,6 +302,7 @@ enum BTLEServerReportLog {
 /// Streams attributed reports from `/usr/bin/log stream`. Callbacks arrive on the main queue.
 final class BTLEServerReportLogSource: @unchecked Sendable {
     private let targetPeripherals: OSAllocatedUnfairLock<Set<UUID>>
+    private let isActive = OSAllocatedUnfairLock<Bool>(initialState: false)
     private let onReport: @Sendable (BTLEServerReportLog.AttributedReport) -> Void
     private let onRedactedReport: @Sendable (BTLEServerReportLog.RedactedObservation) -> Void
     private let diagnosticLogger: @Sendable (String) -> Void
@@ -292,17 +326,22 @@ final class BTLEServerReportLogSource: @unchecked Sendable {
     }
 
     deinit {
+        isActive.withLock { $0 = false }
         process?.terminationHandler = nil
         process?.terminate()
     }
 
     func updatePeripherals(_ peripherals: Set<UUID>) {
         targetPeripherals.withLock { $0 = peripherals }
+        queue.async { [weak self] in
+            self?.attributor.prunePeripherals(keeping: peripherals)
+        }
     }
 
     func start() {
+        isActive.withLock { $0 = true }
         queue.async { [weak self] in
-            guard let self, self.stopped else { return }
+            guard let self, self.isActive.withLock({ $0 }), self.stopped else { return }
             self.stopped = false
             self.restartCount = 0
             self.launch()
@@ -310,12 +349,14 @@ final class BTLEServerReportLogSource: @unchecked Sendable {
     }
 
     func stop() {
+        isActive.withLock { $0 = false }
         queue.async { [weak self] in
             guard let self else { return }
             self.stopped = true
             self.process?.terminationHandler = nil
             self.process?.terminate()
             self.process = nil
+            self.attributor = BTLEServerReportLog.Attributor()
             self.buffer.removeAll()
         }
     }
@@ -364,8 +405,9 @@ final class BTLEServerReportLogSource: @unchecked Sendable {
     }
 
     private func consume(_ chunk: Data) {
+        guard isActive.withLock({ $0 }) else { return }
         buffer.append(chunk)
-        while let newline = buffer.firstIndex(of: 0x0A) {
+        while isActive.withLock({ $0 }), let newline = buffer.firstIndex(of: 0x0A) {
             let lineData = buffer[buffer.startIndex..<newline]
             buffer.removeSubrange(buffer.startIndex...newline)
             guard let line = String(data: lineData, encoding: .utf8),
@@ -373,12 +415,19 @@ final class BTLEServerReportLogSource: @unchecked Sendable {
             else { continue }
             let targets = targetPeripherals.withLock { $0 }
             guard let event = attributor.accept(parsed, peripherals: targets) else { continue }
+            guard isActive.withLock({ $0 }) else { return }
             switch event {
             case let .report(attributed):
                 restartCount = 0
-                DispatchQueue.main.async { [onReport] in onReport(attributed) }
+                DispatchQueue.main.async { [weak self, onReport] in
+                    guard let self, self.isActive.withLock({ $0 }) else { return }
+                    onReport(attributed)
+                }
             case let .redacted(observation):
-                DispatchQueue.main.async { [onRedactedReport] in onRedactedReport(observation) }
+                DispatchQueue.main.async { [weak self, onRedactedReport] in
+                    guard let self, self.isActive.withLock({ $0 }) else { return }
+                    onRedactedReport(observation)
+                }
             }
         }
     }

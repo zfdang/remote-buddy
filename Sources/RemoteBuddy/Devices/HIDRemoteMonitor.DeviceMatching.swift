@@ -245,9 +245,13 @@ extension HIDRemoteMonitor {
     }
 
     /// Feeds a report recovered from the BTLEServer log through the normal IOHID path,
-    /// attributed strictly to an unambiguous matching G9N9N HID device.
+    /// attributed strictly to a bound and unambiguous matching G9N9N HID device.
     func handleBTLEServerLogReport(reportID: UInt32, data: Data) {
         guard let manager else { return }
+        guard targetFingerprint != nil || deviceFingerprint != nil else {
+            diagnosticLogger("HID BTLE_LOG report_unrouted reason=unbound_monitor id=\(reportID)")
+            return
+        }
         let rawCandidates: [IOHIDDevice]
         if let activeDevice {
             rawCandidates = [activeDevice] + probedDevices

@@ -295,13 +295,12 @@ struct G9N9NCompatibilityModeTests {
             ) == [logBLE, nativeBLE]
         )
 
-        // Bound profile routes ONLY to its bound monitor, never falling back to discoveryHIDMonitor.
+        // Bound profile routes ONLY to its bound monitor; unbound profiles never fall back to discoveryHIDMonitor.
         #expect(
             BridgeAppModel.resolveBTLEServerLogDispatchTarget(
                 peripheral: logBLE,
                 profiles: [nativeProfile, logProfile],
                 boundMonitorFingerprints: ["fp-log"],
-                hasDiscoveryMonitor: true,
                 isOnboardingComplete: true,
                 onboardingControlSource: .chromecastRemote,
                 selectedProfileID: logID
@@ -312,7 +311,6 @@ struct G9N9NCompatibilityModeTests {
                 peripheral: logBLE,
                 profiles: [nativeProfile, logProfile],
                 boundMonitorFingerprints: [],
-                hasDiscoveryMonitor: true,
                 isOnboardingComplete: true,
                 onboardingControlSource: .chromecastRemote,
                 selectedProfileID: logID
@@ -323,14 +321,13 @@ struct G9N9NCompatibilityModeTests {
                 peripheral: nativeBLE,
                 profiles: [nativeProfile, logProfile],
                 boundMonitorFingerprints: ["fp-native"],
-                hasDiscoveryMonitor: true,
                 isOnboardingComplete: true,
                 onboardingControlSource: .chromecastRemote,
                 selectedProfileID: nativeID
             ) == .drop(reason: "native_full_mode")
         )
 
-        // Unbound profile with two unbound Chromecast remotes is ambiguous and must drop.
+        // Unbound profile (no hidFingerprint) is excluded from target peripherals and dropped instead of guessing discoveryHIDMonitor.
         let unboundA = RemoteDeviceProfile(
             id: logID,
             model: .chromecastVoiceRemote,
@@ -348,26 +345,32 @@ struct G9N9NCompatibilityModeTests {
             mappings: AppSettings.defaultMappings(for: .chromecastVoiceRemote)
         )
         #expect(
+            BridgeAppModel.btleLogRecoveryTargetPeripherals(
+                profiles: [unboundA],
+                isOnboardingComplete: false,
+                onboardingControlSource: .chromecastRemote,
+                selectedProfileID: logID
+            ).isEmpty
+        )
+        #expect(
             BridgeAppModel.resolveBTLEServerLogDispatchTarget(
                 peripheral: logBLE,
                 profiles: [unboundA, unboundB],
                 boundMonitorFingerprints: [],
-                hasDiscoveryMonitor: true,
                 isOnboardingComplete: false,
                 onboardingControlSource: .chromecastRemote,
                 selectedProfileID: logID
-            ) == .drop(reason: "ambiguous_unbound_profile")
+            ) == .drop(reason: "unbound_hid_profile")
         )
         #expect(
             BridgeAppModel.resolveBTLEServerLogDispatchTarget(
                 peripheral: logBLE,
                 profiles: [unboundA],
                 boundMonitorFingerprints: [],
-                hasDiscoveryMonitor: true,
                 isOnboardingComplete: false,
                 onboardingControlSource: .chromecastRemote,
                 selectedProfileID: logID
-            ) == .discoveryMonitor(profileID: logID)
+            ) == .drop(reason: "unbound_hid_profile")
         )
 
         // HIDRemoteMonitor candidate resolution: unambiguous vs multi-device ambiguity vs deduplicating same fingerprint.
@@ -497,39 +500,140 @@ struct G9N9NCompatibilityModeTests {
         #expect(settings.onboardingStep == .remote)
     }
 
-    @Test func bluetoothLogRecoveryToggleOffAndRestartPreserveModeWithoutLeakingLogSource() throws {
-        let suite = "g9n9n-btle-log-opt-in-" + UUID().uuidString
+    @Test func legacyTwoKeyProfileJSONUpgradesSingleFieldWithoutCorruptingMultiDeviceConfig() throws {
+        let suite = "g9n9n-legacy-upgrade-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let baselineProfiles: [RemoteDeviceProfile] = [
+            RemoteDeviceProfile(
+                model: .rc003,
+                customName: "Living Room Xiaomi",
+                bluetoothIdentifier: UUID(),
+                hidFingerprint: "fp-xiaomi",
+                mappings: {
+                    var m = AppSettings.defaultMappings(for: .rc003)
+                    m.buttonBindings[RemoteButton.ok.rawValue] = .commandReturn
+                    return m
+                }()
+            ),
+            RemoteDeviceProfile(
+                model: .chromecastVoiceRemote,
+                customName: "Legacy G9N9N",
+                bluetoothIdentifier: UUID(),
+                hidFingerprint: "fp-g9n9n",
+                g9n9nInputMode: .full,
+                mappings: {
+                    var m = AppSettings.defaultMappings(for: .chromecastVoiceRemote)
+                    m.buttonBindings[RemoteButton.youtube.rawValue] = .escape
+                    return m
+                }()
+            ),
+            RemoteDeviceProfile(
+                model: .appleSiriRemoteA2854,
+                customName: "Desk Siri",
+                bluetoothIdentifier: UUID(),
+                mappings: AppSettings.defaultMappings(for: .appleSiriRemoteA2854)
+            ),
+        ]
+        let encoded = try JSONEncoder().encode(baselineProfiles)
+        var jsonArray = try #require(try JSONSerialization.jsonObject(with: encoded) as? [[String: Any]])
+        jsonArray[1]["g9n9nInputMode"] = "two_key_compatibility"
+        let legacyData = try JSONSerialization.data(withJSONObject: jsonArray)
+        defaults.set(legacyData, forKey: "remoteDeviceProfiles")
+
+        let reloaded = AppSettings(defaults: defaults)
+        #expect(reloaded.corruptedSettingKeys.isEmpty)
+        #expect(defaults.data(forKey: "remoteDeviceProfiles.corrupt") == nil)
+        #expect(reloaded.remoteDeviceProfiles.count == 3)
+        #expect(reloaded.remoteDeviceProfiles[0].customName == "Living Room Xiaomi")
+        #expect(reloaded.action(for: .ok, profileID: reloaded.remoteDeviceProfiles[0].id) == .commandReturn)
+        #expect(reloaded.remoteDeviceProfiles[1].g9n9nInputMode == nil)
+        #expect(reloaded.remoteDeviceProfiles[1].effectiveG9N9NInputMode == .full)
+        #expect(reloaded.action(for: .youtube, profileID: reloaded.remoteDeviceProfiles[1].id) == .escape)
+        #expect(reloaded.remoteDeviceProfiles[2].customName == "Desk Siri")
+    }
+
+    @Test func bluetoothLogRecoveryLifecyclePausesOnRedactedAndRejectsStaleQueuedCallbacks() throws {
+        let suite = "g9n9n-btle-log-lifecycle-" + UUID().uuidString
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
 
         let settings = AppSettings(defaults: defaults)
         #expect(!settings.g9n9nBluetoothLogRecoveryEnabled)
 
+        settings.customMappingEnabled = true
         settings.onboardingPurpose = .initialSetup
-        let googleID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+        let googleBLE = UUID()
+        let googleID = settings.registerBluetoothRemote(identifier: googleBLE, model: .chromecastVoiceRemote)
+        settings.bindHIDFingerprint("fp-g9n9n-log", to: googleID)
         settings.completeOnboarding()
 
         // Cannot record `.bluetoothLogRecovery` while opt-in toggle is off.
         #expect(!settings.recordG9N9NBluetoothLogRecoveryIntegration(for: googleID))
         #expect(settings.g9n9nInputMode(for: googleID) == .full)
 
-        // Enabling persists and records `.bluetoothLogRecovery` when a log-recovered button arrives.
-        let model = BridgeAppModel(settings: settings, initialAudioDevices: [])
+        let model = BridgeAppModel(
+            settings: settings,
+            initialAudioDevices: [],
+            permissionSnapshotProvider: {
+                HIDPermissionSnapshot(inputMonitoringGranted: true, accessibilityGranted: true)
+            }
+        )
+        defer {
+            model.setG9N9NBluetoothLogRecoveryEnabled(false)
+            model.stop()
+        }
+        model.started = true
         model.setG9N9NBluetoothLogRecoveryEnabled(true)
         #expect(settings.g9n9nBluetoothLogRecoveryEnabled)
         #expect(settings.recordG9N9NBluetoothLogRecoveryIntegration(for: googleID))
         #expect(settings.g9n9nInputMode(for: googleID) == .bluetoothLogRecovery)
+        model.synchronizeBTLEServerLogSource()
+        #expect(model.btleServerReportLogSource != nil)
+        let activeGeneration = model.btleServerReportLogGeneration
 
-        // Observing redacted `<private>` after profile removal flips `btleServerLogRedactedObserved`.
-        model.handleRedactedBTLEServerReport(.init(peripheral: nil, reportID: 2))
+        // Redacted `<private>` report immediately pauses `btleServerReportLogSource` while keeping UI warning visible.
+        model.handleRedactedBTLEServerReport(
+            .init(peripheral: googleBLE, reportID: 2),
+            sourceGeneration: activeGeneration
+        )
         #expect(model.btleServerLogRedactedObserved)
-
-        // Toggling off clears active redacted state and stops log stream while keeping profile metadata across restart.
-        model.setG9N9NBluetoothLogRecoveryEnabled(false)
-        #expect(!settings.g9n9nBluetoothLogRecoveryEnabled)
-        #expect(!model.btleServerLogRedactedObserved)
+        #expect(model.btleServerReportLogSource == nil)
+        model.synchronizeBTLEServerLogSource()
         #expect(model.btleServerReportLogSource == nil)
 
+        // Recheck clears redacted state and allows source to start again; `.notInstalled` blocks startup.
+        model.recheckBluetoothLoggingProfile()
+        #expect(!model.btleServerLogRedactedObserved)
+        #expect(model.btleServerReportLogSource != nil)
+        let secondGeneration = model.btleServerReportLogGeneration
+        #expect(secondGeneration > activeGeneration)
+
+        model.bluetoothLoggingProfileStatus = .notInstalled
+        model.synchronizeBTLEServerLogSource()
+        #expect(model.btleServerReportLogSource == nil)
+
+        // Stale already-queued callbacks after toggle-off and rapid toggle off->on cannot run or mutate status.
+        model.bluetoothLoggingProfileStatus = .unknown
+        model.setG9N9NBluetoothLogRecoveryEnabled(false)
+        #expect(!settings.g9n9nBluetoothLogRecoveryEnabled)
+        #expect(model.btleServerReportLogSource == nil)
+        model.handleAttributedBTLEServerReport(
+            .init(peripheral: googleBLE, reportID: 2, data: Data([0x42, 0x00])),
+            sourceGeneration: secondGeneration
+        )
+        #expect(model.bluetoothLoggingProfileStatus == .unknown)
+
+        model.setG9N9NBluetoothLogRecoveryEnabled(true)
+        #expect(model.btleServerReportLogSource != nil)
+        model.handleAttributedBTLEServerReport(
+            .init(peripheral: googleBLE, reportID: 2, data: Data([0x42, 0x00])),
+            sourceGeneration: secondGeneration
+        )
+        #expect(model.bluetoothLoggingProfileStatus != .installed)
+
+        model.setG9N9NBluetoothLogRecoveryEnabled(false)
         let restarted = AppSettings(defaults: defaults)
         #expect(!restarted.g9n9nBluetoothLogRecoveryEnabled)
         #expect(restarted.g9n9nInputMode(for: googleID) == .bluetoothLogRecovery)

@@ -1337,7 +1337,7 @@
 "g9n9n.btle_log.status.installed" = "蓝牙日志描述文件已安装";
 "g9n9n.btle_log.status.not_installed" = "未检测到蓝牙日志描述文件";
 "g9n9n.btle_log.status.unknown" = "当前非管理员权限下无法确认系统级描述文件状态（如已安装，按遥控器按键即可自动验证）";
-"g9n9n.btle_log.redacted_warning" = "已检测到被系统拦截的遥控器报文，但内容仍被遮蔽为 <private>。请打开内置描述文件并在「系统设置 → 通用 → 设备管理」中安装确认后点击“重新检测”。";
+"g9n9n.btle_log.redacted_warning" = "已检测到被系统拦截的遥控器报文，但内容仍被遮蔽为 <private>，已自动暂停日志读取。请打开内置描述文件并在「系统设置 → 通用 → 设备管理」中安装确认后点击“重新检测”。";
 "g9n9n.btle_log.action.install_profile" = "安装描述文件";
 "g9n9n.btle_log.action.open_device_management" = "打开设备管理";
 "g9n9n.btle_log.action.recheck" = "重新检测";

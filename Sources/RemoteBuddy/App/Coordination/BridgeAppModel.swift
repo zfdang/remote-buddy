@@ -79,6 +79,7 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
     @Published var bluetoothLoggingProfileStatus: BluetoothLoggingProfileStatus = .unknown
     @Published var btleServerLogRedactedObserved = false
     var btleServerReportLogSource: BTLEServerReportLogSource?
+    var btleServerReportLogGeneration: UInt64 = 0
     var lastBTLEServerLogRedactedAt: TimeInterval = 0
     struct VoiceToolUnavailablePrompt: Equatable {
         enum Reason: Equatable {
@@ -471,9 +472,7 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
         voiceSession.end()
         releaseVoiceKeyIfNeeded()
         stopHIDMonitors()
-        btleServerReportLogSource?.stop()
-        btleServerReportLogSource = nil
-        btleServerLogRedactedObserved = false
+        stopBTLEServerLogSource(clearingRedactedObservation: true)
         isAudioOutputReady = false
         isAudioOutputVerified = false
         // Stop is serialized with configurations on the engine queue. Enumeration no

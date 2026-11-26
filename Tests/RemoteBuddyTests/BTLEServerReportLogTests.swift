@@ -166,6 +166,54 @@ struct BTLEServerReportLogTests {
         )
     }
 
+    @Test func expiredAndRemovedHeldRemotesAndNonG9N9NReportShapesAreCleanedAndRejected() {
+        var attributor = BTLEServerReportLog.Attributor()
+
+        // 1. Remote A holds without releasing; after 10s, Remote B presses and releases without dispatch.
+        //    Remote A's expired hold is pruned, so Remote B's release is still attributed accurately.
+        _ = attributor.accept(indication(remote, at: 1.00), peripherals: [remote, secondRemote])
+        #expect(
+            attributor.accept(report("2: {length = 2, bytes = 0x4200}", at: 1.01), peripherals: [remote, secondRemote])
+                == .report(.init(peripheral: remote, reportID: 2, data: Data([0x42, 0x00])))
+        )
+        _ = attributor.accept(indication(secondRemote, at: 12.00), peripherals: [remote, secondRemote])
+        #expect(
+            attributor.accept(report("2: {length = 2, bytes = 0x4300}", at: 12.01), peripherals: [remote, secondRemote])
+                == .report(.init(peripheral: secondRemote, reportID: 2, data: Data([0x43, 0x00])))
+        )
+        #expect(
+            attributor.accept(report("2: {length = 2, bytes = 0x0000}", at: 12.10), peripherals: [remote, secondRemote])
+                == .report(.init(peripheral: secondRemote, reportID: 2, data: Data([0x00, 0x00])))
+        )
+
+        // 2. Remote A holds and is removed from `peripherals`; Remote B can then release without dispatch.
+        _ = attributor.accept(indication(remote, at: 20.00), peripherals: [remote, secondRemote])
+        _ = attributor.accept(report("2: {length = 2, bytes = 0x4200}", at: 20.01), peripherals: [remote, secondRemote])
+        _ = attributor.accept(indication(secondRemote, at: 20.50), peripherals: [secondRemote])
+        #expect(
+            attributor.accept(report("2: {length = 2, bytes = 0x4300}", at: 20.51), peripherals: [secondRemote])
+                == .report(.init(peripheral: secondRemote, reportID: 2, data: Data([0x43, 0x00])))
+        )
+        #expect(
+            attributor.accept(report("2: {length = 2, bytes = 0x0000}", at: 20.60), peripherals: [secondRemote])
+                == .report(.init(peripheral: secondRemote, reportID: 2, data: Data([0x00, 0x00])))
+        )
+
+        // 3. Non-G9N9N report shape (e.g. 8-byte keyboard report with missing dispatch) is rejected
+        //    and invalidates any pending target indication window.
+        _ = attributor.accept(indication(remote, at: 30.00), peripherals: [remote])
+        #expect(
+            attributor.accept(
+                report("1: {length = 8, bytes = 0x0000040000000000}", at: 30.01),
+                peripherals: [remote]
+            ) == nil
+        )
+        #expect(
+            attributor.accept(report("1: {length = 1, bytes = 0x03}", at: 30.02), peripherals: [remote])
+                == nil
+        )
+    }
+
     @Test func staleIndicationAndSinglePressPerIndicationAreEnforced() {
         var attributor = BTLEServerReportLog.Attributor()
         _ = attributor.accept(indication(remote, at: 10.0), peripherals: [remote])

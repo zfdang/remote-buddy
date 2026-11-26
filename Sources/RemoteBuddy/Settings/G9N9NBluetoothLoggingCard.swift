@@ -53,7 +53,7 @@ struct G9N9NBluetoothLoggingSection: View {
                         .controlSize(.small)
 
                         Button(localization.text("g9n9n.btle_log.action.recheck")) {
-                            model.refreshBluetoothLoggingProfileStatus()
+                            model.recheckBluetoothLoggingProfile()
                         }
                         .compatibilityButtonStyle(.standard)
                         .controlSize(.small)

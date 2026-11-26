@@ -6,9 +6,10 @@
 
 | 批次标识 | 普通按键 Report 格式 | HID 描述符声明（不含 ID） | 固件实际发送（不含 ID） | macOS `BTLEServer` 行为 | 公开 `IOHID` 结果 | Remote Buddy 接入方式 |
 | --- | --- | --- | --- | --- | --- | --- |
-| **`0x0110` / 固件 `26.2`**（`PVT/MP`） | Report ID `1`（2 个 8-bit usage 索引） | 2 字节 | 2 字节（例如 `03 00`、`00 00`） | 校验通过并递交 | 全键按下与松开正常到达 | **原生完全支持（`Standard System HID`）**：语音 + 14 颗普通按键 |
-| **`DIS A0` / 固件 `26.7`**（以及表现一致的 `0x0110` / `26.0` `CR PVT/MP`） | Report ID `1`（2 个 8-bit usage 索引） | 2 字节 | 单键与松开仅发 **1 字节**（`03` / `00`）；同时按两键发 **2 字节**（`03 0B`） | 1 字节短报告在长度校验失败后被丢弃 | 单键与松开无法正常到达公开 `IOHID` | **蓝牙日志描述文件恢复（`.mobileconfig`）**：开启开关并安装描述文件后支持 14 颗普通按键 + 语音 |
-| **`HID 0x011B`**（社区实测批次） | Report ID `2`（16-bit 小端 consumer usage + 8-bit 按钮字段） | 3 字节 | 按下与松开仅发 **2 字节**（例如 `42 00`、`00 00`） | 所有普通按键均因长度不符被丢弃 | 普通按键零事件 | **蓝牙日志描述文件恢复（`.mobileconfig`）**：开启开关并安装描述文件后支持 14 颗普通按键 + 语音 |
+| **`0x0110` / 固件 `26.2`**（`PVT/MP`） | Report ID `1`（2 个 8-bit usage 索引） | 2 字节 | 2 字节（例如 `03 00`、`00 00`） | 校验通过并递交 | 全键按下与松开正常到达 | **已验证 · 原生完全支持（`Standard System HID`）**：语音 + 14 颗普通按键 |
+| **`DIS A0` / 固件 `26.7`**（已抓包） | Report ID `1`（2 个 8-bit usage 索引） | 2 字节 | 单键与松开仅发 **1 字节**（`03` / `00`）；同时按两键发 **2 字节**（`03 0B`） | 1 字节短报告在长度校验失败后被丢弃 | 单键与松开无法正常到达公开 `IOHID` | **待真机验收 · 蓝牙日志描述文件恢复（`.mobileconfig`）** |
+| **`0x0110` / 固件 `26.0`**（`CR PVT/MP`） | 声明 Report ID `1` 尺寸，**原始 BLE 报文待抓包确认** | 2 字节 | **待抓包确认** | 公开 `IOHID` 单键无响应 | 单键与松开无法正常到达公开 `IOHID` | **待抓包与真机验收**（解析兼容性需抓包后再确认） |
+| **`HID 0x011B`**（社区实测批次） | Report ID `2`（16-bit 小端 consumer usage + 8-bit 按钮字段） | 3 字节 | 按下与松开仅发 **2 字节**（例如 `42 00`、`00 00`） | 所有普通按键均因长度不符被丢弃 | 普通按键零事件 | **待真机验收 · 蓝牙日志描述文件恢复（`.mobileconfig`）** |
 
 ### 为什么 `BTLEServer` 会丢弃这些报告？
 
@@ -89,28 +90,28 @@ Updated input report for ID #2: <private>
 
 在 macOS 上，`log config --status` 需要 root 权限，而 `/usr/bin/profiles list -output stdout-xml` **无需 root 即可读取已安装的描述文件清单**。Remote Buddy 通过以下双信号判断描述文件状态：
 
-1. **静态清单解析**（`BluetoothLoggingProfileService`）：解析 `profiles list -output stdout-xml` 输出的 XML plist，检查是否存在 `PayloadType == "com.apple.system.logging"` 且对 `com.apple.bluetooth`（或全局 `System`）启用了 `Enable-Private-Data = true` 的条目。若系统级范围（`_computerlevel`）出现在输出中且未命中，返回 `.notInstalled`；若非 root 查询输出中不包含 `_computerlevel` 作用域（常见于以系统范围安装描述文件后），则保留为 `.unknown`，由实时按键/脱敏信号进一步确认。
-2. **实时脱敏探测**（`BTLEServerReportLog`）：当日志流中收到 `Updated input report for ID #...: <private>` 时，标记 `btleServerLogRedactedObserved = true`，向 UI 明确反馈「系统正在丢弃报文且私有数据仍处于遮蔽状态，请确认描述文件已安装生效」。
+1. **静态清单解析**（`BluetoothLoggingProfileService`）：解析 `profiles list -output stdout-xml` 输出的 XML plist，检查是否存在 `PayloadType == "com.apple.system.logging"` 且对 `com.apple.bluetooth`（或全局 `System`）启用了 `Enable-Private-Data = true` 的条目。若系统级范围（`_computerlevel`）出现在输出中且未命中，返回 `.notInstalled` 并阻止持续读取日志；若非 root 查询输出中不包含 `_computerlevel` 作用域（常见于以系统范围安装描述文件后），则保留为 `.unknown`，等待用户点击「重新检测」或进一步按键/脱敏信号验证。
+2. **实时脱敏探测与立即暂停**（`BTLEServerReportLog` + `BridgeAppModel`）：当日志流中收到 `Updated input report for ID #...: <private>` 时，标记 `btleServerLogRedactedObserved = true` 并**立即停止 `/usr/bin/log stream` 子进程**（不再在无有效描述文件时后台空转），同时刷新描述文件状态并提示用户安装后点击「重新检测」恢复读取。
 
 ---
 
 ## 3. 产品边界与安全原则
 
-1. **默认关闭、显式开启（Strict Opt-In）**：
+1. **默认关闭、显式开启与无效即停（Strict Opt-In & Fail-Closed Lifecycle）**：
    - `AppSettings.g9n9nBluetoothLogRecoveryEnabled` 默认为 `false`。
-   - 只要用户未主动打开此增强开关，Remote Buddy **绝不**启动 `/usr/bin/log stream` 子进程，零后台额外开销，也完全不读取系统蓝牙日志。
-2. **统一二元模式模型（无部分支持模式）**：
+   - 只要开关关闭、无已完成 `hidFingerprint` 绑定的非原生 G9N9N 目标、检测到 `.notInstalled`、或观测到 `<private>` 脱敏报告，Remote Buddy 均会立即停止 `/usr/bin/log stream` 子进程；并同步通过 `isActive` 锁与代数校验（`btleServerReportLogGeneration`）丢弃停用瞬间已进入主队列的陈旧回调。
+2. **统一二元模式模型与退役影响**：
    - G9N9N 仅保留两种支持模式：**原生完全支持（`.full`）** 与 **蓝牙日志描述文件支持（`.bluetoothLogRecovery`）**。
-   - 若设备普通按键可通过公开 `IOHID` 完整识别，则始终走原生通道（并禁止 `btle_log` 对其重复触发）；否则统一通过主动开启蓝牙日志恢复 + 安装 `.mobileconfig` 接入，不再维护「仅双键兼容 / 部分支持」中间模式。
+   - 若设备普通按键可通过公开 `IOHID` 完整识别，则始终走原生通道（并禁止 `btle_log` 对其重复触发）；原 `26.7 / 26.0` 「部分支持（方向键 + OK 发 Enter）」已退役——未安装 `.mobileconfig` 时非原生批次仅保留 ATVV 语音且无法通过单键向导验证；老配置中的 `"two_key_compatibility"` 在解码时单字段安全降回默认 `.full`，绝不导致整组 `remoteDeviceProfiles` 解码失败。
 3. **无静默安装、无提权、不篡改证书信任**：
    - Remote Buddy 只负责把内置 `.mobileconfig` 复制到临时路径并通过 `NSWorkspace.shared.open` 交给 macOS 系统队列，以及引导跳转「设备管理」设置页。
    - 描述文件不进行自签名信任注入；用户可在安装前审查明文 XML 内容并自主确认。
-4. **严格的外设隔离、设备绑定校验与无原始字节诊断日志**：
-   - 仅将日志源订阅及路由限定在 `.bluetoothLogRecovery` 设备或配对探测阶段的当前选中 G9N9N，已确认为原生 `.full` 的设备不会走日志恢复分支；
-   - 其他蓝牙外设或跨设备时序交错产生的模糊归属报文、缺少唯一 `IOHIDDevice` 绑定确认的候选报文均直接丢弃；
+4. **严格的外设隔离、物理绑定校验与无原始字节诊断日志**：
+   - 仅将日志源订阅及路由限定在已完成 `bluetoothIdentifier + hidFingerprint` 绑定的 `.bluetoothLogRecovery` 设备（或配对向导中已完成 HID 绑定的当前选中 G9N9N）；**绝不**将日志报文路由到未绑定的 `discoveryHIDMonitor`，已确认为原生 `.full` 的设备也绝不会走日志恢复分支；
+   - `Attributor` 将窗口收紧至 `100 ms` 并校验 G9N9N 合法短报文形状（ID 1 的 1–2B、ID 2 的 2B）；多外设交错活动、超 10 秒过期/已移除设备的遗留持键、`hidFingerprint` 或对应 `hidMonitors[fingerprint]` 缺失均直接清理并丢弃事件；
    - `btle_log` 路径在任何诊断日志中均不输出原始 payload 十六进制字节，也不持久化、不上传。
 5. **外部依赖风险声明**：
-   - 该机制依赖 macOS `bluetoothd` 与 `BTLEServer` 的内部日志格式。若未来 macOS 大版本修改了日志文案，日志恢复通道会静默停止转发，不会崩溃，也不会影响常规 `IOHID` 设备与 ATVV 语音功能。
+   - 该机制依赖 macOS `bluetoothd` 与 `BTLEServer` 的内部日志格式，以及 `bluetoothd` 派发与 `BTLEServer` 报告在 100 ms 窗口内的成对日志顺序。若未来 macOS 大版本修改日志文案或其它 BLE 外设彻底缺失派发行，日志恢复可能漏报或无法确认归属（遵循 fail-closed 原则丢弃），但不会崩溃，也不会影响常规 `IOHID` 设备与 ATVV 语音功能。
 
 ---
 
@@ -121,24 +122,24 @@ Updated input report for ID #2: <private>
                     │
                     ▼
     BluetoothLoggingProfileService
-    (非 root 解析 profiles list XML + 打开描述文件/设备管理页)
+    (非 root 解析 profiles list XML；缺少 _computerlevel 返回 .unknown)
                     │
                     ▼
-    BridgeAppModel (持有唯一共享 BTLEServerReportLogSource 实例)
-      ├─ OSAllocatedUnfairLock<Set<UUID>> 保存目标 G9N9N bluetoothIdentifier
-      ├─ 仅当 started && g9n9nBluetoothLogRecoveryEnabled && 权限就绪
-      │  && 非休眠 && 存在 G9N9N 设备或处于 G9N9N 向导时运行
+    BridgeAppModel (持有唯一共享 BTLEServerReportLogSource + generation 校验)
+      ├─ OSAllocatedUnfairLock<Set<UUID>> 仅保存已绑定 hidFingerprint 的非原生 G9N9N
+      ├─ 仅当 started && g9n9nBluetoothLogRecoveryEnabled && 权限就绪 && 非休眠
+      │  && profile != .notInstalled && !redactedObserved && !targets.isEmpty 时运行
       ├─ /usr/bin/log stream --style ndjson --level debug
-      │     ├─ <private> 脱敏行 ──▶ 更新 btleServerLogRedactedObserved 提示安装
+      │     ├─ <private> 脱敏行 ──▶ 标记 redacted 并立即停止 log stream（等待重新检测）
       │     └─ Attributor 归属成功 ─▶ AttributedReport(peripheral, reportID, data)
-      └─ 按 peripheral UUID → profileID → hidFingerprint 精确路由
+      └─ 校验 generation 与开关有效 → bluetoothIdentifier + hidFingerprint → 对应已绑定 HIDRemoteMonitor
                     │
                     ▼
-    HIDRemoteMonitor (对应已绑定 monitor 或 discoveryHIDMonitor)
+    HIDRemoteMonitor (仅限 targetFingerprint / deviceFingerprint 已确认的监控器)
       ├─ origin = .btleServerLog (vs .iohid)
       ├─ G9N9NProtocol.usages(..., payloadOnly: origin == .btleServerLog)
-      │     ├─ Report ID 1 (1B/2B payload): 覆盖 26.2、26.7、26.0
-      │     └─ Report ID 2 (2B consumer usage): 覆盖 0x011B
+      │     ├─ Report ID 1 (1B/2B payload): 覆盖 26.2、26.7（26.0 待抓包核实）
+      │     └─ Report ID 2 (2B consumer usage): 覆盖 0x011B（待真机逐键验收）
       ├─ 跨来源归一化去重 (150ms 窗口内比较 reportID + 解码后的 usages 集合)
       └─ 按 usage 跟踪 btleLogActiveUsages → 禁用原生直通 + 跳过事件抑制
 ```
@@ -149,7 +150,7 @@ Updated input report for ID #2: <private>
 - 仅连接 1 只 G9N9N 就会同时拉起 **2 个** `/usr/bin/log stream` 子进程；
 - 在多只 G9N9N 遥控器并存时无法根据 `peripheral UUID` 精准分流。
 
-因此由 `BridgeAppModel` 集中维护唯一共享的 `BTLEServerReportLogSource`，再根据 `AttributedReport.peripheral` 反查 `RemoteDeviceProfile.bluetoothIdentifier` 与 `hidFingerprint`，精准投递到对应 `HIDRemoteMonitor`（未完成指纹绑定的设备则投递到 `discoveryHIDMonitor`）。
+因此由 `BridgeAppModel` 集中维护唯一共享的 `BTLEServerReportLogSource`，且仅在设备通过 `learnSelectedRemoteHIDIdentity` 等流程完成 `bluetoothIdentifier` 与 `hidFingerprint` 绑定后，才将其纳入日志监听并将 `AttributedReport` 精确投递至对应的已绑定 `HIDRemoteMonitor`；未完成物理绑定的设备与缺失绑定监听器的事件一律丢弃。
 
 ---
 
@@ -174,9 +175,9 @@ Updated input report for ID #2: <private>
 
 `BTLEServerReportLog.Attributor` 维护 `pendingIndications`、`heldByPeripheral`（含 `pressedAt` 与污染标记）与 `lastActivityByPeripheral`：
 
-1. **可验证归属窗口匹配**：收到 `bluetoothd` 的 `Dispatching GATT (indication|notification) for device "<UUID>" to session "...BTLEServer..."` 后，在 `[-5 ms, +200 ms]` 窗口内匹配紧随其后的 `BTLEServer` report 行。若同一窗口内出现来自不同外设的交错派发活动，则判定归属不明确并直接丢弃。
-2. **无独立 dispatch 的松开恢复**：当全 `0x00` 松开报文缺少 dispatch 行时，仅当同时满足「当前仅唯一一台目标 G9N9N 处于按住状态」「自其按下以来未收到任何其他外设的派发指示（未受污染）」「report ID 与 `1...held.maxLength` 长度一致且在 10 秒按住窗口内」时才允许归属，否则安全丢弃（交给 `missing_release` 超时机制收口）。
-3. **精确设备绑定派发与原生 `.full` 设备隔离**：`BridgeAppModel` 不将已绑定设备回退到 `discoveryHIDMonitor`，未绑定发现态也要求存在唯一 G9N9N 候选；同时 `BridgeAppModel` 与 `HIDRemoteMonitor` 两层均拦截已确认为原生 `.full` 的设备，即使日志副本先于 `IOHID` 到达也绝不重复按键。
+1. **可验证归属窗口匹配**：收到 `bluetoothd` 的 `Dispatching GATT (indication|notification) for device "<UUID>" to session "...BTLEServer..."` 后，先校验报告符合 G9N9N 合法短报文格式（Report ID 1 为 1–2B 或 Report ID 2 为 2B），再在 `[-5 ms, +100 ms]` 窗口内匹配紧随其后的 `BTLEServer` report 行。若同一窗口内出现来自不同外设的交错派发活动，或遇到无法归属的非 G9N9N 长度报文，则判定归属不明确、污染当前持键窗口并直接丢弃。
+2. **无独立 dispatch 的松开恢复**：当全 `0x00` 松开报文缺少 dispatch 行时，先清理已超过 `10s` 上限或已不在目标列表中的过期按住记录，再仅当同时满足「当前仅唯一一台目标 G9N9N 处于按住状态」「自其按下以来未收到任何其他外设的派发指示或未归属报文（未受污染）」「report ID 与 `1...held.maxLength` 长度一致且在 10 秒按住窗口内」时才允许归属，否则安全丢弃（交给 `missing_release` 超时机制收口）。
+3. **精确设备绑定派发与原生 `.full` 设备隔离**：`BridgeAppModel` 与 `HIDRemoteMonitor` 仅接收已完成 `bluetoothIdentifier + hidFingerprint` 绑定且对应 `hidMonitors[fingerprint]` 已就绪的设备；未完成 HID 绑定的发现阶段或缺失绑定监听器一律丢弃，且两层均拦截已确认为原生 `.full` 的设备，即使日志副本先于 `IOHID` 到达也绝不重复按键。
 
 ### 5.3 跨来源归一化去重
 

@@ -1335,7 +1335,7 @@
 "g9n9n.btle_log.status.installed" = "Bluetooth logging profile installed";
 "g9n9n.btle_log.status.not_installed" = "Bluetooth logging profile not detected";
 "g9n9n.btle_log.status.unknown" = "System profile status cannot be confirmed without admin scope (press a remote button after installing to verify)";
-"g9n9n.btle_log.redacted_warning" = "Intercepted remote reports were seen, but payloads are still redacted as <private>. Open the bundled profile, install it in System Settings → General → Device Management, then click Recheck.";
+"g9n9n.btle_log.redacted_warning" = "Intercepted remote reports were seen, but payloads are still redacted as <private>, so log reading has paused. Open the bundled profile, install it in System Settings → General → Device Management, then click Recheck.";
 "g9n9n.btle_log.action.install_profile" = "Install Profile";
 "g9n9n.btle_log.action.open_device_management" = "Device Management";
 "g9n9n.btle_log.action.recheck" = "Recheck";

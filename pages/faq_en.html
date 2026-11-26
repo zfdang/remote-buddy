@@ -128,6 +128,33 @@
     </details>
 
     <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">What actions can I assign in Button Mapping, and what are some practical examples?</span></summary>
+      <div class="troubleshooting-body">
+        <p>Once custom mapping is enabled on the <strong>Buttons</strong> tab, you can independently customize <strong>Single Press</strong>, <strong>Double Press</strong>, and <strong>Long Press</strong> gestures for every physical key (except the dedicated Voice button). Each remote saves its own configuration independently.</p>
+        <p><strong>Available action categories:</strong></p>
+        <ul>
+          <li><strong>Basic Keys:</strong> Frequent editing and navigation shortcuts such as Return, Send (<code>⌘↩</code>), Shift+Return, Copy/Paste, Undo, cursor arrows, and scrolling.</li>
+          <li><strong>System &amp; Media:</strong> App Switcher (<code>⌘Tab</code>), Mission Control, Spotlight, Play/Pause, Next/Previous Track, system volume and display brightness controls, or disabling unused keys.</li>
+          <li><strong>Open an App:</strong> Pick built-in preset apps (Chrome, WeChat, Cursor, ChatGPT, Claude, Terminal, etc.) or select <strong>Open Custom App</strong> to pick any app installed on your Mac—with optional auto-focus via an app shortcut or saved Accessibility input field.</li>
+          <li><strong>Common Phrases:</strong> Open the floating phrase panel to paste frequent snippets, prompts, or commands in one click.</li>
+          <li><strong>Custom Actions:</strong>
+            <ul>
+              <li><strong>Custom Shortcut:</strong> Record any custom keystroke or multi-modifier keyboard shortcut used by your editor or workflow.</li>
+              <li><strong>Open URL / URL Scheme:</strong> Enter any web link (<code>https://...</code>) or app URL scheme such as Apple Shortcuts (<code>shortcuts://run-shortcut?name=MyShortcut</code>) to launch websites or trigger multi-step workflows safely.</li>
+            </ul>
+          </li>
+          <li><strong>Direct Passthrough (directional keys):</strong> Acts like a physical arrow key with zero gesture delay, ideal for holding Right Arrow to fast-forward video playback or continuous cursor movement.</li>
+        </ul>
+        <p><strong>Common setup examples:</strong></p>
+        <ol>
+          <li><strong>Launch a favorite app with one button:</strong> Map the <code>YouTube</code> or <code>NETFLIX</code> key's single press to <strong>Open an App</strong> (or <strong>Open Custom App</strong> for <code>Cursor</code> or <code>WeChat</code>) so one tap brings it forward ready for voice input.</li>
+          <li><strong>Open a web app or run an Apple Shortcut combo:</strong> Assign a spare key or double press to <strong>Open URL / URL Scheme</strong>—use <code>https://chatgpt.com</code> to jump straight to a site, or <code>shortcuts://run-shortcut?name=WorkMode</code> to execute a multi-step Apple Shortcut workflow.</li>
+          <li><strong>Layer custom shortcuts onto Long Press:</strong> Keep single press intuitive (like OK = Return, Long Press = Send), and map another key's long press to a <strong>Custom Shortcut</strong> such as <code>⇧⌘P</code> or <code>⌘Space</code> to double your shortcuts without cluttering single taps.</li>
+        </ol>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
       <summary><span class="troubleshooting-question">What is "Direct Passthrough" and when should I use it?</span></summary>
       <div class="troubleshooting-body">
         <p><strong>Background:</strong> Regular buttons in Remote Buddy support Single Tap, Double Tap, and Long Press gestures. To differentiate a single tap from a double tap, the software must wait a brief arbitration window before emitting keystrokes; furthermore, default long-press behaviors enter rapid-fire repeating single clicks every 100ms after a 350ms hold delay (software rapid-fire).</p>

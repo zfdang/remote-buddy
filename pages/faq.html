@@ -128,6 +128,33 @@
     </details>
 
     <details class="troubleshooting-card">
+      <summary><span class="troubleshooting-question">“按键映射”里每个按键都可以设置哪些动作？有什么常见的设置例子？</span></summary>
+      <div class="troubleshooting-body">
+        <p>在「按键映射」页面开启自定义开关后，除语音键外，每颗实体按键的<strong>单击、双击、长按</strong>都可以分别设置不同动作，并且每台遥控器的配置互不干扰、独立保存。</p>
+        <p><strong>目前可为每个键位设置的动作分为以下几类：</strong></p>
+        <ul>
+          <li><strong>基础按键：</strong>如回车、发送（<code>⌘↩</code>）、换行、复制/粘贴、撤销、上下左右光标与页面滚动等高频编辑操作。</li>
+          <li><strong>系统与媒体：</strong>切换应用（<code>⌘Tab</code>）、调度中心、聚焦搜索、播放/暂停、切歌、音量与亮度调节，以及关闭干扰按键等。</li>
+          <li><strong>打开具体 APP：</strong>不仅包含常用预设应用（如 Chrome、微信、Cursor、ChatGPT、Claude、终端等），还可以选<strong>「打开自定义 APP」</strong>添加 Mac 上的任意程序，并可选配置“打开后自动发送快捷键或定位焦点输入框”。</li>
+          <li><strong>常用语：</strong>将某个键设为唤起常用语浮动面板，快速插入邮箱、地址或长提示词。</li>
+          <li><strong>自定义动作：</strong>
+            <ul>
+              <li><strong>自定义快捷键：</strong>录制 Mac 上的任意单个按键或组合键（例如编辑器命令、录屏、全局触发键）。</li>
+              <li><strong>打开网址 / URL Scheme：</strong>填写网页链接（如 <code>https://...</code>）或应用协议（如苹果原生<strong>「快捷指令」</strong>的 <code>shortcuts://run-shortcut?name=名称</code>），一键打开页面或执行多步快捷指令组合动作。</li>
+            </ul>
+          </li>
+          <li><strong>原样透传（方向键可选）：</strong>作为纯方向键直接按下/抬起，0 延迟响应，适合视频播放器长按倍速或光标持续移动。</li>
+        </ul>
+        <p><strong>常见设置示例：</strong></p>
+        <ol>
+          <li><strong>单键秒开常用程序并直接开聊：</strong>把遥控器上的 <code>YouTube</code> 或 <code>Netflix</code> 键单击设为<strong>「打开具体 APP」</strong>（或「打开自定义 APP」选择 <code>Cursor</code> / <code>微信</code>），点一下切过去就能直接按语音键说话。</li>
+          <li><strong>单键打开网页或联动「快捷指令」做组合动作：</strong>把空闲键（例如 <code>信源键</code> 或 <code>返回键</code> 双击）设为<strong>「打开网址 / URL Scheme」</strong>——填入 <code>https://chatgpt.com</code> 即可一键打开网页版；或填入 <code>shortcuts://run-shortcut?name=工作模式</code>，按一下就能运行你编排好的多步「快捷指令」组合动作。</li>
+          <li><strong>用“长按”扩展自定义快捷键：</strong>例如保留 <code>确定键</code> 单击为回车、长按为发送；再把 <code>静音键</code> 长按设为<strong>「自定义快捷键」</strong>（如 <code>⌘Space</code> 或编辑器命令面板 <code>⇧⌘P</code>），让一颗按键同时承担多种高频操作。</li>
+        </ol>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card">
       <summary><span class="troubleshooting-question">按键的“直通模式（Direct Passthrough）”是什么意思？用在什么场景下？</span></summary>
       <div class="troubleshooting-body">
         <p><strong>诞生背景：</strong>Remote Buddy 默认的普通按键支持“单击、双击、长按”三种手势。为了区分单击和双击，系统在用户按下按键后必须等待数十毫秒的手势判定窗口；且默认的长按手势是在持续按住 350ms 启动延迟后，以 100ms 为周期自动连发单击（软件连发）。</p>

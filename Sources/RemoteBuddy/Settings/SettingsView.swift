@@ -32,6 +32,7 @@ struct SettingsView: View {
     @State var shortcutCaptureTarget: ShortcutEditingTarget?
     @State var applicationShortcutCaptureProfileID: UUID?
     @State var shortcutCaptureFeedback: ShortcutCaptureFeedback?
+    @State var openURLTestFeedback: OpenURLTestFeedback?
     @State var customApplicationLearningStates: [UUID: CustomApplicationLearningState] = [:]
     @State var bluetoothAuthorization: CBManagerAuthorization
     @State var inputMonitoringGranted: Bool

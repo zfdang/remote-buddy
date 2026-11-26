@@ -4,6 +4,13 @@ import CoreBluetooth
 import SwiftUI
 import UniformTypeIdentifiers
 
+struct OpenURLTestFeedback: Equatable {
+    let button: RemoteButton
+    let trigger: ButtonTrigger
+    let urlString: String
+    let succeeded: Bool
+}
+
 extension SettingsView {
     func mappingTriggerEditor(
         _ button: RemoteButton,
@@ -346,6 +353,14 @@ extension SettingsView {
                     .font(.system(size: 12))
                     .foregroundStyle(.red)
                     .fixedSize(horizontal: false, vertical: true)
+            } else if openURLTestFeedback?.button == button,
+                      openURLTestFeedback?.trigger == trigger,
+                      openURLTestFeedback?.urlString == rawInput,
+                      openURLTestFeedback?.succeeded == false {
+                Label(localization.text("open_url.test_failed"), systemImage: "exclamationmark.triangle.fill")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
             } else {
                 Text(localization.text("open_url.help"))
                     .font(.system(size: 12))
@@ -355,6 +370,7 @@ extension SettingsView {
 
             HStack(spacing: 8) {
                 Button(localization.text("open_url.shortcuts_template")) {
+                    openURLTestFeedback = nil
                     setMappingURLString("shortcuts://run-shortcut?name=", for: button, trigger: trigger)
                 }
                 .compatibilityButtonStyle(.standard)
@@ -362,13 +378,20 @@ extension SettingsView {
                 Spacer()
 
                 Button(localization.text("common.action.clear")) {
+                    openURLTestFeedback = nil
                     setMappingURLString(nil, for: button, trigger: trigger)
                 }
                 .compatibilityButtonStyle(.standard)
                 .disabled(trimmed == nil)
 
                 Button(localization.text("open_url.test")) {
-                    _ = KeyboardInjector.send(.openURL, urlString: configured.urlString)
+                    let succeeded = KeyboardInjector.send(.openURL, urlString: configured.urlString)
+                    openURLTestFeedback = OpenURLTestFeedback(
+                        button: button,
+                        trigger: trigger,
+                        urlString: rawInput,
+                        succeeded: succeeded
+                    )
                 }
                 .compatibilityButtonStyle(.prominent)
                 .disabled(validatedURL == nil)

@@ -226,6 +226,7 @@
 "open_url.shortcuts_template" = "Use Shortcuts Template";
 "open_url.not_configured" = "No URL set";
 "open_url.test" = "Test Open";
+"open_url.test_failed" = "macOS could not open this URL. Check the URL or scheme spelling and verify the target app is installed.";
 "action.toggle_long_recording" = "Toggle Continuous Recording";
 "action.open_remote_mic" = "Open Remote Buddy";
 "action.open_codex" = "Open Codex";

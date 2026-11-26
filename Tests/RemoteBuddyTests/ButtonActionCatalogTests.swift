@@ -152,12 +152,13 @@ struct ButtonActionCatalogTests {
         #expect(ButtonAction.openURL.requiresNonSecureInput == false)
 
         #expect(CustomActionURLPolicy.validatedURL(from: " https://remote.zfdang.com ")?.absoluteString == "https://remote.zfdang.com")
+        #expect(CustomActionURLPolicy.validatedURL(from: "shortcuts://")?.absoluteString == "shortcuts://")
         #expect(CustomActionURLPolicy.validatedURL(from: "shortcuts://run-shortcut?name=Morning Brief") != nil)
         #expect(CustomActionURLPolicy.validatedURL(from: "shortcuts://run-shortcut?name=早安工作流") != nil)
         #expect(CustomActionURLPolicy.summaryLabel(for: "https://remote.zfdang.com/docs") == "remote.zfdang.com")
         #expect(CustomActionURLPolicy.summaryLabel(for: "shortcuts://run-shortcut?name=早安") == "shortcuts: 早安")
 
-        for unsafeOrInvalid in [nil, "", "   ", "https://", "http://", "file:///etc/passwd", "javascript:alert(1)", "data:text/html,test", "not a url"] {
+        for unsafeOrInvalid in [nil, "", "   ", "https://", "http://", "shortcuts://run-shortcut?name=", "file:///etc/passwd", "javascript:alert(1)", "data:text/html,test", "not a url"] {
             #expect(CustomActionURLPolicy.validatedURL(from: unsafeOrInvalid) == nil)
         }
 

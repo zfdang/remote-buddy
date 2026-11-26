@@ -68,10 +68,14 @@ enum CustomActionURLPolicy {
             guard let host = url.host, !host.isEmpty else { return nil }
             return url
         }
-        let hasHost = !(url.host?.isEmpty ?? true)
-        let hasPathOrQuery = !url.path.isEmpty || !(url.query?.isEmpty ?? true)
-        guard hasHost || hasPathOrQuery || !url.absoluteString.hasSuffix("://") && url.absoluteString.count > scheme.count + 1 else {
-            return nil
+        if scheme == "shortcuts",
+           url.host?.lowercased() == "run-shortcut" {
+            let name = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                .queryItems?
+                .first(where: { $0.name == "name" })?
+                .value?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            guard let name, !name.isEmpty else { return nil }
         }
         return url
     }

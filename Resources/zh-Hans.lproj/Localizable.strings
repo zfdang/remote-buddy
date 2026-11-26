@@ -226,6 +226,7 @@
 "open_url.shortcuts_template" = "填入快捷指令模板";
 "open_url.not_configured" = "未设置网址";
 "open_url.test" = "测试打开";
+"open_url.test_failed" = "系统未能打开该链接，请检查网址或协议拼写，以及对应的 App 是否已安装。";
 "action.toggle_long_recording" = "切换持续录音";
 "action.open_remote_mic" = "打开遥控搭子";
 "action.open_codex" = "打开 Codex";

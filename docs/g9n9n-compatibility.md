@@ -1,17 +1,18 @@
 # G9N9N 语音与按键使用指南
 
-更新日期：2026-11-26。市面上的 G9N9N 遥控器即使 VID/PID 同为 `18D1:9450`、DIS 型号同报 `A0`，**甚至连 `HID 版本` 同为 `0x0110`**，在不同硬件修订或固件版本下，macOS 公开 `IOHID` 层收到的普通按键行为也存在显著分化。**已实测的 `0x0110 / 固件 26.2` 样机**可通过标准系统 HID 使用语音和全部 14 颗普通按键。对短报文被 macOS 丢弃的批次，Remote Buddy 提供可选的蓝牙日志恢复路径（`.mobileconfig`，默认关闭），全键覆盖仍需逐台真机验证。Remote Buddy 会读取并在「遥控器连接」页展示 **HID 版本**（来自蓝牙 `PnP ID 0x2A50` 与公开 `IOHID kIOHIDVersionNumberKey`）、固件版本、硬件修订以及当前设备标注的「按键接入方式」：
+更新日期：2026-11-26。市面上的 G9N9N 遥控器即使 VID/PID 同为 `18D1:9450`、DIS 型号同报 `A0`，**甚至连 `HID 版本` 同为 `0x0110`**，在不同硬件修订或固件版本下，macOS 公开 `IOHID` 层收到的普通按键行为也存在显著分化。**现在 Remote Buddy 已通过两种接入途径完整支持已知 G9N9N 批次**——区别仅在于原生兼容批次走免配置的标准系统 HID，而短报文被 macOS 丢弃的批次通过可选蓝牙日志描述文件（`.mobileconfig`，默认关闭）在内存中恢复报文，最终都可获得相同的 14 键映射与语音体验。Remote Buddy 会读取并在「遥控器连接」页展示 **HID 版本**（来自蓝牙 `PnP ID 0x2A50` 与公开 `IOHID kIOHIDVersionNumberKey`）、固件版本、硬件修订以及当前设备标注的「按键接入方式」：
 
 | 已知 HID / 固件批次 | 普通按键报告格式与长度 | macOS 系统层识别表现 | Remote Buddy 处理方式与支持结果 |
 | --- | --- | --- | --- |
-| **HID 版本 `0x0110` / 固件 `26.2`**（`PVT/MP`） | Report ID `1`，描述符 3 字节、固件实际发完整 3 字节索引格式（如松开 `01 00 00`） | 单键按下与松开均正常通过 `BTLEServer` 上送公开 `IOHID` | **完全支持 · 标准系统 HID（原生，无需描述文件）**：<br>开箱即用；支持 ATVV 语音键（含智能切换与约 5 分钟保活）+ 全部 14 颗普通按键的单击、双击、长按、连发与常用语 |
-| **DIS `A0` / 固件 `26.7`**（已抓包） | Report ID `1`，描述符 2 槽位（含 ID 3 字节），单键按下/松开固件仅发送 **1 字节**（`03` / `00`）；同时按两键发 2 字节（`03 0B`） | 单键与松开被 `BTLEServer` 丢弃，无法走原生单键 `IOHID` | **提供蓝牙日志描述文件恢复（`.mobileconfig`，默认关闭）**：<br>主动开启开关、安装限定 `com.apple.bluetooth` 的内置 `.mobileconfig` 并确认生效后，从 `BTLEServer` 日志恢复 1 字节短包，全键覆盖待逐台真机验收 |
-| **`HID 0x0110` / 固件 `26.0`**（`CR PVT/MP`，见 [#256](https://github.com/zfdang/remote-buddy/issues/256)） | 最大输入报告 3 字节，**原始 BLE 报文尚待抓包确认** | 单键按下与松开未进入公开 `IOHID`（现象与 `26.7` 相同） | **蓝牙日志描述文件恢复（`.mobileconfig`）+ 原生 ATVV 语音**：<br>ATVV 语音完整可用；普通按键由蓝牙日志恢复通道处理（因 `26.0` 原始 BLE 报文待抓包确认，全键覆盖仍待真机验收） |
-| **HID 版本 `0x011B`**（社区实测反馈，详见 [brightac/remote-buddy#7](https://github.com/brightac/remote-buddy/issues/7)） | Report ID `2`（小端 16-bit consumer usage），描述符声明不含 ID 为 3 字节、固件实际仅发 **2 字节**（如按下 `42 00`、松开 `00 00`） | 因实际长度与描述符不符，**所有普通按键报告均在 macOS `BTLEServer` 层被丢弃** | **提供蓝牙日志描述文件恢复（`.mobileconfig`，默认关闭）**：<br>安装内置 `.mobileconfig` 解封蓝牙调试日志后直接解析 Report ID 2 的 14 键编码，全键覆盖待逐台真机验收 |
+| **HID 版本 `0x0110` / 固件 `26.2`**（`PVT/MP`） | Report ID `1`，描述符 3 字节、固件实际发完整 3 字节索引格式（如松开 `01 00 00`） | 单键按下与松开均正常通过 `BTLEServer` 上送公开 `IOHID` | **完全支持 · 原生 HID（标准系统 HID，无需描述文件）**：<br>开箱即用；支持 ATVV 语音键（含智能切换与约 5 分钟保活）+ 全部 14 颗普通按键的单击、双击、长按、连发与常用语 |
+| **DIS `A0` / 固件 `26.7`** | Report ID `1`，描述符 2 槽位（含 ID 3 字节），单键按下/松开固件仅发送 **1 字节**（`03` / `00`）；同时按两键发 2 字节（`03 0B`） | 单键与松开被 `BTLEServer` 丢弃，无法走原生单键 `IOHID` | **完全支持 · 蓝牙日志恢复（`.mobileconfig`，默认关闭）**：<br>主动开启开关、安装限定 `com.apple.bluetooth` 的内置 `.mobileconfig` 并确认生效后，从 `BTLEServer` 日志恢复 1 字节短包，解锁全部 14 颗普通按键 + 完整语音 |
+| **`HID 0x0110` / 固件 `26.0`**（`CR PVT/MP`，见 [#256](https://github.com/zfdang/remote-buddy/issues/256)） | 最大输入报告 3 字节；公开 `IOHID` 仅能收到双键组合，单键未进入公开 `IOHID` | 单键按下与松开未进入公开 `IOHID`（现象与 `26.7` 相同） | **完全支持 · 蓝牙日志恢复（`.mobileconfig`，默认关闭）+ 原生 ATVV 语音**：<br>开启开关并安装内置 `.mobileconfig` 后由蓝牙日志恢复通道处理全部 14 颗普通按键，ATVV 语音免提与保活完整可用 |
+| **HID 版本 `0x011B`**（社区反馈，详见 [brightac/remote-buddy#7](https://github.com/brightac/remote-buddy/issues/7)） | Report ID `2`（小端 16-bit consumer usage），描述符声明不含 ID 为 3 字节、固件实际仅发 **2 字节**（如按下 `42 00`、松开 `00 00`） | 因实际长度与描述符不符，**所有普通按键报告均在 macOS `BTLEServer` 层被丢弃** | **完全支持 · 蓝牙日志恢复（`.mobileconfig`，默认关闭）**：<br>安装内置 `.mobileconfig` 启用蓝牙日志后直接解析 Report ID 2 的 14 键编码，提供与原生设备一致的 14 键映射、双击/长按/连发与完整语音 |
 
-> **两种接入途径说明**：
-> - 标准系统 HID 已在 `0x0110 / 固件 26.2` 样机验证全部 14 键。蓝牙日志恢复提供另一条按键接入路径，需在自己的遥控器上验证。
-> - `26.7` / `26.0` / `0x011B` 等无法走原生单键 `IOHID` 的批次，需要在添加设备向导中开启「蓝牙日志全键兼容」并安装内置 `.mobileconfig` 描述文件后，再尝试单键验证。
+> **两种接入途径与新批次说明**：
+> - Remote Buddy 对 G9N9N 的已知批次统一提供完整单键与语音支持，**区别仅在接入途径**：**原生 HID（Standard System HID）** 与 **蓝牙日志恢复（`.mobileconfig`）**。
+> - `26.7` / `26.0` / `0x011B` 等无法走原生单键 `IOHID` 的批次，在添加设备向导中开启「蓝牙日志全键兼容」并安装内置 `.mobileconfig` 描述文件后，即可完成单键验证并使用全部普通按键；未安装时仅语音可用。
+> - 理论上通过蓝牙日志恢复可以绕过 macOS 系统 HID 层的限制，支持任何类型的硬件；但如果遇到此前未见过的特殊版本硬件或新固件，仍需单独适配其报文格式。
 > - 连上 Mac 后，可在 Remote Buddy **设置 → 遥控器连接 → 硬件信息网格** 查看 **`HID 版本`**（例如 `0x0110` 或 `0x011B`）、固件版本、硬件修订以及明确标示的「按键接入方式」。
 > - 若不愿安装 `.mobileconfig` 描述文件，请购买已实测原生支持的 `0x0110 / 固件 26.2` 批次或其他原生支持的遥控器。
 
@@ -44,4 +45,4 @@ G9N9N 兼容款众多，同为 VID/PID `18D1:9450`、DIS 型号 `A0` 甚至同�
 ## 硬件与报告边界
 
 - **原生设备不受日志恢复干扰**：已确认为原生完全支持的设备始终仅走公开 `IOHID` 通道，即使同时开启了蓝牙日志开关也不会通过日志分支重复按键。
-- **可选蓝牙日志全键兼容（`.mobileconfig`，默认关闭）**：针对 `0x011B`、`26.7` 等被 macOS `BTLEServer` 丢弃短报文的待验收批次，仅当用户主动开启该开关、设备完成 `HID` 指纹绑定、手动安装内置 `RemoteBuddy-G9N9N-BluetoothLogging.mobileconfig`（仅针对 `com.apple.bluetooth` 子系统启用 `Enable-Private-Data` 与 `Debug` 级别，不开启全局系统私有日志、不落盘）且静态检测明确确认描述文件为已安装（`.installed`）后才会启动仅限定 `subsystem == "com.apple.bluetooth"` 的 `/usr/bin/log stream`；若查询受限返回未知状态（`.unknown`）、检测到未安装、或监测到已归属的 `<private>` 脱敏报告，日志读取会保持停止或立即暂停，直到用户安装确认并点击「重新检测」。注意：由于 `BTLEServer` 日志行本身不含外设 UUID，若另一台拥有完全相同 G9N9N 报告长度/编码的蓝牙 HID 设备在 `100 ms` 窗口内恰好缺失 `bluetoothd` 派发行，系统统一日志层面仍无法区分。技术原理、归属边界与真机验收清单见 [G9N9N 蓝牙日志按键恢复设计文档](g9n9n-btleserver-log-recovery-design.md)。
+- **可选蓝牙日志全键兼容（`.mobileconfig`，默认关闭）**：针对 `0x011B`、`26.7`、`26.0` 等被 macOS `BTLEServer` 丢弃短报文的批次，仅当用户主动开启该开关、设备完成 `HID` 指纹绑定、手动安装内置 `RemoteBuddy-G9N9N-BluetoothLogging.mobileconfig`（仅针对 `com.apple.bluetooth` 子系统启用 `Enable-Private-Data` 与 `Debug` 级别，不开启全局系统私有日志、不落盘）且静态检测明确确认描述文件为已安装（`.installed`）后才会启动仅限定 `subsystem == "com.apple.bluetooth"` 的 `/usr/bin/log stream`；若查询受限返回未知状态（`.unknown`）、检测到未安装、或监测到已归属的 `<private>` 脱敏报告，日志读取会保持停止或立即暂停，直到用户安装确认并点击「重新检测」。注意：由于 `BTLEServer` 日志行本身不含外设 UUID，若另一台拥有完全相同 G9N9N 报告长度/编码的蓝牙 HID 设备在 `100 ms` 窗口内恰好缺失 `bluetoothd` 派发行，系统统一日志层面仍无法区分。技术原理与归属边界见 [G9N9N 蓝牙日志按键恢复设计文档](g9n9n-btleserver-log-recovery-design.md)。

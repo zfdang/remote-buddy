@@ -1376,3 +1376,11 @@
 "g9n9n.btle_log.privacy_note" = "隐私与范围：描述文件未签名，仅对 com.apple.bluetooth 子系统开启私有日志以便恢复您已绑定 G9N9N 遥控器的丢弃按键；不会读取其他设备、不落盘、不上传，随时可在“设备管理”中移除或关闭上方开关。";
 "button_mapping.google.partial.btle_log_hint" = "如果希望在 26.7 / 26.0 / 0x011B 批次上解锁全部 14 颗单键，可前往「遥控器连接」页按需开启「蓝牙日志全键兼容」并安装描述文件。";
 "button_mapping.google.partial.open_connection" = "前往连接设置";
+"remote.device.btle_log_support_badge" = "蓝牙日志兼容";
+"connection.device.button_integration" = "按键接入方式";
+"connection.g9n9n.integration.native_hid" = "标准系统 HID（原生）";
+"connection.g9n9n.integration.btle_log_profile" = "蓝牙日志描述文件 (.mobileconfig)";
+"connection.g9n9n.integration.two_key_compat" = "部分支持（双键兼容）";
+"connection.g9n9n.btle_log_support_notice" = "当前设备通过您安装的 .mobileconfig 蓝牙日志描述文件从 macOS BTLEServer 日志恢复普通按键，全部 14 颗普通按键与语音键均可正常映射。";
+"connection.g9n9n.btle_log_inactive_warning" = "该遥控器记录为通过蓝牙日志描述文件接入，但当前未开启「蓝牙日志全键兼容」或未检测到描述文件；未生效期间普通按键可能无响应。";
+"button_mapping.google.btle_log_subtitle" = "当前通过蓝牙日志描述文件（.mobileconfig）恢复全部 14 颗普通按键与常用语触发；语音键固定用于遥控器麦克风。";

@@ -229,18 +229,23 @@ struct G9N9NSupportBadge: View {
     @EnvironmentObject var localization: LocalizationStore
 
     var body: some View {
-        let isFull = mode == .full
+        let (icon, tint, key): (String, Color, String) = switch mode {
+        case .full:
+            ("checkmark.circle.fill", .green, "remote.device.full_support_badge")
+        case .bluetoothLogRecovery:
+            ("doc.badge.gearshape.fill", .blue, "remote.device.btle_log_support_badge")
+        case .twoKeyCompatibility:
+            ("exclamationmark.circle.fill", .orange, "remote.device.partial_support_badge")
+        }
         HStack(spacing: 4) {
-            Image(systemName: isFull ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
-                .foregroundStyle(isFull ? Color.green : Color.orange)
-            Text(localization.text(
-                isFull ? "remote.device.full_support_badge" : "remote.device.partial_support_badge"
-            ))
-            .foregroundStyle(.secondary)
+            Image(systemName: icon)
+                .foregroundStyle(tint)
+            Text(localization.text(key))
+                .foregroundStyle(.secondary)
         }
         .font(.system(size: 11, weight: .medium))
         .padding(.horizontal, 7)
         .padding(.vertical, 2)
-        .background((isFull ? Color.green : Color.orange).opacity(0.12), in: Capsule())
+        .background(tint.opacity(0.12), in: Capsule())
     }
 }

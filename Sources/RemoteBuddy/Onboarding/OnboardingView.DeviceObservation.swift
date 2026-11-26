@@ -108,7 +108,7 @@ extension OnboardingView {
               selectedPhysicalRemoteProfileMatchesSource,
               !observation.buttons.isEmpty else { return }
         if settings.onboardingControlSource == .chromecastRemote {
-            handleChromecastObservedButtons(observation.buttons)
+            handleChromecastObservedButtons(observation.buttons, origin: observation.origin)
             return
         }
         if settings.onboardingStep == .remote {
@@ -125,7 +125,7 @@ extension OnboardingView {
               selectedPhysicalRemoteProfileMatchesSource,
               !buttons.isEmpty else { return }
         if settings.onboardingControlSource == .chromecastRemote {
-            handleChromecastObservedButtons(buttons)
+            handleChromecastObservedButtons(buttons, origin: nil)
             return
         }
         if settings.onboardingStep == .remote {
@@ -152,7 +152,7 @@ extension OnboardingView {
         }
     }
 
-    private func handleChromecastObservedButtons(_ buttons: Set<RemoteButton>) {
+    private func handleChromecastObservedButtons(_ buttons: Set<RemoteButton>, origin: HIDReportOrigin?) {
         let outcome = ChromecastCompatibilityDetection.evaluate(
             step: settings.onboardingStep,
             buttons: buttons,
@@ -165,7 +165,9 @@ extension OnboardingView {
                 chromecastSingleKeyObserved = true
                 chromecastTwoKeyDetectedWithoutSingleKey = false
                 pendingChromecastComboButtons.removeAll()
-                if isChromecastTwoKeyCompatible {
+                if origin == .btleServerLog {
+                    model.setG9N9NInputMode(.bluetoothLogRecovery, for: settings.selectedRemoteProfileID)
+                } else if origin == .iohid || isChromecastTwoKeyCompatible {
                     model.setG9N9NInputMode(.full, for: settings.selectedRemoteProfileID)
                 }
             }

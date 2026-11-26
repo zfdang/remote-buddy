@@ -100,11 +100,12 @@ struct RemoteDeviceMappings: Codable, Equatable {
     }
 }
 
-/// Operating mode for Chromecast G9N9N remotes: full single-key support vs.
-/// partial compatibility mode for hardware/firmware revisions whose 1-byte
-/// single-key reports are dropped by macOS before reaching public IOHID.
+/// Operating mode for Chromecast G9N9N remotes: full native single-key support,
+/// full single-key support recovered via the opt-in Bluetooth logging profile,
+/// or partial two-key compatibility mode when short reports are dropped by macOS.
 enum G9N9NInputMode: String, Codable, Equatable, CaseIterable {
     case full = "full"
+    case bluetoothLogRecovery = "bluetooth_log_recovery"
     case twoKeyCompatibility = "two_key_compatibility"
 }
 

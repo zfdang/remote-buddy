@@ -284,7 +284,8 @@ extension OnboardingView {
             microphoneReady: onboardingAudioReady, voiceKeyMode: settings.voiceKeyMode,
             tapModeEnabled: settings.voiceFnTapModeEnabled, voiceTool: settings.onboardingVoiceTool,
             binding: settings.verifiedVoiceToolBinding,
-            isPartialSupportG9N9N: isChromecastTwoKeyCompatible)
+            isPartialSupportG9N9N: isChromecastTwoKeyCompatible,
+            g9n9nInputMode: profile?.model.isChromecastRemote == true ? profile?.effectiveG9N9NInputMode : nil)
     }
 
     var completeContent: some View {
@@ -302,15 +303,16 @@ extension OnboardingView {
                 if let name = summary.remoteName {
                     completionSummaryLine("appletvremote.gen4", "onboarding.summary.remote", value: name)
                 }
-                if summary.isPartialSupportG9N9N {
+                if let mode = summary.g9n9nInputMode,
+                   mode == .twoKeyCompatibility || mode == .bluetoothLogRecovery {
                     HStack(alignment: .center, spacing: 10) {
-                        Image(systemName: "exclamationmark.circle")
+                        Image(systemName: mode == .bluetoothLogRecovery ? "doc.badge.gearshape" : "exclamationmark.circle")
                             .foregroundStyle(Color.accentColor)
                             .frame(width: 22)
                         Text(localization.text("onboarding.summary.g9n9n_mode"))
                             .foregroundStyle(.secondary)
                         Spacer(minLength: 12)
-                        G9N9NSupportBadge(mode: .twoKeyCompatibility)
+                        G9N9NSupportBadge(mode: mode)
                     }
                     .accessibilityElement(children: .combine)
                 }

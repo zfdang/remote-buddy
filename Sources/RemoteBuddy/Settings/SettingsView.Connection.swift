@@ -247,11 +247,12 @@ extension SettingsView {
         information: RemoteDeviceInformation?,
         chromecastSupportMode: G9N9NInputMode?
     ) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            if let information {
-                connectionDeviceInformation(information)
+        let readings = connectionDeviceReadings(information, chromecastSupportMode: chromecastSupportMode)
+        return VStack(alignment: .leading, spacing: 10) {
+            if !readings.isEmpty {
+                connectionDeviceInformation(readings)
             }
-            if let information, chromecastSupportMode != nil, !connectionDeviceReadings(information).isEmpty {
+            if !readings.isEmpty, chromecastSupportMode != nil {
                 Divider()
             }
             if let chromecastSupportMode {
@@ -269,8 +270,11 @@ extension SettingsView {
         }
     }
 
-    private func connectionDeviceReadings(_ information: RemoteDeviceInformation) -> [(String, String)] {
-        let protocolSummary: String? = switch (information.protocolVersion, information.capabilities) {
+    private func connectionDeviceReadings(
+        _ information: RemoteDeviceInformation?,
+        chromecastSupportMode: G9N9NInputMode?
+    ) -> [(String, String)] {
+        let protocolSummary: String? = switch (information?.protocolVersion, information?.capabilities) {
         case let (.some(version), .some(capabilities)):
             "\(version) · \(LocalizedMessage("connection.device.frame_bytes", arguments: [String(capabilities.frameSize)]).text(using: localization))"
         case let (.some(version), .none):
@@ -280,22 +284,33 @@ extension SettingsView {
         case (.none, .none):
             nil
         }
+        let integrationValue: String? = chromecastSupportMode.map { mode in
+            let key = switch mode {
+            case .full:
+                "connection.g9n9n.integration.native_hid"
+            case .bluetoothLogRecovery:
+                "connection.g9n9n.integration.btle_log_profile"
+            case .twoKeyCompatibility:
+                "connection.g9n9n.integration.two_key_compat"
+            }
+            return localization.text(key)
+        }
         let readings: [(String, String?)] = [
-            ("connection.device.model", information.modelNumber),
-            ("connection.device.identity", information.identityValue),
-            ("connection.device.hid_version", information.hidVersionValue),
-            ("connection.device.firmware", information.firmwareRevision),
+            ("connection.device.model", information?.modelNumber),
+            ("connection.device.identity", information?.identityValue),
+            ("connection.device.hid_version", information?.hidVersionValue),
+            ("connection.device.firmware", information?.firmwareRevision),
             ("connection.device.protocol", protocolSummary),
-            ("connection.device.audio", information.audioFormat),
+            ("connection.device.audio", information?.audioFormat),
+            ("connection.device.button_integration", integrationValue),
         ]
         return readings.compactMap { key, value in
             value.map { (key, $0) }
         }
     }
 
-    private func connectionDeviceInformation(_ information: RemoteDeviceInformation) -> some View {
-        let available = connectionDeviceReadings(information)
-        return LazyVGrid(
+    private func connectionDeviceInformation(_ available: [(String, String)]) -> some View {
+        LazyVGrid(
             columns: Array(repeating: GridItem(.flexible(), alignment: .leading), count: 3),
             alignment: .leading,
             spacing: 10
@@ -317,29 +332,46 @@ extension SettingsView {
     }
 
     private func g9n9nHardwareSupportSection(for mode: G9N9NInputMode) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        let noticeKey = switch mode {
+        case .full:
+            "connection.g9n9n.full_support_notice"
+        case .bluetoothLogRecovery:
+            "connection.g9n9n.btle_log_support_notice"
+        case .twoKeyCompatibility:
+            "connection.g9n9n.partial_support_notice"
+        }
+        return VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 g9n9nSupportBadge(for: mode)
                     .fixedSize()
-                Text(localization.text(
-                    mode == .twoKeyCompatibility
-                        ? "connection.g9n9n.partial_support_notice"
-                        : "connection.g9n9n.full_support_notice"
-                ))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+                Text(localization.text(noticeKey))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            if mode == .twoKeyCompatibility {
+            if mode == .bluetoothLogRecovery &&
+                (!settings.g9n9nBluetoothLogRecoveryEnabled || model.bluetoothLoggingProfileStatus == .notInstalled) {
+                HStack(alignment: .top, spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                    Text(localization.text("connection.g9n9n.btle_log_inactive_warning"))
+                        .foregroundStyle(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .font(.caption)
+            }
+            if mode == .twoKeyCompatibility || mode == .bluetoothLogRecovery {
                 HStack(spacing: 12) {
                     Link(
                         localization.text("connection.g9n9n.compatibility_doc_link"),
                         destination: AppLinks.g9n9nCompatibilityGuide(for: localization.locale)
                     )
-                    Link(
-                        localization.text("onboarding.chromecast.replace_hardware_link"),
-                        destination: AppLinks.devices(for: localization.locale)
-                    )
+                    if mode == .twoKeyCompatibility {
+                        Link(
+                            localization.text("onboarding.chromecast.replace_hardware_link"),
+                            destination: AppLinks.devices(for: localization.locale)
+                        )
+                    }
                 }
                 .font(.caption)
             }

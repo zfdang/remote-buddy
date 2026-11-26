@@ -555,10 +555,10 @@ extension BridgeAppModel {
                 descriptor: descriptor,
                 payloadOnly: true
             ), usages.count == 1,
-               settings.upgradeG9N9NInputModeToFullForLogRecovery(for: profile.id) {
+               settings.recordG9N9NBluetoothLogRecoveryIntegration(for: profile.id) {
                 targetMonitor.clearTransientInputStateForCompatibility()
                 AppLogger.shared.write(
-                    "REMOTE HID g9n9n_mode=full reason=btle_log_single_key profile=\(profile.id.uuidString)"
+                    "REMOTE HID g9n9n_mode=bluetooth_log_recovery reason=btle_log_single_key profile=\(profile.id.uuidString)"
                 )
             }
         }
@@ -752,11 +752,27 @@ extension BridgeAppModel {
             guard let self, profileID == self.settings.selectedRemoteProfileID else { return }
             self.activeRemoteButtons = buttons
         }
-        monitor.onObservedButtonReport = { [weak self] profileID, buttons in
+        monitor.onObservedButtonReport = { [weak self, weak monitor] profileID, buttons in
             guard let self, !buttons.isEmpty else { return }
+            let origin = monitor?.currentReportOrigin ?? .iohid
+            if let profileID, buttons.count == 1 {
+                if origin == .btleServerLog {
+                    if self.settings.recordG9N9NBluetoothLogRecoveryIntegration(for: profileID) {
+                        AppLogger.shared.write(
+                            "REMOTE HID g9n9n_mode=bluetooth_log_recovery reason=btle_log_observed profile=\(profileID.uuidString)"
+                        )
+                    }
+                } else if origin == .iohid,
+                          self.settings.recordG9N9NNativeIOHIDIntegration(for: profileID) {
+                    AppLogger.shared.write(
+                        "REMOTE HID g9n9n_mode=full reason=native_iohid_observed profile=\(profileID.uuidString)"
+                    )
+                }
+            }
             self.lastObservedRemoteButtonReport = RemoteButtonObservation(
                 profileID: profileID,
-                buttons: buttons
+                buttons: buttons,
+                origin: origin
             )
         }
         monitor.onButtonPressed = { [weak self, weak monitor] profileID, fingerprint, button in

@@ -525,7 +525,7 @@ struct G9N9NCompatibilityModeTests {
         #expect(settings.onboardingStep == .remote)
     }
 
-    @Test func bluetoothLogRecoveryDefaultsOffPersistsAndUnlocksUpgradeToFullMode() throws {
+    @Test func bluetoothLogRecoveryDefaultsOffPersistsAndRecordsIntegrationMode() throws {
         let suite = "g9n9n-btle-log-opt-in-" + UUID().uuidString
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
@@ -539,14 +539,34 @@ struct G9N9NCompatibilityModeTests {
         settings.completeOnboarding()
 
         // Cannot upgrade while opt-in toggle is off.
-        #expect(!settings.upgradeG9N9NInputModeToFullForLogRecovery(for: googleID))
+        #expect(!settings.recordG9N9NBluetoothLogRecoveryIntegration(for: googleID))
         #expect(settings.g9n9nInputMode(for: googleID) == .twoKeyCompatibility)
 
         settings.g9n9nBluetoothLogRecoveryEnabled = true
         let reloaded = AppSettings(defaults: defaults)
         #expect(reloaded.g9n9nBluetoothLogRecoveryEnabled)
-        #expect(reloaded.upgradeG9N9NInputModeToFullForLogRecovery(for: googleID))
+        #expect(reloaded.recordG9N9NBluetoothLogRecoveryIntegration(for: googleID))
+        #expect(reloaded.g9n9nInputMode(for: googleID) == .bluetoothLogRecovery)
+        #expect(reloaded.allowsMappingEdits(for: googleID))
+        #expect(AppSettings(defaults: defaults).g9n9nInputMode(for: googleID) == .bluetoothLogRecovery)
+
+        let summary = OnboardingCompletionSummary(
+            purpose: .initialSetup,
+            remoteName: "Chromecast Remote",
+            buttonsVerified: true,
+            microphoneReady: true,
+            voiceKeyMode: .suggestedShortcut,
+            tapModeEnabled: true,
+            voiceTool: .voiceBuddy,
+            binding: nil,
+            isPartialSupportG9N9N: false,
+            g9n9nInputMode: .bluetoothLogRecovery
+        )
+        #expect(summary.g9n9nInputMode == .bluetoothLogRecovery)
+        #expect(!summary.isPartialSupportG9N9N)
+
+        // Native IOHID single-key recovery resets the profile back to standard full mode.
+        #expect(reloaded.recordG9N9NNativeIOHIDIntegration(for: googleID))
         #expect(reloaded.g9n9nInputMode(for: googleID) == .full)
-        #expect(AppSettings(defaults: defaults).g9n9nInputMode(for: googleID) == .full)
     }
 }

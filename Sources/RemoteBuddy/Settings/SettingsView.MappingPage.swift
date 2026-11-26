@@ -37,10 +37,17 @@ extension SettingsView {
             settings.g9n9nInputMode(for: settings.selectedRemoteProfileID) == .twoKeyCompatibility
     }
 
+    private var isSelectedChromecastBluetoothLogRecovery: Bool {
+        settings.selectedRemoteProfile?.model.isChromecastRemote == true &&
+            settings.g9n9nInputMode(for: settings.selectedRemoteProfileID) == .bluetoothLogRecovery
+    }
+
     private var mappingPageHeader: some View {
         let model = settings.selectedRemoteProfile?.model
         let subtitleKey = if isSelectedChromecastPartialSupport {
             "button_mapping.google.partial_subtitle"
+        } else if isSelectedChromecastBluetoothLogRecovery {
+            "button_mapping.google.btle_log_subtitle"
         } else if model?.isChromecastRemote == true {
             "button_mapping.google.subtitle"
         } else if model?.isT1Remote == true {
@@ -53,6 +60,8 @@ extension SettingsView {
                 PageHeader(title: localization.text("button_mapping.page.title"))
                 if isSelectedChromecastPartialSupport {
                     partialSupportBadge
+                } else if isSelectedChromecastBluetoothLogRecovery {
+                    g9n9nSupportBadge(for: .bluetoothLogRecovery)
                 }
                 mappingHeaderToggle
             }

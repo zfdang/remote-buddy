@@ -399,12 +399,23 @@ extension AppSettings {
     }
 
     @discardableResult
-    func upgradeG9N9NInputModeToFullForLogRecovery(for profileID: UUID?) -> Bool {
+    func recordG9N9NBluetoothLogRecoveryIntegration(for profileID: UUID?) -> Bool {
         guard g9n9nBluetoothLogRecoveryEnabled,
               let profileID,
               let index = remoteDeviceProfiles.firstIndex(where: { $0.id == profileID }),
               remoteDeviceProfiles[index].model.isChromecastRemote,
-              remoteDeviceProfiles[index].effectiveG9N9NInputMode == .twoKeyCompatibility
+              remoteDeviceProfiles[index].effectiveG9N9NInputMode != .bluetoothLogRecovery
+        else { return false }
+        remoteDeviceProfiles[index].g9n9nInputMode = .bluetoothLogRecovery
+        return true
+    }
+
+    @discardableResult
+    func recordG9N9NNativeIOHIDIntegration(for profileID: UUID?) -> Bool {
+        guard let profileID,
+              let index = remoteDeviceProfiles.firstIndex(where: { $0.id == profileID }),
+              remoteDeviceProfiles[index].model.isChromecastRemote,
+              remoteDeviceProfiles[index].effectiveG9N9NInputMode == .bluetoothLogRecovery
         else { return false }
         remoteDeviceProfiles[index].g9n9nInputMode = nil
         return true

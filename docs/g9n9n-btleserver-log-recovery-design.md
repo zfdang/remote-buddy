@@ -210,8 +210,10 @@ Updated input report for ID #2: <private>
   - 用户主动开启后，显示描述文件安装状态、一键打开 `.mobileconfig`、跳转系统设置「设备管理」、重新检测按钮，并在检测到 `<private>` 时给出醒目提示；
   - 安装并生效后，直接按一下 OK 键即可通过 `btle_log` 通道进入**完全支持模式**，完成后续 3 键验证与全 14 键映射。
 - **设置页（连接页 & 映射页）**：
-  - 在 G9N9N 设备硬件卡片中增加「全键兼容增强（蓝牙日志描述文件）」开关、状态标识、安装/卸载说明；
-  - 对之前已进入「部分支持模式」的用户，只要在设置页开启开关并安装描述文件，当首次从 `btle_log` 收到单键按下报告时，自动将其 profile 从 `.twoKeyCompatibility` 平滑升级回 `.full` 并刷新按键状态，无需移除重配。
+  - `G9N9NInputMode` 新增 `.bluetoothLogRecovery` 状态并按设备独立持久化：当向导或日常使用中检测到该 G9N9N 的单键通过 `btle_log` 通道接入时自动记录为 `.bluetoothLogRecovery`（若后续换用或恢复原生单键 `IOHID` 通道则自动恢复为 `.full`）；
+  - 在 **设置 → 遥控器连接（设备详情页）** 的硬件信息网格新增「按键接入方式」字段（明确标示为 `蓝牙日志描述文件 (.mobileconfig)`），并配合「蓝牙日志兼容」徽章与说明卡片呈现；若开关被关闭或描述文件被移除，详情页会同步提示「该遥控器通过蓝牙日志描述文件接入但当前未生效」；
+  - 在 **按键映射页** 与 **向导完成页** 同样展示「蓝牙日志兼容」徽章与接入来源说明；
+  - 对之前已进入「部分支持模式」的用户，只要在设置页开启开关并安装描述文件，当首次从 `btle_log` 收到单键按下报告时，自动将其 profile 从 `.twoKeyCompatibility` 平滑升级为 `.bluetoothLogRecovery` 并保持完整 14 键可编辑，无需移除重配。
 - **诊断摘要**：
   - 在首用诊断文本中记录 `g9n9n_btle_log_recovery_enabled`、`bluetooth_logging_profile` 与 `btle_log_redacted_observed` 三个布尔/枚举字段，绝不记录任何外设 UUID 或报文内容。
 

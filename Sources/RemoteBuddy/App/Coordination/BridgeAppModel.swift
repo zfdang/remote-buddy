@@ -8,6 +8,17 @@ import Foundation
 struct RemoteButtonObservation: Equatable {
     let profileID: UUID?
     let buttons: Set<RemoteButton>
+    let origin: HIDReportOrigin
+
+    init(profileID: UUID?, buttons: Set<RemoteButton>, origin: HIDReportOrigin = .iohid) {
+        self.profileID = profileID
+        self.buttons = buttons
+        self.origin = origin
+    }
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.profileID == rhs.profileID && lhs.buttons == rhs.buttons
+    }
 }
 
 @MainActor

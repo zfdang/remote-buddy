@@ -80,3 +80,5 @@
   .platform-panel-head h2{font-size:20px}
   .platform-panel-body{padding:18px 20px 22px}
 }
+.devices-table.is-comparison{min-width:920px}
+.devices-table.is-comparison th,.devices-table.is-comparison td{padding:12px 14px}

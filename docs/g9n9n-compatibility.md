@@ -1,13 +1,13 @@
 # G9N9N 语音与按键使用指南
 
-更新日期：2026-11-26。市面上的 G9N9N 遥控器即使 VID/PID 同为 `18D1:9450`、DIS 型号同报 `A0`，**甚至连 `HID 版本` 同为 `0x0110`**，在不同硬件修订或固件版本下，macOS 公开 `IOHID` 层收到的普通按键行为也存在显著分化。**现在 Remote Buddy 已通过两种接入途径完整支持已知 G9N9N 批次**——区别仅在于原生兼容批次走免配置的标准系统 HID，而短报文被 macOS 丢弃的批次通过可选蓝牙日志描述文件（`.mobileconfig`，默认关闭）在内存中恢复报文，最终都可获得相同的 14 键映射与语音体验。Remote Buddy 会读取并在「遥控器连接」页展示 **HID 版本**（来自蓝牙 `PnP ID 0x2A50` 与公开 `IOHID kIOHIDVersionNumberKey`）、固件版本、硬件修订以及当前设备标注的「按键接入方式」：
+更新日期：2026-11-27。市面上的 G9N9N 遥控器即使 VID/PID 同为 `18D1:9450`、DIS 型号同报 `A0`，**甚至连 `HID 版本` 同为 `0x0110`**，在不同硬件修订或固件版本下，macOS 公开 `IOHID` 层收到的普通按键行为以及 ATVV 长录音保活表现也存在显著分化。**现在 Remote Buddy 已通过两种接入途径完整支持已知 G9N9N 批次**——区别仅在于原生兼容批次走免配置的标准系统 HID，而短报文被 macOS 丢弃的批次通过可选蓝牙日志描述文件（`.mobileconfig`，默认关闭）在内存中恢复报文，最终都可获得相同的 14 键映射与语音体验。Remote Buddy 会读取并在「遥控器连接」页展示 **HID 版本**（来自蓝牙 `PnP ID 0x2A50` 与公开 `IOHID kIOHIDVersionNumberKey`）、固件版本、硬件修订以及当前设备标注的「按键接入方式」：
 
 | 已知 HID / 固件批次 | 普通按键报告格式与长度 | macOS 系统层识别表现 | Remote Buddy 处理方式与支持结果 |
 | --- | --- | --- | --- |
-| **HID 版本 `0x0110` / 固件 `26.2`**（`PVT/MP`） | Report ID `1`，描述符 3 字节、固件实际发完整 3 字节索引格式（如松开 `01 00 00`） | 单键按下与松开均正常通过 `BTLEServer` 上送公开 `IOHID` | **完全支持 · 原生 HID（标准系统 HID，无需描述文件）**：<br>开箱即用；支持 ATVV 语音键（含智能切换与约 5 分钟保活）+ 全部 14 颗普通按键的单击、双击、长按、连发与常用语 |
-| **DIS `A0` / 固件 `26.7`** | Report ID `1`，描述符 2 槽位（含 ID 3 字节），单键按下/松开固件仅发送 **1 字节**（`03` / `00`）；同时按两键发 2 字节（`03 0B`） | 单键与松开被 `BTLEServer` 丢弃，无法走原生单键 `IOHID` | **完全支持 · 蓝牙日志恢复（`.mobileconfig`，默认关闭）**：<br>主动开启开关、安装限定 `com.apple.bluetooth` 的内置 `.mobileconfig` 并确认生效后，从 `BTLEServer` 日志恢复 1 字节短包，解锁全部 14 颗普通按键 + 完整语音 |
-| **`HID 0x0110` / 固件 `26.0`**（`CR PVT/MP`，见 [#256](https://github.com/zfdang/remote-buddy/issues/256)） | 最大输入报告 3 字节；公开 `IOHID` 仅能收到双键组合，单键未进入公开 `IOHID` | 单键按下与松开未进入公开 `IOHID`（现象与 `26.7` 相同） | **完全支持 · 蓝牙日志恢复（`.mobileconfig`，默认关闭）+ 原生 ATVV 语音**：<br>开启开关并安装内置 `.mobileconfig` 后由蓝牙日志恢复通道处理全部 14 颗普通按键，ATVV 语音免提与保活完整可用 |
-| **HID 版本 `0x011B`**（社区反馈，详见 [brightac/remote-buddy#7](https://github.com/brightac/remote-buddy/issues/7)） | Report ID `2`（小端 16-bit consumer usage），描述符声明不含 ID 为 3 字节、固件实际仅发 **2 字节**（如按下 `42 00`、松开 `00 00`） | 因实际长度与描述符不符，**所有普通按键报告均在 macOS `BTLEServer` 层被丢弃** | **完全支持 · 蓝牙日志恢复（`.mobileconfig`，默认关闭）**：<br>安装内置 `.mobileconfig` 启用蓝牙日志后直接解析 Report ID 2 的 14 键编码，提供与原生设备一致的 14 键映射、双击/长按/连发与完整语音 |
+| **HID 版本 `0x0110` / 固件 `26.2`**（`PVT/MP`） | Report ID `1`，描述符 3 字节、固件实际发完整 3 字节索引格式（如松开 `01 00 00`） | 单键按下与松开均正常通过 `BTLEServer` 上送公开 `IOHID` | **完全支持 · 原生 HID（标准系统 HID，无需描述文件）**：<br>开箱即用；支持 ATVV 语音键（含智能切换，已实测借助 `MIC_EXTEND` 连续免提 **68.9 秒**突破 60 秒，主机默认约 5 分钟保护性停麦）+ 全部 14 颗普通按键的单击、双击、长按、连发与常用语 |
+| **DIS `A0` / 固件 `26.7`** | Report ID `1`，描述符 2 槽位（含 ID 3 字节），单键按下/松开固件仅发送 **1 字节**（`03` / `00`）；同时按两键发 2 字节（`03 0B`） | 单键与松开被 `BTLEServer` 丢弃，无法走原生单键 `IOHID` | **完全支持 · 蓝牙日志恢复（`.mobileconfig`，默认关闭）**：<br>主动开启开关、安装限定 `com.apple.bluetooth` 的内置 `.mobileconfig` 并确认生效后，从 `BTLEServer` 日志恢复 1 字节短包，解锁全部 14 颗普通按键 + ATVV 语音与智能切换（是否通过 `MIC_EXTEND` 突破 60 秒待该批次长时真机验证） |
+| **`HID 0x0110` / 固件 `26.0`**（`CR PVT/MP`，见 [#256](https://github.com/zfdang/remote-buddy/issues/256)） | 最大输入报告 3 字节；公开 `IOHID` 仅能收到双键组合，单键未进入公开 `IOHID` | 单键按下与松开未进入公开 `IOHID`（现象与 `26.7` 相同） | **完全支持 · 蓝牙日志恢复（`.mobileconfig`，默认关闭）+ 原生 ATVV 语音**：<br>开启开关并安装内置 `.mobileconfig` 后由蓝牙日志恢复通道处理全部 14 颗普通按键，ATVV 语音与智能切换可用（是否通过 `MIC_EXTEND` 突破 60 秒待该批次长时真机验证） |
+| **HID 版本 `0x011B`**（`zhuhai_jieli` 杰理方案兼容款，详见 [brightac/remote-buddy#7](https://github.com/brightac/remote-buddy/issues/7) 与 [#280](https://github.com/zfdang/remote-buddy/issues/280)） | Report ID `2`（小端 16-bit consumer usage），描述符声明不含 ID 为 3 字节、固件实际仅发 **2 字节**（如按下 `42 00`、松开 `00 00`） | 因实际长度与描述符不符，**所有普通按键报告均在 macOS `BTLEServer` 层被丢弃** | **完全支持按键 · 语音受约 60 秒上限限制**：<br>安装内置 `.mobileconfig` 启用蓝牙日志后直接解析 Report ID 2 的 14 键编码，提供与原生设备一致的 14 键映射、双击/长按/连发；ATVV 语音与智能切换可用，但实测（[#280](https://github.com/zfdang/remote-buddy/issues/280)）显示主机 `MIC_OPEN` 约 **60.6 秒**静默断流且 `MIC_EXTEND` 无效，当前版本单次录音仍受约 60 秒上限限制 |
 
 > **两种接入途径与新批次说明**：
 > - Remote Buddy 对 G9N9N 的已知批次统一提供完整单键与语音支持，**区别仅在接入途径**：**原生 HID（Standard System HID）** 与 **蓝牙日志恢复（`.mobileconfig`）**。
@@ -38,7 +38,13 @@ G9N9N 兼容款众多，同为 VID/PID `18D1:9450`、DIS 型号 `A0` 甚至同�
 
 ## 语音操作
 
-默认支持**智能切换（点按免提）**：短按 Google Assistant 语音键并松手后保持免提收音（再按语音键或按其他键停止），长按超过 0.7 秒则松手即停；也可在「遥控器连接」设置中切换为纯「按住说话」。两种模式均突破 60 秒时长上限（自动保活最长约 5 分钟），音频由遥控器麦克风送入 Remote Buddy Mic 再交给所选输入工具识别。
+默认支持**智能切换（点按免提）**：短按 Google Assistant 语音键并松手后保持免提收音（再按语音键或按其他键停止），长按超过 0.7 秒则松手即停；也可在「遥控器连接」设置中切换为纯「按住说话」。音频由遥控器麦克风送入 Remote Buddy Mic 再交给所选输入工具识别。
+
+**会话时长与 60 秒保活（按批次而异）**：Remote Buddy 在录音期间会每 10 秒发送 `ATVV MIC_EXTEND` 保活信号，并在到达主机默认约 5 分钟保护上限（可在「通用」设置调整为 3 / 5 / 10 / 15 / 30 分钟）时自动停麦；但是否真正能够突破 60 秒取决于对应批次固件是否响应 `MIC_EXTEND`：
+
+- **`0x0110 / 固件 26.2`**（`Google Inc.`）：已真机实测通过 `MIC_EXTEND` 连续免提 **68.9 秒**不断流（智能切换与按住说话均可用；~5 分钟为主机侧默认保护上限）。
+- **`HID 0x011B`**（`zhuhai_jieli` 杰理方案兼容款，详见 [#280](https://github.com/zfdang/remote-buddy/issues/280)）：社区实测显示固件会忽略 `MIC_EXTEND`，主机 `MIC_OPEN` 开麦在约 **60.6 秒**静默断流且不发 `AUDIO_STOP`；当前版本尚未实现主机端分段关麦重开，因此 `0x011B` 的单次连续录音仍受约 **60 秒**上限限制。
+- **`26.7` / `26.0` 与其他兼容款**：ATVV 语音与智能切换可用，但是否支持 `MIC_EXTEND` 突破 60 秒尚待各自的长时真机测试。
 
 [完整支持与非标批次真机记录](g9n9n-hardware-debugging.md)。
 

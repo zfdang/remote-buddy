@@ -212,7 +212,11 @@ failed discovery is not treated as proof that the service is absent.
 
 Audio remains headerless v1.0 ADPCM with high-nibble-first decoding and AUDIO_SYNC
 predictor restoration. MIC_EXTEND uses the stream ID every ten seconds while
-streaming. Existing generation checks, reconnect backoff, output readiness,
+streaming, though keepalive effectiveness is firmware-dependent: `0x0110 / FW 26.2`
+was verified continuously past 60s (68.9s in PR #217), whereas community testing on
+an `0x011B` (`zhuhai_jieli`) compatible unit in #280 showed `MIC_EXTEND` is ignored
+and the stream stops silently around ~60.6s without `AUDIO_STOP` (only `MIC_CLOSE`
++ `MIC_OPEN` resets the timer, with a ~1.1s audio gap). Existing generation checks, reconnect backoff, output readiness,
 voice ownership and tail draining apply to Google sessions as well as Xiaomi.
 Google voice shortcuts are synthesized in the app; they do not depend on a
 Xiaomi hardware Fn mapping. Physical recording follows the remote's ATVV start

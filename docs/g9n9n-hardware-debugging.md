@@ -2,9 +2,9 @@
 
 本页按硬件/固件批次汇总已知 G9N9N 的**真实设备表现**及实测记录：
 
-1. **Fully Supported 设备（`HID 版本 0x0110` / 固件 `26.2`，`PVT/MP`，完整 3 字节 report 1）**：单键按下与松开均发出完整 3 字节索引格式报告，macOS 正常认识并送达公开 `IOHID` → 进入 **Fully Supported（完全支持）** 模式，语音键与全部 14 颗普通按键完整可用。
-2. **Partially Supported 设备（`DIS A0 / 固件 26.7` 已抓包；以及社区反馈的 `HID 0x0110 / 固件 26.0 / CR PVT/MP`，见 [#256](https://github.com/zfdang/remote-buddy/issues/256)）**：`固件 26.7` 经 PacketLogger 抓包确认单键与松开仅发出 1 字节，被 macOS 在进入公开 `IOHID` 前丢弃，只有同时按两个键凑齐长度才进入公开 `IOHID`；而 `0x0110 / 固件 26.0（CR PVT/MP）` 在 `IOHID` 层表现出相同现象（无单键事件，仅双键 3 字节进入 `IOHID`），原始 BLE 报文尚待抓包确认，可能是类似短报告，也可能是新的硬件或固件变体 → 进入 **Partially Supported（部分支持）** 模式，保留完整语音键（含智能切换与约 5 分钟保活）与「方向键 + OK」发送 Enter。
-3. **`HID 版本 0x011B` 批次（社区反馈，详见 [brightac/remote-buddy#7](https://github.com/brightac/remote-buddy/issues/7)）**：使用 Report ID `2`（小端 16-bit consumer usage，涵盖 14 键编码），描述符声明不含 ID 3 字节、但固件实际仅发送 2 字节（如按下 `42 00`、松开 `00 00`），导致报告在 macOS `BTLEServer` 层即被长度校验丢弃——**公开 `IOHID` 既收不到单键，也收不到双键**；ATVV 语音链路走 GATT 不受 HID 影响仍可使用。Remote Buddy 连接页会读取并显示 PnP / IOHID 中的 **HID 版本**（如 `0x0110` / `0x011B`）供用户快速鉴别批次；默认不读取系统日志，但当用户在向导或设置中主动开启「蓝牙日志全键兼容」并手动安装仅限定 `com.apple.bluetooth` 子系统的 `.mobileconfig` 描述文件后，可通过 `BTLEServer` 统一日志流恢复 `0x011B` 与 `26.7` 短包按键（详见 [G9N9N 蓝牙日志按键恢复设计文档](g9n9n-btleserver-log-recovery-design.md)）。
+1. **Fully Supported 设备（`HID 版本 0x0110` / 固件 `26.2`，`PVT/MP`，完整 3 字节 report 1）**：单键按下与松开均发出完整 3 字节索引格式报告，macOS 正常认识并送达公开 `IOHID` → 进入 **Fully Supported（完全支持）** 模式，语音键与全部 14 颗普通按键完整可用，且已真机实测借助 `MIC_EXTEND` 连续免提 **68.9 秒**突破 60 秒上限（主机默认约 5 分钟保护性停麦）。
+2. **Partially Supported 设备（`DIS A0 / 固件 26.7` 已抓包；以及社区反馈的 `HID 0x0110 / 固件 26.0 / CR PVT/MP`，见 [#256](https://github.com/zfdang/remote-buddy/issues/256)）**：`固件 26.7` 经 PacketLogger 抓包确认单键与松开仅发出 1 字节，被 macOS 在进入公开 `IOHID` 前丢弃，只有同时按两个键凑齐长度才进入公开 `IOHID`；而 `0x0110 / 固件 26.0（CR PVT/MP）` 在 `IOHID` 层表现出相同现象（无单键事件，仅双键 3 字节进入 `IOHID`），原始 BLE 报文尚待抓包确认，可能是类似短报告，也可能是新的硬件或固件变体 → 原生 `IOHID` 下进入 **Partially Supported（部分支持）** 模式（或通过蓝牙日志恢复解锁全键），保留完整语音键（含智能切换，默认约 5 分钟主机保护上限；但是否能借助 `MIC_EXTEND` 稳定超过 60 秒尚待这些批次的长时真机验证）与「方向键 + OK」发送 Enter。
+3. **`HID 版本 0x011B` 批次（社区反馈，`zhuhai_jieli` 杰理方案兼容款，详见 [brightac/remote-buddy#7](https://github.com/brightac/remote-buddy/issues/7) 与 [#280](https://github.com/zfdang/remote-buddy/issues/280)）**：使用 Report ID `2`（小端 16-bit consumer usage，涵盖 14 键编码），描述符声明不含 ID 3 字节、但固件实际仅发送 2 字节（如按下 `42 00`、松开 `00 00`），导致报告在 macOS `BTLEServer` 层即被长度校验丢弃——**公开 `IOHID` 既收不到单键，也收不到双键**；ATVV 语音链路走 GATT 不受 HID 影响仍可使用，但社区实测（[#280](https://github.com/zfdang/remote-buddy/issues/280)）确认该批次主机 `MIC_OPEN` 会在约 **60.6 秒**静默断流（无 `AUDIO_STOP`）且 `MIC_EXTEND` 无效，由于当前版本尚未实现主机端分段重开，在 `0x011B` 上单次连续录音仍受约 60 秒上限限制。Remote Buddy 连接页会读取并显示 PnP / IOHID 中的 **HID 版本**（如 `0x0110` / `0x011B`）供用户快速鉴别批次；默认不读取系统日志，但当用户在向导或设置中主动开启「蓝牙日志全键兼容」并手动安装仅限定 `com.apple.bluetooth` 子系统的 `.mobileconfig` 描述文件后，可通过 `BTLEServer` 统一日志流恢复 `0x011B` 与 `26.7` 短包按键（详见 [G9N9N 蓝牙日志按键恢复设计文档](g9n9n-btleserver-log-recovery-design.md)）。
 
 版本识别、模式说明与操作指南见 [G9N9N 语音与按键使用指南](g9n9n-compatibility.md)。
 
@@ -121,14 +121,57 @@
 | `3.106s` | Host 写 `MIC_CLOSE`（`0d 00`） | 总计收到 `126` 包 / `20,160` 字节（约 2.7 秒免提音频） |
 | `3.127s`（+21 ms） | Remote 通知 CTL | 返回 `AUDIO_STOP`：`00 00`，音频流干净停止 |
 
-### 3. 两种可行实现路线与待验证边界（当前暂未实现）
+### 3. 智能切换落地与 `FW 26.2` 后续真机验证（2026-11-19，PR #217）
 
-1. **普通按键映射「切换持续录音（`toggleLongRecording`）」**：在完全支持单键报告的 G9N9N 上，可由普通按键（如 `输入源`、`Netflix` 等）直接触发 `0x0C` 开麦、再按一次发 `0x0D` 关麦，不存在硬件断流重启空窗。
-2. **语音键短按自动重开（类 `rc003VoiceExtension`）**：若要复用物理语音键，需要在短按松手触发 `0x00` 后立即回发 `0x0C 00` 重开免提流（长按超过阈值仍松手即停）；每次短按重启麦克风存在约 **`~195 ms`** 的硬件启动空窗（`0.413s -> 0.609s`）。
+上述方案二已落地为 G9N9N 默认的**智能切换（Smart Toggle）**模式（短按 `< 0.7s` 松手后立即下发 `0x0C 00` 保持免提，长按 `≥ 0.7s` 松手即停），并同时在连接设置中保留纯「按住说话」模式。
 
-若后续决定启用上述任一模式，还需先补两项实机边界确认：
-1. **单次免提超时与保活上限**：纯 `0x0C` 打开后不触碰按键时，固件是否会主动超时断流（以及周期发送 `0x0E MIC_EXTEND` 能否持续延长时间）。
-2. **`0x0C` 流进行中再次按下物理语音键的帧格式**：确认二次按下时 CTL 上报的是 `0x08` 还是带新 session ID 的 `0x04 03 02 xx`，以便软件统一识别为“第二次按 → 下发 `0x0D` 停止”。
+2026-11-19 在 `0x0110 / 固件 26.2`（`Chromecast Remote A0 / PVT/MP`，`ver=26.11.19 build=925`）上补齐了免提长录音与二次按停真机验证：
+
+- **长时免提与 `MIC_EXTEND` 保活**：连续口述 **68.9 秒**（`batches=3439`、`samples=1,100,480`、`enqueue_failures=0`），期间周期发送 6 次 `ATVV MIC_EXTEND (0x0E)`，音频流保持稳定未在 60 秒断流。说明在 `0x0110 / FW 26.2` 原生固件上 `MIC_EXTEND` 确实有效；应用内默认约 5 分钟（或在「通用」中可选的 3 / 5 / 10 / 15 / 30 分钟）属于**主机侧保护性自动停麦上限**，并非每一档时长都在所有硬件批次上逐一跑满验证。
+- **二次按下语音键结束**：先上报带递增 `session` 的 `0x04`，随后 `1–47 ms` 上报 `0x08`；主机发 `MIC_CLOSE (0x0D)` 后流干净停止。
+- **免提期间按其他物理键**：固件自身会先主动发送 ATVV `0x00 (AUDIO_STOP)`，随后再上送对应按键的 HID 报告。
+
+---
+
+## 四、社区实测：HID `0x011B`（杰理兼容款）60.6 秒固定断流与 `MIC_EXTEND` 无效（2026-11-27，[#280](https://github.com/zfdang/remote-buddy/issues/280)）
+
+2026-11-27 社区开发者（`@brightac`）在一台 `HID 版本 0x011B` 的 G9N9N 兼容款上，退出 Remote Buddy 后使用独立 CoreBluetooth 测试程序直接下发 ATVV 指令（环境安静、不按遥控器任何按键），完成了两轮自动化实测。
+
+### 设备身份与芯片方案判断
+
+| 项目 | 实测值 |
+| --- | --- |
+| VID / PID | `18D1:9450`，`HID 版本 0x011B` |
+| DIS 厂商 / 型号 | `zhuhai_jieli` / `hid_mouse` |
+| DIS 序列号 / 硬件修订 | `25091QUH1000GOCR PVT/MP0.0.1` / `CR PVT/MP0.0.1` |
+| DIS 固件 / 软件版本 | `0.0.1` / `0.0.1` |
+| `GET_CAPS` 回复 | `0B 01 00 02 03 00 F7 01 00`（ATVV v1.0、16 kHz ADPCM、帧长 247） |
+| 音频包 | 固定 128 字节 |
+
+上述 DIS 字段与杰理（JieLi）SDK HID 模板默认值一致（`fw-AC63_BT_SDK/apps/hid/modules/bt/ble_hogp.c`：`zhuhai_jieli`、`hid_mouse`、`PNP_PID_VERSION 0x011b`），推断其为基于杰理方案的兼容款遥控器，与 `0x0110 / Google Inc. / 固件 26.2` 并非同一套固件。
+
+### 实测数据汇总
+
+| 测试项 | 实测结果 |
+| --- | --- |
+| 断流时刻 | 主机 `MIC_OPEN` 开麦后固定在 **60.56–60.62 秒**静默停流（6 次测试），**不发 `AUDIO_STOP`**，也无超时原因码；重开后的新流从首包起算同样约 `60.2` 秒 |
+| `MIC_EXTEND` 保活 | 每 10 秒发送 `0E 00`、`0E FF`、错 id `0E 05` 或完全不发，断流时刻完全一致（固件忽略 `MIC_EXTEND`） |
+| 流中再发 `MIC_OPEN` | 遥控器回新的 `04 xx 02 00` 且音频不断，但内部超时计时**不重置**，照样约 60.6 秒断流 |
+| `MIC_CLOSE` + `MIC_OPEN` 重开 | 有效；每 50 秒重开一次连续运行 30 分钟（36 次）未发生断流 |
+| 重开音频空洞 | `1.08–1.29` 秒，平均 **`1.13` 秒**。音频固定在 `MIC_CLOSE` 后约 `1.40` 秒恢复，与 `MIC_OPEN` 何时发送无关；若在 `AUDIO_STOP` 后超过 1 秒再开，则退化为冷启动的 `0.37` 秒首包延迟，总空洞更长 |
+| 提前关流再开 | 在 5 / 20 / 40 秒主动关流再开，空洞时长一致，新流均重新拥有完整的约 60 秒时长 |
+| 冷开麦首包延迟 | `0.365–0.385` 秒；空闲 10 秒到 5 分钟无差别，且未收到 `0F02` |
+| `AUDIO_SYNC` 与采样率切换 | 两轮自动测试均未收到 `AUDIO_SYNC`，也未出现降到 8 kHz 的情况 |
+| 实际包率 | 平均 `59.8` 包/秒，约合 **`15.3 kHz`**（比标称 16 kHz 少约 4%，各段在 `14.5–15.9 kHz` 间波动） |
+| `MIC_CLOSE` 的 session id | 流中发送错误 id（`0D 05`）同样会停流 |
+| 关流残包窗口 | `MIC_CLOSE` 到收到 `AUDIO_STOP` 耗时 `40–330 ms`，期间还会到达 `2–15` 包旧流音频；之后基本无包，也不会自复活 |
+| `GET_CAPS` model 字节 | `00` / `01` / `03` 回复完全相同 |
+| 物理语音键按下延迟 | 固件按下后约 `1.3` 秒不送音频（早先配合 Remote Buddy 实测）；按下时立刻由主机下发 `MIC_OPEN` 也无效（遥控器回 `AUDIO_START` 但不发音频包） |
+
+### 跨项目互证与当前程序边界
+
+- 同类观察：`Hylouis233/sayall-g9n9n` 在同款样机上亦测得约 `59.96` 秒断流；`Fanatical-Naturalist/MiVibe-Remote` 在小米遥控器持续发 `MIC_EXTEND` 仍约 60 秒断流后改为主机端分段重开。
+- **当前 Remote Buddy 行为边界**：Remote Buddy 目前在免提与长录音期间仅周期发送 `MIC_EXTEND`，**尚未实现针对 `0x011B` 的主机端分段重开（`MIC_CLOSE` + `MIC_OPEN`）**。因此，当前版本在 `0x011B` 批次上的单次连续录音实际仍受约 **60 秒**硬件断流限制（且到点无 `AUDIO_STOP`）。若后续版本为 `0x011B` 增加主机端分段续流，需按上述实测约束在开麦 50–55 秒内挑静音点 `MIC_CLOSE` 后紧接 `MIC_OPEN`（不等待 `AUDIO_STOP`）、按约 `1.4` 秒补齐空洞静音、过滤 `MIC_CLOSE` 后约 `0.3` 秒内的旧流残包、以「一段时间无包」检测静默断流，并避免按精确 16 kHz 估算长录音时长。
 
 ---
 

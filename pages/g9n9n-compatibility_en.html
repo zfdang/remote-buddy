@@ -66,7 +66,7 @@
             <td><span class="device-status is-planned">Voice Only</span></td>
             <td>Report ID <code>2</code> (16-bit consumer usage) declares 3 bytes excluding ID, but firmware sends only <strong>2 bytes</strong> (e.g. <code>42 00</code> press, <code>00 00</code> release).</td>
             <td>Because payload size mismatches the HID descriptor, all ordinary button reports are dropped by macOS <code>BTLEServer</code>—neither single keys nor 2-key chords reach public <code>IOHID</code>.</td>
-            <td><strong>Voice only (ordinary buttons unsupported via public APIs)</strong>: ATVV voice recording still works over its separate channel. Remote Buddy strictly uses public macOS APIs; we recommend replacing <code>0x011B</code> hardware with a verified single-key unit (such as <code>0x0110 / FW 26.2</code>) or another supported model.</td>
+            <td><strong>Default: Voice only (optional logging profile unlocks all 14 keys)</strong>: ATVV voice recording works normally. To unlock all 14 buttons on <code>0x011B</code>, opt in to Bluetooth log key recovery in onboarding or Connection settings and install the bundled <code>.mobileconfig</code> profile; otherwise, replace with a verified <code>0x0110 / FW 26.2</code> unit.</td>
           </tr>
         </tbody>
       </table>
@@ -145,7 +145,7 @@
         </div>
         <ul class="device-specs">
           <li><strong>No speculative chord decoding</strong>: Partially Supported mode never guesses individual keys or synthesized long-press repeats from 2-key chords without release reports; recognized zeroed short release reports clear key state safely without firing Power.</li>
-          <li><strong>No private log scraping</strong>: For <code>0x011B</code> units dropped inside macOS <code>BTLEServer</code>, Remote Buddy never reads private system logs to bypass OS boundaries.</li>
+          <li><strong>Opt-in Bluetooth logging profile (off by default)</strong>: For <code>0x011B</code> and <code>26.7</code> batches dropped by macOS <code>BTLEServer</code>, Remote Buddy never reads system logs by default; only when you explicitly turn on the toggle and install the bundled <code>com.apple.bluetooth</code> <code>.mobileconfig</code> profile in System Settings → General → Device Management does it recover your paired G9N9N's dropped reports in memory (removable anytime).</li>
           <li><strong>Further reading</strong>: Compare all remote hardware on the <a class="text-link" href="device_en.html">Supported Remotes page →</a>, or inspect byte-level capture logs on GitHub in <a class="text-link" href="https://github.com/zfdang/remote-buddy/blob/main/docs/g9n9n-hardware-debugging.md">G9N9N hardware debugging notes ↗</a>, <a class="text-link" href="https://github.com/zfdang/remote-buddy/issues/256">community report #256 (0x0110 / FW 26.0) ↗</a>, and <a class="text-link" href="https://github.com/brightac/remote-buddy/issues/7">community report #7 (0x011B) ↗</a>.</li>
         </ul>
       </article>

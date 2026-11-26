@@ -149,7 +149,9 @@ struct SettingsView: View {
             refreshPermissionStates()
             loginItemService.refresh()
             resumeCustomMappingIfPermissionsGranted()
-
+            if settings.g9n9nBluetoothLogRecoveryEnabled {
+                model.refreshBluetoothLoggingProfileStatus()
+            }
         }
         .alert(
             localization.text("button_mapping.permission_prompt.title"),

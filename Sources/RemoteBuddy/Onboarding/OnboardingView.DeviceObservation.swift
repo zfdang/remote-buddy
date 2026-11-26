@@ -29,7 +29,10 @@ extension OnboardingView {
             voiceBinding: settings.stagedVoiceToolBinding ?? settings.verifiedVoiceToolBinding,
             postEventAccessGranted: permissionOverrides?.postEventAccess ??
                 permissionOverrides?.accessibility ??
-                KeyboardInjector.isPostEventAccessGranted
+                KeyboardInjector.isPostEventAccessGranted,
+            g9n9nBluetoothLogRecoveryEnabled: settings.g9n9nBluetoothLogRecoveryEnabled,
+            bluetoothLoggingProfileStatus: model.bluetoothLoggingProfileStatus,
+            btleServerLogRedactedObserved: model.btleServerLogRedactedObserved
         )
         let logger = AppLogger.shared
         let summary = snapshot.redactedText

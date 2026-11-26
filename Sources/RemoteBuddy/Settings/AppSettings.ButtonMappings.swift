@@ -398,6 +398,18 @@ extension AppSettings {
         remoteDeviceProfiles[index].g9n9nInputMode = stored
     }
 
+    @discardableResult
+    func upgradeG9N9NInputModeToFullForLogRecovery(for profileID: UUID?) -> Bool {
+        guard g9n9nBluetoothLogRecoveryEnabled,
+              let profileID,
+              let index = remoteDeviceProfiles.firstIndex(where: { $0.id == profileID }),
+              remoteDeviceProfiles[index].model.isChromecastRemote,
+              remoteDeviceProfiles[index].effectiveG9N9NInputMode == .twoKeyCompatibility
+        else { return false }
+        remoteDeviceProfiles[index].g9n9nInputMode = nil
+        return true
+    }
+
     func g9n9nVoiceButtonMode(for profileID: UUID?) -> G9N9NVoiceButtonMode {
         guard let profileID,
               let profile = remoteDeviceProfiles.first(where: { $0.id == profileID }) else {

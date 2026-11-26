@@ -65,6 +65,10 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
     @Published var activeVoiceSource: RemoteInputSource?
     @Published var voiceShortcutStatus = LocalizedMessage("voice_button.status.preparing")
     @Published var voiceKeyCompatibilityWarning: VoiceKeyCompatibilityWarning?
+    @Published var bluetoothLoggingProfileStatus: BluetoothLoggingProfileStatus = .unknown
+    @Published var btleServerLogRedactedObserved = false
+    var btleServerReportLogSource: BTLEServerReportLogSource?
+    var lastBTLEServerLogRedactedAt: TimeInterval = 0
     struct VoiceToolUnavailablePrompt: Equatable {
         enum Reason: Equatable {
             case unavailable
@@ -455,6 +459,9 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
         voiceSession.end()
         releaseVoiceKeyIfNeeded()
         stopHIDMonitors()
+        btleServerReportLogSource?.stop()
+        btleServerReportLogSource = nil
+        btleServerLogRedactedObserved = false
         isAudioOutputReady = false
         isAudioOutputVerified = false
         // Stop is serialized with configurations on the engine queue. Enumeration no

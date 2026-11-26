@@ -210,7 +210,30 @@ extension HIDRemoteMonitor {
         diagnosticLogger("HID DEVICE probe_removed")
     }
 
-    func handleReport(from device: IOHIDDevice, reportID: UInt32, data: Data) {
+    /// Feeds a report recovered from the BTLEServer log through the normal IOHID path,
+    /// attributed to the matched G9N9N HID device, as if IOHID had delivered it.
+    func handleBTLEServerLogReport(reportID: UInt32, data: Data) {
+        guard let manager else { return }
+        let candidates: [IOHIDDevice]
+        if let activeDevice {
+            candidates = [activeDevice] + probedDevices
+        } else if let matched = IOHIDManagerCopyDevices(manager) as? Set<IOHIDDevice> {
+            candidates = probedDevices + Array(matched)
+        } else {
+            candidates = probedDevices
+        }
+        guard let device = candidates.first(where: { allowsG9N9N && isGoogleDevice($0) }) else {
+            diagnosticLogger("HID BTLE_LOG report_unrouted reason=no_google_device id=\(reportID)")
+            return
+        }
+        handleReport(from: device, reportID: reportID, data: data, origin: .btleServerLog)
+    }
+
+    func handleReport(from device: IOHIDDevice, reportID: UInt32, data: Data, origin: HIDReportOrigin = .iohid) {
+        let previousOrigin = currentReportOrigin
+        currentReportOrigin = origin
+        defer { currentReportOrigin = previousOrigin }
+        let reportSource = origin == .btleServerLog ? "btle_log" : "device"
         guard manager != nil else {
             diagnosticLogger("HID REPORT rejected reason=monitor_inactive")
             return
@@ -226,7 +249,7 @@ extension HIDRemoteMonitor {
         currentReportDescriptor = deviceMetadata.reportDescriptor
         if currentReportIsGoogle {
             let payload = data.prefix(16).map { String(format: "%02X", $0) }.joined(separator: " ")
-            diagnosticLogger("HID GOOGLE report id=\(reportID) bytes=\(data.count) payload=\(payload)")
+            diagnosticLogger("HID GOOGLE report id=\(reportID) bytes=\(data.count) payload=\(payload) source=\(origin.rawValue)")
         }
         guard !isGoogleCandidateIdentity(device, metadata: deviceMetadata) || currentReportIsGoogle else { return }
         guard !isT1CandidateIdentity(device, metadata: deviceMetadata) || currentReportIsT1 else { return }
@@ -253,13 +276,17 @@ extension HIDRemoteMonitor {
         }
         let discoveryReport: ParsedHIDReport?
         if deviceFingerprint == nil, targetFingerprint == nil {
-            guard let parsed = parseReport(reportID: reportID, data: data, source: "device") else {
+            guard let parsed = parseReport(reportID: reportID, data: data, source: reportSource) else {
+                return
+            }
+            if isDuplicateGoogleReport(reportID: reportID, usages: parsed.mappedUsages, origin: origin) {
+                diagnosticLogger("HID GOOGLE report dropped reason=duplicate source=\(origin.rawValue)")
                 return
             }
             let observedUsages = parsed.allObservedUsages
             guard Self.shouldPromoteDiscoveryReport(usages: observedUsages) else {
                 diagnosticLogger(
-                    "HID REPORT deferred reason=discovery_no_known_button source=device " +
+                    "HID REPORT deferred reason=discovery_no_known_button source=\(reportSource) " +
                         "id=\(reportID) bytes=\(data.count) usage_count=\(observedUsages.count)"
                 )
                 return
@@ -290,11 +317,11 @@ extension HIDRemoteMonitor {
             processParsedReport(
                 reportID: reportID,
                 data: data,
-                source: "device",
+                source: reportSource,
                 parsed: discoveryReport
             )
         } else {
-            parseAndProcess(reportID: reportID, data: data, source: "device")
+            parseAndProcess(reportID: reportID, data: data, source: reportSource)
         }
     }
 

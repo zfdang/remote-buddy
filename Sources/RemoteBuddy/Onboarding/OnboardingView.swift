@@ -159,6 +159,9 @@ struct OnboardingView: View {
                 routeConnectedPhysicalRemoteIfNeeded()
             case .remote:
                 prepareSelectedControlConnection()
+                if settings.g9n9nBluetoothLogRecoveryEnabled {
+                    model.refreshBluetoothLoggingProfileStatus()
+                }
             case .voiceTrigger:
                 break
             case .complete:

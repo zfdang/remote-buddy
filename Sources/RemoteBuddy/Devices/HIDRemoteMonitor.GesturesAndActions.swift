@@ -41,6 +41,14 @@ extension HIDRemoteMonitor {
         ).action == .directPassthrough
     }
 
+    /// Expects and swallows the native key event macOS generates for a remote press.
+    /// Reports recovered from the BTLEServer log have no native event, so arming would
+    /// only risk swallowing a real keyboard press of the same key.
+    func armNativeSuppression(button: RemoteButton, edge: RemoteEventEdge, fromBTLEServerLog: Bool = false) {
+        guard !fromBTLEServerLog, currentReportOrigin != .btleServerLog else { return }
+        eventSuppressor.arm(button: button, edge: edge)
+    }
+
     func shouldUseNativePassthrough(
         button: RemoteButton,
         action: ButtonAction,
@@ -48,6 +56,7 @@ extension HIDRemoteMonitor {
         recognizesLongPress: Bool
     ) -> Bool {
         guard !activeDeviceIsSeized,
+              currentReportOrigin != .btleServerLog,
               !appSwitcherCoordinator.isActive,
               !recognizesDoubleClick,
               !recognizesLongPress,
@@ -316,6 +325,7 @@ extension HIDRemoteMonitor {
         lastT1MouseLogTime = 0
         resetGestureRecognition()
         activeUsages.removeAll()
+        btleLogActiveUsages.removeAll()
         emitActiveButtons()
         appSwitcherCoordinator.finishIfActive(reason: "common_phrases_opened", confirmed: false)
     }
@@ -335,15 +345,20 @@ extension HIDRemoteMonitor {
         if !activeDeviceIsSeized {
             for usage in activeUsages.subtracting(nativePassthroughUsages) {
                 if let button = RemoteButton.usageMap[usage] {
-                    eventSuppressor.arm(button: button, edge: .up)
+                    armNativeSuppression(
+                        button: button,
+                        edge: .up,
+                        fromBTLEServerLog: btleLogActiveUsages.contains(usage)
+                    )
                 }
             }
             for usage in interceptedT1PassthroughUsages {
                 if let button = RemoteButton.usageMap[usage] {
-                    eventSuppressor.arm(button: button, edge: .up)
+                    armNativeSuppression(button: button, edge: .up)
                 }
             }
         }
+        btleLogActiveUsages.removeAll()
         repeatTimers.values.forEach { $0.cancel() }
         repeatTimers.removeAll()
         repeatTokens.removeAll()

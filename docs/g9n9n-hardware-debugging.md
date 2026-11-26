@@ -4,7 +4,7 @@
 
 1. **Fully Supported 设备（`HID 版本 0x0110` / 固件 `26.2`，`PVT/MP`，完整 3 字节 report 1）**：单键按下与松开均发出完整 3 字节索引格式报告，macOS 正常认识并送达公开 `IOHID` → 进入 **Fully Supported（完全支持）** 模式，语音键与全部 14 颗普通按键完整可用。
 2. **Partially Supported 设备（`DIS A0 / 固件 26.7` 已抓包；以及社区反馈的 `HID 0x0110 / 固件 26.0 / CR PVT/MP`，见 [#256](https://github.com/zfdang/remote-buddy/issues/256)）**：`固件 26.7` 经 PacketLogger 抓包确认单键与松开仅发出 1 字节，被 macOS 在进入公开 `IOHID` 前丢弃，只有同时按两个键凑齐长度才进入公开 `IOHID`；而 `0x0110 / 固件 26.0（CR PVT/MP）` 在 `IOHID` 层表现出相同现象（无单键事件，仅双键 3 字节进入 `IOHID`），原始 BLE 报文尚待抓包确认，可能是类似短报告，也可能是新的硬件或固件变体 → 进入 **Partially Supported（部分支持）** 模式，保留完整语音键（含智能切换与约 5 分钟保活）与「方向键 + OK」发送 Enter。
-3. **`HID 版本 0x011B` 批次（社区反馈，详见 [brightac/remote-buddy#7](https://github.com/brightac/remote-buddy/issues/7)）**：使用 Report ID `2`（小端 16-bit consumer usage，涵盖 14 键编码），描述符声明不含 ID 3 字节、但固件实际仅发送 2 字节（如按下 `42 00`、松开 `00 00`），导致报告在 macOS `BTLEServer` 层即被长度校验丢弃——**公开 `IOHID` 既收不到单键，也收不到双键**；ATVV 语音链路走 GATT 不受 HID 影响仍可使用。Remote Buddy 连接页会读取并显示 PnP / IOHID 中的 **HID 版本**（如 `0x0110` / `0x011B`）供用户快速鉴别批次，但依据只使用公开系统接口的原则，不通过读取系统调试日志绕过 `BTLEServer`。
+3. **`HID 版本 0x011B` 批次（社区反馈，详见 [brightac/remote-buddy#7](https://github.com/brightac/remote-buddy/issues/7)）**：使用 Report ID `2`（小端 16-bit consumer usage，涵盖 14 键编码），描述符声明不含 ID 3 字节、但固件实际仅发送 2 字节（如按下 `42 00`、松开 `00 00`），导致报告在 macOS `BTLEServer` 层即被长度校验丢弃——**公开 `IOHID` 既收不到单键，也收不到双键**；ATVV 语音链路走 GATT 不受 HID 影响仍可使用。Remote Buddy 连接页会读取并显示 PnP / IOHID 中的 **HID 版本**（如 `0x0110` / `0x011B`）供用户快速鉴别批次；默认不读取系统日志，但当用户在向导或设置中主动开启「蓝牙日志全键兼容」并手动安装仅限定 `com.apple.bluetooth` 子系统的 `.mobileconfig` 描述文件后，可通过 `BTLEServer` 统一日志流恢复 `0x011B` 与 `26.7` 短包按键（详见 [G9N9N 蓝牙日志按键恢复设计文档](g9n9n-btleserver-log-recovery-design.md)）。
 
 版本识别、模式说明与操作指南见 [G9N9N 语音与按键使用指南](g9n9n-compatibility.md)。
 

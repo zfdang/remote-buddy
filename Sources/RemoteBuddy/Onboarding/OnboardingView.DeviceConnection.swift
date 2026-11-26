@@ -282,6 +282,10 @@ extension OnboardingView {
                 destination: AppLinks.g9n9nCompatibilityGuide(for: localization.locale)
             )
             .font(.system(size: 12))
+
+            Divider()
+
+            G9N9NBluetoothLoggingSection(model: model, settings: settings)
         }
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)

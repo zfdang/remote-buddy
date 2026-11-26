@@ -116,6 +116,7 @@ extension BridgeAppModel {
                     "created=\(existingProfileID == nil)"
             )
         }
+        synchronizeBTLEServerLogSource()
         return profileID
     }
 
@@ -204,6 +205,7 @@ extension BridgeAppModel {
         remotePowerStates.removeValue(forKey: profileID)
         remoteSystemDeviceNames.removeValue(forKey: profileID)
         refreshBluetoothPresentation()
+        synchronizeBTLEServerLogSource()
         AppLogger.shared.write("REMOTE PROFILE phase=completed result=removed")
         return true
     }

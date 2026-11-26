@@ -1359,3 +1359,18 @@
 "connection.device_guide.g9n9n.limit.detail" = "Automatic hardware keepalive lets both Smart Toggle and Hold-to-Talk stream past 60s, capped at ~5 minutes per session to prevent accidental battery drain.";
 "connection.device_guide.g9n9n.other_key_stops.title" = "Pressing another button stops hands-free listening";
 "connection.device_guide.g9n9n.other_key_stops.detail" = "During hands-free streaming, tapping any other physical button makes firmware stop audio immediately—finish speaking before using other keys.";
+
+// Opt-in G9N9N Bluetooth logging profile compatibility
+"g9n9n.btle_log.title" = "Bluetooth Logging Full-Key Compatibility";
+"g9n9n.btle_log.toggle" = "Enable Bluetooth log key recovery (requires .mobileconfig profile)";
+"g9n9n.btle_log.subtitle" = "Off by default. Optional workaround for G9N9N batches (such as 0x011B, FW 26.7, or 26.0) whose short HID reports are dropped by macOS BTLEServer, unlocking all 14 ordinary buttons.";
+"g9n9n.btle_log.status.installed" = "Bluetooth logging profile installed";
+"g9n9n.btle_log.status.not_installed" = "Bluetooth logging profile not detected";
+"g9n9n.btle_log.status.unknown" = "Checking profile status…";
+"g9n9n.btle_log.redacted_warning" = "Intercepted remote reports were seen, but payloads are still redacted as <private>. Open the bundled profile, install it in System Settings → General → Device Management, then click Recheck.";
+"g9n9n.btle_log.action.install_profile" = "Install Profile";
+"g9n9n.btle_log.action.open_device_management" = "Device Management";
+"g9n9n.btle_log.action.recheck" = "Recheck";
+"g9n9n.btle_log.privacy_note" = "Privacy & scope: This unsigned profile enables private logging only for com.apple.bluetooth so Remote Buddy can recover dropped reports from your paired G9N9N. Other devices are ignored, logs are not persisted or uploaded, and you can remove the profile or turn off this toggle anytime.";
+"button_mapping.google.partial.btle_log_hint" = "To unlock all 14 single keys on 26.7 / 26.0 / 0x011B batches, optionally enable Bluetooth log key recovery and install the logging profile in Connection settings.";
+"button_mapping.google.partial.open_connection" = "Open Connection";

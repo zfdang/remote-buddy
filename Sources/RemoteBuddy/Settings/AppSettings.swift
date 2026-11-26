@@ -23,6 +23,7 @@ final class AppSettings: ObservableObject {
         static let openMainWindowAtLaunch = "openMainWindowAtLaunch"
         static let receiveUpdateNotifications = "receiveUpdateNotifications"
         static let diagnosticLoggingEnabled = AppLogger.diagnosticLoggingEnabledKey
+        static let g9n9nBluetoothLogRecoveryEnabled = "g9n9nBluetoothLogRecoveryEnabled"
         static let voiceFnTapModeEnabled = "voiceFnTapModeEnabled"
         static let voiceKeyMode = "voiceKeyMode"
         static let lastLaunchedBuild = "launch.lastLaunchedBuild"
@@ -208,6 +209,15 @@ final class AppSettings: ObservableObject {
             if defaults === UserDefaults.standard, !AppLogger.isTestProcess() {
                 AppLogger.shared.setEnabled(diagnosticLoggingEnabled)
             }
+        }
+    }
+
+    @Published var g9n9nBluetoothLogRecoveryEnabled: Bool {
+        didSet {
+            defaults.set(
+                g9n9nBluetoothLogRecoveryEnabled,
+                forKey: Keys.g9n9nBluetoothLogRecoveryEnabled
+            )
         }
     }
 
@@ -500,6 +510,7 @@ final class AppSettings: ObservableObject {
         diagnosticLoggingEnabled = defaults.object(forKey: Keys.diagnosticLoggingEnabled) == nil
             ? true
             : defaults.bool(forKey: Keys.diagnosticLoggingEnabled)
+        g9n9nBluetoothLogRecoveryEnabled = defaults.bool(forKey: Keys.g9n9nBluetoothLogRecoveryEnabled)
         voiceFnTapModeEnabled = defaults.bool(forKey: Keys.voiceFnTapModeEnabled)
         voiceKeyMode = VoiceKeyMode(
             rawValue: defaults.string(forKey: Keys.voiceKeyMode) ?? ""

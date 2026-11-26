@@ -361,6 +361,20 @@ extension SettingsView {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "doc.badge.gearshape")
+                            .foregroundStyle(Color.accentColor)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(localization.text("button_mapping.google.partial.btle_log_hint"))
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Button(localization.text("button_mapping.google.partial.open_connection")) {
+                                selectSection(.connection)
+                            }
+                            .compatibilityButtonStyle(.standard)
+                            .controlSize(.small)
+                        }
+                    }
+                    HStack(alignment: .top, spacing: 8) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundStyle(.orange)
                         Text(localization.text("onboarding.chromecast.replace_hardware_advice"))

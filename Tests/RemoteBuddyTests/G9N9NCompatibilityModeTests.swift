@@ -524,4 +524,29 @@ struct G9N9NCompatibilityModeTests {
         probe.invoke("continue")
         #expect(settings.onboardingStep == .remote)
     }
+
+    @Test func bluetoothLogRecoveryDefaultsOffPersistsAndUnlocksUpgradeToFullMode() throws {
+        let suite = "g9n9n-btle-log-opt-in-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let settings = AppSettings(defaults: defaults)
+        #expect(!settings.g9n9nBluetoothLogRecoveryEnabled)
+
+        settings.onboardingPurpose = .initialSetup
+        let googleID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+        settings.setG9N9NInputMode(.twoKeyCompatibility, for: googleID)
+        settings.completeOnboarding()
+
+        // Cannot upgrade while opt-in toggle is off.
+        #expect(!settings.upgradeG9N9NInputModeToFullForLogRecovery(for: googleID))
+        #expect(settings.g9n9nInputMode(for: googleID) == .twoKeyCompatibility)
+
+        settings.g9n9nBluetoothLogRecoveryEnabled = true
+        let reloaded = AppSettings(defaults: defaults)
+        #expect(reloaded.g9n9nBluetoothLogRecoveryEnabled)
+        #expect(reloaded.upgradeG9N9NInputModeToFullForLogRecovery(for: googleID))
+        #expect(reloaded.g9n9nInputMode(for: googleID) == .full)
+        #expect(AppSettings(defaults: defaults).g9n9nInputMode(for: googleID) == .full)
+    }
 }

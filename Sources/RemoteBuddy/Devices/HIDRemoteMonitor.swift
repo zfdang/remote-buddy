@@ -90,6 +90,12 @@ enum HIDDeviceMatchDecision: Equatable {
     case rejected(String)
 }
 
+enum HIDReportOrigin: String, Equatable, Hashable {
+    case iohid = "iohid"
+    case btleServerLog = "btle_log"
+    case simulated = "simulated"
+}
+
 @MainActor
 final class HIDRemoteMonitor {
     struct ParsedHIDReport {
@@ -112,6 +118,10 @@ final class HIDRemoteMonitor {
     let allowsG9N9N: Bool
     let allowsT1Remote: Bool
     var currentReportIsGoogle = false
+    /// Reports recovered from the BTLEServer log never reached macOS, so no native key event follows them.
+    var currentReportOrigin: HIDReportOrigin = .iohid
+    var btleLogActiveUsages = Set<UInt16>()
+    var lastGoogleReportByOrigin: [HIDReportOrigin: (reportID: UInt32, usages: Set<UInt16>, time: TimeInterval)] = [:]
     var currentReportIsT1 = false
     var t1VoiceHoldActive = false
 
@@ -401,6 +411,8 @@ final class HIDRemoteMonitor {
 
     func stop() {
         isWaitingForMatchingServices = false
+        btleLogActiveUsages.removeAll()
+        lastGoogleReportByOrigin.removeAll()
         if ownsEventSuppressor { eventSuppressor.stop() }
         permissionPollSubscription?.cancel()
         permissionPollSubscription = nil

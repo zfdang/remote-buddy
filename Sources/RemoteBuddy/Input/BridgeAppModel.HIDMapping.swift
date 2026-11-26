@@ -320,6 +320,7 @@ extension BridgeAppModel {
         if canReuseRunningHIDMonitors(for: desiredConfiguration, forceRestart: forceRestart) {
             hidPowerKeySuppressed = powerKeySuppressed
             hidAllowedLocationIDs = allowedLocationIDs
+            synchronizeBTLEServerLogSource()
             return
         }
 
@@ -373,6 +374,7 @@ extension BridgeAppModel {
             hidMonitoringInterrupted = false
             appliedHIDMonitoringConfiguration = desiredConfiguration
         }
+        synchronizeBTLEServerLogSource()
         refreshRuntimePermissionDiagnosis(trigger: "hid_monitors_started")
     }
 
@@ -445,6 +447,134 @@ extension BridgeAppModel {
         discoveryHIDMonitor = nil
         activeRemoteButtons = []
         lastObservedRemoteButtonReport = nil
+        synchronizeBTLEServerLogSource()
+    }
+
+    func refreshBluetoothLoggingProfileStatus() {
+        Task { [weak self] in
+            let status = await BluetoothLoggingProfileService.detectInstalledStatus()
+            await MainActor.run {
+                guard let self else { return }
+                self.bluetoothLoggingProfileStatus = status
+            }
+        }
+    }
+
+    func setG9N9NBluetoothLogRecoveryEnabled(_ enabled: Bool) {
+        guard settings.g9n9nBluetoothLogRecoveryEnabled != enabled else {
+            synchronizeBTLEServerLogSource()
+            return
+        }
+        settings.g9n9nBluetoothLogRecoveryEnabled = enabled
+        AppLogger.shared.write("SETTINGS G9N9N_BTLE_LOG enabled=\(enabled)")
+        synchronizeBTLEServerLogSource()
+        if enabled {
+            refreshBluetoothLoggingProfileStatus()
+        }
+    }
+
+    func synchronizeBTLEServerLogSource() {
+        let permissions = permissionSnapshotProvider()
+        let chromecastPeripherals = Set(
+            settings.remoteDeviceProfiles
+                .filter { $0.model.isChromecastRemote }
+                .compactMap(\.bluetoothIdentifier)
+        )
+        let hasChromecastDemand = !chromecastPeripherals.isEmpty ||
+            (!settings.isOnboardingComplete && settings.onboardingControlSource == .chromecastRemote)
+        let shouldRun = started &&
+            settings.g9n9nBluetoothLogRecoveryEnabled &&
+            !audio.suspensionState.suspendsHIDMonitoring &&
+            settings.customMappingEnabled &&
+            permissions.inputMonitoringGranted &&
+            permissions.accessibilityGranted &&
+            hasChromecastDemand
+        guard shouldRun else {
+            if btleServerReportLogSource != nil {
+                btleServerReportLogSource?.stop()
+                btleServerReportLogSource = nil
+                AppLogger.shared.write("HID BTLE_LOG source=stopped")
+            }
+            btleServerLogRedactedObserved = false
+            return
+        }
+        if let existing = btleServerReportLogSource {
+            existing.updatePeripherals(chromecastPeripherals)
+            return
+        }
+        let source = BTLEServerReportLogSource(
+            peripherals: chromecastPeripherals,
+            diagnosticLogger: { message in
+                DispatchQueue.main.async {
+                    AppLogger.shared.write(message)
+                }
+            },
+            onReport: { [weak self] attributed in
+                MainActor.assumeIsolated {
+                    self?.handleAttributedBTLEServerReport(attributed)
+                }
+            },
+            onRedactedReport: { [weak self] observation in
+                MainActor.assumeIsolated {
+                    self?.handleRedactedBTLEServerReport(observation)
+                }
+            }
+        )
+        btleServerReportLogSource = source
+        source.start()
+    }
+
+    func handleAttributedBTLEServerReport(_ attributed: BTLEServerReportLog.AttributedReport) {
+        btleServerLogRedactedObserved = false
+        if bluetoothLoggingProfileStatus != .installed {
+            bluetoothLoggingProfileStatus = .installed
+        }
+        let matchingProfile = settings.remoteDeviceProfiles.first {
+            $0.model.isChromecastRemote && $0.bluetoothIdentifier == attributed.peripheral
+        }
+        let targetMonitor: HIDRemoteMonitor? = if let fingerprint = matchingProfile?.hidFingerprint,
+                                                  let bound = hidMonitors[fingerprint] {
+            bound
+        } else {
+            discoveryHIDMonitor
+        }
+        guard let targetMonitor else {
+            AppLogger.shared.write("HID BTLE_LOG report_unrouted reason=no_monitor id=\(attributed.reportID)")
+            return
+        }
+        if settings.isOnboardingComplete,
+           let profile = matchingProfile,
+           profile.effectiveG9N9NInputMode == .twoKeyCompatibility,
+           attributed.data.contains(where: { $0 != 0 }) {
+            let descriptor = targetMonitor.activeDevice.flatMap { targetMonitor.metadata(for: $0).reportDescriptor }
+                ?? targetMonitor.probedDevices.first(where: { targetMonitor.isGoogleDevice($0) })
+                    .flatMap { targetMonitor.metadata(for: $0).reportDescriptor }
+            if let usages = G9N9NProtocol.usages(
+                reportID: attributed.reportID,
+                data: attributed.data,
+                descriptor: descriptor,
+                payloadOnly: true
+            ), usages.count == 1,
+               settings.upgradeG9N9NInputModeToFullForLogRecovery(for: profile.id) {
+                targetMonitor.clearTransientInputStateForCompatibility()
+                AppLogger.shared.write(
+                    "REMOTE HID g9n9n_mode=full reason=btle_log_single_key profile=\(profile.id.uuidString)"
+                )
+            }
+        }
+        targetMonitor.handleBTLEServerLogReport(reportID: attributed.reportID, data: attributed.data)
+    }
+
+    func handleRedactedBTLEServerReport(_ observation: BTLEServerReportLog.RedactedObservation) {
+        btleServerLogRedactedObserved = true
+        if bluetoothLoggingProfileStatus == .unknown {
+            refreshBluetoothLoggingProfileStatus()
+        }
+        let now = ProcessInfo.processInfo.systemUptime
+        if now - lastBTLEServerLogRedactedAt >= 10 {
+            lastBTLEServerLogRedactedAt = now
+            AppLogger.shared.write("HID BTLE_LOG redacted_report_observed id=\(observation.reportID)")
+        }
     }
 
     /// Releases HID monitors, event taps, input-source observers, and pending recovery work

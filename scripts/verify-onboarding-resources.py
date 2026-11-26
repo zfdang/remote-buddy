@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Check every screenshot used by setup is included in an app resource directory."""
+import plistlib
 import re
 import struct
 import sys
@@ -124,4 +125,30 @@ files.extend(resources / f'{name}.png' for name in sorted(illustrations))
 for path in files:
     width, height = dimensions(path)
     assert width > 0 and height > 0, f'Empty image: {path}'
-print(f'Verified {len(files)} setup and device images in {resources}')
+
+profile_path = resources / 'Profiles' / 'RemoteBuddy-G9N9N-BluetoothLogging.mobileconfig'
+assert profile_path.is_file(), f'Missing logging profile: {profile_path}'
+profile_plist = plistlib.loads(profile_path.read_bytes())
+assert profile_plist.get('PayloadType') == 'Configuration', f'Invalid PayloadType in {profile_path}'
+assert profile_plist.get('PayloadRemovalDisallowed') is False, f'Profile must be removable: {profile_path}'
+logging_payloads = [
+    item for item in profile_plist.get('PayloadContent', [])
+    if isinstance(item, dict) and item.get('PayloadType') == 'com.apple.system.logging'
+]
+assert len(logging_payloads) == 1, f'Expected one logging payload in {profile_path}'
+logging_payload = logging_payloads[0]
+assert not logging_payload.get('System', {}).get('Enable-Private-Data'), (
+    f'Profile must not enable global System.Enable-Private-Data: {profile_path}'
+)
+bt_options = logging_payload.get('Subsystems', {}).get('com.apple.bluetooth', {}).get('DEFAULT-OPTIONS', {})
+assert bt_options.get('Enable-Private-Data') is True, (
+    f'Profile must enable Enable-Private-Data for com.apple.bluetooth: {profile_path}'
+)
+assert bt_options.get('Level', {}).get('Enable') == 'Debug', (
+    f'Profile must enable Debug level for com.apple.bluetooth: {profile_path}'
+)
+assert 'Persist' not in bt_options.get('Level', {}), (
+    f'Profile must not force persistent disk logging: {profile_path}'
+)
+
+print(f'Verified {len(files)} setup and device images and 1 logging profile in {resources}')

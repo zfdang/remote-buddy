@@ -66,7 +66,7 @@
             <td><span class="device-status is-planned">仅语音可用</span></td>
             <td>Report ID <code>2</code>（小端 16-bit consumer usage），描述符声明不含 ID 为 3 字节，固件实际仅发送 <strong>2 字节</strong>（如按下 <code>42 00</code>、松开 <code>00 00</code>）。</td>
             <td>因实际长度与描述符不符，所有普通按键报告均在 macOS <code>BTLEServer</code> 层被丢弃，公开 <code>IOHID</code> 连双键组合也收不到任何普通按键。</td>
-            <td><strong>仅语音键可用（普通按键不受公开接口支持）</strong>：ATVV 语音键走独立通道仍可正常录音；应用严格遵循仅调用公开系统 API 原则，建议退换为已验证支持单键的完全支持批次（如 <code>0x0110 / 固件 26.2</code>）或更换其他支持型号。</td>
+            <td><strong>默认：仅语音键可用（或启用可选蓝牙日志增强）</strong>：ATVV 语音键走独立通道仍可正常录音。若需在本机解锁全部 14 颗普通按键，可在向导或「设置 → 遥控器连接」中主动开启「蓝牙日志全键兼容」并安装内置 <code>.mobileconfig</code> 描述文件；不愿安装描述文件时，建议更换为 <code>0x0110 / 固件 26.2</code> 等完全支持批次。</td>
           </tr>
         </tbody>
       </table>
@@ -145,7 +145,7 @@
         </div>
         <ul class="device-specs">
           <li><strong>不做无松开报告的双键猜测</strong>：部分支持模式下不会通过双键组合反向推断全部 14 颗单键，也不开放缺乏松开报告时的长按连发，仅稳定提供「方向键 + OK」模拟 Enter；已识别的短零值松开报告会清除按键状态，不会误触发电源键。</li>
-          <li><strong>不读取系统私有调试日志</strong>：针对 <code>0x011B</code> 等被 macOS <code>BTLEServer</code> 丢弃的报文批次，应用不会绕过系统隐私与公开 API 边界提取底层报文。</li>
+          <li><strong>默认不读取系统私有调试日志，支持按需显式开启</strong>：针对 <code>0x011B</code>、<code>26.7</code> 等被 macOS <code>BTLEServer</code> 丢弃短报文的批次，应用默认完全关闭日志读取；仅当用户主动开启开关并在「系统设置 → 通用 → 设备管理」安装仅限定 <code>com.apple.bluetooth</code> 子系统的内置 <code>.mobileconfig</code> 后，才会在内存中恢复已绑定 G9N9N 的丢弃按键（随时可移除或关闭）。</li>
           <li><strong>更多资料</strong>：查看其他支持的遥控器对比请访问 <a class="text-link" href="device.html">支持设备页面 →</a>；如需查阅详细字节级真机测试记录，可参考仓库内的 <a class="text-link" href="https://github.com/zfdang/remote-buddy/blob/main/docs/g9n9n-hardware-debugging.md">G9N9N 真机测试记录（GitHub）↗</a>、<a class="text-link" href="https://github.com/zfdang/remote-buddy/issues/256">社区反馈 #256（0x0110 / FW 26.0）↗</a> 与 <a class="text-link" href="https://github.com/brightac/remote-buddy/issues/7">社区报告 #7（0x011B）↗</a>。</li>
         </ul>
       </article>

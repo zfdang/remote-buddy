@@ -1361,3 +1361,18 @@
 "connection.device_guide.g9n9n.limit.detail" = "已自动启用硬件保活，智能切换与按住说话均可连续说超 60 秒，并在约 5 分钟时自动停麦以防忘记关麦耗尽电量。";
 "connection.device_guide.g9n9n.other_key_stops.title" = "免提期间按其他键会结束收音";
 "connection.device_guide.g9n9n.other_key_stops.detail" = "智能切换免提收音时，若按下任意其他实体按键，硬件会直接停止音频流；请等说完再按其他按键。";
+
+// Opt-in G9N9N Bluetooth logging profile compatibility
+"g9n9n.btle_log.title" = "蓝牙日志全键兼容增强";
+"g9n9n.btle_log.toggle" = "启用蓝牙日志全键兼容（需安装 .mobileconfig 描述文件）";
+"g9n9n.btle_log.subtitle" = "默认关闭。专为 0x011B、26.7 或 26.0 等被 macOS BTLEServer 丢弃短报文的 G9N9N 批次准备，开启并安装描述文件后可解锁全部 14 颗普通按键。";
+"g9n9n.btle_log.status.installed" = "蓝牙日志描述文件已安装";
+"g9n9n.btle_log.status.not_installed" = "未检测到蓝牙日志描述文件";
+"g9n9n.btle_log.status.unknown" = "正在检测描述文件状态…";
+"g9n9n.btle_log.redacted_warning" = "已检测到被系统拦截的遥控器报文，但内容仍被遮蔽为 <private>。请打开内置描述文件并在「系统设置 → 通用 → 设备管理」中安装确认后点击“重新检测”。";
+"g9n9n.btle_log.action.install_profile" = "安装描述文件";
+"g9n9n.btle_log.action.open_device_management" = "打开设备管理";
+"g9n9n.btle_log.action.recheck" = "重新检测";
+"g9n9n.btle_log.privacy_note" = "隐私与范围：描述文件未签名，仅对 com.apple.bluetooth 子系统开启私有日志以便恢复您已绑定 G9N9N 遥控器的丢弃按键；不会读取其他设备、不落盘、不上传，随时可在“设备管理”中移除或关闭上方开关。";
+"button_mapping.google.partial.btle_log_hint" = "如果希望在 26.7 / 26.0 / 0x011B 批次上解锁全部 14 颗单键，可前往「遥控器连接」页按需开启「蓝牙日志全键兼容」并安装描述文件。";
+"button_mapping.google.partial.open_connection" = "前往连接设置";

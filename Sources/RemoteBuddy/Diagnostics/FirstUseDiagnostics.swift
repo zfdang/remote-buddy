@@ -377,6 +377,9 @@ struct FirstUseDiagnosticSnapshot {
     var controlSource: OnboardingControlSource = .unselected
     var voiceBinding: VoiceToolUserBinding? = nil
     var postEventAccessGranted: Bool? = nil
+    var g9n9nBluetoothLogRecoveryEnabled = false
+    var bluetoothLoggingProfileStatus: BluetoothLoggingProfileStatus = .unknown
+    var btleServerLogRedactedObserved = false
     let generatedAt = Date()
 
     var onboardingVoiceKeyPolicy: String {
@@ -435,6 +438,9 @@ struct FirstUseDiagnosticSnapshot {
             "permission_input_monitoring=\(capabilities.inputMonitoringGranted)",
             "permission_accessibility=\(capabilities.accessibilityGranted)",
             "permission_post_event=\(postEventAccessGranted ?? capabilities.accessibilityGranted)",
+            "g9n9n_btle_log_recovery_enabled=\(g9n9nBluetoothLogRecoveryEnabled)",
+            "bluetooth_logging_profile=\(bluetoothLoggingProfileStatus.rawValue)",
+            "btle_log_redacted_observed=\(btleServerLogRedactedObserved)",
             "control_connected=\(capabilities.remoteConnected)",
             "control_button_observed=\(capabilities.remoteButtonObserved)",
             "remote_voice_button_press_count=\(context.remoteInput.voiceButtonPressCount)",

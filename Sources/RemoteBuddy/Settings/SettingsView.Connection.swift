@@ -64,6 +64,9 @@ extension SettingsView {
         }
         .onAppear {
             model.refreshVoiceKeyCompatibilityWarning()
+            if settings.g9n9nBluetoothLogRecoveryEnabled {
+                model.refreshBluetoothLoggingProfileStatus()
+            }
             if permissionOverrides == nil {
                 model.refreshRuntimePermissionDiagnosis(trigger: "settings_connection_appear")
             }
@@ -253,6 +256,8 @@ extension SettingsView {
             }
             if let chromecastSupportMode {
                 g9n9nHardwareSupportSection(for: chromecastSupportMode)
+                Divider()
+                G9N9NBluetoothLoggingSection(model: model, settings: settings)
             }
         }
         .padding(12)

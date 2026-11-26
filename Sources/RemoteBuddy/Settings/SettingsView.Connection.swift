@@ -247,7 +247,7 @@ extension SettingsView {
         information: RemoteDeviceInformation?,
         chromecastSupportMode: G9N9NInputMode?
     ) -> some View {
-        let readings = connectionDeviceReadings(information, chromecastSupportMode: chromecastSupportMode)
+        let readings = connectionDeviceReadings(information)
         return VStack(alignment: .leading, spacing: 10) {
             if !readings.isEmpty {
                 connectionDeviceInformation(readings)
@@ -256,9 +256,7 @@ extension SettingsView {
                 Divider()
             }
             if let chromecastSupportMode {
-                g9n9nHardwareSupportSection(for: chromecastSupportMode)
-                Divider()
-                G9N9NBluetoothLoggingSection(model: model, settings: settings)
+                connectionIntegrationModeRow(for: chromecastSupportMode)
             }
         }
         .padding(12)
@@ -271,8 +269,7 @@ extension SettingsView {
     }
 
     private func connectionDeviceReadings(
-        _ information: RemoteDeviceInformation?,
-        chromecastSupportMode: G9N9NInputMode?
+        _ information: RemoteDeviceInformation?
     ) -> [(String, String)] {
         let protocolSummary: String? = switch (information?.protocolVersion, information?.capabilities) {
         case let (.some(version), .some(capabilities)):
@@ -284,15 +281,6 @@ extension SettingsView {
         case (.none, .none):
             nil
         }
-        let integrationValue: String? = chromecastSupportMode.map { mode in
-            let key = switch mode {
-            case .full:
-                "connection.g9n9n.integration.native_hid"
-            case .bluetoothLogRecovery:
-                "connection.g9n9n.integration.btle_log_profile"
-            }
-            return localization.text(key)
-        }
         let readings: [(String, String?)] = [
             ("connection.device.model", information?.modelNumber),
             ("connection.device.identity", information?.identityValue),
@@ -300,7 +288,6 @@ extension SettingsView {
             ("connection.device.firmware", information?.firmwareRevision),
             ("connection.device.protocol", protocolSummary),
             ("connection.device.audio", information?.audioFormat),
-            ("connection.device.button_integration", integrationValue),
         ]
         return readings.compactMap { key, value in
             value.map { (key, $0) }
@@ -329,50 +316,32 @@ extension SettingsView {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func g9n9nHardwareSupportSection(for mode: G9N9NInputMode) -> some View {
-        let noticeKey = switch mode {
+    private func connectionIntegrationModeRow(for mode: G9N9NInputMode) -> some View {
+        let valueKey = switch mode {
         case .full:
-            "connection.g9n9n.full_support_notice"
+            "connection.g9n9n.integration.native_hid"
         case .bluetoothLogRecovery:
-            "connection.g9n9n.btle_log_support_notice"
+            "connection.g9n9n.integration.btle_log_profile"
         }
-        return VStack(alignment: .leading, spacing: 6) {
-            if mode == .full {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    g9n9nSupportBadge(for: mode)
-                        .fixedSize()
-                    Text(localization.text(noticeKey))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            } else {
-                Text(localization.text(noticeKey))
+        let isBluetoothLogInactive = mode == .bluetoothLogRecovery &&
+            (!settings.g9n9nBluetoothLogRecoveryEnabled ||
+                model.bluetoothLoggingProfileStatus != .installed ||
+                model.btleServerLogRedactedObserved)
+        return HStack(alignment: .center, spacing: 8) {
+            Text(localization.text("connection.device.button_integration"))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(localization.text(valueKey))
+                .font(.system(size: 12, weight: .medium))
+                .textSelection(.enabled)
+            if isBluetoothLogInactive {
+                Image(systemName: "exclamationmark.triangle.fill")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            if mode == .bluetoothLogRecovery &&
-                (!settings.g9n9nBluetoothLogRecoveryEnabled ||
-                    model.bluetoothLoggingProfileStatus != .installed ||
-                    model.btleServerLogRedactedObserved) {
-                HStack(alignment: .top, spacing: 6) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
-                    Text(localization.text("connection.g9n9n.btle_log_inactive_warning"))
-                        .foregroundStyle(.primary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .font(.caption)
-            }
-            if mode == .bluetoothLogRecovery {
-                Link(
-                    localization.text("connection.g9n9n.compatibility_doc_link"),
-                    destination: AppLinks.g9n9nCompatibilityGuide(for: localization.locale)
-                )
-                .font(.caption)
+                    .foregroundStyle(.orange)
+                    .help(localization.text("connection.g9n9n.btle_log_inactive_warning"))
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder

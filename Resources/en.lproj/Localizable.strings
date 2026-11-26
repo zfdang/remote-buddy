@@ -1287,8 +1287,6 @@
 
 "onboarding.summary.g9n9n_mode" = "G9N9N Support Mode";
 
-"remote.device.full_support_badge" = "Fully Supported Hardware";
-"connection.g9n9n.full_support_notice" = "Voice button and all 14 standard buttons work and can be customized.";
 "connection.g9n9n.compatibility_doc_link" = "Read G9N9N Compatibility Docs ↗";
 "connection.g9n9n.voice_button_mode.title" = "Voice Button Mode";
 "connection.g9n9n.voice_button_mode.hold" = "Hold to Talk";
@@ -1342,6 +1340,5 @@
 "connection.device.button_integration" = "Button Integration";
 "connection.g9n9n.integration.native_hid" = "Standard System HID";
 "connection.g9n9n.integration.btle_log_profile" = "Bluetooth Logging Profile (.mobileconfig)";
-"connection.g9n9n.btle_log_support_notice" = "Ordinary buttons on this remote are recovered via your installed .mobileconfig Bluetooth logging profile; all 14 buttons and voice input are enabled.";
 "connection.g9n9n.btle_log_inactive_warning" = "This remote uses the Bluetooth logging profile, but recovery is currently turned off, the profile is not confirmed installed, or payloads are still redacted as <private>; ordinary buttons may not respond until restored.";
 "button_mapping.google.btle_log_subtitle" = "All 14 ordinary buttons and common phrases are recovered via your installed .mobileconfig Bluetooth logging profile; Voice stays dedicated to the microphone.";

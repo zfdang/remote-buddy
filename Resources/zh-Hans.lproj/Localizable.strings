@@ -1289,8 +1289,6 @@
 
 "onboarding.summary.g9n9n_mode" = "G9N9N 支持模式";
 
-"remote.device.full_support_badge" = "完全支持硬件版本";
-"connection.g9n9n.full_support_notice" = "语音键与全部 14 颗普通按键均可正常使用与自定义。";
 "connection.g9n9n.compatibility_doc_link" = "查看 G9N9N 兼容性文档 ↗";
 "connection.g9n9n.voice_button_mode.title" = "语音键触发方式";
 "connection.g9n9n.voice_button_mode.hold" = "按住说话";
@@ -1344,6 +1342,5 @@
 "connection.device.button_integration" = "按键接入方式";
 "connection.g9n9n.integration.native_hid" = "标准系统 HID（原生）";
 "connection.g9n9n.integration.btle_log_profile" = "蓝牙日志描述文件 (.mobileconfig)";
-"connection.g9n9n.btle_log_support_notice" = "当前设备通过您安装的 .mobileconfig 蓝牙日志描述文件从 macOS BTLEServer 日志恢复普通按键，全部 14 颗普通按键与语音键均可正常映射。";
 "connection.g9n9n.btle_log_inactive_warning" = "该遥控器通过蓝牙日志描述文件接入，但当前未开启「蓝牙日志全键兼容」、尚未确认描述文件已安装，或日志仍被遮蔽为 <private>；恢复生效前普通按键可能无响应。";
 "button_mapping.google.btle_log_subtitle" = "当前通过蓝牙日志描述文件（.mobileconfig）恢复全部 14 颗普通按键与常用语触发；语音键固定用于遥控器麦克风。";

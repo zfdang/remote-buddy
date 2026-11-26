@@ -44,7 +44,7 @@
       <summary><span class="troubleshooting-question">Remote Buddy 支持哪些遥控器？</span></summary>
       <div class="troubleshooting-body">
         <p>Remote Buddy 并非所有蓝牙遥控器都能通用，而是针对各厂商专有的蓝牙语音传输协议与 HID 报告格式做了深度驱动适配。目前支持情况如下：</p>
-        <p><strong>1. Google Chromecast Voice Remote（G9N9N）：完全支持（推荐原生 HID 批次）</strong><br><code>0x0110 / 固件 26.2</code> 样机通过标准系统 HID 即插即用，支持语音、全部 14 颗普通按键自定义和电量显示。默认约 5 分钟自动停麦，可在「通用」中调整。固件 <code>26.7</code>、<code>26.0</code> 及 HID <code>0x011B</code> 等收不到原生单键的批次，通过手动安装 <code>.mobileconfig</code> 并主动启用蓝牙日志恢复（默认关闭），同样支持全部 14 颗普通按键与语音。详见 <a class="text-link" href="g9n9n-compatibility.html">G9N9N 语音与按键兼容性指南 ↗</a>。</p>
+        <p><strong>1. Google Chromecast Voice Remote（G9N9N）：完全支持（推荐原生 HID 批次）</strong><br><code>0x0110 / 固件 26.2</code> 样机通过标准系统 HID 即插即用，支持语音、全部 14 颗普通按键自定义和电量显示。默认约 5 分钟自动停麦，可在「通用」中调整。固件 <code>26.7</code>、<code>26.0</code> 及 HID <code>0x011B</code> 等收不到原生单键的批次，通过手动安装 <code>.mobileconfig</code> 并主动启用蓝牙日志恢复（默认关闭），同样支持全部 14 颗普通按键与语音。理论上通过蓝牙日志恢复可以绕过 macOS 限制支持任何类型的 G9N9N 硬件，但如遇此前未见过的特殊硬件版本仍需单独适配。详见 <a class="text-link" href="g9n9n-compatibility.html">G9N9N 语音与按键兼容性指南 ↗</a>。</p>
         <p><strong>2. 小米蓝牙遥控器 2 / 2 Pro（型号 RC001 电池版 / RC003 充电版）：已支持</strong><br>支持按住说话与 60 秒录音，支持全按键自定义。</p>
         <p><strong>3. T1 飞鼠键盘语音遥控器（T1-Remote）：已支持</strong><br>须通过蓝牙直连 Mac（非 2.4G 接收器）。支持点按免提、正面 7 颗常用键自定义，背面自带约 45 键迷你全键盘与空中飞鼠。</p>
         <p><strong>4. 计划支持中：</strong>Google TV Streamer Voice Remote（型号 GY3LE）、Apple Siri Remote（如第 3 代 A2854）等已列入跟进规划，暂未开放生产使用。</p>

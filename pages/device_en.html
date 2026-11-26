@@ -51,7 +51,7 @@
           <td><span class="device-status is-supported">Supported</span></td>
           <td><strong>Supports Smart Toggle (default) and Hold to Talk</strong>; tap once for hands-free listening (press again to stop), or hold &gt;0.7s to stop on release; no 60s limit (keepalive up to ~5 min)</td>
           <td>Purchased and tested: ~¥15 CNY (~$2 USD)<br><a class="text-link" href="https://mobile.yangkeduo.com/goods.html?ps=wI005ehWCi">Pinduoduo Listing ↗</a></td>
-          <td>All known hardware versions support voice (bottom white LED glows during streaming), 14 configurable buttons, and battery display: standard units work out of the box, while some batches enable all buttons after installing the Bluetooth logging profile (<code>.mobileconfig</code>) during setup.</td>
+          <td>Voice, all 14 buttons, and battery display were verified on <code>0x0110 / FW 26.2</code>. Batches whose single-key presses do not reach native HID can try opt-in Bluetooth log recovery with a manually installed <code>.mobileconfig</code> profile. Full button coverage still requires hardware verification.</td>
         </tr>
         <tr>
           <td><strong>Xiaomi Bluetooth Remote 2 / 2 Pro</strong><br><span class="device-model-code">RC001 / RC003</span></td>
@@ -105,9 +105,9 @@
         <ul class="device-specs">
           <li><strong>Known hardware versions &amp; integration paths (all report VID/PID <code>18D1:9450</code> · check <code>HID version</code>, firmware, and Button Integration in Connection settings after pairing)</strong>:
             1) <code>0x0110 / FW 26.2</code> (<code>PVT/MP</code>): <strong>Standard System HID</strong>, plug-and-play voice + all 14 buttons;
-            2) <code>A0 / FW 26.7</code> &amp; <code>0x0110 / FW 26.0</code> (<code>CR PVT/MP</code>, per <a class="text-link" href="https://github.com/zfdang/remote-buddy/issues/256">#256 ↗</a>): short single-key reports are dropped by macOS and recovered via the <strong>Bluetooth Logging Profile (<code>.mobileconfig</code>)</strong>, enabling voice + all 14 buttons once installed;
-            3) <code>0x011B</code> (per <a class="text-link" href="https://github.com/brightac/remote-buddy/issues/7">community report #7 ↗</a>): short Report <code>2</code> payloads are dropped by macOS and likewise recovered via the <strong>Bluetooth Logging Profile</strong>; voice works directly.</li>
-          <li><strong>Button mapping</strong>: All 14 ordinary buttons support custom single, double, and long presses: directions, OK, Back, Home, Mute, volume, YouTube, Netflix, Input, and Power.</li>
+            2) <code>A0 / FW 26.7</code> and <code>0x0110 / FW 26.0</code> (<code>CR PVT/MP</code>, per <a class="text-link" href="https://github.com/zfdang/remote-buddy/issues/256">#256 ↗</a>): single-key reports do not reach the app through native HID. Log recovery is available to try. Full button coverage still requires hardware verification;
+            3) <code>0x011B</code> (per <a class="text-link" href="https://github.com/brightac/remote-buddy/issues/7">community report #7 ↗</a>): macOS drops short Report <code>2</code> packets. Log recovery is available to try and still requires hardware verification.</li>
+          <li><strong>Button mapping</strong>: Configure directions, OK, Back, Home, Mute, volume, YouTube, Netflix, Input, and Power. Verify each button when using log recovery.</li>
           <li><strong>Voice, duration &amp; LED</strong>: Defaults to <strong>Smart Toggle</strong>—tap and release to speak hands-free (press again or tap another button to stop, ~0.2s mic reopen pause), or hold over 0.7s to stop on release; can also switch to pure Hold to Talk in Connection settings. Both modes <strong>exceed the 60s limit</strong> via 10s keepalive (capped at ~5 minutes to prevent accidental battery drain). The bottom white LED glows steadily while streaming voice; battery percentage appears when a reading is available.</li>
           <li><strong>Setup</strong>: Press OK, then test three different ordinary buttons. Default media controls: YouTube plays the previous track, Netflix plays the next track, and Input toggles play/pause. All can be customized.</li>
         </ul>
@@ -225,7 +225,7 @@
         <p class="eyebrow">FIRST CHOICE</p>
         <h3>G9N9N: Smart Toggle, comfortable, great value</h3>
         <p>Supports both <strong>Smart Toggle (tap hands-free) and Hold to Talk</strong> with <strong>no 60s cutoff</strong> (keepalive up to ~5 minutes, bottom white LED shows active streaming). Shorter than Xiaomi with a rounded grip, very light, and around ¥15 (~$2), with Voice positioned right below the directional ring for effortless thumb reach.</p>
-        <p>All known hardware versions provide full 14-button mapping. The main tradeoff is two replaceable AAA batteries rather than built-in charging; for profile-free plug-and-play, prefer the <code>0x0110 / FW 26.2</code> version.</p>
+        <p>For profile-free setup, prefer the tested <code>0x0110 / FW 26.2</code> batch. The remote uses two replaceable AAA batteries.</p>
       </article>
       <article class="buying-card">
         <p class="eyebrow">MORE FEATURES</p>

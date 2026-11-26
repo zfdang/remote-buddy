@@ -184,6 +184,18 @@ struct ProductBoundaryTests {
         #expect(reloadedTen.voiceAutoStopDuration.timeInterval == 600)
         #expect(reloadedTen.voiceAutoStopDuration.maxKeepaliveExtensions == 60)
 
+        reloadedTen.voiceAutoStopDuration = .fifteenMinutes
+        let reloadedFifteen = AppSettings(defaults: defaults)
+        #expect(reloadedFifteen.voiceAutoStopDuration == .fifteenMinutes)
+        #expect(reloadedFifteen.voiceAutoStopDuration.timeInterval == 900)
+        #expect(reloadedFifteen.voiceAutoStopDuration.maxKeepaliveExtensions == 90)
+
+        reloadedFifteen.voiceAutoStopDuration = .thirtyMinutes
+        let reloadedThirty = AppSettings(defaults: defaults)
+        #expect(reloadedThirty.voiceAutoStopDuration == .thirtyMinutes)
+        #expect(reloadedThirty.voiceAutoStopDuration.timeInterval == 1800)
+        #expect(reloadedThirty.voiceAutoStopDuration.maxKeepaliveExtensions == 180)
+
         defaults.set(999, forKey: AppSettings.Keys.voiceAutoStopMinutes)
         let fallback = AppSettings(defaults: defaults)
         #expect(fallback.voiceAutoStopDuration == .fiveMinutes)

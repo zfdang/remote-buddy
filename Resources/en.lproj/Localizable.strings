@@ -500,6 +500,8 @@
 "about.preferences.voice_auto_stop_duration.3m" = "3 min";
 "about.preferences.voice_auto_stop_duration.5m" = "5 min";
 "about.preferences.voice_auto_stop_duration.10m" = "10 min";
+"about.preferences.voice_auto_stop_duration.15m" = "15 min";
+"about.preferences.voice_auto_stop_duration.30m" = "30 min";
 "settings.overview.ready" = "Permissions and microphone ready";
 "settings.overview.missing_requirements" = "Needs setup: %@";
 "settings.overview.open_section" = "Open %@ settings";
@@ -610,8 +612,8 @@
 "onboarding.voice_tool.typeless.title" = "Typeless";
 "onboarding.voice_tool.typeless.detail" = "Use Typeless for voice typing.";
 "onboarding.voice_tool.other.title" = "Other Voice App";
-"onboarding.voice_tool.other.detail" = "Use another voice typing tool or voice assistant.";
-"onboarding.voice_tool.other.setup_detail" = "Supports voice typing tools or voice assistants such as Siri that do not insert text into fields. Set its microphone (or System Settings → Sound) to Remote Buddy Mic and verify the shortcut activates it.";
+"onboarding.voice_tool.other.detail" = "Use another voice typing tool, voice assistant, or standalone recorder.";
+"onboarding.voice_tool.other.setup_detail" = "Supports voice typing tools, or assistants and recorders such as Siri and WeType AI Recorder that do not insert text into fields. Set its microphone (or System Settings → Sound) to Remote Buddy Mic and verify the shortcut activates it.";
 "onboarding.voice_tool.status.not_installed" = "Not installed";
 "onboarding.voice_tool.runtime.not_running" = "%@ is not running. Remote Buddy already tried to open it in the background; choose “Reopen” before testing again.";
 "onboarding.voice_tool.runtime.unknown" = "Choose “Reopen” to start %@ before testing again.";
@@ -747,7 +749,7 @@
 "onboarding.voice_test.manual_input" = "Keyboard input detected. Try again with the voice button.";
 "onboarding.voice_test.success" = "Voice and text input are confirmed";
 "onboarding.voice_test.success_non_text" = "Voice trigger and audio delivery are confirmed";
-"onboarding.voice_test.non_text_confirm" = "This tool does not insert text into fields (e.g., Siri); I confirmed the voice button triggers it";
+"onboarding.voice_test.non_text_confirm" = "This tool does not insert text into fields (e.g., Siri, WeType AI Recorder); I confirmed the voice button triggers it";
 "onboarding.controls.title" = "Try your everyday control buttons";
 "onboarding.controls.detail" = "Press three different control buttons to try navigation, OK, Back, Home, or volume control.";
 "onboarding.controls.xiaomi.detail" = "Press three different control buttons on the Xiaomi remote, such as an arrow, OK, Back, Home, or volume.";

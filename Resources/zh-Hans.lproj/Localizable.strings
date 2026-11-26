@@ -500,6 +500,8 @@
 "about.preferences.voice_auto_stop_duration.3m" = "3 分钟";
 "about.preferences.voice_auto_stop_duration.5m" = "5 分钟";
 "about.preferences.voice_auto_stop_duration.10m" = "10 分钟";
+"about.preferences.voice_auto_stop_duration.15m" = "15 分钟";
+"about.preferences.voice_auto_stop_duration.30m" = "30 分钟";
 "settings.overview.ready" = "权限与麦克风均已就绪";
 "settings.overview.missing_requirements" = "待设置：%@";
 "settings.overview.open_section" = "打开%@设置";
@@ -610,8 +612,8 @@
 "onboarding.voice_tool.typeless.title" = "Typeless";
 "onboarding.voice_tool.typeless.detail" = "在 Typeless 中使用语音键输入。";
 "onboarding.voice_tool.other.title" = "其他语音工具";
-"onboarding.voice_tool.other.detail" = "用于其他语音输入工具或语音助手。";
-"onboarding.voice_tool.other.setup_detail" = "支持语音输入工具，或系统 Siri 等不向输入框写入文字的语音助手。请在该工具设置（或系统声音输入）中选择正确的麦克风，并确认快捷键能正常唤醒。";
+"onboarding.voice_tool.other.detail" = "用于其他语音输入工具、语音助手或独立录音软件。";
+"onboarding.voice_tool.other.setup_detail" = "支持语音输入工具，或系统 Siri、微信 AI 录音笔等不向输入框写入文字的工具。请在该工具设置（或系统声音输入）中选择正确的麦克风，并确认快捷键能正常唤醒。";
 "onboarding.voice_tool.status.not_installed" = "尚未安装";
 "onboarding.voice_tool.runtime.not_running" = "%@ 尚未运行。遥控搭子已尝试在后台打开；请点击“重新打开”后再测试。";
 "onboarding.voice_tool.runtime.unknown" = "请点击“重新打开”，启动 %@ 后再测试。";
@@ -744,7 +746,7 @@
 "onboarding.voice_test.manual_input" = "检测到键盘输入，请重新用语音键说一句";
 "onboarding.voice_test.success" = "语音与文字输入都已确认";
 "onboarding.voice_test.success_non_text" = "语音触发与声音传输都已确认";
-"onboarding.voice_test.non_text_confirm" = "该工具不会向输入框写入文字（例如系统 Siri 等语音助手），我已确认按下语音键可正常唤醒并响应";
+"onboarding.voice_test.non_text_confirm" = "该工具不会向输入框写入文字（例如系统 Siri、微信 AI 录音笔等），我已确认按下语音键可正常唤醒并响应";
 "onboarding.controls.title" = "试试常用的控制按键";
 "onboarding.controls.detail" = "连续按下三个不同的普通按键，感受方向、确认、返回、主页或音量控制。";
 "onboarding.controls.xiaomi.detail" = "在小米遥控器上连续按下三个不同的普通按键，例如方向、确定、返回、主页或音量。";

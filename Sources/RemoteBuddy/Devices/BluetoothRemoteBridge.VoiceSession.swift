@@ -474,12 +474,14 @@ extension BluetoothRemoteBridge {
         guard googleCandidate || t1Candidate, streaming, !microphoneClosePending,
               streamStopWatchdog == nil,
               let generation = currentGeneration() else { return }
-        microphoneKeepalive = scheduleMicrophoneClose(10) { [weak self] in
+        microphoneKeepalive = scheduleMicrophoneClose(TimeInterval(VoiceAutoStopDuration.keepaliveIntervalSeconds)) { [weak self] in
             guard let self, self.streaming, !self.microphoneClosePending,
                   self.streamStopWatchdog == nil,
                   self.currentGeneration() == generation else { return }
-            if self.microphoneKeepaliveCount >= Self.maxMicrophoneKeepaliveExtensions {
-                AppLogger.shared.write("ATVV MIC_EXTEND limit_reached session=\(self.sessionID)")
+            if self.microphoneKeepaliveCount >= self.maxMicrophoneKeepaliveExtensions {
+                AppLogger.shared.write(
+                    "ATVV MIC_EXTEND limit_reached session=\(self.sessionID) max_minutes=\(self.settings.voiceAutoStopDuration.minutes)"
+                )
                 _ = self.requestMicrophoneClose()
                 return
             }

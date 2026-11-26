@@ -1,6 +1,35 @@
 import Combine
 import Foundation
 
+/// Safety cap options (in minutes) for continuous or hands-free voice sessions across
+/// supported remotes (such as G9N9N and T1), stopping forgotten sessions automatically.
+enum VoiceAutoStopDuration: Int, CaseIterable, Codable, Identifiable {
+    case threeMinutes = 3
+    case fiveMinutes = 5
+    case tenMinutes = 10
+
+    static let keepaliveIntervalSeconds = 10
+
+    var id: Int { rawValue }
+    var minutes: Int { rawValue }
+    var timeInterval: TimeInterval { TimeInterval(rawValue * 60) }
+
+    var maxKeepaliveExtensions: Int {
+        (rawValue * 60) / Self.keepaliveIntervalSeconds
+    }
+
+    var titleKey: String {
+        switch self {
+        case .threeMinutes:
+            return "about.preferences.voice_auto_stop_duration.3m"
+        case .fiveMinutes:
+            return "about.preferences.voice_auto_stop_duration.5m"
+        case .tenMinutes:
+            return "about.preferences.voice_auto_stop_duration.10m"
+        }
+    }
+}
+
 @MainActor
 final class AppSettings: ObservableObject {
     static let currentOnboardingVersion = 1
@@ -26,6 +55,7 @@ final class AppSettings: ObservableObject {
         static let g9n9nBluetoothLogRecoveryEnabled = "g9n9nBluetoothLogRecoveryEnabled"
         static let voiceFnTapModeEnabled = "voiceFnTapModeEnabled"
         static let voiceKeyMode = "voiceKeyMode"
+        static let voiceAutoStopMinutes = "voiceAutoStopMinutes"
         static let lastLaunchedBuild = "launch.lastLaunchedBuild"
         static let onboardingPurpose = "onboarding.purpose"
         static let onboardingCompletedVersion = "onboarding.completedVersion"
@@ -233,6 +263,13 @@ final class AppSettings: ObservableObject {
     @Published var voiceKeyMode: VoiceKeyMode {
         didSet {
             defaults.set(voiceKeyMode.rawValue, forKey: Keys.voiceKeyMode)
+        }
+    }
+
+    /// 自动停麦安全上限（分钟），适用于 G9N9N、T1 等点按免提或硬件保活收音模式。
+    @Published var voiceAutoStopDuration: VoiceAutoStopDuration {
+        didSet {
+            defaults.set(voiceAutoStopDuration.rawValue, forKey: Keys.voiceAutoStopMinutes)
         }
     }
 
@@ -514,6 +551,9 @@ final class AppSettings: ObservableObject {
         voiceKeyMode = VoiceKeyMode(
             rawValue: defaults.string(forKey: Keys.voiceKeyMode) ?? ""
         ) ?? .suggestedShortcut
+        let storedVoiceAutoStopMinutes = (defaults.object(forKey: Keys.voiceAutoStopMinutes) as? NSNumber)?.intValue
+        voiceAutoStopDuration = storedVoiceAutoStopMinutes
+            .flatMap(VoiceAutoStopDuration.init(rawValue:)) ?? .fiveMinutes
         onboardingPurpose = defaults.string(forKey: Keys.onboardingPurpose)
             .flatMap(OnboardingPurpose.init(rawValue:)) ?? .initialSetup
         onboardingCompletedVersion = defaults.integer(forKey: Keys.onboardingCompletedVersion)

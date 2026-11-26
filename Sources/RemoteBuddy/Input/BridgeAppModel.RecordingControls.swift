@@ -255,19 +255,21 @@ extension BridgeAppModel {
 
     func scheduleG9N9NSmartToggleDeadline(generation: UInt64) {
         g9n9nSmartToggleDeadlineTimer?.cancel()
+        let timeoutSeconds = settings.voiceAutoStopDuration.timeInterval
         let timer = DispatchSource.makeTimerSource(queue: .main)
-        timer.schedule(deadline: .now() + G9N9NSmartToggleState.maximumHandsFreeDuration)
+        timer.schedule(deadline: .now() + timeoutSeconds)
         timer.setEventHandler { [weak self] in
             guard let self,
                   case let .handsFreeActive(bridgeID) = self.g9n9nSmartToggle.phase,
                   self.g9n9nSmartToggle.generation == generation
             else { return }
             let bridge = self.g9n9nSmartToggleBridge
+            let maxMinutes = self.settings.voiceAutoStopDuration.minutes
             if bridge?.streaming == true {
                 _ = self.g9n9nSmartToggle.enterClosing(bridgeID: bridgeID)
                 self.cancelG9N9NSmartToggleTimers()
                 _ = bridge?.requestMicrophoneClose()
-                AppLogger.shared.write("G9N9N SMART_TOGGLE stopping reason=safe_timeout")
+                AppLogger.shared.write("G9N9N SMART_TOGGLE stopping reason=safe_timeout max_minutes=\(maxMinutes)")
             } else {
                 self.abortG9N9NSmartToggleSession(reason: "safe_timeout", requestClose: true)
             }

@@ -235,7 +235,10 @@ extension SettingsView {
                             chromecastSupportMode: chromecastSupportMode
                         )
                     }
-                    if let usageGuide = ConnectionDeviceUsageGuide.make(for: profile) {
+                    if let usageGuide = ConnectionDeviceUsageGuide.make(
+                        for: profile,
+                        voiceAutoStopDuration: settings.voiceAutoStopDuration
+                    ) {
                         ConnectionDeviceUsageSection(guide: usageGuide)
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading).padding(.top, 4)

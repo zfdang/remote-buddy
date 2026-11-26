@@ -97,7 +97,9 @@ final class BluetoothRemoteBridge: NSObject {
     var t1Candidate = false
     var googleReadiness = G9N9NReadiness()
     var t1Readiness = T1RemoteReadiness()
-    static let maxMicrophoneKeepaliveExtensions = 30
+    var maxMicrophoneKeepaliveExtensions: Int {
+        settings.voiceAutoStopDuration.maxKeepaliveExtensions
+    }
     var microphoneKeepalive: ScheduledOperation?
     var microphoneKeepaliveCount = 0
     var identifiedModel: RemoteModel?

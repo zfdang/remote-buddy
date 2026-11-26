@@ -161,6 +161,34 @@ struct ProductBoundaryTests {
         #expect(!reloaded.receiveUpdateNotifications)
     }
 
+    @Test @MainActor func voiceAutoStopDurationDefaultsToFiveMinutesPersistsAndFallsBackSafely() throws {
+        let suite = "remote-buddy.voice-timeout.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let initial = AppSettings(defaults: defaults)
+        #expect(initial.voiceAutoStopDuration == .fiveMinutes)
+        #expect(initial.voiceAutoStopDuration.minutes == 5)
+        #expect(initial.voiceAutoStopDuration.timeInterval == 300)
+        #expect(initial.voiceAutoStopDuration.maxKeepaliveExtensions == 30)
+
+        initial.voiceAutoStopDuration = .threeMinutes
+        let reloadedThree = AppSettings(defaults: defaults)
+        #expect(reloadedThree.voiceAutoStopDuration == .threeMinutes)
+        #expect(reloadedThree.voiceAutoStopDuration.timeInterval == 180)
+        #expect(reloadedThree.voiceAutoStopDuration.maxKeepaliveExtensions == 18)
+
+        reloadedThree.voiceAutoStopDuration = .tenMinutes
+        let reloadedTen = AppSettings(defaults: defaults)
+        #expect(reloadedTen.voiceAutoStopDuration == .tenMinutes)
+        #expect(reloadedTen.voiceAutoStopDuration.timeInterval == 600)
+        #expect(reloadedTen.voiceAutoStopDuration.maxKeepaliveExtensions == 60)
+
+        defaults.set(999, forKey: AppSettings.Keys.voiceAutoStopMinutes)
+        let fallback = AppSettings(defaults: defaults)
+        #expect(fallback.voiceAutoStopDuration == .fiveMinutes)
+    }
+
     @Test @MainActor func settingsPersistPreferencesWithoutUsageData() throws {
         let suite = "remote-buddy.tests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))

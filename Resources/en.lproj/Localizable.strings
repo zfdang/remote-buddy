@@ -485,6 +485,12 @@
 "voice_tool.unavailable.alert.open_settings" = "Open Integration";
 "settings.general.display_group" = "App display";
 "settings.general.language_group" = "Language";
+"settings.general.voice_behavior" = "Voice Recording";
+"about.preferences.voice_auto_stop_duration" = "Auto-stop voice timeout";
+"about.preferences.voice_auto_stop_duration_help" = "To prevent forgetting to stop the mic and draining the battery, remotes using hands-free tap or hardware keepalive (such as G9N9N and T1) stop recording automatically after this duration (default: 5 min).";
+"about.preferences.voice_auto_stop_duration.3m" = "3 min";
+"about.preferences.voice_auto_stop_duration.5m" = "5 min";
+"about.preferences.voice_auto_stop_duration.10m" = "10 min";
 "settings.overview.ready" = "Permissions and microphone ready";
 "settings.overview.missing_requirements" = "Needs setup: %@";
 "settings.overview.open_section" = "Open %@ settings";
@@ -1316,14 +1322,14 @@
 "connection.device_guide.xiaomi.voice.detail" = "Hold Voice while speaking and release to stop; hardware stops pushing audio as soon as you let go, so Smart Toggle / tap-to-talk cannot be enabled.";
 "connection.device_guide.xiaomi.limit.title" = "~60-second single-hold hardware limit";
 "connection.device_guide.xiaomi.limit.detail" = "Firmware ends the stream after ~60 seconds of continuous holding. For longer dictation, release briefly and press again to continue.";
-"connection.device_guide.t1.voice.title" = "Press once to start, press again to stop (~5 min cap)";
-"connection.device_guide.t1.voice.detail" = "Press and release Voice to speak hands-free, then press once more to stop. Automatic keepalive caps sessions at ~5 minutes to avoid battery drain.";
+"connection.device_guide.t1.voice.title" = "Press once to start, press again to stop (~%1$@ min cap)";
+"connection.device_guide.t1.voice.detail" = "Press and release Voice to speak hands-free, then press once more to stop. Automatic keepalive caps sessions at ~%1$@ minutes to avoid battery drain (configurable in General).";
 "connection.device_guide.t1.hold_compat.title" = "Works with hold-to-talk voice tools";
 "connection.device_guide.t1.hold_compat.detail" = "Remote Buddy holds your tool's voice shortcut while streaming and releases on stop, so no continuous physical hold is required.";
 "connection.device_guide.g9n9n.led.title" = "Bottom white LED indicates active voice streaming";
 "connection.device_guide.g9n9n.led.detail" = "Whenever the remote microphone is open and transmitting audio in either mode, the white LED near the bottom stays lit and turns off when stopped.";
-"connection.device_guide.g9n9n.limit.title" = "Both modes exceed 60s (~5-minute safety limit)";
-"connection.device_guide.g9n9n.limit.detail" = "Automatic hardware keepalive lets both Smart Toggle and Hold-to-Talk stream past 60s, capped at ~5 minutes per session to prevent accidental battery drain.";
+"connection.device_guide.g9n9n.limit.title" = "Both modes exceed 60s (~%1$@ min safety limit)";
+"connection.device_guide.g9n9n.limit.detail" = "Automatic hardware keepalive lets both Smart Toggle and Hold-to-Talk stream past 60s, capped at ~%1$@ minutes per session to prevent accidental battery drain (configurable in General).";
 "connection.device_guide.g9n9n.other_key_stops.title" = "Pressing another button stops hands-free listening";
 "connection.device_guide.g9n9n.other_key_stops.detail" = "During hands-free streaming, tapping any other physical button makes firmware stop audio immediately—finish speaking before using other keys.";
 

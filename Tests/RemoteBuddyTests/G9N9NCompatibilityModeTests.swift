@@ -5,21 +5,10 @@ import SwiftUI
 import Testing
 @testable import RemoteBuddy
 
-@Suite("G9N9N partial-support compatibility mode")
+@Suite("G9N9N support modes and Bluetooth log recovery")
 @MainActor
 struct G9N9NCompatibilityModeTests {
-    @Test func enterChordRecognizesOkWithAnyDirectionOnly() {
-        let ok = RemoteButton.ok.hidUsage
-        for arrow in [RemoteButton.up, .down, .left, .right] {
-            #expect(G9N9NProtocol.isEnterChord([ok, arrow.hidUsage]))
-        }
-        #expect(!G9N9NProtocol.isEnterChord([ok]))
-        #expect(!G9N9NProtocol.isEnterChord([ok, RemoteButton.back.hidUsage]))
-        #expect(!G9N9NProtocol.isEnterChord([RemoteButton.up.hidUsage, RemoteButton.down.hidUsage]))
-        #expect(!G9N9NProtocol.isEnterChord([ok, RemoteButton.up.hidUsage, RemoteButton.down.hidUsage]))
-    }
-
-    @Test func settingsPersistCompatibilityModePerChromecastProfileOnly() throws {
+    @Test func settingsPersistTwoSupportModesPerChromecastProfileOnly() throws {
         let suite = "g9n9n-mode-persist-" + UUID().uuidString
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
@@ -30,386 +19,393 @@ struct G9N9NCompatibilityModeTests {
         let xiaomiID = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
 
         #expect(settings.g9n9nInputMode(for: googleID) == .full)
-        settings.setG9N9NInputMode(.twoKeyCompatibility, for: googleID)
-        settings.setG9N9NInputMode(.twoKeyCompatibility, for: xiaomiID)
+        settings.setG9N9NInputMode(.bluetoothLogRecovery, for: googleID)
+        settings.setG9N9NInputMode(.bluetoothLogRecovery, for: xiaomiID)
 
         let reloaded = AppSettings(defaults: defaults)
-        #expect(reloaded.g9n9nInputMode(for: googleID) == .twoKeyCompatibility)
+        #expect(reloaded.g9n9nInputMode(for: googleID) == .bluetoothLogRecovery)
         #expect(reloaded.g9n9nInputMode(for: xiaomiID) == .full)
 
-        // Completed setup or integration-only flow cannot mutate compatibility mode arbitrarily.
+        // Completed setup or integration-only flow cannot mutate mode via onboarding helper.
         reloaded.completeOnboarding()
         reloaded.setG9N9NInputMode(.full, for: googleID)
-        #expect(reloaded.g9n9nInputMode(for: googleID) == .twoKeyCompatibility)
+        #expect(reloaded.g9n9nInputMode(for: googleID) == .bluetoothLogRecovery)
 
         SettingsPageBehavior.beginIntegrationSetup(tool: .doubao, settings: reloaded)
         reloaded.setG9N9NInputMode(.full, for: googleID)
-        #expect(reloaded.g9n9nInputMode(for: googleID) == .twoKeyCompatibility)
+        #expect(reloaded.g9n9nInputMode(for: googleID) == .bluetoothLogRecovery)
 
         SettingsPageBehavior.beginDeviceSetup(settings: reloaded)
         reloaded.setG9N9NInputMode(.full, for: googleID)
         #expect(AppSettings(defaults: defaults).g9n9nInputMode(for: googleID) == .full)
     }
 
-    @Test func partialSupportModeBlocksAllMappingEditsAndResetsUntilRestoredToFull() throws {
-        let suite = "g9n9n-mode-lock-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
-
-        let settings = AppSettings(defaults: defaults)
-        settings.onboardingPurpose = .initialSetup
-        let googleID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
-        settings.selectRemoteProfile(googleID)
-        settings.setAction(.escape, for: .ok, trigger: .singleClick)
-        settings.setG9N9NInputMode(.twoKeyCompatibility, for: googleID)
-        settings.completeOnboarding()
-
-        #expect(!settings.allowsMappingEdits(for: googleID))
-        let shortcut = CustomKeyboardShortcut(keyCode: 9, modifierFlags: [.command], keyLabel: "V")
-        settings.setAction(.deleteBackward, for: .ok, trigger: .singleClick)
-        settings.setAction(.volumeUp, for: .ok, trigger: .doubleClick)
-        settings.setShortcut(shortcut, for: .ok, trigger: .singleClick)
-        settings.setBaseBinding(
-            ConfiguredButtonAction(action: .returnKey, shortcut: nil),
-            for: .up,
-            trigger: .singleClick,
-            profileID: googleID
-        )
-        settings.resetBindings()
-
-        #expect(settings.action(for: .ok, profileID: googleID) == .escape)
-        #expect(settings.configuredAction(for: .ok, trigger: .doubleClick, profileID: googleID).action == .disabled)
-        #expect(settings.shortcut(for: .ok, profileID: googleID) == nil)
-        #expect(settings.action(for: .up, profileID: googleID) == .arrowUp)
-
-        SettingsPageBehavior.beginDeviceSetup(settings: settings)
-        settings.setG9N9NInputMode(.full, for: googleID)
-        settings.completeOnboarding()
-        #expect(settings.allowsMappingEdits(for: googleID))
-        settings.setAction(.deleteBackward, for: .ok, trigger: .singleClick)
-        #expect(settings.action(for: .ok, profileID: googleID) == .deleteBackward)
-    }
-
-    @Test func onboardingDetectionRequiresExplicitOptInBeforeAcceptingTwoKeyCombos() {
+    @Test func onboardingDetectionRequiresSingleKeyProofBeforePassingRemoteStep() {
         let combo: Set<RemoteButton> = [.up, .ok]
         #expect(
-            ChromecastCompatibilityDetection.evaluate(
+            ChromecastOnboardingDetection.evaluate(
                 step: .remote,
                 buttons: combo,
-                singleKeyObserved: false,
-                compatibilityModeEnabled: false
-            ) == .awaitCompatibilityOptIn(buttons: combo)
+                singleKeyObserved: false
+            ) == .awaitSingleKey(buttons: combo)
         )
         #expect(
-            ChromecastCompatibilityDetection.evaluate(
-                step: .remote,
-                buttons: combo,
-                singleKeyObserved: false,
-                compatibilityModeEnabled: true
-            ) == .recordCompatibilityMode(buttons: combo)
-        )
-        #expect(
-            ChromecastCompatibilityDetection.evaluate(
+            ChromecastOnboardingDetection.evaluate(
                 step: .remote,
                 buttons: [.ok],
-                singleKeyObserved: false,
-                compatibilityModeEnabled: true
-            ) == .recordFullMode(buttons: [.ok])
+                singleKeyObserved: false
+            ) == .recordSingleKey(buttons: [.ok])
         )
         #expect(
-            ChromecastCompatibilityDetection.evaluate(
+            ChromecastOnboardingDetection.evaluate(
+                step: .remote,
+                buttons: combo,
+                singleKeyObserved: true
+            ) == .recordSingleKey(buttons: combo)
+        )
+        #expect(
+            ChromecastOnboardingDetection.evaluate(
                 step: .controls,
                 buttons: [.ok, .back],
-                singleKeyObserved: false,
-                compatibilityModeEnabled: true
-            ) == .controlsNonChordObserved(buttons: [.ok, .back])
+                singleKeyObserved: true
+            ) == .controlsObserved(buttons: [.ok, .back])
         )
-        #expect(
-            ChromecastCompatibilityDetection.evaluate(
-                step: .controls,
-                buttons: [.up, .ok],
-                singleKeyObserved: false,
-                compatibilityModeEnabled: true
-            ) == .controlsChordConfirmed(buttons: [.up, .ok])
-        )
-    }
 
-    @Test func compatibilityOptInCardShowsOnRemoteUntilSingleKeyConfirmation() {
-        #expect(ChromecastCompatibilityDetection.shouldShowCompatibilityOptInCard(
+        #expect(ChromecastOnboardingDetection.shouldShowBluetoothLogRecoveryCard(
             step: .remote,
             source: .chromecastRemote,
             singleKeyObserved: false
         ))
-        #expect(!ChromecastCompatibilityDetection.shouldShowCompatibilityOptInCard(
+        #expect(!ChromecastOnboardingDetection.shouldShowBluetoothLogRecoveryCard(
             step: .remote,
             source: .chromecastRemote,
             singleKeyObserved: true
         ))
-        #expect(!ChromecastCompatibilityDetection.shouldShowCompatibilityOptInCard(
+        #expect(!ChromecastOnboardingDetection.shouldShowBluetoothLogRecoveryCard(
             step: .controls,
             source: .chromecastRemote,
             singleKeyObserved: false
         ))
-        #expect(!ChromecastCompatibilityDetection.shouldShowCompatibilityOptInCard(
+        #expect(!ChromecastOnboardingDetection.shouldShowBluetoothLogRecoveryCard(
             step: .remote,
             source: .xiaomiRemote,
             singleKeyObserved: false
         ))
     }
 
-    @Test func compatibilityControlsGatePassesWithOneEnterChordWithoutBypassingPermissions() {
-        var capabilities = OnboardingCapabilities(
-            bluetoothGranted: true,
-            inputMonitoringGranted: true,
-            accessibilityGranted: true,
-            remoteConnected: true,
-            remoteButtonObserved: true,
-            isTwoKeyCompatibleMode: true,
-            compatibleChordConfirmed: false
-        )
-        let context = FirstUseDiagnosticContext(
-            step: .controls,
-            remoteAvailability: .hasRemote,
-            controlMethod: .physicalRemote,
-            capabilities: capabilities,
-            hasSelectedAudioUID: true
-        )
-        #expect(context.failureReason == .controlsNotConfirmed)
-        #expect(!OnboardingFlowPolicy.canContinue(
-            from: .controls,
-            voiceTool: .doubao,
-            selectedDevice: .chromecastG9N9N,
-            capabilities: capabilities
-        ))
-
-        capabilities.compatibleChordConfirmed = true
-        #expect(OnboardingFlowPolicy.canContinue(
-            from: .controls,
-            voiceTool: .doubao,
-            selectedDevice: .chromecastG9N9N,
-            capabilities: capabilities
-        ))
-
-        let summary = OnboardingCompletionSummary(
-            purpose: .initialSetup,
-            remoteName: "Chromecast Remote",
-            buttonsVerified: true,
-            microphoneReady: true,
-            voiceKeyMode: .function,
-            tapModeEnabled: false,
-            voiceTool: .doubao,
-            binding: nil,
-            isPartialSupportG9N9N: true
-        )
-        #expect(summary.isPartialSupportG9N9N)
-        #expect(summary.buttonsVerified == true)
-    }
-
-    @Test func compatibilityModeRuntimeEmitsEnterForDirectionPlusOkEvenWithoutReleasesOrSeize() throws {
-        let suite = "g9n9n-compat-runtime-" + UUID().uuidString
+    @Test func btleLogPathDoesNotLogRawPayloadBytes() throws {
+        let suite = "g9n9n-no-raw-bytes-" + UUID().uuidString
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
 
         let settings = AppSettings(defaults: defaults)
         settings.customMappingEnabled = true
-        let profileID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
-        settings.selectRemoteProfile(profileID)
-        settings.setG9N9NInputMode(.twoKeyCompatibility, for: profileID)
-        settings.completeOnboarding()
-
-        let clock = ControlledTestScheduler()
-        var actions: [ButtonAction] = []
-        var nativeFilterAvailable = true
-        let monitor = HIDRemoteMonitor(
-            settings: settings,
-            profileID: profileID,
-            scheduler: clock,
-            runtimePermissions: { true },
-            nativeSuppressionAvailable: { nativeFilterAvailable },
-            actionPerformer: { _, _, configured in
-                actions.append(configured.action)
-                return true
-            },
-            diagnosticLogger: { _ in }
-        )
-        let descriptor = G9N9NProtocol.indexedConsumerDescriptor
-        monitor.connectSimulatedDevice(fingerprint: "google", profileID: profileID, isSeized: false)
-        defer { monitor.disconnectSimulatedDevice() }
-
-        // Repeated direction+OK presses emit single Returns with no release reports and no held repeat.
-        monitor.handleSimulatedGoogleReport(reportID: 1, data: Data([1, 3, 7]), descriptor: descriptor)
-        monitor.handleSimulatedGoogleReport(reportID: 1, data: Data([1, 7, 3]), descriptor: descriptor)
-        monitor.handleSimulatedGoogleReport(reportID: 1, data: Data([1, 7, 4]), descriptor: descriptor)
-        clock.advance(to: 5_000)
-        #expect(actions == [.returnKey, .returnKey, .returnKey])
-
-        // Single keys and non-arrow combos are ignored safely in partial-support mode.
-        monitor.handleSimulatedGoogleReport(reportID: 1, data: Data([1, 7, 0]), descriptor: descriptor)
-        monitor.handleSimulatedGoogleReport(reportID: 1, data: Data([1, 3, 0]), descriptor: descriptor)
-        monitor.handleSimulatedGoogleReport(reportID: 1, data: Data([1, 7, 11]), descriptor: descriptor)
-        #expect(actions.count == 3)
-
-        // Unseized fallback without an active native suppression tap pauses safely instead of double-firing.
-        nativeFilterAvailable = false
-        monitor.handleSimulatedGoogleReport(reportID: 1, data: Data([1, 7, 3]), descriptor: descriptor)
-        #expect(actions.count == 3)
-
-        // Re-running Add Device setup to restore full mode unlocks single-button mapping.
-        nativeFilterAvailable = true
-        SettingsPageBehavior.beginDeviceSetup(settings: settings)
-        settings.setG9N9NInputMode(.full, for: profileID)
-        settings.completeOnboarding()
-        settings.setAction(.escape, for: .ok, trigger: .singleClick)
-        settings.setAction(.disabled, for: .ok, trigger: .doubleClick)
-        settings.setAction(.disabled, for: .ok, trigger: .longPress)
-        monitor.handleSimulatedGoogleReport(reportID: 1, data: Data([1, 7, 0]), descriptor: descriptor)
-        monitor.handleSimulatedGoogleReport(reportID: 1, data: Data([1, 0, 0]), descriptor: descriptor)
-        #expect(actions.last == .escape)
-    }
-
-    @Test func compatibilityModeSuppressesEnterDuringOnboardingAndAllowsRepeatedCombos() throws {
-        let suite = "g9n9n-compat-onboarding-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
-
-        let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
-        settings.onboardingStep = .controls
-        settings.onboardingControlSource = .chromecastRemote
-        let profileID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
-        settings.selectRemoteProfile(profileID)
-        settings.setG9N9NInputMode(.twoKeyCompatibility, for: profileID)
-
-        var actions: [ButtonAction] = []
-        var observedCombos: [Set<RemoteButton>] = []
-        let monitor = HIDRemoteMonitor(
-            settings: settings,
-            profileID: profileID,
-            runtimePermissions: { true },
-            actionPerformer: { _, _, configured in
-                actions.append(configured.action)
-                return true
-            },
-            diagnosticLogger: { _ in }
-        )
-        monitor.onboardingWindowIsActive = { true }
-        monitor.onActiveButtons = { _, buttons in
-            if !buttons.isEmpty { observedCombos.append(buttons) }
-        }
-        monitor.connectSimulatedDevice(fingerprint: "google", profileID: profileID)
-        defer { monitor.disconnectSimulatedDevice() }
-
-        let descriptor = G9N9NProtocol.indexedConsumerDescriptor
-        monitor.handleSimulatedGoogleReport(reportID: 1, data: Data([1, 7, 3]), descriptor: descriptor)
-        monitor.handleSimulatedGoogleReport(reportID: 1, data: Data([1, 7, 3]), descriptor: descriptor)
-        #expect(actions.isEmpty)
-        #expect(observedCombos == [[.ok, .up], [.ok, .up]])
-    }
-
-    @Test func unseizedCompatibilityModeSuppressesNativeEventsOnSetupAndUnsupportedReports() throws {
-        let suite = "g9n9n-compat-suppress-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
-
-        let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
-        settings.onboardingControlSource = .chromecastRemote
-        let profileID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
-        settings.selectRemoteProfile(profileID)
-        settings.setG9N9NInputMode(.twoKeyCompatibility, for: profileID)
-
-        var now: TimeInterval = 0
-        let suppressor = KeyboardEventSuppressor(uptime: { now })
-        var actions: [ButtonAction] = []
-        let monitor = HIDRemoteMonitor(
-            settings: settings,
-            profileID: profileID,
-            eventSuppressor: suppressor,
-            runtimePermissions: { true },
-            nativeSuppressionAvailable: { true },
-            actionPerformer: { _, _, configured in
-                actions.append(configured.action)
-                return true
-            },
-            diagnosticLogger: { _ in }
-        )
-        monitor.onboardingWindowIsActive = { true }
-        monitor.connectSimulatedDevice(fingerprint: "google", profileID: profileID, isSeized: false)
-        defer { monitor.disconnectSimulatedDevice() }
-
-        func keyEvent(_ keyCode: CGKeyCode, keyDown: Bool) throws -> CGEvent {
-            try #require(CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: keyDown))
-        }
-
-        let descriptor = G9N9NProtocol.indexedConsumerDescriptor
-        for step in [OnboardingStep.remote, .controls] {
-            settings.onboardingStep = step
-            monitor.handleSimulatedGoogleReport(reportID: 1, data: Data([1, 7, 3]), descriptor: descriptor)
-            #expect(suppressor.handle(type: .keyDown, event: try keyEvent(126, keyDown: true)))
-            #expect(suppressor.handle(type: .keyDown, event: try keyEvent(36, keyDown: true)))
-            #expect(suppressor.handle(type: .keyUp, event: try keyEvent(126, keyDown: false)))
-            #expect(suppressor.handle(type: .keyUp, event: try keyEvent(36, keyDown: false)))
-            #expect(!suppressor.handle(type: .keyUp, event: try keyEvent(126, keyDown: false)))
-        }
-        #expect(actions.isEmpty)
-
-        settings.completeOnboarding()
-        monitor.handleSimulatedGoogleReport(reportID: 1, data: Data([1, 7, 11]), descriptor: descriptor)
-        #expect(actions.isEmpty)
-        #expect(suppressor.handle(type: .keyDown, event: try keyEvent(36, keyDown: true)))
-
-        // Stale pending/suppressed tokens expire after 30 seconds without waiting on wall clock time.
-        now = 31
-        #expect(!suppressor.handle(type: .keyUp, event: try keyEvent(36, keyDown: false)))
-        #expect(!suppressor.handle(type: .keyDown, event: try keyEvent(36, keyDown: true)))
-    }
-
-    @Test func backgroundGoogleTwoKeyComboPreservesFullComboAcrossSelectionSwitch() throws {
-        let suite = "g9n9n-background-switch-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
-
-        let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
-        settings.onboardingPurpose = .initialSetup
-        settings.onboardingStep = .remote
-        settings.setOnboardingControlSource(.chromecastRemote)
-
-        let xiaomiID = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         let googleID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
-        settings.selectRemoteProfile(xiaomiID)
+        settings.selectRemoteProfile(googleID)
+        settings.setG9N9NInputMode(.bluetoothLogRecovery, for: googleID)
+        settings.completeOnboarding()
 
-        let model = BridgeAppModel(settings: settings, initialAudioDevices: [])
-        let monitor = model.makeHIDMonitor(profileID: googleID, targetFingerprint: nil, runtimePermissions: { true })
-        monitor.connectSimulatedDevice(fingerprint: "google", profileID: googleID)
+        var logs: [String] = []
+        let monitor = HIDRemoteMonitor(
+            settings: settings,
+            profileID: googleID,
+            runtimePermissions: { true },
+            actionPerformer: { _, _, _ in true },
+            diagnosticLogger: { logs.append($0) }
+        )
+        monitor.connectSimulatedDevice(fingerprint: "google-no-raw", profileID: googleID)
         defer { monitor.disconnectSimulatedDevice() }
 
-        // Background G9N9N sends Direction + OK while Xiaomi is still selected:
-        // onButtonPressed switches selectedRemoteProfileID to googleID and updates lastRemoteButtonPress
-        // with one representative button, while onObservedButtonReport still delivers the full 2-key combo.
         monitor.handleSimulatedGoogleReport(
-            reportID: 1,
-            data: Data([1, 7, 3]),
-            descriptor: G9N9NProtocol.indexedConsumerDescriptor
+            reportID: 2,
+            data: Data([0x42, 0x00]),
+            source: "btle_log",
+            origin: .btleServerLog
+        )
+        monitor.handleSimulatedGoogleReport(
+            reportID: 2,
+            data: Data([0x00, 0x00]),
+            source: "btle_log",
+            origin: .btleServerLog
         )
 
-        #expect(settings.selectedRemoteProfileID == googleID)
-        let observation = try #require(model.lastObservedRemoteButtonReport)
-        #expect(observation == RemoteButtonObservation(profileID: googleID, buttons: [.up, .ok]))
-        #expect(model.activeRemoteButtons.isEmpty)
+        #expect(!logs.isEmpty)
+        #expect(logs.allSatisfy { !$0.contains("payload=") && !$0.contains("42 00") })
+    }
 
-        // When onboarding evaluates that full report, it detects a 2-key combo awaiting opt-in rather than 1-key proof.
+    @Test func nativeFullVerifiedDeviceRejectsBTLEServerLogAcrossBothArrivalOrders() throws {
+        let suite = "g9n9n-native-order-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        // Arrival Order A: completed `.full` device receives `btle_log` BEFORE `iohid` -> no double fire!
+        do {
+            let settings = AppSettings(defaults: defaults)
+            settings.customMappingEnabled = true
+            let googleID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+            settings.selectRemoteProfile(googleID)
+            settings.setG9N9NInputMode(.full, for: googleID)
+            settings.completeOnboarding()
+
+            var actions: [ButtonAction] = []
+            var logs: [String] = []
+            let monitor = HIDRemoteMonitor(
+                settings: settings,
+                profileID: googleID,
+                runtimePermissions: { true },
+                actionPerformer: { _, _, configured in
+                    actions.append(configured.action)
+                    return true
+                },
+                diagnosticLogger: { logs.append($0) }
+            )
+            let descriptor = G9N9NProtocol.indexedConsumerDescriptor
+            monitor.connectSimulatedDevice(fingerprint: "google-native-first", profileID: googleID, isSeized: false)
+            defer { monitor.disconnectSimulatedDevice() }
+
+            // btle_log arrives first on a native `.full` profile: must be rejected upfront without touching IOHID passthrough.
+            monitor.handleSimulatedGoogleReport(
+                reportID: 1,
+                data: Data([5, 0]),
+                descriptor: descriptor,
+                source: "btle_log",
+                origin: .btleServerLog
+            )
+            monitor.handleSimulatedGoogleReport(
+                reportID: 1,
+                data: Data([0, 0]),
+                descriptor: descriptor,
+                source: "btle_log",
+                origin: .btleServerLog
+            )
+            // Native IOHID then delivers Left press + release: uses native passthrough cleanly once.
+            monitor.handleSimulatedGoogleReport(
+                reportID: 1,
+                data: Data([1, 5, 0]),
+                descriptor: descriptor,
+                source: "device",
+                origin: .iohid
+            )
+            monitor.handleSimulatedGoogleReport(
+                reportID: 1,
+                data: Data([1, 0, 0]),
+                descriptor: descriptor,
+                source: "device",
+                origin: .iohid
+            )
+
+            #expect(actions.isEmpty) // Native arrowLeft passthrough never injects synthetic arrowLeft!
+            #expect(logs.contains { $0.contains("reason=native_full_mode") })
+        }
+
+        // Arrival Order B: during onboarding, `iohid` arrives -> marks nativeGoogleIOHIDObserved so later `btle_log` is rejected.
+        do {
+            let settings = AppSettings(defaults: defaults)
+            settings.customMappingEnabled = true
+            settings.onboardingPurpose = .initialSetup
+            let googleID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+            settings.selectRemoteProfile(googleID)
+
+            var verifiedCallbackIDs: [UUID?] = []
+            var logs: [String] = []
+            let monitor = HIDRemoteMonitor(
+                settings: settings,
+                profileID: googleID,
+                runtimePermissions: { true },
+                actionPerformer: { _, _, _ in true },
+                diagnosticLogger: { logs.append($0) }
+            )
+            monitor.onNativeGoogleIOHIDVerified = { verifiedCallbackIDs.append($0) }
+            let descriptor = G9N9NProtocol.indexedConsumerDescriptor
+            monitor.connectSimulatedDevice(fingerprint: "google-onboarding-iohid", profileID: googleID)
+            defer { monitor.disconnectSimulatedDevice() }
+
+            // Simulate btle_log arriving just before IOHID during onboarding; IOHID single-key still verifies native support!
+            monitor.handleSimulatedGoogleReport(
+                reportID: 1,
+                data: Data([3, 0]),
+                descriptor: descriptor,
+                source: "btle_log",
+                origin: .btleServerLog
+            )
+            monitor.handleSimulatedGoogleReport(
+                reportID: 1,
+                data: Data([1, 3, 0]),
+                descriptor: descriptor,
+                source: "device",
+                origin: .iohid
+            )
+            #expect(verifiedCallbackIDs == [googleID])
+            #expect(monitor.nativeGoogleIOHIDObserved)
+
+            // Subsequent btle_log press is now dropped immediately.
+            monitor.handleSimulatedGoogleReport(
+                reportID: 1,
+                data: Data([4, 0]),
+                descriptor: descriptor,
+                source: "btle_log",
+                origin: .btleServerLog
+            )
+            #expect(logs.contains { $0.contains("reason=native_iohid_verified") })
+        }
+    }
+
+    @Test func btleTargetFilterAndDispatchEnforceStrictDeviceBindingAndExcludeNativeFull() throws {
+        let nativeID = UUID()
+        let logID = UUID()
+        let secondUnboundID = UUID()
+        let nativeBLE = UUID()
+        let logBLE = UUID()
+        let secondBLE = UUID()
+
+        let nativeProfile = RemoteDeviceProfile(
+            id: nativeID,
+            model: .chromecastVoiceRemote,
+            bluetoothIdentifier: nativeBLE,
+            hidFingerprint: "fp-native",
+            g9n9nInputMode: nil,
+            mappings: AppSettings.defaultMappings(for: .chromecastVoiceRemote)
+        )
+        let logProfile = RemoteDeviceProfile(
+            id: logID,
+            model: .chromecastVoiceRemote,
+            bluetoothIdentifier: logBLE,
+            hidFingerprint: "fp-log",
+            g9n9nInputMode: .bluetoothLogRecovery,
+            mappings: AppSettings.defaultMappings(for: .chromecastVoiceRemote)
+        )
+
+        // Completed state: targetPeripherals excludes native `.full`, includes only `.bluetoothLogRecovery`.
         #expect(
-            ChromecastCompatibilityDetection.evaluate(
-                step: .remote,
-                buttons: observation.buttons,
-                singleKeyObserved: false,
-                compatibilityModeEnabled: false
-            ) == .awaitCompatibilityOptIn(buttons: [.up, .ok])
+            BridgeAppModel.btleLogRecoveryTargetPeripherals(
+                profiles: [nativeProfile, logProfile],
+                isOnboardingComplete: true,
+                onboardingControlSource: .chromecastRemote,
+                selectedProfileID: nativeID
+            ) == [logBLE]
+        )
+
+        // Onboarding state: includes the selected G9N9N remote alongside any existing log-recovery remote.
+        #expect(
+            BridgeAppModel.btleLogRecoveryTargetPeripherals(
+                profiles: [nativeProfile, logProfile],
+                isOnboardingComplete: false,
+                onboardingControlSource: .chromecastRemote,
+                selectedProfileID: nativeID
+            ) == [logBLE, nativeBLE]
+        )
+
+        // Bound profile routes ONLY to its bound monitor, never falling back to discoveryHIDMonitor.
+        #expect(
+            BridgeAppModel.resolveBTLEServerLogDispatchTarget(
+                peripheral: logBLE,
+                profiles: [nativeProfile, logProfile],
+                boundMonitorFingerprints: ["fp-log"],
+                hasDiscoveryMonitor: true,
+                isOnboardingComplete: true,
+                onboardingControlSource: .chromecastRemote,
+                selectedProfileID: logID
+            ) == .boundMonitor(fingerprint: "fp-log", profileID: logID)
+        )
+        #expect(
+            BridgeAppModel.resolveBTLEServerLogDispatchTarget(
+                peripheral: logBLE,
+                profiles: [nativeProfile, logProfile],
+                boundMonitorFingerprints: [],
+                hasDiscoveryMonitor: true,
+                isOnboardingComplete: true,
+                onboardingControlSource: .chromecastRemote,
+                selectedProfileID: logID
+            ) == .drop(reason: "bound_monitor_unavailable")
+        )
+        #expect(
+            BridgeAppModel.resolveBTLEServerLogDispatchTarget(
+                peripheral: nativeBLE,
+                profiles: [nativeProfile, logProfile],
+                boundMonitorFingerprints: ["fp-native"],
+                hasDiscoveryMonitor: true,
+                isOnboardingComplete: true,
+                onboardingControlSource: .chromecastRemote,
+                selectedProfileID: nativeID
+            ) == .drop(reason: "native_full_mode")
+        )
+
+        // Unbound profile with two unbound Chromecast remotes is ambiguous and must drop.
+        let unboundA = RemoteDeviceProfile(
+            id: logID,
+            model: .chromecastVoiceRemote,
+            bluetoothIdentifier: logBLE,
+            hidFingerprint: nil,
+            g9n9nInputMode: .bluetoothLogRecovery,
+            mappings: AppSettings.defaultMappings(for: .chromecastVoiceRemote)
+        )
+        let unboundB = RemoteDeviceProfile(
+            id: secondUnboundID,
+            model: .chromecastVoiceRemote,
+            bluetoothIdentifier: secondBLE,
+            hidFingerprint: nil,
+            g9n9nInputMode: nil,
+            mappings: AppSettings.defaultMappings(for: .chromecastVoiceRemote)
+        )
+        #expect(
+            BridgeAppModel.resolveBTLEServerLogDispatchTarget(
+                peripheral: logBLE,
+                profiles: [unboundA, unboundB],
+                boundMonitorFingerprints: [],
+                hasDiscoveryMonitor: true,
+                isOnboardingComplete: false,
+                onboardingControlSource: .chromecastRemote,
+                selectedProfileID: logID
+            ) == .drop(reason: "ambiguous_unbound_profile")
+        )
+        #expect(
+            BridgeAppModel.resolveBTLEServerLogDispatchTarget(
+                peripheral: logBLE,
+                profiles: [unboundA],
+                boundMonitorFingerprints: [],
+                hasDiscoveryMonitor: true,
+                isOnboardingComplete: false,
+                onboardingControlSource: .chromecastRemote,
+                selectedProfileID: logID
+            ) == .discoveryMonitor(profileID: logID)
+        )
+
+        // HIDRemoteMonitor candidate resolution: unambiguous vs multi-device ambiguity vs deduplicating same fingerprint.
+        #expect(
+            HIDRemoteMonitor.resolveBTLEServerLogCandidate(
+                candidates: [("dev1", "fp-1"), ("dev2", "fp-2")],
+                activeFingerprint: nil,
+                targetFingerprint: nil,
+                excludedFingerprints: []
+            ) == .rejected("ambiguous_google_device")
+        )
+        #expect(
+            HIDRemoteMonitor.resolveBTLEServerLogCandidate(
+                candidates: [("dev1", "fp-1"), ("dev1-dup", "fp-1")],
+                activeFingerprint: nil,
+                targetFingerprint: nil,
+                excludedFingerprints: []
+            ) == .selected("dev1")
+        )
+        #expect(
+            HIDRemoteMonitor.resolveBTLEServerLogCandidate(
+                candidates: [("dev1", "fp-1"), ("dev2", "fp-2")],
+                activeFingerprint: nil,
+                targetFingerprint: nil,
+                excludedFingerprints: ["fp-1"]
+            ) == .selected("dev2")
+        )
+        #expect(
+            HIDRemoteMonitor.resolveBTLEServerLogCandidate(
+                candidates: [(String, String?)]([]),
+                activeFingerprint: nil,
+                targetFingerprint: nil,
+                excludedFingerprints: []
+            ) == .rejected("no_google_device")
         )
     }
 
-    @Test func dismissingAddDeviceOnboardingRestoresExistingChromecastCompatibilityMode() throws {
+    @Test func dismissingAddDeviceOnboardingRestoresExistingChromecastMode() throws {
         let suite = "g9n9n-dismiss-restore-" + UUID().uuidString
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
@@ -421,19 +417,17 @@ struct G9N9NCompatibilityModeTests {
         settings.selectRemoteProfile(googleID)
         settings.setG9N9NInputMode(.full, for: googleID)
         settings.completeOnboarding()
-        #expect(settings.allowsMappingEdits(for: googleID))
 
         SettingsPageBehavior.beginDeviceSetup(settings: settings)
-        settings.setG9N9NInputMode(.twoKeyCompatibility, for: googleID)
-        #expect(settings.g9n9nInputMode(for: googleID) == .twoKeyCompatibility)
+        settings.setG9N9NInputMode(.bluetoothLogRecovery, for: googleID)
+        #expect(settings.g9n9nInputMode(for: googleID) == .bluetoothLogRecovery)
 
         // Simulate relaunch/reload before cancelling Add Device onboarding.
         let reloaded = AppSettings(defaults: defaults)
-        #expect(reloaded.g9n9nInputMode(for: googleID) == .twoKeyCompatibility)
+        #expect(reloaded.g9n9nInputMode(for: googleID) == .bluetoothLogRecovery)
         reloaded.dismissOnboarding()
 
         #expect(reloaded.g9n9nInputMode(for: googleID) == .full)
-        #expect(reloaded.allowsMappingEdits(for: googleID))
         #expect(AppSettings(defaults: defaults).g9n9nInputMode(for: googleID) == .full)
     }
 
@@ -445,28 +439,6 @@ struct G9N9NCompatibilityModeTests {
         #expect(
             AppLinks.g9n9nCompatibilityGuide(for: Locale(identifier: "en_US")).absoluteString
                 == "https://remote.zfdang.com/g9n9n-compatibility_en.html"
-        )
-    }
-
-    @Test func cancellingAddDeviceDoesNotUpgradeNewlyAddedPartialSupportProfile() throws {
-        let suite = "g9n9n-dismiss-fresh-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
-
-        let settings = AppSettings(defaults: defaults)
-        let xiaomiID = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
-        settings.selectRemoteProfile(xiaomiID)
-        settings.completeOnboarding()
-
-        SettingsPageBehavior.beginDeviceSetup(settings: settings)
-        let freshGoogleID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
-        settings.selectRemoteProfile(freshGoogleID)
-        settings.setG9N9NInputMode(.twoKeyCompatibility, for: freshGoogleID)
-
-        settings.dismissOnboarding()
-        #expect(
-            !settings.remoteDeviceProfiles.contains { $0.id == freshGoogleID } ||
-                settings.g9n9nInputMode(for: freshGoogleID) == .twoKeyCompatibility
         )
     }
 
@@ -525,7 +497,7 @@ struct G9N9NCompatibilityModeTests {
         #expect(settings.onboardingStep == .remote)
     }
 
-    @Test func bluetoothLogRecoveryDefaultsOffPersistsAndRecordsIntegrationMode() throws {
+    @Test func bluetoothLogRecoveryToggleOffAndRestartPreserveModeWithoutLeakingLogSource() throws {
         let suite = "g9n9n-btle-log-opt-in-" + UUID().uuidString
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
@@ -535,20 +507,32 @@ struct G9N9NCompatibilityModeTests {
 
         settings.onboardingPurpose = .initialSetup
         let googleID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
-        settings.setG9N9NInputMode(.twoKeyCompatibility, for: googleID)
         settings.completeOnboarding()
 
-        // Cannot upgrade while opt-in toggle is off.
+        // Cannot record `.bluetoothLogRecovery` while opt-in toggle is off.
         #expect(!settings.recordG9N9NBluetoothLogRecoveryIntegration(for: googleID))
-        #expect(settings.g9n9nInputMode(for: googleID) == .twoKeyCompatibility)
+        #expect(settings.g9n9nInputMode(for: googleID) == .full)
 
-        settings.g9n9nBluetoothLogRecoveryEnabled = true
-        let reloaded = AppSettings(defaults: defaults)
-        #expect(reloaded.g9n9nBluetoothLogRecoveryEnabled)
-        #expect(reloaded.recordG9N9NBluetoothLogRecoveryIntegration(for: googleID))
-        #expect(reloaded.g9n9nInputMode(for: googleID) == .bluetoothLogRecovery)
-        #expect(reloaded.allowsMappingEdits(for: googleID))
-        #expect(AppSettings(defaults: defaults).g9n9nInputMode(for: googleID) == .bluetoothLogRecovery)
+        // Enabling persists and records `.bluetoothLogRecovery` when a log-recovered button arrives.
+        let model = BridgeAppModel(settings: settings, initialAudioDevices: [])
+        model.setG9N9NBluetoothLogRecoveryEnabled(true)
+        #expect(settings.g9n9nBluetoothLogRecoveryEnabled)
+        #expect(settings.recordG9N9NBluetoothLogRecoveryIntegration(for: googleID))
+        #expect(settings.g9n9nInputMode(for: googleID) == .bluetoothLogRecovery)
+
+        // Observing redacted `<private>` after profile removal flips `btleServerLogRedactedObserved`.
+        model.handleRedactedBTLEServerReport(.init(peripheral: nil, reportID: 2))
+        #expect(model.btleServerLogRedactedObserved)
+
+        // Toggling off clears active redacted state and stops log stream while keeping profile metadata across restart.
+        model.setG9N9NBluetoothLogRecoveryEnabled(false)
+        #expect(!settings.g9n9nBluetoothLogRecoveryEnabled)
+        #expect(!model.btleServerLogRedactedObserved)
+        #expect(model.btleServerReportLogSource == nil)
+
+        let restarted = AppSettings(defaults: defaults)
+        #expect(!restarted.g9n9nBluetoothLogRecoveryEnabled)
+        #expect(restarted.g9n9nInputMode(for: googleID) == .bluetoothLogRecovery)
 
         let summary = OnboardingCompletionSummary(
             purpose: .initialSetup,
@@ -559,14 +543,12 @@ struct G9N9NCompatibilityModeTests {
             tapModeEnabled: true,
             voiceTool: .voiceBuddy,
             binding: nil,
-            isPartialSupportG9N9N: false,
             g9n9nInputMode: .bluetoothLogRecovery
         )
         #expect(summary.g9n9nInputMode == .bluetoothLogRecovery)
-        #expect(!summary.isPartialSupportG9N9N)
 
-        // Native IOHID single-key recovery resets the profile back to standard full mode.
-        #expect(reloaded.recordG9N9NNativeIOHIDIntegration(for: googleID))
-        #expect(reloaded.g9n9nInputMode(for: googleID) == .full)
+        // Native IOHID single-key recovery resets the profile back to standard `.full` mode.
+        #expect(restarted.recordG9N9NNativeIOHIDIntegration(for: googleID))
+        #expect(restarted.g9n9nInputMode(for: googleID) == .full)
     }
 }

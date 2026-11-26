@@ -334,10 +334,6 @@ extension HIDRemoteMonitor {
         clearTransientInputState(emitEmptyActiveButtons: true)
     }
 
-    func clearTransientInputStateForCompatibility() {
-        clearTransientInputState(emitEmptyActiveButtons: false)
-    }
-
     func clearTransientInputState(emitEmptyActiveButtons: Bool) {
         googleIndexedReportsIncludeID = false
         onInputReset?(profileID)

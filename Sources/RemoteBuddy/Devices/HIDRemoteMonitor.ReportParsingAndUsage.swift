@@ -80,7 +80,30 @@ extension HIDRemoteMonitor {
         deviceFingerprint = nil
         resetInputState()
         activeDeviceIsSeized = false
+        nativeGoogleIOHIDObserved = false
         lastGoogleReportByOrigin.removeAll()
+    }
+
+    func shouldRejectBTLEServerLogGoogleReport() -> String? {
+        guard currentReportIsGoogle, currentReportOrigin == .btleServerLog else { return nil }
+        if nativeGoogleIOHIDObserved {
+            return "native_iohid_verified"
+        }
+        if settings.isOnboardingComplete,
+           let profileID,
+           let profile = settings.remoteDeviceProfiles.first(where: { $0.id == profileID && $0.model.isChromecastRemote }),
+           profile.effectiveG9N9NInputMode == .full {
+            return "native_full_mode"
+        }
+        return nil
+    }
+
+    func recordNativeGoogleIOHIDIfNeeded(usages: Set<UInt16>, origin: HIDReportOrigin) {
+        guard currentReportIsGoogle, origin == .iohid, usages.count == 1 else { return }
+        if !nativeGoogleIOHIDObserved {
+            nativeGoogleIOHIDObserved = true
+            onNativeGoogleIOHIDVerified?(profileID)
+        }
     }
 
     /// The same report may reach both IOHID and the log (with or without the leading
@@ -104,10 +127,20 @@ extension HIDRemoteMonitor {
     }
 
     func parseAndProcess(reportID: UInt32, data: Data, source: String) {
+        if let rejectReason = shouldRejectBTLEServerLogGoogleReport() {
+            diagnosticLogger("HID GOOGLE report dropped reason=\(rejectReason) source=\(source)")
+            return
+        }
         guard let parsed = parseReport(reportID: reportID, data: data, source: source) else {
             return
         }
+        recordNativeGoogleIOHIDIfNeeded(usages: parsed.mappedUsages, origin: currentReportOrigin)
         if isDuplicateGoogleReport(reportID: reportID, usages: parsed.mappedUsages, origin: currentReportOrigin) {
+            if currentReportOrigin == .iohid && !activeDeviceIsSeized {
+                for button in RemoteButton.buttons(for: parsed.mappedUsages) {
+                    eventSuppressor.arm(button: button, edge: .down)
+                }
+            }
             diagnosticLogger("HID GOOGLE report dropped reason=duplicate source=\(source)")
             return
         }
@@ -235,79 +268,9 @@ extension HIDRemoteMonitor {
         }
         if backOnlyMode {
             processBackOnly(usages: usages.intersection([RemoteButton.back.hidUsage]))
-        } else if currentReportIsGoogle,
-                  settings.g9n9nInputMode(for: profileID ?? settings.selectedRemoteProfileID) == .twoKeyCompatibility {
-            processGoogleTwoKeyCompatibility(usages: usages)
         } else {
             process(usages: usages)
         }
-    }
-
-    func processGoogleTwoKeyCompatibility(usages: Set<UInt16>) {
-        let observedButtons = RemoteButton.buttons(for: usages)
-        guard !observedButtons.isEmpty else {
-            resetInputState()
-            return
-        }
-        // Arm native event suppression before any early returns (onboarding suppression or
-        // unsupported-input ignore) so unseized monitors never leak physical OS key events.
-        if !activeDeviceIsSeized {
-            for button in observedButtons {
-                armNativeSuppression(button: button, edge: .down)
-            }
-        }
-        let targetProfileID = profileID ?? settings.selectedRemoteProfileID
-        let representative = observedButtons.contains(.ok)
-            ? RemoteButton.ok
-            : observedButtons.sorted { $0.rawValue < $1.rawValue }.first!
-        if OnboardingControlValidationPolicy.suppressConfiguredActions(
-            at: settings.onboardingStep,
-            source: settings.onboardingControlSource,
-            reportingModel: .chromecastVoiceRemote,
-            onboardingWindowIsActive: onboardingWindowIsActive()
-        ) {
-            if let deviceFingerprint,
-               let routing = onButtonPressed?(profileID, deviceFingerprint, representative),
-               profileID == nil {
-                profileID = routing.profileID
-            }
-            let resolvedID = profileID ?? targetProfileID
-            onActiveButtons?(resolvedID, observedButtons)
-            onObservedButtonReport?(resolvedID, observedButtons)
-            clearTransientInputStateForCompatibility()
-            return
-        }
-
-        // Release notifications are absent on short-report G9N9N firmware, so clear active
-        // state on every report and only emit instant Return/Enter for direction + OK chords.
-        resetInputState()
-        var shouldPerformAction = true
-        if let deviceFingerprint,
-           let routing = onButtonPressed?(profileID, deviceFingerprint, representative) {
-            if profileID == nil { profileID = routing.profileID }
-            shouldPerformAction = routing.shouldPerformAction
-        }
-        guard shouldPerformAction else {
-            let resolvedID = profileID ?? targetProfileID
-            onActiveButtons?(resolvedID, observedButtons)
-            onObservedButtonReport?(resolvedID, observedButtons)
-            return
-        }
-        guard G9N9NProtocol.isEnterChord(usages) else {
-            diagnosticLogger("HID G9N9N compat ignored reason=unsupported_input")
-            return
-        }
-        guard profileID != nil else { return }
-        guard mappingDeliveryIsSafe else {
-            pauseForUnavailableNativeFilter()
-            return
-        }
-        let action = ConfiguredButtonAction(action: .returnKey, shortcut: nil)
-        guard actionPerformer(.ok, .singleClick, action) else {
-            if !runtimePermissionsAreValid() { releaseForRevokedPermissions() }
-            return
-        }
-        diagnosticLogger("HID G9N9N compat_enter_chord action=return")
     }
 
     static func handlesAppSwitcherControl(_ button: RemoteButton) -> Bool {

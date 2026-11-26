@@ -436,8 +436,9 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
         settings.setG9N9NInputMode(mode, for: targetID)
         for monitor in Array(hidMonitors.values) + (discoveryHIDMonitor.map { [$0] } ?? [])
         where monitor.profileID == nil || monitor.profileID == targetID {
-            monitor.clearTransientInputStateForCompatibility()
+            monitor.clearTransientInputState(emitEmptyActiveButtons: false)
         }
+        synchronizeBTLEServerLogSource()
         AppLogger.shared.write("REMOTE HID g9n9n_mode=\(mode.rawValue) profile=\(targetID.uuidString)")
     }
 

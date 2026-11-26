@@ -187,7 +187,6 @@ extension AppSettings {
     }
 
     func setAction(_ action: ButtonAction, for button: RemoteButton) {
-        guard allowsMappingEdits(for: selectedRemoteProfileID) else { return }
         buttonBindings[button] = action
     }
 
@@ -203,7 +202,6 @@ extension AppSettings {
     }
 
     func setShortcut(_ shortcut: CustomKeyboardShortcut?, for button: RemoteButton) {
-        guard allowsMappingEdits(for: selectedRemoteProfileID) else { return }
         buttonShortcuts[button] = shortcut
     }
 
@@ -381,10 +379,6 @@ extension AppSettings {
             return .full
         }
         return profile.effectiveG9N9NInputMode
-    }
-
-    func allowsMappingEdits(for profileID: UUID?) -> Bool {
-        g9n9nInputMode(for: profileID ?? selectedRemoteProfileID) != .twoKeyCompatibility
     }
 
     func setG9N9NInputMode(_ mode: G9N9NInputMode, for profileID: UUID?) {
@@ -627,7 +621,6 @@ extension AppSettings {
     }
 
     func setAction(_ action: ButtonAction, for button: RemoteButton, trigger: ButtonTrigger) {
-        guard allowsMappingEdits(for: selectedRemoteProfileID) else { return }
         guard trigger != .singleClick else {
             setAction(action, for: button)
             return
@@ -649,7 +642,6 @@ extension AppSettings {
         for button: RemoteButton,
         trigger: ButtonTrigger
     ) {
-        guard allowsMappingEdits(for: selectedRemoteProfileID) else { return }
         guard trigger != .singleClick else {
             buttonApplicationProfileIDs[button] = applicationProfileID
             return
@@ -667,7 +659,6 @@ extension AppSettings {
         for button: RemoteButton,
         trigger: ButtonTrigger
     ) {
-        guard allowsMappingEdits(for: selectedRemoteProfileID) else { return }
         guard trigger != .singleClick else {
             setShortcut(shortcut, for: button)
             return
@@ -681,7 +672,6 @@ extension AppSettings {
     }
 
     func resetBindings() {
-        guard allowsMappingEdits(for: selectedRemoteProfileID) else { return }
         withResettingBindings {
             let mappings = Self.defaultMappings(for: selectedRemoteProfile?.model ?? .unknown)
             buttonBindings = mappings.parsedButtonBindings

@@ -118,101 +118,150 @@ enum BTLEServerReportLog {
         return .report(Report(reportID: reportID, data: Data(bytes)), timestamp: timestamp)
     }
 
-    /// Pairs indication/notification and report lines, keeping only reports attributed
-    /// to `peripherals`.
+    /// Pairs indication/notification and report lines, keeping only reports whose
+    /// peripheral identity is verifiably attributed and part of `peripherals`.
     ///
-    /// bluetoothd does not always log a dispatch line for a release report, and on
-    /// short-report firmware (e.g. FW 26.7) a 2-byte chord press is followed by a
-    /// 1-byte all-zero release. An all-zero report with the same report ID and length
-    /// within `1...held.maxLength` is therefore attributed to the held remote.
+    /// - Interleaved dispatch lines from multiple BLE peripherals within
+    ///   `attributionWindow` make the following report ambiguous and are dropped.
+    /// - Dispatch-less all-zero release reports are only accepted when strictly
+    ///   one target remote is held, no other BLE peripheral has emitted any
+    ///   indication since that press, and the release arrives within
+    ///   `maxMissingDispatchReleaseWindow`.
     struct Attributor: Sendable {
-        private var lastIndication: (peripheral: UUID, timestamp: TimeInterval)?
-        private var heldByPeripheral: [UUID: (reportID: UInt32, maxLength: Int)] = [:]
-        private var lastHeldPeripheral: UUID?
+        static let maxMissingDispatchReleaseWindow: TimeInterval = 10.0
+
+        private struct HeldState: Sendable {
+            var reportID: UInt32
+            var maxLength: Int
+            var pressedAt: TimeInterval
+            var taintedByOtherPeripheral: Bool
+        }
+
+        private var pendingIndications: [(peripheral: UUID, timestamp: TimeInterval)] = []
+        private var heldByPeripheral: [UUID: HeldState] = [:]
+        private var lastActivityByPeripheral: [UUID: TimeInterval] = [:]
+
+        private mutating func pruneExpired(before timestamp: TimeInterval) {
+            pendingIndications.removeAll { timestamp - $0.timestamp > BTLEServerReportLog.attributionWindow }
+            lastActivityByPeripheral = lastActivityByPeripheral.filter {
+                abs(timestamp - $0.value) <= BTLEServerReportLog.attributionWindow
+            }
+        }
+
+        private func hasConcurrentActivity(fromOtherThan peripheral: UUID, around timestamp: TimeInterval) -> Bool {
+            lastActivityByPeripheral.contains { otherPeripheral, otherTime in
+                otherPeripheral != peripheral && abs(timestamp - otherTime) <= BTLEServerReportLog.attributionWindow
+            }
+        }
+
+        private func hasNonTargetActivity(among peripherals: Set<UUID>, around timestamp: TimeInterval) -> Bool {
+            lastActivityByPeripheral.contains { peripheral, time in
+                !peripherals.contains(peripheral) && abs(timestamp - time) <= BTLEServerReportLog.attributionWindow
+            }
+        }
 
         mutating func accept(_ line: Line, peripherals: Set<UUID>) -> AttributedEvent? {
             switch line {
             case let .indication(peripheral, timestamp):
-                lastIndication = (peripheral, timestamp)
+                pruneExpired(before: timestamp)
+                for heldPeripheral in heldByPeripheral.keys where heldPeripheral != peripheral {
+                    heldByPeripheral[heldPeripheral]?.taintedByOtherPeripheral = true
+                }
+                lastActivityByPeripheral[peripheral] = timestamp
+                pendingIndications.append((peripheral, timestamp))
                 return nil
 
             case let .redactedReport(reportID, timestamp):
-                let last = lastIndication
-                lastIndication = nil
-                if let last,
-                   timestamp - last.timestamp >= -0.005,
-                   timestamp - last.timestamp <= attributionWindow {
-                    guard peripherals.contains(last.peripheral) else { return nil }
-                    return .redacted(RedactedObservation(peripheral: last.peripheral, reportID: reportID))
+                pruneExpired(before: timestamp)
+                let valid = pendingIndications.filter {
+                    let delta = timestamp - $0.timestamp
+                    return delta >= -0.005 && delta <= BTLEServerReportLog.attributionWindow
+                }
+                if !valid.isEmpty {
+                    let distinct = Set(valid.map(\.peripheral))
+                    if distinct.count > 1 {
+                        pendingIndications.removeAll()
+                        return nil
+                    }
+                    let matched = valid[0]
+                    if let removeIndex = pendingIndications.firstIndex(where: {
+                        $0.peripheral == matched.peripheral && $0.timestamp == matched.timestamp
+                    }) {
+                        pendingIndications.remove(at: removeIndex)
+                    }
+                    guard peripherals.contains(matched.peripheral),
+                          !hasConcurrentActivity(fromOtherThan: matched.peripheral, around: timestamp)
+                    else { return nil }
+                    return .redacted(RedactedObservation(peripheral: matched.peripheral, reportID: reportID))
                 }
                 // Without the logging profile, bluetoothd also logs `<private>` for the
                 // peripheral UUID so no indication line is matched.
-                guard !peripherals.isEmpty, reportID == 1 || reportID == 2 else { return nil }
+                guard !peripherals.isEmpty,
+                      reportID == 1 || reportID == 2,
+                      !hasNonTargetActivity(among: peripherals, around: timestamp)
+                else { return nil }
                 return .redacted(RedactedObservation(peripheral: nil, reportID: reportID))
 
             case let .report(report, timestamp):
-                let last = lastIndication
-                lastIndication = nil
-                if let last,
-                   timestamp - last.timestamp >= -0.005,
-                   timestamp - last.timestamp <= attributionWindow {
-                    guard peripherals.contains(last.peripheral) else { return nil }
-                    track(report, for: last.peripheral)
-                    return .report(AttributedReport(
-                        peripheral: last.peripheral,
-                        reportID: report.reportID,
-                        data: report.data
-                    ))
+                pruneExpired(before: timestamp)
+                let valid = pendingIndications.filter {
+                    let delta = timestamp - $0.timestamp
+                    return delta >= -0.005 && delta <= BTLEServerReportLog.attributionWindow
                 }
-                guard report.data.allSatisfy({ $0 == 0 }) else { return nil }
-                if let candidate = fallbackHeldPeripheral(for: report, among: peripherals),
-                   let held = heldByPeripheral[candidate],
-                   held.reportID == report.reportID,
-                   (1...held.maxLength).contains(report.data.count) {
-                    heldByPeripheral.removeValue(forKey: candidate)
-                    if lastHeldPeripheral == candidate {
-                        lastHeldPeripheral = nil
+                if !valid.isEmpty {
+                    let distinct = Set(valid.map(\.peripheral))
+                    if distinct.count > 1 {
+                        pendingIndications.removeAll()
+                        return nil
                     }
+                    let matched = valid[0]
+                    if let removeIndex = pendingIndications.firstIndex(where: {
+                        $0.peripheral == matched.peripheral && $0.timestamp == matched.timestamp
+                    }) {
+                        pendingIndications.remove(at: removeIndex)
+                    }
+                    guard !hasConcurrentActivity(fromOtherThan: matched.peripheral, around: timestamp),
+                          peripherals.contains(matched.peripheral)
+                    else { return nil }
+                    track(report, for: matched.peripheral, at: timestamp)
                     return .report(AttributedReport(
-                        peripheral: candidate,
+                        peripheral: matched.peripheral,
                         reportID: report.reportID,
                         data: report.data
                     ))
                 }
-                return nil
+                guard report.data.allSatisfy({ $0 == 0 }),
+                      heldByPeripheral.count == 1,
+                      let (candidate, held) = heldByPeripheral.first,
+                      peripherals.contains(candidate),
+                      !held.taintedByOtherPeripheral,
+                      held.reportID == report.reportID,
+                      (1...held.maxLength).contains(report.data.count),
+                      timestamp >= held.pressedAt,
+                      timestamp - held.pressedAt <= Self.maxMissingDispatchReleaseWindow
+                else { return nil }
+                heldByPeripheral.removeValue(forKey: candidate)
+                return .report(AttributedReport(
+                    peripheral: candidate,
+                    reportID: report.reportID,
+                    data: report.data
+                ))
             }
         }
 
-        private mutating func track(_ report: Report, for peripheral: UUID) {
+        private mutating func track(_ report: Report, for peripheral: UUID, at timestamp: TimeInterval) {
             if report.data.allSatisfy({ $0 == 0 }) {
                 heldByPeripheral.removeValue(forKey: peripheral)
-                if lastHeldPeripheral == peripheral {
-                    lastHeldPeripheral = nil
-                }
             } else {
-                let previousMax = heldByPeripheral[peripheral]?.reportID == report.reportID
-                    ? (heldByPeripheral[peripheral]?.maxLength ?? 0)
-                    : 0
-                heldByPeripheral[peripheral] = (report.reportID, max(previousMax, report.data.count))
-                lastHeldPeripheral = peripheral
+                let existing = heldByPeripheral[peripheral]
+                let previousMax = existing?.reportID == report.reportID ? (existing?.maxLength ?? 0) : 0
+                heldByPeripheral[peripheral] = HeldState(
+                    reportID: report.reportID,
+                    maxLength: max(previousMax, report.data.count),
+                    pressedAt: timestamp,
+                    taintedByOtherPeripheral: false
+                )
             }
-        }
-
-        private func fallbackHeldPeripheral(for report: Report, among peripherals: Set<UUID>) -> UUID? {
-            if let lastHeldPeripheral,
-               peripherals.contains(lastHeldPeripheral),
-               let held = heldByPeripheral[lastHeldPeripheral],
-               held.reportID == report.reportID,
-               (1...held.maxLength).contains(report.data.count) {
-                return lastHeldPeripheral
-            }
-            let matching = heldByPeripheral.keys.filter { peripheral in
-                guard peripherals.contains(peripheral), let held = heldByPeripheral[peripheral] else {
-                    return false
-                }
-                return held.reportID == report.reportID && (1...held.maxLength).contains(report.data.count)
-            }
-            return matching.count == 1 ? matching.first : nil
         }
     }
 }

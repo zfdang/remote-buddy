@@ -307,9 +307,7 @@ struct FirstUseDiagnosticContext: Equatable {
             if !capabilities.transcriptionAppeared { return .voiceNoTranscript }
         case .controls:
             if !capabilities.remoteConnected { return .remoteNotFound }
-            if capabilities.isTwoKeyCompatibleMode {
-                if !capabilities.compatibleChordConfirmed { return .controlsNotConfirmed }
-            } else if capabilities.testedRemoteButtonCount < 3 {
+            if capabilities.testedRemoteButtonCount < 3 {
                 return .controlsNotConfirmed
             }
         case .complete:

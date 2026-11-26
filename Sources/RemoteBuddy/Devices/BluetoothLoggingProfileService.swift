@@ -57,6 +57,25 @@ enum BluetoothLoggingProfileService {
         return false
     }
 
+    static func status(fromProfilesXMLData profilesXMLData: Data) -> BluetoothLoggingProfileStatus {
+        guard !profilesXMLData.isEmpty,
+              let plist = try? PropertyListSerialization.propertyList(
+                  from: profilesXMLData,
+                  options: [],
+                  format: nil
+              ) as? [String: Any]
+        else {
+            return .unknown
+        }
+        if isBluetoothPrivateLoggingInstalled(profilesXMLData: profilesXMLData) {
+            return .installed
+        }
+        // Non-root `profiles list` omits system-scoped (`_computerlevel`) profiles.
+        // Only treat an absence as `.notInstalled` when the computer-level list itself
+        // was included in the query output; otherwise absence proves `.unknown`.
+        return plist.keys.contains("_computerlevel") ? .notInstalled : .unknown
+    }
+
     static func detectInstalledStatus() async -> BluetoothLoggingProfileStatus {
         await Task.detached(priority: .utility) {
             let process = Process()
@@ -73,7 +92,7 @@ enum BluetoothLoggingProfileService {
             let data = stdout.fileHandleForReading.readDataToEndOfFile()
             process.waitUntilExit()
             guard process.terminationStatus == 0 else { return .unknown }
-            return isBluetoothPrivateLoggingInstalled(profilesXMLData: data) ? .installed : .notInstalled
+            return status(fromProfilesXMLData: data)
         }.value
     }
 

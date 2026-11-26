@@ -38,9 +38,6 @@ extension OnboardingView {
         }
         observedRemoteButtons.removeAll()
         chromecastSingleKeyObserved = false
-        chromecastTwoKeyDetectedWithoutSingleKey = false
-        pendingChromecastComboButtons.removeAll()
-        compatibleChordConfirmed = false
         remoteInputDiagnostic = FirstUseRemoteInputDiagnostic()
         testedControlButtons.removeAll()
         secureInputActive = nil

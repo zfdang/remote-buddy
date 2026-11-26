@@ -290,8 +290,6 @@ extension SettingsView {
                 "connection.g9n9n.integration.native_hid"
             case .bluetoothLogRecovery:
                 "connection.g9n9n.integration.btle_log_profile"
-            case .twoKeyCompatibility:
-                "connection.g9n9n.integration.two_key_compat"
             }
             return localization.text(key)
         }
@@ -337,8 +335,6 @@ extension SettingsView {
             "connection.g9n9n.full_support_notice"
         case .bluetoothLogRecovery:
             "connection.g9n9n.btle_log_support_notice"
-        case .twoKeyCompatibility:
-            "connection.g9n9n.partial_support_notice"
         }
         return VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -350,7 +346,9 @@ extension SettingsView {
                     .fixedSize(horizontal: false, vertical: true)
             }
             if mode == .bluetoothLogRecovery &&
-                (!settings.g9n9nBluetoothLogRecoveryEnabled || model.bluetoothLoggingProfileStatus == .notInstalled) {
+                (!settings.g9n9nBluetoothLogRecoveryEnabled ||
+                    model.bluetoothLoggingProfileStatus == .notInstalled ||
+                    model.btleServerLogRedactedObserved) {
                 HStack(alignment: .top, spacing: 6) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundStyle(.orange)
@@ -360,19 +358,11 @@ extension SettingsView {
                 }
                 .font(.caption)
             }
-            if mode == .twoKeyCompatibility || mode == .bluetoothLogRecovery {
-                HStack(spacing: 12) {
-                    Link(
-                        localization.text("connection.g9n9n.compatibility_doc_link"),
-                        destination: AppLinks.g9n9nCompatibilityGuide(for: localization.locale)
-                    )
-                    if mode == .twoKeyCompatibility {
-                        Link(
-                            localization.text("onboarding.chromecast.replace_hardware_link"),
-                            destination: AppLinks.devices(for: localization.locale)
-                        )
-                    }
-                }
+            if mode == .bluetoothLogRecovery {
+                Link(
+                    localization.text("connection.g9n9n.compatibility_doc_link"),
+                    destination: AppLinks.g9n9nCompatibilityGuide(for: localization.locale)
+                )
                 .font(.caption)
             }
         }

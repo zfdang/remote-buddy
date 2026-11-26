@@ -4,11 +4,11 @@
 
 市面上的 Google Chromecast Voice Remote（**G9N9N**，VID `0x18D1` / PID `0x9450`）存在多个硬件修订与固件批次。尽管语音键（ATVV 协议，走独立 GATT 特征通道）在已知批次上均能稳定工作，但普通按键（走 HOGP / HID over GATT）在 macOS 公开 `IOHID` 层的表现存在显著分化：
 
-| 批次标识 | 普通按键 Report 格式 | HID 描述符声明（不含 ID） | 固件实际发送（不含 ID） | macOS `BTLEServer` 行为 | 公开 `IOHID` 结果 | 无描述文件时的支持状态 |
+| 批次标识 | 普通按键 Report 格式 | HID 描述符声明（不含 ID） | 固件实际发送（不含 ID） | macOS `BTLEServer` 行为 | 公开 `IOHID` 结果 | Remote Buddy 接入方式 |
 | --- | --- | --- | --- | --- | --- | --- |
-| **`0x0110` / 固件 `26.2`**（`PVT/MP`） | Report ID `1`（2 个 8-bit usage 索引） | 2 字节 | 2 字节（例如 `03 00`、`00 00`） | 校验通过并递交 | 全键按下与松开正常到达 | **完全支持（14 颗单键 + 语音）** |
-| **`DIS A0` / 固件 `26.7`**（以及表现一致的 `0x0110` / `26.0` `CR PVT/MP`） | Report ID `1`（2 个 8-bit usage 索引） | 2 字节 | 单键与松开仅发 **1 字节**（`03` / `00`）；同时按两键发 **2 字节**（`03 0B`） | 1 字节短报告在长度校验失败后被丢弃；2 字节双键通过 | 仅双键组合到达 `IOHID`，单键与松开完全丢失 | **部分支持（语音 + 方向键+OK 发 Enter）** |
-| **`HID 0x011B`**（社区实测批次） | Report ID `2`（16-bit 小端 consumer usage + 8-bit 按钮字段） | 3 字节 | 按下与松开仅发 **2 字节**（例如 `42 00`、`00 00`） | 所有普通按键均因长度不符被丢弃 | **连双键都收不到**，普通按键零事件 | **仅语音可用** |
+| **`0x0110` / 固件 `26.2`**（`PVT/MP`） | Report ID `1`（2 个 8-bit usage 索引） | 2 字节 | 2 字节（例如 `03 00`、`00 00`） | 校验通过并递交 | 全键按下与松开正常到达 | **原生完全支持（`Standard System HID`）**：语音 + 14 颗普通按键 |
+| **`DIS A0` / 固件 `26.7`**（以及表现一致的 `0x0110` / `26.0` `CR PVT/MP`） | Report ID `1`（2 个 8-bit usage 索引） | 2 字节 | 单键与松开仅发 **1 字节**（`03` / `00`）；同时按两键发 **2 字节**（`03 0B`） | 1 字节短报告在长度校验失败后被丢弃 | 单键与松开无法正常到达公开 `IOHID` | **蓝牙日志描述文件恢复（`.mobileconfig`）**：开启开关并安装描述文件后支持 14 颗普通按键 + 语音 |
+| **`HID 0x011B`**（社区实测批次） | Report ID `2`（16-bit 小端 consumer usage + 8-bit 按钮字段） | 3 字节 | 按下与松开仅发 **2 字节**（例如 `42 00`、`00 00`） | 所有普通按键均因长度不符被丢弃 | 普通按键零事件 | **蓝牙日志描述文件恢复（`.mobileconfig`）**：开启开关并安装描述文件后支持 14 颗普通按键 + 语音 |
 
 ### 为什么 `BTLEServer` 会丢弃这些报告？
 
@@ -89,7 +89,7 @@ Updated input report for ID #2: <private>
 
 在 macOS 上，`log config --status` 需要 root 权限，而 `/usr/bin/profiles list -output stdout-xml` **无需 root 即可读取已安装的描述文件清单**。Remote Buddy 通过以下双信号判断描述文件状态：
 
-1. **静态清单解析**（`BluetoothLoggingProfileService`）：解析 `profiles list -output stdout-xml` 输出的 XML plist，检查是否存在 `PayloadType == "com.apple.system.logging"` 且对 `com.apple.bluetooth`（或全局 `System`）启用了 `Enable-Private-Data = true` 的条目。该检测不死绑单一 UUID，既能识别 Remote Buddy 内置描述文件，也能兼容用户自行安装的其他官方蓝牙日志描述文件。
+1. **静态清单解析**（`BluetoothLoggingProfileService`）：解析 `profiles list -output stdout-xml` 输出的 XML plist，检查是否存在 `PayloadType == "com.apple.system.logging"` 且对 `com.apple.bluetooth`（或全局 `System`）启用了 `Enable-Private-Data = true` 的条目。若系统级范围（`_computerlevel`）出现在输出中且未命中，返回 `.notInstalled`；若非 root 查询输出中不包含 `_computerlevel` 作用域（常见于以系统范围安装描述文件后），则保留为 `.unknown`，由实时按键/脱敏信号进一步确认。
 2. **实时脱敏探测**（`BTLEServerReportLog`）：当日志流中收到 `Updated input report for ID #...: <private>` 时，标记 `btleServerLogRedactedObserved = true`，向 UI 明确反馈「系统正在丢弃报文且私有数据仍处于遮蔽状态，请确认描述文件已安装生效」。
 
 ---
@@ -99,13 +99,16 @@ Updated input report for ID #2: <private>
 1. **默认关闭、显式开启（Strict Opt-In）**：
    - `AppSettings.g9n9nBluetoothLogRecoveryEnabled` 默认为 `false`。
    - 只要用户未主动打开此增强开关，Remote Buddy **绝不**启动 `/usr/bin/log stream` 子进程，零后台额外开销，也完全不读取系统蓝牙日志。
-2. **保留零配置降级方案**：
-   - 原有针对 `26.7 / 26.0` 的「部分支持（双键兼容）模式」完整保留。不愿安装描述文件的用户仍可零配置使用语音键 + 「方向键 + OK」发送 Enter。
+2. **统一二元模式模型（无部分支持模式）**：
+   - G9N9N 仅保留两种支持模式：**原生完全支持（`.full`）** 与 **蓝牙日志描述文件支持（`.bluetoothLogRecovery`）**。
+   - 若设备普通按键可通过公开 `IOHID` 完整识别，则始终走原生通道（并禁止 `btle_log` 对其重复触发）；否则统一通过主动开启蓝牙日志恢复 + 安装 `.mobileconfig` 接入，不再维护「仅双键兼容 / 部分支持」中间模式。
 3. **无静默安装、无提权、不篡改证书信任**：
    - Remote Buddy 只负责把内置 `.mobileconfig` 复制到临时路径并通过 `NSWorkspace.shared.open` 交给 macOS 系统队列，以及引导跳转「设备管理」设置页。
    - 描述文件不进行自签名信任注入；用户可在安装前审查明文 XML 内容并自主确认。
-4. **严格的外设隔离与本地隐私**：
-   - 仅收集当前用户在 Remote Buddy 中已配置/绑定的 Chromecast G9N9N 外设 UUID（`bluetoothIdentifier`）的报文；其他蓝牙键盘、鼠标、耳机、手机等设备的 GATT 报告一律在归属阶段丢弃，不进入处理管线、不写入日志、不持久化、不上传。
+4. **严格的外设隔离、设备绑定校验与无原始字节诊断日志**：
+   - 仅将日志源订阅及路由限定在 `.bluetoothLogRecovery` 设备或配对探测阶段的当前选中 G9N9N，已确认为原生 `.full` 的设备不会走日志恢复分支；
+   - 其他蓝牙外设或跨设备时序交错产生的模糊归属报文、缺少唯一 `IOHIDDevice` 绑定确认的候选报文均直接丢弃；
+   - `btle_log` 路径在任何诊断日志中均不输出原始 payload 十六进制字节，也不持久化、不上传。
 5. **外部依赖风险声明**：
    - 该机制依赖 macOS `bluetoothd` 与 `BTLEServer` 的内部日志格式。若未来 macOS 大版本修改了日志文案，日志恢复通道会静默停止转发，不会崩溃，也不会影响常规 `IOHID` 设备与 ATVV 语音功能。
 
@@ -167,18 +170,13 @@ Updated input report for ID #2: <private>
     - `[0x03, 0x0B]` → `[.up, .back]`（完整覆盖双键组合）。
   - **Report ID 2（`0x011B`）**：跳过首字节 `2` 剥离分支，直接按 16-bit 小端 consumer usage 解析，确保 14 颗按键与 `[0x00, 0x00]` 松开无歧义。
 
-### 5.2 外设归属与无 dispatch 松开恢复状态机
+### 5.2 外设归属、设备绑定与原生通道隔离
 
-`BTLEServerReportLog.Attributor` 维护两个状态：
-- `lastIndication: (peripheral: UUID, timestamp: TimeInterval)?`
-- `heldByPeripheral: [UUID: (reportID: UInt32, maxLength: Int)]` 与 `lastHeldPeripheral: UUID?`
+`BTLEServerReportLog.Attributor` 维护 `pendingIndications`、`heldByPeripheral`（含 `pressedAt` 与污染标记）与 `lastActivityByPeripheral`：
 
-匹配规则：
-1. **标准有归属窗口匹配**：收到 `bluetoothd` 的 `Dispatching GATT (indication|notification) for device "<UUID>" to session "...BTLEServer..."` 后，在 `[-5 ms, +200 ms]` 窗口内匹配紧随其后的 `BTLEServer` report 行（实测最大延迟约 46 ms，留足余量）。若该 UUID 不在目标 G9N9N 集合中（例如蓝牙键盘/鼠标），直接丢弃且**不清空其他遥控器的持键状态**。
-2. **无独立 dispatch 的松开恢复**（解决社区 Issue #7 实测发现的松开无 dispatch 行问题，同时兼容 `26.7` 双键长度变化）：
-   - 当一条 report 未命中有效窗口内的目标 indication，但其 payload **全部为 `0x00`** 时：
-   - 检查最近持键的目标外设 `candidate` 是否有 `held = heldByPeripheral[candidate]`，满足 `held.reportID == report.reportID` 且 **`(1...held.maxLength).contains(report.data.count)`**；
-   - 放宽长度匹配为 `1...held.maxLength` 的原因：`26.7` 批次同时按两键发出 **2 字节**（`03 0B`），而全松开时固件只发出 **1 字节**（`00`）。放宽后可确保双键按下后的 1 字节松开不卡键。
+1. **可验证归属窗口匹配**：收到 `bluetoothd` 的 `Dispatching GATT (indication|notification) for device "<UUID>" to session "...BTLEServer..."` 后，在 `[-5 ms, +200 ms]` 窗口内匹配紧随其后的 `BTLEServer` report 行。若同一窗口内出现来自不同外设的交错派发活动，则判定归属不明确并直接丢弃。
+2. **无独立 dispatch 的松开恢复**：当全 `0x00` 松开报文缺少 dispatch 行时，仅当同时满足「当前仅唯一一台目标 G9N9N 处于按住状态」「自其按下以来未收到任何其他外设的派发指示（未受污染）」「report ID 与 `1...held.maxLength` 长度一致且在 10 秒按住窗口内」时才允许归属，否则安全丢弃（交给 `missing_release` 超时机制收口）。
+3. **精确设备绑定派发与原生 `.full` 设备隔离**：`BridgeAppModel` 不将已绑定设备回退到 `discoveryHIDMonitor`，未绑定发现态也要求存在唯一 G9N9N 候选；同时 `BridgeAppModel` 与 `HIDRemoteMonitor` 两层均拦截已确认为原生 `.full` 的设备，即使日志副本先于 `IOHID` 到达也绝不重复按键。
 
 ### 5.3 跨来源归一化去重
 
@@ -202,20 +200,17 @@ Updated input report for ID #2: <private>
 - 同样使用 `OSAllocatedUnfairLock` 保护非线程安全的 `DateFormatter` 时间戳解析器。
 - 进程异常退出采用退避重连（`1s, 2s, ..., 上限 30s`），并在成功解析交付首条报告后归零计数；在系统休眠（`suspendHIDMonitoring`）和权限撤销时同步停止进程，唤醒后再重建。
 
-### 5.6 首次向导、设置页与模式平滑升级
+### 5.6 首次向导与设置页接入标识
 
 - **首次/添加设备向导（`OnboardingView`）**：
-  - 保持现有「先测单按 OK，无反应可尝试上+OK 并勾选部分支持模式」的零配置主流程；
-  - 在 Chromecast 兼容提示卡片内提供可展开/可选的「全键兼容增强（蓝牙日志描述文件）」开关（默认关闭）；
-  - 用户主动开启后，显示描述文件安装状态、一键打开 `.mobileconfig`、跳转系统设置「设备管理」、重新检测按钮，并在检测到 `<private>` 时给出醒目提示；
-  - 安装并生效后，直接按一下 OK 键即可通过 `btle_log` 通道进入**完全支持模式**，完成后续 3 键验证与全 14 键映射。
+  - 主流程明确区分两种接入方式：单按 OK 正常进入即自动判定为**原生完全支持（`.full`）**；若单按无响应，向导卡片直接引导用户主动开启「蓝牙日志全键兼容（`.mobileconfig`）」，显示安装/权限作用域提示、一键打开 `.mobileconfig`、跳转系统设置「设备管理」、重新检测按钮与 `<private>` 实时警告；
+  - 安装生效后单按 OK 即可通过 `btle_log` 通道进入，完成后续 3 键验证与全 14 键映射。
 - **设置页（连接页 & 映射页）**：
-  - `G9N9NInputMode` 新增 `.bluetoothLogRecovery` 状态并按设备独立持久化：当向导或日常使用中检测到该 G9N9N 的单键通过 `btle_log` 通道接入时自动记录为 `.bluetoothLogRecovery`（若后续换用或恢复原生单键 `IOHID` 通道则自动恢复为 `.full`）；
-  - 在 **设置 → 遥控器连接（设备详情页）** 的硬件信息网格新增「按键接入方式」字段（明确标示为 `蓝牙日志描述文件 (.mobileconfig)`），并配合「蓝牙日志兼容」徽章与说明卡片呈现；若开关被关闭或描述文件被移除，详情页会同步提示「该遥控器通过蓝牙日志描述文件接入但当前未生效」；
-  - 在 **按键映射页** 与 **向导完成页** 同样展示「蓝牙日志兼容」徽章与接入来源说明；
-  - 对之前已进入「部分支持模式」的用户，只要在设置页开启开关并安装描述文件，当首次从 `btle_log` 收到单键按下报告时，自动将其 profile 从 `.twoKeyCompatibility` 平滑升级为 `.bluetoothLogRecovery` 并保持完整 14 键可编辑，无需移除重配。
+  - `G9N9NInputMode` 仅包含 `.full` 与 `.bluetoothLogRecovery` 两个枚举值并按设备独立持久化；
+  - 在 **设置 → 遥控器连接（设备详情页）** 的硬件信息网格展示「按键接入方式」（标明 `蓝牙日志描述文件 (.mobileconfig)`），并配合「蓝牙日志兼容」徽章与说明卡片呈现；若开关被关闭、描述文件未安装或检测到 `<private>`，详情页会同步显示失效提醒；
+  - 在 **按键映射页** 与 **向导完成页** 同样展示「蓝牙日志兼容」徽章与接入来源说明。
 - **诊断摘要**：
-  - 在首用诊断文本中记录 `g9n9n_btle_log_recovery_enabled`、`bluetooth_logging_profile` 与 `btle_log_redacted_observed` 三个布尔/枚举字段，绝不记录任何外设 UUID 或报文内容。
+  - 在首用诊断文本中记录 `g9n9n_btle_log_recovery_enabled`、`bluetooth_logging_profile` 与 `btle_log_redacted_observed` 三个状态字段，绝不记录任何外设 UUID 或报文内容。
 
 ---
 
@@ -227,15 +222,16 @@ Updated input report for ID #2: <private>
    - Report ID 2（`0x011B`）14 键 + `0000` 解码；
    - Report ID 1（`26.7`）1 字节单键（含 `0x01` Power、`0x03` Up、`0x07` OK）、2 字节双键（`03 0B`）、1 字节 `0x00` 松开；
    - `indication` 与 `notification` 两种 `bluetoothd` 派发日志格式；
-   - 2 字节双键按下后无 dispatch 的 1 字节 `0x00` 松开归属；
-   - `<private>` 脱敏报告检测、缩略长包过滤、多 G9N9N 隔离、蓝牙键盘干扰隔离；
-   - `BluetoothLoggingProfileService` XML 解析与内置 `.mobileconfig` 资源校验。
+   - 多外设交错指示丢弃、多遥控器持键与受污染无 dispatch 松开拒绝；
+   - `<private>` 脱敏报告检测、缩略长包过滤；
+   - `BluetoothLoggingProfileService` XML 解析（含系统级缺失 `.notInstalled` 与无 `_computerlevel` 返回 `.unknown`）与内置 `.mobileconfig` 资源校验。
 2. **`G9N9NProtocolTests` / `HoldRepeatConfigurationTests` / `G9N9NCompatibilityModeTests`**：
    - `payloadOnly: true` 与 `iohid` 短松开（`[1, 0]`）边界隔离；
-   - `IOHID (01 03 00)` 与 `btle_log (03 00)` 跨来源去重；
-   - `btle_log` 左右方向键主动注入而非原生直通；
-   - `btle_log` 按下/松开/超时恢复不误触发 `eventSuppressor`；
-   - 开关默认 `false`、持久化以及开启后由 `.twoKeyCompatibility` 平滑升级为 `.full`。
+   - `IOHID (01 03 00)` 与 `btle_log (03 00)` 跨来源去重与双向到达顺序；
+   - 原生 `.full` 设备对日志恢复的隔离（两种到达顺序均不重复触发）；
+   - 多 G9N9N 设备缺失绑定时不误派发给首个 HID 候选；
+   - `btle_log` 路径零原始字节日志输出；
+   - 开关默认 `false`、关闭开关/移除描述文件/重启后的状态保留与恢复行为。
 
 ### 6.2 真机验收清单
 

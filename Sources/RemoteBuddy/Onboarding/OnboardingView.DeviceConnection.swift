@@ -94,30 +94,24 @@ extension OnboardingView {
             statusCard(
                 icon: remoteInputDiagnostic.shouldShowVoiceButtonCorrection
                     ? "exclamationmark.triangle.fill"
-                    : chromecastTwoKeyDetectedWithoutSingleKey && !isChromecastTwoKeyCompatible
-                        ? "exclamationmark.circle.fill"
-                        : observedRemoteButtons.isEmpty
-                            ? "button.programmable"
-                            : "checkmark.circle.fill",
+                    : observedRemoteButtons.isEmpty
+                        ? "button.programmable"
+                        : "checkmark.circle.fill",
                 title: localization.text(
                     remoteInputDiagnostic.shouldShowVoiceButtonCorrection
                         ? "onboarding.remote.voice_button_mistake.title"
-                        : chromecastTwoKeyDetectedWithoutSingleKey && !isChromecastTwoKeyCompatible
-                            ? "onboarding.remote.chromecast.combo_needs_opt_in.title"
-                            : observedRemoteButtons.isEmpty
-                                ? "onboarding.remote.button_waiting"
-                                : "onboarding.remote.button_received"
+                        : observedRemoteButtons.isEmpty
+                            ? "onboarding.remote.button_waiting"
+                            : "onboarding.remote.button_received"
                 ),
                 detail: physicalRemoteButtonStatusDetail,
                 isComplete: !observedRemoteButtons.isEmpty,
-                pendingColor: (remoteInputDiagnostic.shouldShowVoiceButtonCorrection ||
-                    (chromecastTwoKeyDetectedWithoutSingleKey && !isChromecastTwoKeyCompatible))
-                    ? .orange : nil,
+                pendingColor: remoteInputDiagnostic.shouldShowVoiceButtonCorrection ? .orange : nil,
                 compact: true
             )
 
-            if shouldShowChromecastCompatibilityCard {
-                chromecastCompatibilityOptInCard
+            if shouldShowChromecastBluetoothLogRecoveryCard {
+                chromecastBluetoothLogRecoveryCard
             }
 
             if shouldShowSecureInputWarning {
@@ -213,18 +207,11 @@ extension OnboardingView {
 
     private var physicalRemoteButtonStatusDetail: String {
         if settings.onboardingControlSource == .chromecastRemote {
-            if chromecastTwoKeyDetectedWithoutSingleKey && !isChromecastTwoKeyCompatible {
-                return localization.text("onboarding.remote.chromecast.combo_needs_opt_in.detail")
-            }
-            if isChromecastTwoKeyCompatible {
-                return localization.text(
-                    observedRemoteButtons.isEmpty
-                        ? "onboarding.remote.chromecast.compat_waiting_detail"
-                        : "onboarding.remote.chromecast.compat_ready_detail"
-                )
-            }
             if chromecastSingleKeyObserved {
-                return localization.text("onboarding.remote.chromecast.full_ready_detail")
+                let key = settings.g9n9nInputMode(for: settings.selectedRemoteProfileID) == .bluetoothLogRecovery
+                    ? "onboarding.remote.chromecast.btle_log_ready_detail"
+                    : "onboarding.remote.chromecast.full_ready_detail"
+                return localization.text(key)
             }
             if observedRemoteButtons.isEmpty && !remoteInputDiagnostic.shouldShowVoiceButtonCorrection {
                 return localization.text("onboarding.remote.chromecast.single_waiting_detail")
@@ -238,64 +225,35 @@ extension OnboardingView {
         return localization.text(instructionKey)
     }
 
-    private var shouldShowChromecastCompatibilityCard: Bool {
-        ChromecastCompatibilityDetection.shouldShowCompatibilityOptInCard(
+    private var shouldShowChromecastBluetoothLogRecoveryCard: Bool {
+        ChromecastOnboardingDetection.shouldShowBluetoothLogRecoveryCard(
             step: settings.onboardingStep,
             source: settings.onboardingControlSource,
             singleKeyObserved: chromecastSingleKeyObserved
         )
     }
 
-    private var chromecastCompatibilityOptInCard: some View {
-        let highlighted = chromecastTwoKeyDetectedWithoutSingleKey && !isChromecastTwoKeyCompatible
-        let tint: Color = highlighted ? .orange : (isChromecastTwoKeyCompatible ? .blue : .secondary)
-        return VStack(alignment: .leading, spacing: 8) {
-            Text(localization.text(
-                highlighted
-                    ? "onboarding.remote.chromecast.compat_prompt_highlighted"
-                    : "onboarding.remote.chromecast.compat_prompt"
-            ))
-            .font(.system(size: 12))
-            .foregroundStyle(highlighted ? .primary : .secondary)
-            .fixedSize(horizontal: false, vertical: true)
+    private var chromecastBluetoothLogRecoveryCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(localization.text("onboarding.remote.chromecast.btle_log_prompt"))
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
 
-            Toggle(isOn: Binding(
-                get: { isChromecastTwoKeyCompatible },
-                set: { setChromecastPartialSupportMode($0) }
-            )) {
-                Text(localization.text("onboarding.remote.chromecast.compat_checkbox"))
-                    .font(.system(size: 13, weight: .medium))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .toggleStyle(.checkbox)
-            .accessibilityIdentifier("g9n9n-partial-support-toggle")
-
-            if isChromecastTwoKeyCompatible {
-                Text(localization.text("onboarding.remote.chromecast.compat_scope_summary"))
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+            G9N9NBluetoothLoggingSection(model: model, settings: settings)
 
             Link(
                 localization.text("connection.g9n9n.compatibility_doc_link"),
                 destination: AppLinks.g9n9nCompatibilityGuide(for: localization.locale)
             )
             .font(.system(size: 12))
-
-            Divider()
-
-            G9N9NBluetoothLoggingSection(model: model, settings: settings)
         }
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            highlighted ? Color.orange.opacity(0.08) : Color.primary.opacity(0.035),
-            in: RoundedRectangle(cornerRadius: 12)
-        )
+        .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 12))
         .overlay {
             RoundedRectangle(cornerRadius: 12)
-                .stroke(tint.opacity(highlighted ? 0.45 : 0.16), lineWidth: 1)
+                .stroke(Color.secondary.opacity(0.16), lineWidth: 1)
         }
     }
 

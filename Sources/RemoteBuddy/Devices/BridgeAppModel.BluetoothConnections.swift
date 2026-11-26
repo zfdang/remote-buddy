@@ -157,6 +157,9 @@ extension BridgeAppModel {
     func selectRemoteProfile(_ profileID: UUID) {
         settings.selectRemoteProfile(profileID)
         refreshBluetoothPresentation()
+        if !settings.isOnboardingComplete {
+            synchronizeBTLEServerLogSource()
+        }
     }
 
     @discardableResult

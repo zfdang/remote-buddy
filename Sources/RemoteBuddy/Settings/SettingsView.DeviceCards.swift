@@ -132,10 +132,6 @@ extension SettingsView {
         }
     }
 
-    var partialSupportBadge: some View {
-        g9n9nSupportBadge(for: .twoKeyCompatibility)
-    }
-
     func g9n9nSupportBadge(for mode: G9N9NInputMode) -> some View {
         G9N9NSupportBadge(mode: mode)
     }
@@ -234,8 +230,6 @@ struct G9N9NSupportBadge: View {
             ("checkmark.circle.fill", .green, "remote.device.full_support_badge")
         case .bluetoothLogRecovery:
             ("doc.badge.gearshape.fill", .blue, "remote.device.btle_log_support_badge")
-        case .twoKeyCompatibility:
-            ("exclamationmark.circle.fill", .orange, "remote.device.partial_support_badge")
         }
         HStack(spacing: 4) {
             Image(systemName: icon)

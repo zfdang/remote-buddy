@@ -121,6 +121,7 @@ final class HIDRemoteMonitor {
     /// Reports recovered from the BTLEServer log never reached macOS, so no native key event follows them.
     var currentReportOrigin: HIDReportOrigin = .iohid
     var btleLogActiveUsages = Set<UInt16>()
+    var nativeGoogleIOHIDObserved = false
     var lastGoogleReportByOrigin: [HIDReportOrigin: (reportID: UInt32, usages: Set<UInt16>, time: TimeInterval)] = [:]
     var currentReportIsT1 = false
     var t1VoiceHoldActive = false
@@ -206,6 +207,7 @@ final class HIDRemoteMonitor {
     var isMonitoring: Bool { manager != nil }
     var onInternalAction: ((UUID?, ButtonAction) -> Void)?
     var onT1VoiceHoldChanged: ((UUID?, Bool) -> Void)?
+    var onNativeGoogleIOHIDVerified: ((UUID?) -> Void)?
     var onboardingWindowIsActive: () -> Bool = { true }
 
     init(
@@ -412,6 +414,7 @@ final class HIDRemoteMonitor {
     func stop() {
         isWaitingForMatchingServices = false
         btleLogActiveUsages.removeAll()
+        nativeGoogleIOHIDObserved = false
         lastGoogleReportByOrigin.removeAll()
         if ownsEventSuppressor { eventSuppressor.stop() }
         permissionPollSubscription?.cancel()

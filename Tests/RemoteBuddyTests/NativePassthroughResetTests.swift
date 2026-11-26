@@ -28,7 +28,7 @@ struct NativePassthroughResetTests {
         #expect(keyUps == 0)
         switch path {
         case "disconnect": monitor.disconnectSimulatedDevice()
-        case "compatibilityReset": monitor.clearTransientInputStateForCompatibility()
+        case "compatibilityReset": monitor.clearTransientInputState(emitEmptyActiveButtons: false)
         default: monitor.stop()
         }
         clock.advance(to: HIDRemoteTiming.maximumContinuousHoldMilliseconds + 1000)

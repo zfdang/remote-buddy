@@ -56,60 +56,60 @@
           </tr>
           <tr>
             <th scope="row"><strong>DIS <code>A0</code> / FW <code>26.7</code> (BLE captured)<br>&amp; <code>HID 0x0110</code> / FW <code>26.0</code></strong><br><span class="device-model-code">CR PVT/MP · Community report <a class="text-link" href="https://github.com/zfdang/remote-buddy/issues/256">#256 ↗</a></span></th>
-            <td><span class="device-status is-partial">Partially Supported</span></td>
-            <td><code>FW 26.7</code> declares Report ID <code>1</code> (3 bytes total) but sends only <strong>1 byte</strong> (<code>03</code> / <code>00</code>) for single keys; <code>0x0110 / FW 26.0</code> reports 3-byte max input size, with raw BLE capture still pending (could be a similar short report or a distinct hardware/firmware variant).</td>
-            <td>Single-key press and release reports do not reach public <code>IOHID</code> (<code>26.7</code> confirmed 1-byte drop; <code>26.0</code> pending BLE capture); only <strong>simultaneous 2-key chords</strong> (e.g. <code>01 03 0B</code> / <code>01 07 04</code>) reach public <code>IOHID</code>.</td>
-            <td><strong>Partially Supported (2-key compatibility mode)</strong>: Voice (including Smart Toggle and ~5 min keepalive) works normally; ordinary input is limited to <em>Direction + OK</em> (such as Up + OK) sending Return/Enter. Single-key remapping, multi-tap, and single-key phrases are unavailable.</td>
+            <td><span class="device-status is-supported">Profile Compatible</span></td>
+            <td><code>FW 26.7</code> declares Report ID <code>1</code> (3 bytes total) but sends only <strong>1 byte</strong> (<code>03</code> / <code>00</code>) for single keys; <code>0x0110 / FW 26.0</code> reports 3-byte max input size.</td>
+            <td>Single-key press and release reports are dropped by <code>BTLEServer</code> and do not work natively via public <code>IOHID</code>.</td>
+            <td><strong>Bluetooth Logging Profile Recovery (<code>.mobileconfig</code>)</strong>: Off by default; turn on Bluetooth log key recovery in Connection settings or onboarding and install the bundled <code>.mobileconfig</code> to unlock Voice and all 14 buttons.</td>
           </tr>
           <tr>
             <th scope="row"><strong>HID version <code>0x011B</code></strong><br><span class="device-model-code">Community tested</span></th>
-            <td><span class="device-status is-planned">Voice Only</span></td>
+            <td><span class="device-status is-supported">Profile Compatible</span></td>
             <td>Report ID <code>2</code> (16-bit consumer usage) declares 3 bytes excluding ID, but firmware sends only <strong>2 bytes</strong> (e.g. <code>42 00</code> press, <code>00 00</code> release).</td>
-            <td>Because payload size mismatches the HID descriptor, all ordinary button reports are dropped by macOS <code>BTLEServer</code>—neither single keys nor 2-key chords reach public <code>IOHID</code>.</td>
-            <td><strong>Default: Voice only (optional logging profile unlocks all 14 keys)</strong>: ATVV voice recording works normally. To unlock all 14 buttons on <code>0x011B</code>, opt in to Bluetooth log key recovery in onboarding or Connection settings and install the bundled <code>.mobileconfig</code> profile; otherwise, replace with a verified <code>0x0110 / FW 26.2</code> unit.</td>
+            <td>Because payload size mismatches the HID descriptor, all ordinary button reports are dropped by macOS <code>BTLEServer</code> before public <code>IOHID</code>.</td>
+            <td><strong>Bluetooth Logging Profile Recovery (<code>.mobileconfig</code>)</strong>: Off by default; opt in to Bluetooth log key recovery in Connection settings or onboarding and install the bundled <code>.mobileconfig</code> to unlock Voice and all 14 buttons.</td>
           </tr>
         </tbody>
       </table>
     </div>
 
     <div class="download-note" id="notice">
-      <strong>Identification &amp; replacement guidance:</strong>
-      After pairing with your Mac, open Remote Buddy <strong>Settings → Connection → Hardware info</strong> to check your remote's <code>HID version</code> (such as <code>0x0110</code> or <code>0x011B</code>), firmware revision, and hardware revision. <strong><code>HID version 0x0110</code> alone does not guarantee single-key support</strong>: observed <code>0x0110</code> units include both fully supported <code>FW 26.2 (PVT/MP)</code> and 2-key-only <code>FW 26.0 (CR PVT/MP, see <a class="text-link" href="https://github.com/zfdang/remote-buddy/issues/256">#256 ↗</a>)</code>, so always rely on the live onboarding single-key check. If single buttons do not register and only 2-key chords work, <strong>you must explicitly opt in during onboarding</strong> to enter Partially Supported mode—the app never silently downgrades without confirmation. If your unit is a <code>0x011B</code> batch where even 2-key chords cannot reach <code>IOHID</code>, see the <a class="text-link" href="device_en.html">Supported Remotes &amp; Buying Guide →</a> (maintainer-tested <code>0x0110 / FW 26.2</code> unit reference: <a class="text-link" href="https://mobile.yangkeduo.com/goods.html?ps=wI005ehWCi">Pinduoduo product page (~¥15) ↗</a>).
+      <strong>Two Integration Paths Only:</strong>
+      Remote Buddy supports two G9N9N integration paths: <strong>Standard System HID (Full Support)</strong> and <strong>Bluetooth Logging Profile Recovery (<code>.mobileconfig</code>)</strong>—limited Partial Support (2-key) mode has been removed. After pairing, open <strong>Settings → Connection → Hardware info</strong> to check your unit's Button Integration method, <code>HID version</code>, and firmware revision. If you prefer not to install a profile, choose a native unit on the <a class="text-link" href="device_en.html">Supported Remotes &amp; Buying Guide →</a> (maintainer-tested <code>0x0110 / FW 26.2</code> reference: <a class="text-link" href="https://mobile.yangkeduo.com/goods.html?ps=wI005ehWCi">Pinduoduo (~¥15) ↗</a>).
     </div>
   </section>
 
   <section class="compare-section" id="setup-and-modes" aria-labelledby="setup-and-modes-title">
-    <h2 id="setup-and-modes-title">First-Time Setup &amp; Button Mapping Modes</h2>
-    <p class="lead-sub">Marketing names or shared VID/PID (<code>18D1:9450</code>) alone cannot verify button compatibility; onboarding locks the appropriate mode based on live key tests.</p>
+    <h2 id="setup-and-modes-title">First-Time Setup &amp; Integration Paths</h2>
+    <p class="lead-sub">Marketing names or shared VID/PID (<code>18D1:9450</code>) alone cannot verify button behavior; onboarding records whether your unit works via native IOHID or the Bluetooth logging profile.</p>
 
     <div class="devices-grid">
       <article class="device-card">
         <div class="device-card-head">
           <div>
-            <h3>1. Onboarding detection</h3>
+            <h3>1. Onboarding Detection</h3>
             <span class="device-model-code">Bluetooth pairing &amp; Step 2 check</span>
           </div>
           <span class="device-status is-supported">Guided flow</span>
         </div>
         <ul class="device-specs">
           <li><strong>Bluetooth pairing</strong>: Connect the remote in macOS Bluetooth settings; hold Back + Home for ~3 seconds to enter pairing mode.</li>
-          <li><strong>Press OK alone first</strong>: When onboarding detects a single-key OK press, it automatically enables <strong>Fully Supported mode</strong> and asks you to test three distinct ordinary buttons before voice setup.</li>
-          <li><strong>If single presses produce no event</strong>: Onboarding prompts you to hold <em>Up + OK</em> (any D-pad direction + OK). If only 2-key chords register, tick <strong>Confirm partial support (compatibility mode)</strong> and verify one chord to continue.</li>
+          <li><strong>Press OK alone first</strong>: When public <code>IOHID</code> delivers a single-key press, Remote Buddy marks the unit as <strong>Standard System HID</strong> (native Full Support) and proceeds to test three buttons.</li>
+          <li><strong>Enable Log Recovery if single keys fail</strong>: Turn on opt-in Bluetooth log key recovery in onboarding, install the bundled <code>.mobileconfig</code> profile, then press OK to verify all 14 buttons via the logging profile path.</li>
         </ul>
       </article>
 
       <article class="device-card">
         <div class="device-card-head">
           <div>
-            <h3>2. Mapping capabilities by mode</h3>
-            <span class="device-model-code">Fully Supported vs. Partial Support</span>
+            <h3>2. Full 14-Button Mapping on Both Paths</h3>
+            <span class="device-model-code">Standard System HID vs. .mobileconfig Profile</span>
           </div>
-          <span class="device-status is-partial">Locked per mode</span>
+          <span class="device-status is-supported">Full 14-button support</span>
         </div>
         <ul class="device-specs">
-          <li><strong>Fully Supported (14 buttons)</strong>: Remap single, double, and long presses for D-pad directions, OK, Back, Home, Mute, Volume +/-, YouTube, Netflix, Input, and Power. Defaults: YouTube = Previous track, Netflix = Next track, Input = Play/Pause.</li>
-          <li><strong>Partially Supported (read-only lock)</strong>: Once opted in during setup, Connection settings show the mode as read-only, map <strong>Direction + OK → Return/Enter</strong>, and hide inapplicable 14-button and single-key phrase editors.</li>
-          <li><strong>Switching to a fully supported unit later</strong>: Remove the old profile in Connection settings and run <em>Add New Device</em> to test single-key support cleanly.</li>
+          <li><strong>All 14 ordinary buttons</strong>: Both integration paths support single, double, and long-press actions plus common phrases for all 14 buttons.</li>
+          <li><strong>Clear integration indicator</strong>: Connection details and Button Mapping display whether each device uses Standard System HID or Bluetooth Logging Profile (.mobileconfig).</li>
+          <li><strong>Native isolation</strong>: Units verified for native IOHID remain isolated from log recovery so keys never double-fire.</li>
         </ul>
       </article>
     </div>
@@ -144,8 +144,8 @@
           <span class="device-status is-planned">Scope limits</span>
         </div>
         <ul class="device-specs">
-          <li><strong>No speculative chord decoding</strong>: Partially Supported mode never guesses individual keys or synthesized long-press repeats from 2-key chords without release reports; recognized zeroed short release reports clear key state safely without firing Power.</li>
-          <li><strong>Opt-in Bluetooth logging profile (off by default)</strong>: For <code>0x011B</code> and <code>26.7</code> batches dropped by macOS <code>BTLEServer</code>, Remote Buddy never reads system logs by default; only when you explicitly turn on the toggle and install the bundled <code>com.apple.bluetooth</code> <code>.mobileconfig</code> profile in System Settings → General → Device Management does it recover your paired G9N9N's dropped reports in memory (removable anytime).</li>
+          <li><strong>Native isolation</strong>: Units verified for native <code>IOHID</code> continue using <code>IOHID</code> only and never double-fire even if the log recovery toggle is enabled.</li>
+          <li><strong>Opt-in Bluetooth logging profile (off by default)</strong>: For <code>0x011B</code> and <code>26.7</code> batches dropped by macOS <code>BTLEServer</code>, Remote Buddy never reads system logs by default; only when you explicitly turn on the toggle and install the bundled <code>com.apple.bluetooth</code> <code>.mobileconfig</code> profile in System Settings → General → Device Management does it recover your paired, unambiguously bound G9N9N's dropped reports in memory (removable anytime).</li>
           <li><strong>Further reading</strong>: Compare all remote hardware on the <a class="text-link" href="device_en.html">Supported Remotes page →</a>, or inspect byte-level capture logs on GitHub in <a class="text-link" href="https://github.com/zfdang/remote-buddy/blob/main/docs/g9n9n-hardware-debugging.md">G9N9N hardware debugging notes ↗</a>, <a class="text-link" href="https://github.com/zfdang/remote-buddy/issues/256">community report #256 (0x0110 / FW 26.0) ↗</a>, and <a class="text-link" href="https://github.com/brightac/remote-buddy/issues/7">community report #7 (0x011B) ↗</a>.</li>
         </ul>
       </article>

@@ -190,12 +190,18 @@ extension HIDRemoteMonitor {
         }
     }
 
+    enum BTLEServerLogCandidateResolution<Device> {
+        case selected(Device)
+        case rejected(String)
+    }
+
     func deviceDidRemove(device: IOHIDDevice) {
         cachedDeviceMetadata.removeValue(forKey: ObjectIdentifier(device))
         if let activeDevice, CFEqual(activeDevice, device) {
             IOHIDDeviceClose(activeDevice, IOOptionBits(kIOHIDOptionsTypeNone))
             self.activeDevice = nil
             deviceFingerprint = nil
+            nativeGoogleIOHIDObserved = false
             resetInputState()
             activeDeviceIsSeized = false
             updateStatus(LocalizedMessage("button_mapping.status.disconnected"))
@@ -210,23 +216,60 @@ extension HIDRemoteMonitor {
         diagnosticLogger("HID DEVICE probe_removed")
     }
 
+    nonisolated static func resolveBTLEServerLogCandidate<Device>(
+        candidates: [(device: Device, fingerprint: String?)],
+        activeFingerprint: String?,
+        targetFingerprint: String?,
+        excludedFingerprints: Set<String>
+    ) -> BTLEServerLogCandidateResolution<Device> {
+        var unique: [(device: Device, fingerprint: String)] = []
+        var seenFingerprints: Set<String> = []
+        for candidate in candidates {
+            guard case let .accepted(fingerprint) = reportRoutingDecision(
+                reportingFingerprint: candidate.fingerprint,
+                activeFingerprint: activeFingerprint,
+                targetFingerprint: targetFingerprint,
+                excludedFingerprints: excludedFingerprints
+            ) else { continue }
+            if seenFingerprints.insert(fingerprint).inserted {
+                unique.append((candidate.device, fingerprint))
+            }
+        }
+        guard !unique.isEmpty else {
+            return .rejected("no_google_device")
+        }
+        guard unique.count == 1 else {
+            return .rejected("ambiguous_google_device")
+        }
+        return .selected(unique[0].device)
+    }
+
     /// Feeds a report recovered from the BTLEServer log through the normal IOHID path,
-    /// attributed to the matched G9N9N HID device, as if IOHID had delivered it.
+    /// attributed strictly to an unambiguous matching G9N9N HID device.
     func handleBTLEServerLogReport(reportID: UInt32, data: Data) {
         guard let manager else { return }
-        let candidates: [IOHIDDevice]
+        let rawCandidates: [IOHIDDevice]
         if let activeDevice {
-            candidates = [activeDevice] + probedDevices
+            rawCandidates = [activeDevice] + probedDevices
         } else if let matched = IOHIDManagerCopyDevices(manager) as? Set<IOHIDDevice> {
-            candidates = probedDevices + Array(matched)
+            rawCandidates = probedDevices + Array(matched)
         } else {
-            candidates = probedDevices
+            rawCandidates = probedDevices
         }
-        guard let device = candidates.first(where: { allowsG9N9N && isGoogleDevice($0) }) else {
-            diagnosticLogger("HID BTLE_LOG report_unrouted reason=no_google_device id=\(reportID)")
-            return
+        let googleCandidates = rawCandidates
+            .filter { allowsG9N9N && isGoogleDevice($0) }
+            .map { ($0, metadata(for: $0).fingerprint) }
+        switch Self.resolveBTLEServerLogCandidate(
+            candidates: googleCandidates,
+            activeFingerprint: deviceFingerprint,
+            targetFingerprint: targetFingerprint,
+            excludedFingerprints: excludedFingerprints()
+        ) {
+        case let .rejected(reason):
+            diagnosticLogger("HID BTLE_LOG report_unrouted reason=\(reason) id=\(reportID)")
+        case let .selected(device):
+            handleReport(from: device, reportID: reportID, data: data, origin: .btleServerLog)
         }
-        handleReport(from: device, reportID: reportID, data: data, origin: .btleServerLog)
     }
 
     func handleReport(from device: IOHIDDevice, reportID: UInt32, data: Data, origin: HIDReportOrigin = .iohid) {
@@ -247,10 +290,6 @@ extension HIDRemoteMonitor {
         currentReportIsGoogle = allowsG9N9N && isGoogleDevice(device, metadata: deviceMetadata)
         currentReportIsT1 = !currentReportIsGoogle && allowsT1Remote && isT1Device(device, metadata: deviceMetadata)
         currentReportDescriptor = deviceMetadata.reportDescriptor
-        if currentReportIsGoogle {
-            let payload = data.prefix(16).map { String(format: "%02X", $0) }.joined(separator: " ")
-            diagnosticLogger("HID GOOGLE report id=\(reportID) bytes=\(data.count) payload=\(payload) source=\(origin.rawValue)")
-        }
         guard !isGoogleCandidateIdentity(device, metadata: deviceMetadata) || currentReportIsGoogle else { return }
         guard !isT1CandidateIdentity(device, metadata: deviceMetadata) || currentReportIsT1 else { return }
         guard currentReportIsGoogle || Self.isLocationAllowed(
@@ -274,12 +313,26 @@ extension HIDRemoteMonitor {
             diagnosticLogger("HID REPORT rejected reason=\(reason)")
             return
         }
+        if let rejectReason = shouldRejectBTLEServerLogGoogleReport() {
+            diagnosticLogger("HID GOOGLE report dropped reason=\(rejectReason) source=\(reportSource)")
+            return
+        }
+        if currentReportIsGoogle && origin != .btleServerLog {
+            let payload = data.prefix(16).map { String(format: "%02X", $0) }.joined(separator: " ")
+            diagnosticLogger("HID GOOGLE report id=\(reportID) bytes=\(data.count) payload=\(payload) source=\(origin.rawValue)")
+        }
         let discoveryReport: ParsedHIDReport?
         if deviceFingerprint == nil, targetFingerprint == nil {
             guard let parsed = parseReport(reportID: reportID, data: data, source: reportSource) else {
                 return
             }
+            recordNativeGoogleIOHIDIfNeeded(usages: parsed.mappedUsages, origin: origin)
             if isDuplicateGoogleReport(reportID: reportID, usages: parsed.mappedUsages, origin: origin) {
+                if origin == .iohid && !activeDeviceIsSeized {
+                    for button in RemoteButton.buttons(for: parsed.mappedUsages) {
+                        eventSuppressor.arm(button: button, edge: .down)
+                    }
+                }
                 diagnosticLogger("HID GOOGLE report dropped reason=duplicate source=\(origin.rawValue)")
                 return
             }
@@ -580,3 +633,5 @@ extension HIDRemoteMonitor {
         return buttons.isEmpty ? "none" : buttons.joined(separator: ",")
     }
 }
+
+extension HIDRemoteMonitor.BTLEServerLogCandidateResolution: Equatable where Device: Equatable {}

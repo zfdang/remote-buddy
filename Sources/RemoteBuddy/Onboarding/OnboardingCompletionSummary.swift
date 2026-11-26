@@ -9,13 +9,11 @@ struct OnboardingCompletionSummary {
     let tapModeEnabled: Bool?
     let voiceTool: OnboardingVoiceTool?
     let voiceVerified: Bool?
-    let isPartialSupportG9N9N: Bool
     let g9n9nInputMode: G9N9NInputMode?
 
     init(purpose: OnboardingPurpose, remoteName: String, buttonsVerified: Bool,
          microphoneReady: Bool, voiceKeyMode: VoiceKeyMode, tapModeEnabled: Bool,
          voiceTool: OnboardingVoiceTool, binding: VoiceToolUserBinding?,
-         isPartialSupportG9N9N: Bool = false,
          g9n9nInputMode: G9N9NInputMode? = nil) {
         self.remoteName = purpose == .integration ? nil : remoteName
         self.buttonsVerified = purpose == .integration ? nil : buttonsVerified
@@ -23,9 +21,7 @@ struct OnboardingCompletionSummary {
         self.voiceKeyMode = purpose == .addDevice ? nil : voiceKeyMode
         self.tapModeEnabled = purpose == .addDevice ? nil : tapModeEnabled
         self.voiceTool = purpose == .addDevice ? nil : voiceTool
-        self.isPartialSupportG9N9N = purpose == .integration ? false : isPartialSupportG9N9N
-        let resolvedMode = g9n9nInputMode ?? (isPartialSupportG9N9N ? .twoKeyCompatibility : nil)
-        self.g9n9nInputMode = purpose == .integration ? nil : resolvedMode
+        self.g9n9nInputMode = purpose == .integration ? nil : g9n9nInputMode
         self.voiceVerified = purpose == .addDevice ? nil : (
             binding?.validationState == .verified && binding?.tool == voiceTool &&
             binding?.shortcut == voiceKeyMode && binding?.gestureMode == (tapModeEnabled ? .toggle : .hold)

@@ -108,7 +108,7 @@ struct BTLEServerReportLogTests {
         #expect(attributor.accept(report("1: {length = 1, bytes = 0x00}", at: 50.250), peripherals: [remote]) == nil)
     }
 
-    @Test func keyboardZeroReportDoesNotReleaseTheRemote() {
+    @Test func keyboardZeroReportDoesNotReleaseTheRemoteAndTaintsDispatchlessFallback() {
         var attributor = BTLEServerReportLog.Attributor()
         _ = attributor.accept(indication(remote, at: 1.0), peripherals: [remote])
         _ = attributor.accept(report("2: {length = 2, bytes = 0x4300}", at: 1.01), peripherals: [remote])
@@ -117,10 +117,52 @@ struct BTLEServerReportLogTests {
             attributor.accept(report("1: {length = 8, bytes = 0x0000000000000000}", at: 1.51), peripherals: [remote])
                 == nil
         )
-        // Remote release still arrives cleanly after keyboard noise.
+        // A dispatch-less release after an intervening peripheral indication is ambiguous and must drop.
         #expect(
             attributor.accept(report("2: {length = 2, bytes = 0x0000}", at: 1.6), peripherals: [remote])
+                == nil
+        )
+        // A release accompanied by the remote's own dispatch line still succeeds.
+        _ = attributor.accept(indication(remote, at: 1.9), peripherals: [remote])
+        #expect(
+            attributor.accept(report("2: {length = 2, bytes = 0x0000}", at: 1.91), peripherals: [remote])
                 == .report(.init(peripheral: remote, reportID: 2, data: Data([0x00, 0x00])))
+        )
+    }
+
+    @Test func interleavedIndicationsAndMultipleHeldRemotesAreDroppedWhenAmbiguous() {
+        var attributor = BTLEServerReportLog.Attributor()
+
+        // Interleaved keyboard + remote indications within attributionWindow -> drop ambiguous report.
+        _ = attributor.accept(indication(remote, at: 10.00), peripherals: [remote, secondRemote])
+        _ = attributor.accept(indication(keyboard, at: 10.02), peripherals: [remote, secondRemote])
+        #expect(
+            attributor.accept(report("2: {length = 2, bytes = 0x4200}", at: 10.03), peripherals: [remote, secondRemote])
+                == nil
+        )
+
+        // Interleaved indications from two configured G9N9N remotes -> drop instead of guessing.
+        _ = attributor.accept(indication(remote, at: 11.00), peripherals: [remote, secondRemote])
+        _ = attributor.accept(indication(secondRemote, at: 11.03), peripherals: [remote, secondRemote])
+        #expect(
+            attributor.accept(report("2: {length = 2, bytes = 0x4300}", at: 11.04), peripherals: [remote, secondRemote])
+                == nil
+        )
+
+        // Two simultaneously held remotes -> dispatch-less zero release must never pick most recently held.
+        _ = attributor.accept(indication(remote, at: 20.00), peripherals: [remote, secondRemote])
+        #expect(
+            attributor.accept(report("2: {length = 2, bytes = 0x4200}", at: 20.01), peripherals: [remote, secondRemote])
+                == .report(.init(peripheral: remote, reportID: 2, data: Data([0x42, 0x00])))
+        )
+        _ = attributor.accept(indication(secondRemote, at: 20.50), peripherals: [remote, secondRemote])
+        #expect(
+            attributor.accept(report("2: {length = 2, bytes = 0x4300}", at: 20.51), peripherals: [remote, secondRemote])
+                == .report(.init(peripheral: secondRemote, reportID: 2, data: Data([0x43, 0x00])))
+        )
+        #expect(
+            attributor.accept(report("2: {length = 2, bytes = 0x0000}", at: 20.60), peripherals: [remote, secondRemote])
+                == nil
         )
     }
 
@@ -217,12 +259,12 @@ struct BTLEServerReportLogTests {
         """.data(using: .utf8)!
         #expect(BluetoothLoggingProfileService.isBluetoothPrivateLoggingInstalled(profilesXMLData: scopedXML))
 
-        let unrelatedXML = """
+        let unrelatedComputerLevelXML = """
         <?xml version="1.0" encoding="UTF-8"?>
         <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
         <plist version="1.0">
         <dict>
-            <key>user</key>
+            <key>_computerlevel</key>
             <array>
                 <dict>
                     <key>ProfileItems</key>
@@ -239,7 +281,23 @@ struct BTLEServerReportLogTests {
         </dict>
         </plist>
         """.data(using: .utf8)!
-        #expect(!BluetoothLoggingProfileService.isBluetoothPrivateLoggingInstalled(profilesXMLData: unrelatedXML))
+        let userOnlyXML = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>zfdang</key>
+            <array/>
+        </dict>
+        </plist>
+        """.data(using: .utf8)!
+        #expect(BluetoothLoggingProfileService.status(fromProfilesXMLData: scopedXML) == .installed)
+        #expect(BluetoothLoggingProfileService.status(fromProfilesXMLData: unrelatedComputerLevelXML) == .notInstalled)
+        // Non-root `profiles list` omits `_computerlevel`; absence of a system profile from user scope stays `.unknown`.
+        #expect(BluetoothLoggingProfileService.status(fromProfilesXMLData: userOnlyXML) == .unknown)
+        #expect(BluetoothLoggingProfileService.status(fromProfilesXMLData: Data()) == .unknown)
+        #expect(!BluetoothLoggingProfileService.isBluetoothPrivateLoggingInstalled(profilesXMLData: unrelatedComputerLevelXML))
+        #expect(!BluetoothLoggingProfileService.isBluetoothPrivateLoggingInstalled(profilesXMLData: userOnlyXML))
         #expect(!BluetoothLoggingProfileService.isBluetoothPrivateLoggingInstalled(profilesXMLData: Data()))
     }
 

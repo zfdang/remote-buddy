@@ -76,7 +76,6 @@ final class AppSettings: ObservableObject {
 
     func setBaseBinding(_ configured: ConfiguredButtonAction, for button: RemoteButton,
                         trigger: ButtonTrigger, profileID: UUID?) {
-        guard allowsMappingEdits(for: profileID) else { return }
         AppLogger.shared.write(
             "SETTINGS MAPPING updated button=\(button.rawValue) trigger=\(trigger.rawValue) " +
                 "action=\(configured.action.rawValue) profile_scoped=\(profileID != nil)"

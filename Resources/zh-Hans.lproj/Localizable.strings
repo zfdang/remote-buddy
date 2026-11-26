@@ -1282,44 +1282,15 @@
 "connection.empty.detail" = "点击右上角“添加新设备”，连接你的遥控器。";
 "connection.action.device_comparison" = "设备对比与选购指南 ↗";
 
-"onboarding.remote.chromecast.combo_needs_opt_in.title" = "检测到双键组合，需勾选确认部分支持模式";
-"onboarding.remote.chromecast.combo_needs_opt_in.detail" = "刚才检测到双键组合按下，但未收到单键。若单键无法识别，请勾选下方兼容模式；若本机支持单按，请松开后单按一次 OK。";
-"onboarding.remote.chromecast.compat_waiting_detail" = "已启用部分支持（兼容）模式。请同时按住「上 + OK」（或任意方向键 + OK）完成检测。";
-"onboarding.remote.chromecast.compat_ready_detail" = "已确认双键组合输入（部分支持模式：语音键可用，普通操作仅支持方向键 + OK 发送 Enter）。";
-"onboarding.remote.chromecast.single_waiting_detail" = "先单独按一次确定（OK）键即可完成完全支持检测；如果单按无反应，请查看下方部分支持兼容模式说明。";
-"onboarding.remote.chromecast.full_ready_detail" = "已收到单键输入：当前 G9N9N 处于完全支持模式，支持全部 14 颗普通按键与语音键。";
-"onboarding.remote.chromecast.compat_prompt_highlighted" = "G9N9N 分完全支持（单键）与部分支持（仅双键）两种模式。若确认单键无效、只能双键识别，请勾选：";
-"onboarding.remote.chromecast.compat_prompt" = "两种支持模式：完全支持请单按 OK；若单键无法检测，请按「上 + OK」并勾选：";
-"onboarding.remote.chromecast.compat_checkbox" = "确认进入部分支持（兼容）模式（单键检测不出，仅双键如「上 + OK」有效）";
-"onboarding.remote.chromecast.compat_scope_summary" = "部分支持说明：1. 语音键可正常按住使用；2. 仅支持同时按「方向键 + OK」发送 Enter 键，其余普通单键不可用。";
-
-"onboarding.controls.chromecast.compat.title" = "确认部分支持按键组合";
-"onboarding.controls.chromecast.compat.detail" = "当前 G9N9N 处于部分支持（双键兼容）模式：单按普通键不会被系统接收，请验证双键发送 Enter 组合是否可用。";
-"onboarding.controls.chromecast.compat.waiting_title" = "请同时按住「上 + OK」（或任意方向键 + OK）";
-"onboarding.controls.chromecast.compat.waiting_detail" = "同时按下后即可确认部分支持组合有效；无需逐一测试其他单键。";
-"onboarding.controls.chromecast.compat.confirmed_title" = "已确认「方向键 + OK」组合可用";
-"onboarding.controls.chromecast.compat.confirmed_detail" = "后续日常使用时，按「上 + OK」（或任意方向键 + OK）即可发送 Enter 键。";
-"onboarding.controls.chromecast.compat.limit_voice" = "语音键：可正常按住说话，松开停止收音";
-"onboarding.controls.chromecast.compat.limit_enter" = "唯一可用的按键组合：方向键 + OK → 发送 Enter（回车）";
-"onboarding.controls.chromecast.compat.limit_others" = "其余 14 颗普通单键、双击/长按及单键常用语在此硬件版本上不可用";
-"onboarding.controls.chromecast.compat.switch_to_full" = "我的遥控器支持单按，返回标准检测";
-"onboarding.side.compatible_chord" = "方向键 + OK 已验证";
+"onboarding.remote.chromecast.single_waiting_detail" = "先单独按一次确定（OK）键即可完成原生完全支持检测；如果单按无反应，请开启下方蓝牙日志全键兼容并安装描述文件。";
+"onboarding.remote.chromecast.full_ready_detail" = "已收到单键输入：当前 G9N9N 处于原生完全支持模式，支持全部 14 颗普通按键与语音键。";
+"onboarding.remote.chromecast.btle_log_ready_detail" = "已通过蓝牙日志描述文件收到单键输入：全部 14 颗普通按键与语音键均可使用。";
+"onboarding.remote.chromecast.btle_log_prompt" = "G9N9N 提供两种接入方式：单按 OK 正常识别时自动走原生完全支持；若单键无响应（如 0x011B / 26.7 / 26.0 批次），请开启下方蓝牙日志全键兼容并安装描述文件。";
 
 "onboarding.summary.g9n9n_mode" = "G9N9N 支持模式";
-"onboarding.summary.g9n9n_partial_mode" = "部分支持硬件版本（双键兼容）";
-"onboarding.summary.partial_buttons_passed" = "语音可用；仅「方向键 + OK」可发 Enter";
 
-"button_mapping.google.partial_subtitle" = "当前 G9N9N 处于部分支持（双键兼容）模式：语音键可用，仅「方向键 + OK」可发送 Enter";
-"button_mapping.google.partial.card_title" = "部分支持模式（双键兼容）生效中";
-"button_mapping.google.partial.card_detail" = "该版本 G9N9N 的单键通知与松开报告会被 macOS 丢弃，无法独立配置 14 颗普通按键。本模式为您提供以下有限支持：";
-"button_mapping.google.partial.voice_rule" = "1. 语音键（Google Assistant）：正常可用，按住说话、松开结束";
-"button_mapping.google.partial.enter_rule" = "2. 组合键「方向键 + OK」（如「上 + OK」）：同时按下发送一次 Enter（回车）键（需保持上方映射开关开启）";
-"button_mapping.google.partial.unsupported_rule" = "3. 其余 14 颗普通单键、双击/长按、单键常用语及任何键位修改在该模式下均禁止使用";
-"button_mapping.google.partial.setup_only_hint" = "支持模式已在首次/添加设备向导中锁定，此处仅作只读展示；若更换了遥控器硬件，请在「连接」页移除该设备后通过「添加新设备」重新识别。";
 "remote.device.full_support_badge" = "完全支持硬件版本";
-"remote.device.partial_support_badge" = "部分支持硬件版本";
 "connection.g9n9n.full_support_notice" = "语音键与全部 14 颗普通按键均可正常使用与自定义。";
-"connection.g9n9n.partial_support_notice" = "仅语音键可用，普通操作仅「方向键 + OK」可发 Enter 键，不可修改映射。功能受限较大，建议更换为已验证完全支持的遥控器或硬件版本；更换后请移除此设备并通过「添加新设备」重新识别。";
 "connection.g9n9n.compatibility_doc_link" = "查看 G9N9N 兼容性文档 ↗";
 "connection.g9n9n.voice_button_mode.title" = "语音键触发方式";
 "connection.g9n9n.voice_button_mode.hold" = "按住说话";
@@ -1327,9 +1298,6 @@
 "connection.g9n9n.voice_button_mode.hold_help" = "按住 Google Assistant 语音键说话，松开后立即停止收音。";
 "connection.g9n9n.voice_button_mode.smart_toggle_help" = "短按并松开后保持免提收音，再按一次停止（松手瞬间约有 0.2 秒硬件重连间隔）；若按住超过 0.7 秒则松手即停。";
 "button_mapping.voice.settings_button" = "前往输入法整合设置";
-"common_phrases.g9n9n_partial_notice" = "当前选中的 G9N9N 处于部分支持（双键兼容）模式，仅支持语音键和「方向键 + OK」发 Enter，无法通过单键触发常用语。";
-"onboarding.chromecast.replace_hardware_advice" = "部分支持模式下功能缺失较多，仅作临时兼容；如需完整按键体验，建议更换为已验证支持 macOS 的遥控器硬件版本。";
-"onboarding.chromecast.replace_hardware_link" = "查看可完全支持的设备与选购指南 ↗";
 
 // Tencent Chatterfly hold-to-talk integration
 "onboarding.voice_tool.chatterfly.title" = "腾讯Chatterfly";
@@ -1368,19 +1336,16 @@
 "g9n9n.btle_log.subtitle" = "默认关闭。专为 0x011B、26.7 或 26.0 等被 macOS BTLEServer 丢弃短报文的 G9N9N 批次准备，开启并安装描述文件后可解锁全部 14 颗普通按键。";
 "g9n9n.btle_log.status.installed" = "蓝牙日志描述文件已安装";
 "g9n9n.btle_log.status.not_installed" = "未检测到蓝牙日志描述文件";
-"g9n9n.btle_log.status.unknown" = "正在检测描述文件状态…";
+"g9n9n.btle_log.status.unknown" = "当前非管理员权限下无法确认系统级描述文件状态（如已安装，按遥控器按键即可自动验证）";
 "g9n9n.btle_log.redacted_warning" = "已检测到被系统拦截的遥控器报文，但内容仍被遮蔽为 <private>。请打开内置描述文件并在「系统设置 → 通用 → 设备管理」中安装确认后点击“重新检测”。";
 "g9n9n.btle_log.action.install_profile" = "安装描述文件";
 "g9n9n.btle_log.action.open_device_management" = "打开设备管理";
 "g9n9n.btle_log.action.recheck" = "重新检测";
 "g9n9n.btle_log.privacy_note" = "隐私与范围：描述文件未签名，仅对 com.apple.bluetooth 子系统开启私有日志以便恢复您已绑定 G9N9N 遥控器的丢弃按键；不会读取其他设备、不落盘、不上传，随时可在“设备管理”中移除或关闭上方开关。";
-"button_mapping.google.partial.btle_log_hint" = "如果希望在 26.7 / 26.0 / 0x011B 批次上解锁全部 14 颗单键，可前往「遥控器连接」页按需开启「蓝牙日志全键兼容」并安装描述文件。";
-"button_mapping.google.partial.open_connection" = "前往连接设置";
 "remote.device.btle_log_support_badge" = "蓝牙日志兼容";
 "connection.device.button_integration" = "按键接入方式";
 "connection.g9n9n.integration.native_hid" = "标准系统 HID（原生）";
 "connection.g9n9n.integration.btle_log_profile" = "蓝牙日志描述文件 (.mobileconfig)";
-"connection.g9n9n.integration.two_key_compat" = "部分支持（双键兼容）";
 "connection.g9n9n.btle_log_support_notice" = "当前设备通过您安装的 .mobileconfig 蓝牙日志描述文件从 macOS BTLEServer 日志恢复普通按键，全部 14 颗普通按键与语音键均可正常映射。";
-"connection.g9n9n.btle_log_inactive_warning" = "该遥控器记录为通过蓝牙日志描述文件接入，但当前未开启「蓝牙日志全键兼容」或未检测到描述文件；未生效期间普通按键可能无响应。";
+"connection.g9n9n.btle_log_inactive_warning" = "该遥控器通过蓝牙日志描述文件接入，但当前未开启「蓝牙日志全键兼容」或描述文件未生效（未安装 / 仍为 <private>）；未恢复前普通按键可能无响应。";
 "button_mapping.google.btle_log_subtitle" = "当前通过蓝牙日志描述文件（.mobileconfig）恢复全部 14 颗普通按键与常用语触发；语音键固定用于遥控器麦克风。";

@@ -60,11 +60,13 @@ extension AppSettings {
     }
 
     func uncommittedOnboardingRemoteProfileIDs() -> [UUID] {
-        let initialIDs = Set(onboardingReturnConfiguration?.initialRemoteProfileIDs ?? [])
+        if let configuration = onboardingReturnConfiguration {
+            let initialIDs = Set(configuration.initialRemoteProfileIDs)
+            return remoteDeviceProfiles.map(\.id).filter { !initialIDs.contains($0) }
+        }
         let forgottenBluetooth = forgottenBluetoothIdentifiers
         let forgottenHID = forgottenHIDFingerprints
         return remoteDeviceProfiles.compactMap { profile in
-            guard !initialIDs.contains(profile.id) else { return nil }
             let matchesForgottenBluetooth = profile.bluetoothIdentifier.map { forgottenBluetooth.contains($0) } ?? false
             let matchesForgottenHID = profile.hidFingerprint.map { forgottenHID.contains($0) } ?? false
             return (matchesForgottenBluetooth || matchesForgottenHID) ? profile.id : nil
@@ -72,18 +74,11 @@ extension AppSettings {
     }
 
     func confirmedTransientOnboardingProfile() -> RemoteDeviceProfile? {
-        let transientIDs = Set(uncommittedOnboardingRemoteProfileIDs())
-        guard !transientIDs.isEmpty else { return nil }
-        if let selectedID = selectedRemoteProfileID,
-           transientIDs.contains(selectedID),
-           let selectedProfile = remoteDeviceProfiles.first(where: { $0.id == selectedID }) {
-            return selectedProfile
-        }
-        if transientIDs.count == 1,
-           let onlyID = transientIDs.first {
-            return remoteDeviceProfiles.first(where: { $0.id == onlyID })
-        }
-        return nil
+        guard let selected = selectedRemoteProfile,
+              onboardingControlSource.matchesConfirmedCandidate(selected.model),
+              uncommittedOnboardingRemoteProfileIDs().contains(selected.id)
+        else { return nil }
+        return selected
     }
 
     func unconfirmedTransientRemoteProfileIDs() -> [UUID] {
@@ -95,7 +90,7 @@ extension AppSettings {
         onboardingVoiceTrigger = nil
         guard canDismissOnboarding, let configuration = onboardingReturnConfiguration else { return }
         for profileID in uncommittedOnboardingRemoteProfileIDs() {
-            _ = removeRemoteProfile(profileID)
+            _ = removeRemoteProfile(profileID, rememberAsForgotten: false)
         }
         if let initialModes = configuration.initialG9N9NInputModes {
             for index in remoteDeviceProfiles.indices where remoteDeviceProfiles[index].model.isChromecastRemote {
@@ -302,7 +297,7 @@ extension AppSettings {
         completedOnboardingDestination = onboardingPurpose.completionDestination
         let confirmedProfiles = confirmedTransientOnboardingProfile().map { [$0] } ?? []
         for profileID in unconfirmedTransientRemoteProfileIDs() {
-            _ = removeRemoteProfile(profileID)
+            _ = removeRemoteProfile(profileID, rememberAsForgotten: false)
         }
         unforgetRemotes(confirmedProfiles)
         defaults.removeObject(forKey: Self.onboardingReturnConfigurationKey)

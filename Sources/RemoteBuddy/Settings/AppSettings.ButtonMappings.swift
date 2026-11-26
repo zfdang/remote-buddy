@@ -141,16 +141,16 @@ extension AppSettings {
     }
 
     @discardableResult
-    func removeRemoteProfile(_ profileID: UUID) -> Bool {
+    func removeRemoteProfile(_ profileID: UUID, rememberAsForgotten: Bool = true) -> Bool {
         guard let profile = remoteDeviceProfiles.first(where: { $0.id == profileID }) else { return false }
-        if let identifier = profile.bluetoothIdentifier {
+        if rememberAsForgotten, let identifier = profile.bluetoothIdentifier {
             defaults.set(forgottenBluetoothIdentifiers.union([identifier]).map(\.uuidString),
                          forKey: "forgottenRemoteBluetoothIdentifiers")
             var models = forgottenBluetoothModels
             models[identifier.uuidString] = profile.model.rawValue
             defaults.set(models, forKey: Self.forgottenBluetoothModelsKey)
         }
-        if let fingerprint = profile.hidFingerprint {
+        if rememberAsForgotten, let fingerprint = profile.hidFingerprint {
             defaults.set(Array(forgottenHIDFingerprints.union([fingerprint])),
                          forKey: "forgottenRemoteHIDFingerprints")
             var models = forgottenHIDModels

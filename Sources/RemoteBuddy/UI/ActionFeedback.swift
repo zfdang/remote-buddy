@@ -656,8 +656,8 @@ final class ActionFeedbackCenter: ObservableObject {
 
 /// Bottom-center layout for floating HUD panels, accounting for drop-shadow padding.
 enum ActionFeedbackLayout {
-    static let bubbleBottomInset: CGFloat = 56.0 / 3
-    static let bottomHeightRatio: CGFloat = 0.05 / 3
+    static let bubbleBottomInset: CGFloat = 56.0 / 6
+    static let bottomHeightRatio: CGFloat = 0.05 / 6
     static let contentPadding: CGFloat = 16
     static let edgeMargin: CGFloat = 8
 
@@ -674,7 +674,7 @@ enum ActionFeedbackLayout {
         let x = maximumX >= minimumX
             ? min(max(preferredX, minimumX), maximumX)
             : minimumX
-        let minimumY = visibleFrame.minY + edgeMargin
+        let minimumY = visibleFrame.minY + edgeMargin - contentPadding
         let maximumY = visibleFrame.maxY - panelSize.height - edgeMargin
         let preferredY = visibleFrame.minY
             + (bubbleBottomInset + visibleFrame.height * bottomHeightRatio).rounded()

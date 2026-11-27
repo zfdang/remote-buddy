@@ -155,6 +155,61 @@ struct VoiceInputActivationTests {
         #expect(model.voiceFnTapSession.phase == .idle)
     }
 
+    @Test(arguments: [false, true])
+    func abortedComposerResyncBlocksVoiceShortcutAndRollsBackInputSource(tapMode: Bool) throws {
+        let (model, defaults, suite) = try makeModel()
+        defer { defaults.removePersistentDomain(forName: suite) }
+        model.settings.setApplicationIntegration(.antigravity, enabled: true)
+        useReadyDestination(model)
+        var edges: [Bool] = []
+        let controller = ApplicationIntegrationController(
+            settings: model.settings,
+            notifications: NotificationCenter(),
+            frontmost: { (ApplicationIntegration.antigravity.bundleIdentifier, pid_t(42)) },
+            focusWithResync: { _, _, resync, done in
+                #expect(resync)
+                done(.aborted)
+                return ScheduledOperation {}
+            },
+            onStateChange: { model.recordApplicationIntegrationStatus($0) }
+        )
+        model.applicationIntegrationController = controller
+        controller.start()
+        defer { controller.stop() }
+
+        let target = try #require(OnboardingVoiceTool.weixin.preferredInputSourceID)
+        var inputSource = "previous"
+        model.preferredInputSourceMonitor = PreferredInputSourceMonitor(
+            voiceTool: { .weixin },
+            prepareInputSource: { _ in inputSource = target; return .selected },
+            currentInputSourceID: { inputSource },
+            restoreInputSource: { inputSource = $0; return .selected },
+            waitForInputSourceActivation: { _, _, _, done in done(true) },
+            installMonitor: { _ in nil },
+            logger: { _ in }
+        )
+        if tapMode {
+            model.voiceTapTrigger = VoiceTapTrigger(selectedMode: { .function }, setKey: { _, down in
+                edges.append(down)
+                return true
+            })
+            let clock = ControlledTestScheduler()
+            model.voiceFnTapSession = model.makeVoiceFnTapSession(schedule: clock.voiceSchedule)
+            model.voiceFnTapSession.setEnabled(true)
+            #expect(model.voiceFnTapSession.startVoice())
+            clock.runAll()
+        } else {
+            #expect(!model.updateVoiceKeyState(streaming: true, forceSoftware: true, owner: .bluetooth,
+                keySetter: { _, down in edges.append(down); return true }))
+        }
+
+        #expect(edges.isEmpty)
+        #expect(inputSource == "previous")
+        #expect(model.applicationIntegrationStatus == .cancelled(.actionFailed))
+        #expect(!model.voiceKeyLatch.isHeld)
+        #expect(model.voiceFnTapSession.phase == .idle)
+    }
+
     @Test func dictationRechecksNonIntegratedForegroundBeforeSecondTap() throws {
         let (model, defaults, suite) = try makeModel()
         defer { defaults.removePersistentDomain(forName: suite) }

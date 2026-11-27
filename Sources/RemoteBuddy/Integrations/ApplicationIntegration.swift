@@ -78,7 +78,7 @@ enum ApplicationIntegration: String, CaseIterable, Identifiable {
 }
 
 enum ApplicationFocusResult: Equatable {
-    case focused, preserved, unavailable
+    case focused, preserved, unavailable, aborted
 }
 
 enum ApplicationIntegrationPreparationState: Equatable {
@@ -190,6 +190,8 @@ final class ApplicationIntegrationController {
             guard let self, self.generation == requestID, self.pendingCompletion != nil else { return }
             if !self.isCurrentVoiceInputTarget(target) {
                 self.finish(requestID: requestID, result: .cancelled(.targetChanged))
+            } else if focusResult == .aborted {
+                self.finish(requestID: requestID, result: .cancelled(.actionFailed))
             } else {
                 self.finish(requestID: requestID, result: .ready,
                     focusStatus: focusResult == .focused ? .ready : (focusResult == .preserved ? .preserved : (timedOut ? .focusTimedOut : .unavailable)))

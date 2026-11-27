@@ -193,6 +193,8 @@ extension KeyboardInjector {
                 guard gate.isCurrent(requestID) else { return }
                 if result == .unavailable {
                     AppLogger.shared.write("APP INTEGRATION failed bundle=\(bundleIdentifier) reason=focus_not_confirmed")
+                } else if result == .aborted {
+                    AppLogger.shared.write("APP INTEGRATION failed bundle=\(bundleIdentifier) reason=selection_restore_failed")
                 }
                 completion(result)
             }
@@ -209,7 +211,9 @@ extension KeyboardInjector {
                 let result = focusIntegratedComposer(integration, processIdentifier: processIdentifier,
                     resyncFocusedComposer: resyncFocusedComposer,
                     clickAttempted: &nextClickAttempted, resynced: &didResync, canContinue: canContinue)
-                if result != .unavailable {
+                if result == .aborted {
+                    finish(.aborted)
+                } else if result != .unavailable {
                     let outcome = result == .preserved ? (didResync ? "resynced" : "preserved") : "focused"
                     AppLogger.shared.write("APP INTEGRATION \(outcome) bundle=\(bundleIdentifier)")
                     finish(result)
@@ -306,7 +310,7 @@ extension KeyboardInjector {
                 )
                 let windowFrame = axFrame(window)
                 var postedClick = false
-                let didResync = resyncFocusedIntegratedComposer(
+                let resyncOutcome = resyncFocusedIntegratedComposer(
                     candidate,
                     integration: integration,
                     windowFrame: windowFrame,
@@ -327,8 +331,13 @@ extension KeyboardInjector {
                 if postedClick {
                     clickAttempted = true
                 }
-                if didResync {
+                switch resyncOutcome {
+                case .resynced:
                     resynced = true
+                case .skipped:
+                    break
+                case .failed:
+                    return .aborted
                 }
             }
             return .preserved
@@ -575,6 +584,12 @@ extension KeyboardInjector {
         return canContinue() && isFocused()
     }
 
+    enum FocusedComposerResyncResult: Equatable {
+        case skipped
+        case resynced
+        case failed
+    }
+
     static func resyncFocusedIntegratedComposer(
         _ candidate: AccessibilityTextCandidate,
         integration: ApplicationIntegration,
@@ -588,24 +603,29 @@ extension KeyboardInjector {
         isSelectedRangeSettable: () -> Bool = { false },
         writeSelectedRange: (CFRange) -> Bool = { _ in false },
         pause: () -> Void = { usleep(40_000) }
-    ) -> Bool {
-        guard canContinue(), !preserveOtherFocus() else { return false }
+    ) -> FocusedComposerResyncResult {
+        guard canContinue(), !preserveOtherFocus() else { return .skipped }
         guard let point = integratedComposerClickPoint(candidate, integration: integration, windowFrame: windowFrame),
               hitTest(point), canContinue(), !preserveOtherFocus()
-        else { return false }
-        let savedRange = readSelectedRange()
-        guard canContinue(), !preserveOtherFocus() else { return false }
-        guard postClick(point) else { return false }
+        else { return .skipped }
+        guard let savedRange = readSelectedRange(), isSelectedRangeSettable(),
+              canContinue(), !preserveOtherFocus()
+        else { return .skipped }
+        guard postClick(point) else { return .skipped }
         pause()
-        guard canContinue(), !preserveOtherFocus(), isFocused() else { return false }
-        if let savedRange {
-            let currentRange = readSelectedRange()
-            let changed = currentRange.map { $0.location != savedRange.location || $0.length != savedRange.length } ?? true
-            if changed, canContinue(), !preserveOtherFocus(), isFocused(), isSelectedRangeSettable() {
-                _ = writeSelectedRange(savedRange)
-            }
+        guard canContinue(), !preserveOtherFocus(), isFocused() else { return .failed }
+        let currentRange = readSelectedRange()
+        if let currentRange, currentRange.location == savedRange.location, currentRange.length == savedRange.length {
+            return .resynced
         }
-        return true
+        guard canContinue(), !preserveOtherFocus(), isFocused(), isSelectedRangeSettable(),
+              writeSelectedRange(savedRange)
+        else { return .failed }
+        guard canContinue(), !preserveOtherFocus(), isFocused(),
+              let updated = readSelectedRange(),
+              updated.location == savedRange.location, updated.length == savedRange.length
+        else { return .failed }
+        return .resynced
     }
 
     private static func postAccessibilityFocusClick(_ point: CGPoint) -> Bool {

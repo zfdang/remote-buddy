@@ -546,14 +546,16 @@ struct ApplicationIntegrationTests {
             hitTest: { _ in true },
             postClick: { _ in clicks += 1; return true },
             isFocused: { pauses == 1 },
+            readSelectedRange: { CFRange(location: 0, length: 0) },
+            isSelectedRangeSettable: { true },
             pause: { pauses += 1 }
         )
-        #expect(resynced)
+        #expect(resynced == .resynced)
         #expect(clicks == 1)
         #expect(pauses == 1)
 
         for disallowed in [candidate("Search messages"), candidate("code editor")] {
-            #expect(!KeyboardInjector.resyncFocusedIntegratedComposer(
+            #expect(KeyboardInjector.resyncFocusedIntegratedComposer(
                 disallowed,
                 integration: .antigravity,
                 windowFrame: window,
@@ -561,11 +563,13 @@ struct ApplicationIntegrationTests {
                 hitTest: { _ in true },
                 postClick: { _ in Issue.record("Non-composer must not be clicked"); return true },
                 isFocused: { true },
+                readSelectedRange: { CFRange(location: 0, length: 0) },
+                isSelectedRangeSettable: { true },
                 pause: {}
-            ))
+            ) == .skipped)
         }
         for app in [ApplicationIntegration.weChat, .chatGPT] {
-            #expect(!KeyboardInjector.resyncFocusedIntegratedComposer(
+            #expect(KeyboardInjector.resyncFocusedIntegratedComposer(
                 candidate("Message input"),
                 integration: app,
                 windowFrame: window,
@@ -573,10 +577,12 @@ struct ApplicationIntegrationTests {
                 hitTest: { _ in true },
                 postClick: { _ in Issue.record("App without verified click target must not be clicked"); return true },
                 isFocused: { true },
+                readSelectedRange: { CFRange(location: 0, length: 0) },
+                isSelectedRangeSettable: { true },
                 pause: {}
-            ))
+            ) == .skipped)
         }
-        #expect(!KeyboardInjector.resyncFocusedIntegratedComposer(
+        #expect(KeyboardInjector.resyncFocusedIntegratedComposer(
             candidate("Message input"),
             integration: .antigravity,
             windowFrame: window,
@@ -584,9 +590,11 @@ struct ApplicationIntegrationTests {
             hitTest: { _ in false },
             postClick: { _ in Issue.record("Occluded composer must not be clicked"); return true },
             isFocused: { true },
+            readSelectedRange: { CFRange(location: 0, length: 0) },
+            isSelectedRangeSettable: { true },
             pause: {}
-        ))
-        #expect(!KeyboardInjector.resyncFocusedIntegratedComposer(
+        ) == .skipped)
+        #expect(KeyboardInjector.resyncFocusedIntegratedComposer(
             candidate("Message input"),
             integration: .antigravity,
             windowFrame: window,
@@ -595,8 +603,10 @@ struct ApplicationIntegrationTests {
             hitTest: { _ in true },
             postClick: { _ in Issue.record("Moved focus must not be clicked"); return true },
             isFocused: { true },
+            readSelectedRange: { CFRange(location: 0, length: 0) },
+            isSelectedRangeSettable: { true },
             pause: {}
-        ))
+        ) == .skipped)
     }
 
     @Test func resyncFocusedIntegratedComposerPreservesMidTextCaretAndSelection() {
@@ -623,10 +633,66 @@ struct ApplicationIntegrationTests {
                 },
                 pause: {}
             )
-            #expect(resynced)
+            #expect(resynced == .resynced)
             #expect(writes.count == 1)
             #expect(currentRange.location == saved.location && currentRange.length == saved.length)
         }
+
+        // Unreadable or non-settable selection skips before posting any click.
+        #expect(KeyboardInjector.resyncFocusedIntegratedComposer(
+            candidate("Message input"),
+            integration: .antigravity,
+            windowFrame: window,
+            canContinue: { true },
+            hitTest: { _ in true },
+            postClick: { _ in Issue.record("Unreadable selection must not be clicked"); return true },
+            isFocused: { true },
+            readSelectedRange: { nil },
+            isSelectedRangeSettable: { true },
+            pause: {}
+        ) == .skipped)
+        #expect(KeyboardInjector.resyncFocusedIntegratedComposer(
+            candidate("Message input"),
+            integration: .antigravity,
+            windowFrame: window,
+            canContinue: { true },
+            hitTest: { _ in true },
+            postClick: { _ in Issue.record("Non-settable selection must not be clicked"); return true },
+            isFocused: { true },
+            readSelectedRange: { CFRange(location: 3, length: 4) },
+            isSelectedRangeSettable: { false },
+            pause: {}
+        ) == .skipped)
+
+        // Failed restoration or mismatched re-read returns .failed so voice triggers are aborted.
+        var current = CFRange(location: 4, length: 2)
+        #expect(KeyboardInjector.resyncFocusedIntegratedComposer(
+            candidate("Message input"),
+            integration: .antigravity,
+            windowFrame: window,
+            canContinue: { true },
+            hitTest: { _ in true },
+            postClick: { _ in current = CFRange(location: 0, length: 0); return true },
+            isFocused: { true },
+            readSelectedRange: { current },
+            isSelectedRangeSettable: { true },
+            writeSelectedRange: { _ in false },
+            pause: {}
+        ) == .failed)
+        current = CFRange(location: 4, length: 2)
+        #expect(KeyboardInjector.resyncFocusedIntegratedComposer(
+            candidate("Message input"),
+            integration: .antigravity,
+            windowFrame: window,
+            canContinue: { true },
+            hitTest: { _ in true },
+            postClick: { _ in current = CFRange(location: 0, length: 0); return true },
+            isFocused: { true },
+            readSelectedRange: { current },
+            isSelectedRangeSettable: { true },
+            writeSelectedRange: { _ in true }, // Succeeds AX call but leaves range un-restored
+            pause: {}
+        ) == .failed)
 
         var movedAfterClick = false
         let aborted = KeyboardInjector.resyncFocusedIntegratedComposer(
@@ -649,7 +715,7 @@ struct ApplicationIntegrationTests {
             },
             pause: {}
         )
-        #expect(!aborted)
+        #expect(aborted == .failed)
     }
 
     @Test func automaticIntegrationSourceCannotEnableUndocumentedAccessibilityAttributes() throws {

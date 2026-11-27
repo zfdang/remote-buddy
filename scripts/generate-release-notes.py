@@ -6,7 +6,7 @@ from pathlib import Path
 import re
 import subprocess
 
-TAG = re.compile(r'v\d{2}-\d{2}-\d{2}\.\d{3}\Z')
+TAG = re.compile(r'v\d{2}-\d{2}-\d{2}\.\d{3,4}\Z')
 CONVENTIONAL = re.compile(r'^(feat|fix|perf|refactor|style|docs|test|build|ci|chore|revert)(?:\([^)]*\))?(!)?:\s*(.+)$')
 TYPE_LABELS = {
     'feat': '新增', 'fix': '修复', 'revert': '修复',

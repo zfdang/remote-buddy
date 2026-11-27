@@ -47,8 +47,8 @@ class AppcastTests(unittest.TestCase):
     def test_display_suffix_wraps_without_wrapping_update_version(self):
         with tempfile.TemporaryDirectory() as directory:
             signature = base64.b64encode(bytes(64)).decode()
-            for count in (999, 1000, 1001, 12345):
-                tag = f'v26-10-18.{count % 1000:03d}'
+            for count in (999, 1000, 1001, 9999, 10000, 12345):
+                tag = f'v26-10-18.{count % 10000:04d}'
                 package = Path(directory) / f'Remote_Buddy_{tag}_macOS_arm64.pkg'
                 package.write_bytes(b'package')
                 output = Path(directory) / 'appcast.xml'

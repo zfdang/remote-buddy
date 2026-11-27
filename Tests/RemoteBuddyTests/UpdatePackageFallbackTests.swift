@@ -7,7 +7,7 @@ import Testing
 struct UpdatePackageFallbackTests {
     @Test func derivesGitHubFallbackOnlyForValidatedPagesPackageURLs() {
         let primaryArm = URL(string: "https://remote.zfdang.com/downloads/Remote_Buddy_v26-11-15.867_macOS_arm64.pkg")!
-        let primaryIntel = URL(string: "https://remote.zfdang.com/downloads/Remote_Buddy_v26-11-15.867_macOS_intel.pkg")!
+        let primaryIntel = URL(string: "https://remote.zfdang.com/downloads/Remote_Buddy_v26-11-15.1000_macOS_intel.pkg")!
 
         #expect(UpdatePackageURLResolver.isPrimaryPackageURL(primaryArm))
         #expect(
@@ -16,7 +16,7 @@ struct UpdatePackageFallbackTests {
         )
         #expect(
             UpdatePackageURLResolver.githubReleaseFallbackURL(for: primaryIntel)
-                == URL(string: "https://github.com/zfdang/remote-buddy/releases/download/v26-11-15.867/Remote_Buddy_v26-11-15.867_macOS_intel.pkg")!
+                == URL(string: "https://github.com/zfdang/remote-buddy/releases/download/v26-11-15.1000/Remote_Buddy_v26-11-15.1000_macOS_intel.pkg")!
         )
 
         for invalid in [

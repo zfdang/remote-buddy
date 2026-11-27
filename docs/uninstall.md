@@ -1,6 +1,6 @@
 # 卸载 Remote Buddy
 
-从 GitHub Releases 下载 `Remote_Buddy_Uninstaller_vYY-MM-DD.NNN_macOS_universal.pkg`，Apple Silicon 和 Intel 使用同一份包。最新版卸载器同时支持旧版 Voice Input Buddy 和新版 Remote Buddy；迁移时无需寻找旧卸载器。卸载旧版后再安装新版。它只有卸载脚本，没有架构相关的可执行程序或安装载荷。
+从 GitHub Releases 下载 `Remote_Buddy_Uninstaller_vYY-MM-DD.NNNN_macOS_universal.pkg`，Apple Silicon 和 Intel 使用同一份包。最新版卸载器同时支持旧版 Voice Input Buddy 和新版 Remote Buddy；迁移时无需寻找旧卸载器。卸载旧版后再安装新版。它只有卸载脚本，没有架构相关的可执行程序或安装载荷。
 
 双击包，使用 macOS Installer 按介绍、卸载范围和组件选项页继续。**系统按钮显示“安装 / Install”，点击后实际删除程序和驱动，不会安装软件。** 个人数据删除选项默认勾选，取消勾选即可保留。结束页明确显示卸载完成。系统的安装成功提示表示卸载脚本执行成功。
 

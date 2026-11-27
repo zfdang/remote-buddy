@@ -428,6 +428,8 @@ shutil.copy2(pathlib.Path(os.environ['FIXTURE_LIVE'])/filename,args[args.index('
         # Test wraparound from 1042 to 000 -> 2000
         ver_wrap = rebuild.resolve_version('v99-10-12.000', existing_feed_path=existing_feed)
         self.assertEqual(ver_wrap, '2000')
+        self.assertEqual(rebuild.resolve_version('v99-10-12.1043', existing_feed_path=existing_feed), '1043')
+        self.assertEqual(rebuild.resolve_version('v99-10-12.0000', existing_feed_path=existing_feed), '10000')
 
         # Without git history, without package, and without existing feed, it raises ValueError instead of guessing
         with self.assertRaises(ValueError) as ctx:

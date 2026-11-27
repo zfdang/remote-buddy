@@ -698,6 +698,19 @@ extension AppSettings {
         return true
     }
 
+    @discardableResult
+    func updateRemoteProfileHardwareShortID(
+        _ profileID: UUID,
+        shortID: String?
+    ) -> Bool {
+        guard let normalized = RemoteDeviceNamePolicy.normalizedShortIdentifier(shortID),
+              let index = remoteDeviceProfiles.firstIndex(where: { $0.id == profileID }),
+              remoteDeviceProfiles[index].hardwareShortID != normalized
+        else { return false }
+        remoteDeviceProfiles[index].hardwareShortID = normalized
+        return true
+    }
+
     func updateRemoteProfileModel(_ profileID: UUID, model: RemoteModel) {
         guard model != .unknown,
               let index = remoteDeviceProfiles.firstIndex(where: { $0.id == profileID }),

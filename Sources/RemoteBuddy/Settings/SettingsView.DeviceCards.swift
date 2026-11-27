@@ -11,7 +11,7 @@ extension SettingsView {
             settings.remoteDeviceProfiles.filter { profile in
                 model.isRemoteConnected(profile.id)
             },
-            modelName: remoteModelName,
+            modelName: remoteBaseModelName,
             systemName: { model.systemDeviceName(for: $0) }
         )
         if visibleProfiles.isEmpty {
@@ -206,8 +206,16 @@ extension SettingsView {
         }
     }
 
-    func remoteModelName(_ profile: RemoteDeviceProfile) -> String {
+    func remoteBaseModelName(_ profile: RemoteDeviceProfile) -> String {
         localization.text(profile.displayNameFallbackKey)
+    }
+
+    func remoteModelName(_ profile: RemoteDeviceProfile) -> String {
+        RemoteDeviceNamePolicy.disambiguatedModelName(
+            for: profile,
+            among: settings.remoteDeviceProfiles,
+            baseModelName: remoteBaseModelName(profile)
+        )
     }
 
     private func remoteSystemName(_ profile: RemoteDeviceProfile) -> String {

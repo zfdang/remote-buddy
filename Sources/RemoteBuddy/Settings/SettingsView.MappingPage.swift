@@ -392,7 +392,7 @@ extension SettingsView {
     private var mappingDevicePicker: some View {
         let profiles = RemoteDeviceNamePolicy.sortedForCards(
             settings.remoteDeviceProfiles,
-            modelName: remoteModelName,
+            modelName: remoteBaseModelName,
             systemName: { model.systemDeviceName(for: $0) }
         )
         return Picker(localization.text("remote.device.selector"), selection: Binding<UUID?>(

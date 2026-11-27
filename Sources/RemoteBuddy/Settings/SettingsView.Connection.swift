@@ -30,7 +30,7 @@ extension SettingsView {
         } content: {
             CompatibilityGlassContainer(spacing: 14) {
                 let profiles = RemoteDeviceNamePolicy.sortedForCards(settings.remoteDeviceProfiles,
-                    modelName: remoteModelName, systemName: { model.systemDeviceName(for: $0) })
+                    modelName: remoteBaseModelName, systemName: { model.systemDeviceName(for: $0) })
                 VStack(spacing: 16) {
                     if let runtimeIssue = model.runtimePermissionIssue {
                         runtimePermissionIssuePanel(runtimeIssue)

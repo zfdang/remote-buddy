@@ -33,6 +33,64 @@ enum RemoteDeviceNamePolicy {
         return "\(base) \(index + 1)"
     }
 
+    static func normalizedShortIdentifier(_ raw: String?) -> String? {
+        guard let raw else { return nil }
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        guard trimmed.count == 4, trimmed.allSatisfy(isHexCharacter) else { return nil }
+        return trimmed
+    }
+
+    static func shortIdentifier(for profile: RemoteDeviceProfile, length: Int = 4) -> String {
+        if length == 4, let hardware = normalizedShortIdentifier(profile.hardwareShortID) {
+            return hardware
+        }
+        for candidate in [
+            profile.hidFingerprint,
+            profile.bluetoothIdentifier?.uuidString,
+            profile.id.uuidString,
+        ] {
+            guard let candidate else { continue }
+            let hex = candidate.uppercased().filter(isHexCharacter)
+            if hex.count >= length {
+                return String(hex.prefix(length))
+            }
+        }
+        return String(profile.id.uuidString.uppercased().filter(isHexCharacter).prefix(length))
+    }
+
+    static func disambiguatedModelName(
+        for profile: RemoteDeviceProfile,
+        among profiles: [RemoteDeviceProfile],
+        baseModelName: String
+    ) -> String {
+        let peers = profiles.filter { $0.model == profile.model }
+        guard peers.count > 1 else { return baseModelName }
+
+        let shortID = shortIdentifier(for: profile, length: 4)
+        let collidingPeers = peers.filter { shortIdentifier(for: $0, length: 4) == shortID }
+        let resolvedShortID: String
+        if collidingPeers.count > 1 {
+            let extended = shortIdentifier(for: profile, length: 6)
+            let extendedCollisions = collidingPeers.filter {
+                shortIdentifier(for: $0, length: 6) == extended
+            }
+            if extendedCollisions.count == 1 {
+                resolvedShortID = extended
+            } else if let index = collidingPeers.firstIndex(where: { $0.id == profile.id }) {
+                resolvedShortID = "\(shortID)-\(index + 1)"
+            } else {
+                resolvedShortID = shortID
+            }
+        } else {
+            resolvedShortID = shortID
+        }
+        return "\(baseModelName) #\(resolvedShortID)"
+    }
+
+    private static func isHexCharacter(_ character: Character) -> Bool {
+        ("0"..."9").contains(character) || ("A"..."F").contains(character)
+    }
+
     static func observedSystemName(from rawName: String?) -> String? {
         guard let rawName else { return nil }
         let name = normalizedName(rawName)

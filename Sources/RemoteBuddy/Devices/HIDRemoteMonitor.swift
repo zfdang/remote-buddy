@@ -695,6 +695,7 @@ final class HIDRemoteMonitor {
         duplicate: Bool,
         nowNanoseconds: UInt64
     ) {
+        guard usesDeviceReportCallback else { return }
         let events = pathHealth.record(
             path: path,
             duplicate: duplicate,

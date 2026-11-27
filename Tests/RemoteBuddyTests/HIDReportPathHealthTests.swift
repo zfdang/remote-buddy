@@ -145,6 +145,33 @@ struct HIDReportPathHealthTests {
         #expect(matchingSource.contains("recordPathReport("))
     }
 
+    @Test @MainActor func monitorSkipsPathHealthFallbackLoggingWhenDeviceCallbackIsInactive() throws {
+        guard ProcessInfo.processInfo.operatingSystemVersion.majorVersion < 27 else { return }
+        let suite = UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        var logs: [String] = []
+        let monitor = HIDRemoteMonitor(
+            settings: AppSettings(defaults: defaults),
+            diagnosticLogger: { logs.append($0) }
+        )
+        #expect(!monitor.usesDeviceReportCallback)
+
+        monitor.recordPathReport(
+            path: .manager,
+            duplicate: false,
+            nowNanoseconds: 1_000_000_000
+        )
+        monitor.recordPathReport(
+            path: .manager,
+            duplicate: false,
+            nowNanoseconds: 13_000_000_000
+        )
+
+        #expect(!logs.contains { $0.contains("HID REPORT PATH") })
+    }
+
     private func driveManagerOnlyWindow(
         _ health: inout HIDReportPathHealth,
         startingAt start: UInt64

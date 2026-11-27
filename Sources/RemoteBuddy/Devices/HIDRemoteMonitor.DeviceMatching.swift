@@ -290,7 +290,7 @@ extension HIDRemoteMonitor {
         timestampNanoseconds: UInt64 = HIDReportClock.uptimeNanoseconds(),
         path: HIDReportCallbackPath = .manager
     ) {
-        if origin == .iohid, path != .simulated {
+        if origin == .iohid, path != .simulated, usesDeviceReportCallback {
             let dedupKey = HIDReportDeduplicationKey(
                 devicePointer: UInt(bitPattern: Unmanaged.passUnretained(device).toOpaque()),
                 reportID: reportID,

@@ -217,6 +217,7 @@ extension BridgeAppModel {
                     g9n9nSmartToggleReopenTimer?.cancel()
                     g9n9nSmartToggleReopenTimer = nil
                     scheduleG9N9NSmartToggleDeadline(generation: deadlineGeneration)
+                    startVoiceSilenceNoticeMonitoring(generation: deadlineGeneration)
                 }
                 AppLogger.shared.write(
                     "G9N9N SMART_TOGGLE reopened trace=\(voiceSession.activeBluetoothVoiceTraceID ?? 0)"
@@ -564,6 +565,10 @@ extension BridgeAppModel {
         voiceSession.bluetoothVoiceDecodedBatchCount += 1
         voiceSession.bluetoothVoiceDecodedSampleCount += samples.count
         voiceSession.bluetoothVoiceTailDiagnostics.append(samples, at: ProcessInfo.processInfo.systemUptime)
+        if case let .handsFreeActive(ownerID) = g9n9nSmartToggle.phase,
+           ownerID == identifier {
+            voiceSilenceNoticeTracker.audioReceived(at: bridge.nowUptime())
+        }
         publishCurrentVoiceSampleReceiptIfNeeded(sampleCount: samples.count)
         if !enqueued {
             voiceSession.bluetoothVoiceEnqueueFailureCount += 1

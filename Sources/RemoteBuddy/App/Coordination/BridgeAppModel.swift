@@ -251,6 +251,10 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
     weak var g9n9nSmartToggleBridge: BluetoothRemoteBridge?
     var g9n9nSmartToggleReopenTimer: DispatchSourceTimer?
     var g9n9nSmartToggleDeadlineTimer: DispatchSourceTimer?
+    var voiceSilenceNoticeTracker = VoiceSilenceNoticeTracker()
+    var voiceSilenceNoticeTimer: DispatchSourceTimer?
+    lazy var voiceSilenceNoticeController = VoiceSilenceNoticeController()
+    var onVoiceSilenceNoticePresented: ((_ title: String, _ text: String) -> Void)?
     let hidEventSuppressor: KeyboardEventSuppressor
     var appSwitcherCoordinator = HIDAppSwitcherCoordinator()
     let permissionSnapshotProvider: () -> HIDPermissionSnapshot
@@ -455,6 +459,10 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
     func prepareForTermination() {
         isTerminating = true
         commonPhrases.close(reason: "app_terminating")
+        voiceSilenceNoticeTimer?.cancel()
+        voiceSilenceNoticeTimer = nil
+        voiceSilenceNoticeTracker.endSession()
+        voiceSilenceNoticeController.dismiss(reason: "app_terminating")
     }
 
     func stop() {

@@ -1361,3 +1361,10 @@
 "connection.g9n9n.integration.btle_log_profile" = "Bluetooth Logging Profile (.mobileconfig)";
 "connection.g9n9n.btle_log_inactive_warning" = "This remote uses the Bluetooth logging profile, but recovery is currently turned off, the profile is not confirmed installed, or payloads are still redacted as <private>; ordinary buttons may not respond until restored.";
 "button_mapping.google.btle_log_subtitle" = "All 14 ordinary buttons and common phrases are recovered via your installed .mobileconfig Bluetooth logging profile; Voice stays dedicated to the microphone.";
+
+// Floating notice accessibility and hands-free silence reminder
+"notice.accessibility.dismiss" = "Dismiss notice";
+"notice.accessibility.warning_prefix" = "Warning: ";
+"notice.accessibility.error_prefix" = "Error: ";
+"voice.silence_notice.title" = "Remote microphone is still listening";
+"voice.silence_notice.body" = "Press Voice or another button on the remote to finish hands-free listening.";

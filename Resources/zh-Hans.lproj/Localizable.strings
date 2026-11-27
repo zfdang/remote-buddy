@@ -1363,3 +1363,10 @@
 "connection.g9n9n.integration.btle_log_profile" = "蓝牙日志描述文件 (.mobileconfig)";
 "connection.g9n9n.btle_log_inactive_warning" = "该遥控器通过蓝牙日志描述文件接入，但当前未开启「蓝牙日志全键兼容」、尚未确认描述文件已安装，或日志仍被遮蔽为 <private>；恢复生效前普通按键可能无响应。";
 "button_mapping.google.btle_log_subtitle" = "当前通过蓝牙日志描述文件（.mobileconfig）恢复全部 14 颗普通按键与常用语触发；语音键固定用于遥控器麦克风。";
+
+// 浮层提示无障碍与免提静默提醒
+"notice.accessibility.dismiss" = "关闭提示";
+"notice.accessibility.warning_prefix" = "警告：";
+"notice.accessibility.error_prefix" = "错误：";
+"voice.silence_notice.title" = "遥控器仍在免提收音";
+"voice.silence_notice.body" = "已持续 60 秒未收到语音，说完后请再按一次语音键或其他按键结束收音。";

@@ -330,4 +330,169 @@ struct ApplicationButtonProfileTests {
         #expect(identity?.bundleID == "com.apple.finder")
         #expect(identity?.name.hasSuffix(".app") == false)
     }
+
+    @Test func deferredClickAndLongPressKeepApplicationScopeCapturedOnButtonDown() throws {
+        let (settings, defaults, suite) = try makeSettings()
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        settings.customMappingEnabled = true
+        settings.onboardingStep = .complete
+        let profileID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+        settings.selectRemoteProfile(profileID)
+        settings.setBaseBinding(
+            ConfiguredButtonAction(action: .commandUndo, shortcut: nil),
+            for: .ok, trigger: .doubleClick, profileID: profileID
+        )
+
+        var front: String? = claude
+        settings.frontmostApplicationBundleIdentifier = { front }
+
+        settings.addApplicationButtonProfile(bundleID: claude, name: "Claude")
+        settings.setApplicationScopedAction(
+            ConfiguredButtonAction(action: .customShortcut, shortcut: nextSession),
+            bundleID: claude, button: .ok, trigger: .singleClick
+        )
+        settings.setApplicationScopedAction(
+            ConfiguredButtonAction(action: .escape, shortcut: nil),
+            bundleID: claude, button: .ok, trigger: .longPress
+        )
+
+        settings.addApplicationButtonProfile(bundleID: codex, name: "Codex")
+        settings.setApplicationScopedAction(
+            ConfiguredButtonAction(action: .customShortcut, shortcut: nextChat),
+            bundleID: codex, button: .ok, trigger: .singleClick
+        )
+        settings.setApplicationScopedAction(
+            ConfiguredButtonAction(action: .commandCopy, shortcut: nil),
+            bundleID: codex, button: .ok, trigger: .longPress
+        )
+
+        let clock = ControlledTestScheduler()
+        var performed: [ConfiguredButtonAction] = []
+        let monitor = HIDRemoteMonitor(
+            settings: settings,
+            profileID: profileID,
+            scheduler: clock,
+            runtimePermissions: { true },
+            actionPerformer: { _, _, configured in
+                performed.append(configured)
+                return true
+            },
+            diagnosticLogger: { _ in }
+        )
+        monitor.connectSimulatedDevice(fingerprint: "google", profileID: profileID)
+        defer { monitor.disconnectSimulatedDevice() }
+
+        func sendOK(pressed: Bool) {
+            monitor.handleSimulatedGoogleReport(
+                reportID: 1,
+                data: Data([1, pressed ? 7 : 0, 0]),
+                descriptor: G9N9NProtocol.indexedConsumerDescriptor
+            )
+        }
+
+        // P1: press and release OK in Claude, switch focus to Codex before double-click timeout expires.
+        front = claude
+        sendOK(pressed: true)
+        sendOK(pressed: false)
+        #expect(performed.isEmpty)
+        front = codex
+        clock.advance(to: clock.now + HIDRemoteTiming.doubleClickMilliseconds)
+        #expect(performed.count == 1)
+        #expect(performed[0].shortcut == nextSession)
+
+        // Subsequent tap in Codex resolves cleanly using Codex's scope (no stale capture from Claude).
+        sendOK(pressed: true)
+        sendOK(pressed: false)
+        clock.advance(to: clock.now + HIDRemoteTiming.doubleClickMilliseconds)
+        #expect(performed.count == 2)
+        #expect(performed[1].shortcut == nextChat)
+
+        // Hold OK in Claude, switch focus to Codex before long-press timeout expires.
+        front = claude
+        sendOK(pressed: true)
+        front = codex
+        clock.advance(to: clock.now + HIDRemoteTiming.longPressMilliseconds)
+        sendOK(pressed: false)
+        #expect(performed.count == 3)
+        #expect(performed[2].action == .escape)
+    }
+
+    @Test func appScopedHoldRepeatMatchesRuntimeAndAllowsExplicitRepeatAfterOpenURL() throws {
+        let (settings, defaults, suite) = try makeSettings()
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let remoteID = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
+        settings.selectRemoteProfile(remoteID)
+        var front: String? = claude
+        settings.frontmostApplicationBundleIdentifier = { front }
+
+        settings.addApplicationButtonProfile(bundleID: claude, name: "Claude")
+        settings.setApplicationScopedAction(
+            ConfiguredButtonAction(action: .openURL, shortcut: nil, urlString: "https://example.com"),
+            bundleID: claude, button: .volumeDown, trigger: .singleClick
+        )
+
+        // P2 #1: Editor/display and runtime must both disable default hold-repeat after openURL.
+        #expect(settings.applicationScopedAction(bundleID: claude, button: .volumeDown, trigger: .longPress).action == .disabled)
+        #expect(!settings.allowsHoldRepeat(for: .volumeDown, profileID: remoteID))
+        #expect(!settings.isApplicationOverride(bundleID: claude, button: .volumeDown, trigger: .longPress))
+
+        // Explicitly choosing Repeat Single Click stores an override and enables hold-repeat at runtime.
+        settings.setApplicationScopedAction(
+            ConfiguredButtonAction(action: .repeatSingleClick, shortcut: nil),
+            bundleID: claude, button: .volumeDown, trigger: .longPress
+        )
+        #expect(settings.isApplicationOverride(bundleID: claude, button: .volumeDown, trigger: .longPress))
+        #expect(settings.applicationScopedAction(bundleID: claude, button: .volumeDown, trigger: .longPress).action == .repeatSingleClick)
+        #expect(settings.allowsHoldRepeat(for: .volumeDown, profileID: remoteID))
+
+        // Restoring singleClick back to the remote's base action prunes the now-redundant Repeat override.
+        settings.clearApplicationOverride(bundleID: claude, button: .volumeDown, trigger: .singleClick)
+        #expect(!settings.isApplicationOverride(bundleID: claude, button: .volumeDown, trigger: .longPress))
+        #expect(settings.allowsHoldRepeat(for: .volumeDown, profileID: remoteID))
+    }
+
+    @Test func selectingBaseActionDropsOverrideEvenWithStaleUnusedPayloadFields() throws {
+        let (settings, defaults, suite) = try makeSettings()
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let remoteID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+        settings.selectRemoteProfile(remoteID)
+        settings.frontmostApplicationBundleIdentifier = { claude }
+        settings.addApplicationButtonProfile(bundleID: claude, name: "Claude")
+
+        let baseOK = settings.configuredBaseAction(for: .ok, trigger: .singleClick)
+
+        // Simulate SettingsView.setMappingAction retaining unused fields when switching back to baseOK.action:
+        // 1) Stale custom shortcut.
+        settings.setApplicationScopedAction(
+            ConfiguredButtonAction(action: .customShortcut, shortcut: nextSession),
+            bundleID: claude, button: .ok, trigger: .singleClick
+        )
+        settings.setApplicationScopedAction(
+            ConfiguredButtonAction(action: baseOK.action, shortcut: nextSession),
+            bundleID: claude, button: .ok, trigger: .singleClick
+        )
+        #expect(!settings.isApplicationOverride(bundleID: claude, button: .ok, trigger: .singleClick))
+
+        // 2) Stale openURL string + customApplication profile ID.
+        settings.setApplicationScopedAction(
+            ConfiguredButtonAction(
+                action: baseOK.action,
+                shortcut: nil,
+                applicationProfileID: UUID(),
+                urlString: "https://example.com"
+            ),
+            bundleID: claude, button: .ok, trigger: .singleClick
+        )
+        #expect(!settings.isApplicationOverride(bundleID: claude, button: .ok, trigger: .singleClick))
+
+        // Updating the remote's base OK binding now propagates to Claude because no ghost override remained.
+        settings.setBaseBinding(
+            ConfiguredButtonAction(action: .space, shortcut: nil),
+            for: .ok, trigger: .singleClick, profileID: remoteID
+        )
+        #expect(settings.configuredAction(for: .ok, trigger: .singleClick, profileID: remoteID).action == .space)
+    }
 }

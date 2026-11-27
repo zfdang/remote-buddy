@@ -184,8 +184,17 @@ extension AppSettings {
         configuredAction(for: button, trigger: .singleClick).action
     }
 
-    func action(for button: RemoteButton, profileID: UUID?) -> ButtonAction {
-        configuredAction(for: button, trigger: .singleClick, profileID: profileID).action
+    func action(
+        for button: RemoteButton,
+        profileID: UUID?,
+        applicationScope: ApplicationOverrideScope = .live
+    ) -> ButtonAction {
+        configuredAction(
+            for: button,
+            trigger: .singleClick,
+            profileID: profileID,
+            applicationScope: applicationScope
+        ).action
     }
 
     func setAction(_ action: ButtonAction, for button: RemoteButton) {
@@ -229,9 +238,17 @@ extension AppSettings {
         return profile.mappings.parsedButtonURLs[button]
     }
 
-    func allowsHoldRepeat(for button: RemoteButton, profileID: UUID? = nil) -> Bool {
-        configuredBaseAction(for: button, trigger: .longPress,
-            profileID: profileID ?? selectedRemoteProfileID).action == .repeatSingleClick
+    func allowsHoldRepeat(
+        for button: RemoteButton,
+        profileID: UUID? = nil,
+        applicationScope: ApplicationOverrideScope = .live
+    ) -> Bool {
+        configuredBaseAction(
+            for: button,
+            trigger: .longPress,
+            profileID: profileID ?? selectedRemoteProfileID,
+            applicationScope: applicationScope
+        ).action == .repeatSingleClick
     }
 
     func defaultAction(for button: RemoteButton, trigger: ButtonTrigger) -> ConfiguredButtonAction {
@@ -288,24 +305,50 @@ extension AppSettings {
             for: button,
             trigger: trigger,
             profileID: selectedRemoteProfileID,
-            applyingApplicationProfile: false
+            applicationScope: .disabled
         )
     }
 
-    /// Resolves a button action, preferring the frontmost application's override when enabled.
+    /// Resolves a button action, preferring the active application scope's override when enabled.
     func configuredBaseAction(
         for button: RemoteButton,
         trigger: ButtonTrigger,
         profileID: UUID?,
-        applyingApplicationProfile: Bool = true
+        applicationScope: ApplicationOverrideScope = .live
     ) -> ConfiguredButtonAction {
-        if applyingApplicationProfile,
-           let override = applicationButtonOverride(for: button, trigger: trigger, profileID: profileID) {
+        if let override = applicationButtonOverride(
+            for: button,
+            trigger: trigger,
+            profileID: profileID,
+            applicationScope: applicationScope
+        ) {
             return override
         }
-        let singleClickOverride = applyingApplicationProfile
-            ? applicationButtonOverride(for: button, trigger: .singleClick, profileID: profileID)?.action
-            : nil
+        return inheritedBaseAction(
+            for: button,
+            trigger: trigger,
+            profileID: profileID,
+            applicationScope: applicationScope
+        )
+    }
+
+    /// Base mapping inherited when `(button, trigger)` has no per-application override.
+    /// Secondary triggers inherit any per-application `.singleClick` override on the same button
+    /// (for example `.openURL` disabling default long-press hold-repeat).
+    func inheritedBaseAction(
+        for button: RemoteButton,
+        trigger: ButtonTrigger,
+        profileID: UUID?,
+        applicationScope: ApplicationOverrideScope = .live
+    ) -> ConfiguredButtonAction {
+        let singleClickOverride = trigger == .singleClick
+            ? nil
+            : applicationButtonOverride(
+                for: button,
+                trigger: .singleClick,
+                profileID: profileID,
+                applicationScope: applicationScope
+            )?.action
         if let profileID,
            profileID != selectedRemoteProfileID,
            let profile = remoteDeviceProfiles.first(where: { $0.id == profileID }) {
@@ -350,7 +393,7 @@ extension AppSettings {
             for: button,
             trigger: trigger,
             profileID: selectedRemoteProfileID,
-            applyingApplicationProfile: false
+            applicationScope: .disabled
         )
     }
 
@@ -358,14 +401,14 @@ extension AppSettings {
         for button: RemoteButton,
         trigger: ButtonTrigger,
         profileID: UUID?,
-        applyingApplicationProfile: Bool = true
+        applicationScope: ApplicationOverrideScope = .live
     ) -> ConfiguredButtonAction {
         if trigger != .singleClick,
            configuredBaseAction(
                for: button,
                trigger: .singleClick,
                profileID: profileID,
-               applyingApplicationProfile: applyingApplicationProfile
+               applicationScope: applicationScope
            ).action == .directPassthrough {
             return .disabled
         }
@@ -373,7 +416,7 @@ extension AppSettings {
             for: button,
             trigger: trigger,
             profileID: profileID,
-            applyingApplicationProfile: applyingApplicationProfile
+            applicationScope: applicationScope
         )
         if configured.action == .directPassthrough, !button.isDirectional || trigger != .singleClick {
             return .disabled

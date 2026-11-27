@@ -38,6 +38,17 @@ struct ConfiguredButtonAction: Codable, Equatable {
     }
 
     static let disabled = ConfiguredButtonAction(action: .disabled, shortcut: nil)
+
+    /// Returns a copy retaining only the payload field used by `action`, clearing
+    /// stale fields left behind when switching from another action type.
+    func normalizedForAction() -> ConfiguredButtonAction {
+        ConfiguredButtonAction(
+            action: action,
+            shortcut: action == .customShortcut ? shortcut : nil,
+            applicationProfileID: action == .openCustomApplication ? applicationProfileID : nil,
+            urlString: action == .openURL ? CustomActionURLPolicy.normalizedInput(urlString) : nil
+        )
+    }
 }
 
 enum CustomActionURLPolicy {

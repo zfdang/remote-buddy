@@ -262,9 +262,14 @@ final class HIDRemoteMonitor {
     var usageExpiryTokens: [UInt16: UUID] = [:]
     var repeatTimers: [UInt16: HIDRemoteScheduledTask] = [:]
     var repeatTokens: [UInt16: UUID] = [:]
+    struct CapturedApplicationScope: Equatable {
+        let bundleIdentifier: String?
+    }
+
     var nonRepeatablePressedButtons = Set<RemoteButton>()
     var nonRepeatableReleaseTimers: [RemoteButton: HIDRemoteScheduledTask] = [:]
     var gestureRecognizer = RemoteButtonGestureRecognizer()
+    var capturedApplicationScopes: [RemoteButton: CapturedApplicationScope] = [:]
     var doubleClickTimers: [RemoteButton: HIDRemoteScheduledTask] = [:]
     var doubleClickTimerTokens: [RemoteButton: UUID] = [:]
     var longPressTimers: [RemoteButton: HIDRemoteScheduledTask] = [:]

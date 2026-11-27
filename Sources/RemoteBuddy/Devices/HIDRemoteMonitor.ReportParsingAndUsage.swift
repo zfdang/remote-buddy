@@ -405,26 +405,46 @@ extension HIDRemoteMonitor {
             // presses from that stale snapshot, but still finish its release edges.
             guard activeUsages == usages else { break }
             guard let button = RemoteButton.usageMap[usage] else { continue }
+            let capturedScope = gestureRecognizer.isTracking(button)
+                ? capturedOrCurrentApplicationScope(for: button)
+                : currentApplicationScope()
+            capturedApplicationScopes[button] = capturedScope
+            let applicationScope = ApplicationOverrideScope.fixed(capturedScope.bundleIdentifier)
             let preflightProfileID = profileID
-            let preflightDirectPassthrough = isDirectPassthrough(button: button, profileID: preflightProfileID)
+            let preflightDirectPassthrough = isDirectPassthrough(
+                button: button,
+                profileID: preflightProfileID,
+                applicationScope: applicationScope
+            )
             let preflightRecognizesDoubleClick = !preflightDirectPassthrough && settings.configuredAction(
                 for: button,
                 trigger: .doubleClick,
-                profileID: preflightProfileID
+                profileID: preflightProfileID,
+                applicationScope: applicationScope
             ).action != .disabled
             let preflightRecognizesLongPress = !preflightDirectPassthrough && settings.configuredAction(
                 for: button,
                 trigger: .longPress,
-                profileID: preflightProfileID
-            ).action != .disabled && !settings.allowsHoldRepeat(for: button, profileID: preflightProfileID)
-            let preflightAction = settings.action(for: button, profileID: preflightProfileID)
+                profileID: preflightProfileID,
+                applicationScope: applicationScope
+            ).action != .disabled && !settings.allowsHoldRepeat(
+                for: button,
+                profileID: preflightProfileID,
+                applicationScope: applicationScope
+            )
+            let preflightAction = settings.action(
+                for: button,
+                profileID: preflightProfileID,
+                applicationScope: applicationScope
+            )
             let usesNativePassthrough = preflightProfileID != nil &&
                 !preflightDirectPassthrough &&
                 claimsRuntimeButton?(preflightProfileID, button) != true && shouldUseNativePassthrough(
                 button: button,
                 action: preflightAction,
                 recognizesDoubleClick: preflightRecognizesDoubleClick,
-                recognizesLongPress: preflightRecognizesLongPress
+                recognizesLongPress: preflightRecognizesLongPress,
+                applicationScope: applicationScope
             )
             if !activeDeviceIsSeized, !usesNativePassthrough {
                 armNativeSuppression(button: button, edge: .down)
@@ -462,14 +482,24 @@ extension HIDRemoteMonitor {
             let recognizesDoubleClick = settings.configuredAction(
                 for: button,
                 trigger: .doubleClick,
-                profileID: profileID
+                profileID: profileID,
+                applicationScope: applicationScope
             ).action != .disabled
             let recognizesLongPress = settings.configuredAction(
                 for: button,
                 trigger: .longPress,
-                profileID: profileID
-            ).action != .disabled && !settings.allowsHoldRepeat(for: button, profileID: profileID)
-            let action = settings.action(for: button, profileID: profileID)
+                profileID: profileID,
+                applicationScope: applicationScope
+            ).action != .disabled && !settings.allowsHoldRepeat(
+                for: button,
+                profileID: profileID,
+                applicationScope: applicationScope
+            )
+            let action = settings.action(
+                for: button,
+                profileID: profileID,
+                applicationScope: applicationScope
+            )
             if appSwitcherCoordinator.isActive,
                handleAppSwitcherControlPress(button) {
                 continue
@@ -506,7 +536,11 @@ extension HIDRemoteMonitor {
                 )
                 continue
             }
-            if isDirectPassthrough(button: button, profileID: profileID) {
+            if isDirectPassthrough(
+                button: button,
+                profileID: profileID,
+                applicationScope: applicationScope
+            ) {
                 guard mappingDeliveryIsSafe else {
                     pauseForUnavailableNativeFilter()
                     continue
@@ -539,18 +573,28 @@ extension HIDRemoteMonitor {
                 guard shouldAcceptRawPress(
                     button: button,
                     action: action,
-                    frontmostBundleIdentifier: frontmostBundleIdentifier()
+                    frontmostBundleIdentifier: frontmostBundleIdentifier(),
+                    applicationScope: applicationScope
                 ) else { continue }
                 diagnosticLogger(
                     "HID GESTURE button=\(button.rawValue) trigger=singleClick path=raw " +
-                        "long_press=\(settings.configuredAction(for: button, trigger: .longPress, profileID: profileID).action.rawValue) " +
-                        "double_click=\(settings.configuredAction(for: button, trigger: .doubleClick, profileID: profileID).action.rawValue) " +
-                        "hold_repeat=\(settings.allowsHoldRepeat(for: button, profileID: profileID)) " +
+                        "long_press=\(settings.configuredAction(for: button, trigger: .longPress, profileID: profileID, applicationScope: applicationScope).action.rawValue) " +
+                        "double_click=\(settings.configuredAction(for: button, trigger: .doubleClick, profileID: profileID, applicationScope: applicationScope).action.rawValue) " +
+                        "hold_repeat=\(settings.allowsHoldRepeat(for: button, profileID: profileID, applicationScope: applicationScope)) " +
                         "preflight_bound=\(preflightProfileID != nil)"
                 )
-                guard performConfiguredAction(for: button, trigger: .singleClick) else { continue }
+                guard performConfiguredAction(
+                    for: button,
+                    trigger: .singleClick,
+                    applicationScope: applicationScope
+                ) else { continue }
             }
-            startRepeatIfNeeded(usage: usage, button: button, action: action)
+            startRepeatIfNeeded(
+                usage: usage,
+                button: button,
+                action: action,
+                applicationScope: applicationScope
+            )
         }
 
         processReleases(for: released)
@@ -567,7 +611,10 @@ extension HIDRemoteMonitor {
             }
             cancelRepeat(for: usage)
             if let button = RemoteButton.usageMap[usage] {
-                defer { clearBTLELogPendingGestureIfFinished(for: button) }
+                defer {
+                    clearBTLELogPendingGestureIfFinished(for: button)
+                    clearCapturedApplicationScopeIfIdle(for: button)
+                }
                 if onRuntimeButton?(profileID, button, .release) == true {
                     if usedDirectPassthrough, let keyCode = button.directionKeyCode {
                         _ = nativeKeyStatePoster(keyCode, false, [])
@@ -657,6 +704,7 @@ extension HIDRemoteMonitor {
         cancelDoubleClickTimeout(for: button)
         cancelLongPressTimeout(for: button)
         gestureRecognizer.cancel(button)
+        capturedApplicationScopes.removeValue(forKey: button)
         finishNonRepeatablePress(button)
         if nativePassthroughUsages.remove(usage) != nil {
             for event in button.nativeEvents {

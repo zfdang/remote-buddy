@@ -1,6 +1,16 @@
 import AppKit
 import Foundation
 
+/// Controls which application scope is consulted when resolving per-application overrides.
+enum ApplicationOverrideScope: Equatable {
+    /// Resolve against the live frontmost application at lookup time.
+    case live
+    /// Resolve against a captured frontmost application bundle identifier (possibly `nil`).
+    case fixed(String?)
+    /// Ignore per-application overrides and use the remote's own base mapping.
+    case disabled
+}
+
 /// Per-application button overrides for a single remote profile, chosen by the frontmost
 /// application when a button press is resolved. Only buttons and triggers that differ from
 /// the remote's base mapping are stored; unlisted buttons keep the remote's base mapping.
@@ -105,18 +115,43 @@ extension AppSettings {
         return applicationButtonProfiles
     }
 
-    /// Returns the frontmost application's override for `button` and `trigger` on `profileID`, if any.
+    /// Returns the frontmost or captured application's override for `button` and `trigger` on `profileID`, if any.
     func applicationButtonOverride(
         for button: RemoteButton,
         trigger: ButtonTrigger,
-        profileID: UUID?
+        profileID: UUID?,
+        applicationScope: ApplicationOverrideScope = .live
     ) -> ConfiguredButtonAction? {
         let profiles = applicationButtonProfiles(for: profileID)
-        guard !profiles.isEmpty,
-              let bundleID = frontmostApplicationBundleIdentifier(),
+        let bundleID: String?
+        switch applicationScope {
+        case .disabled:
+            return nil
+        case .live:
+            guard !profiles.isEmpty else { return nil }
+            bundleID = frontmostApplicationBundleIdentifier()
+        case let .fixed(captured):
+            bundleID = captured
+        }
+        guard let bundleID,
               let profile = profiles[bundleID]
         else { return nil }
         return profile.action(for: button, trigger: trigger)
+    }
+
+    /// Action inherited by `(bundleID, button, trigger)` when no override exists on that trigger.
+    /// Respects any single-click override on the same button (for example `.openURL` disabling default hold-repeat).
+    func applicationInheritedAction(
+        bundleID: String,
+        button: RemoteButton,
+        trigger: ButtonTrigger
+    ) -> ConfiguredButtonAction {
+        inheritedBaseAction(
+            for: button,
+            trigger: trigger,
+            profileID: selectedRemoteProfileID,
+            applicationScope: .fixed(bundleID)
+        )
     }
 
     /// Action displayed/edited for `bundleID` on the selected remote's mapping page.
@@ -125,11 +160,15 @@ extension AppSettings {
         button: RemoteButton,
         trigger: ButtonTrigger
     ) -> ConfiguredButtonAction {
-        applicationButtonProfiles[bundleID]?.action(for: button, trigger: trigger)
-            ?? configuredBaseAction(for: button, trigger: trigger)
+        configuredBaseAction(
+            for: button,
+            trigger: trigger,
+            profileID: selectedRemoteProfileID,
+            applicationScope: .fixed(bundleID)
+        )
     }
 
-    /// Saves an override for `bundleID` on the selected remote; matching the remote's base action removes it.
+    /// Saves a normalized override for `bundleID` on the selected remote; matching the inherited action removes it.
     func setApplicationScopedAction(
         _ action: ConfiguredButtonAction,
         bundleID: String,
@@ -137,9 +176,14 @@ extension AppSettings {
         trigger: ButtonTrigger
     ) {
         var profile = applicationButtonProfiles[bundleID] ?? ApplicationButtonProfile()
-        let base = configuredBaseAction(for: button, trigger: trigger)
-        profile.setAction(action == base ? nil : action, for: button, trigger: trigger)
+        let normalized = action.normalizedForAction()
+        let inherited = applicationInheritedAction(bundleID: bundleID, button: button, trigger: trigger)
+            .normalizedForAction()
+        profile.setAction(normalized == inherited ? nil : normalized, for: button, trigger: trigger)
         applicationButtonProfiles[bundleID] = profile
+        if trigger == .singleClick {
+            pruneRedundantLongPressOverride(bundleID: bundleID, button: button)
+        }
     }
 
     /// Explicitly removes any override for `button` and `trigger` from `bundleID` on the selected remote.
@@ -151,6 +195,21 @@ extension AppSettings {
         guard var profile = applicationButtonProfiles[bundleID] else { return }
         profile.setAction(nil, for: button, trigger: trigger)
         applicationButtonProfiles[bundleID] = profile
+        if trigger == .singleClick {
+            pruneRedundantLongPressOverride(bundleID: bundleID, button: button)
+        }
+    }
+
+    private func pruneRedundantLongPressOverride(bundleID: String, button: RemoteButton) {
+        guard var profile = applicationButtonProfiles[bundleID],
+              let longPress = profile.action(for: button, trigger: .longPress)
+        else { return }
+        let inherited = applicationInheritedAction(bundleID: bundleID, button: button, trigger: .longPress)
+            .normalizedForAction()
+        if longPress.normalizedForAction() == inherited {
+            profile.setAction(nil, for: button, trigger: .longPress)
+            applicationButtonProfiles[bundleID] = profile
+        }
     }
 
     func isApplicationOverride(

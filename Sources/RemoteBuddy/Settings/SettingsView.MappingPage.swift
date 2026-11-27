@@ -312,7 +312,11 @@ extension SettingsView {
         let defaultAction: ConfiguredButtonAction
         if let bundleID = editingApplicationBundleID {
             settings.clearApplicationOverride(bundleID: bundleID, button: button, trigger: trigger)
-            defaultAction = settings.configuredBaseAction(for: button, trigger: trigger)
+            defaultAction = settings.applicationInheritedAction(
+                bundleID: bundleID,
+                button: button,
+                trigger: trigger
+            )
         } else {
             defaultAction = settings.defaultAction(for: button, trigger: trigger)
             saveMappingBinding(defaultAction, button: button, trigger: trigger)

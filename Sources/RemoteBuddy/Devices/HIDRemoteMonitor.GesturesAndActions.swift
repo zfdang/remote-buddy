@@ -2,15 +2,36 @@ import AppKit
 import Foundation
 
 extension HIDRemoteMonitor {
+    func currentApplicationScope() -> CapturedApplicationScope {
+        CapturedApplicationScope(bundleIdentifier: settings.frontmostApplicationBundleIdentifier())
+    }
+
+    func capturedOrCurrentApplicationScope(for button: RemoteButton) -> CapturedApplicationScope {
+        capturedApplicationScopes[button] ?? currentApplicationScope()
+    }
+
+    func clearCapturedApplicationScopeIfIdle(for button: RemoteButton) {
+        guard !activeUsages.contains(button.hidUsage),
+              !gestureRecognizer.isTracking(button),
+              repeatTimers[button.hidUsage] == nil
+        else { return }
+        capturedApplicationScopes.removeValue(forKey: button)
+    }
+
     func shouldAcceptRawPress(
         button: RemoteButton,
         action: ButtonAction,
-        frontmostBundleIdentifier: String? = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+        frontmostBundleIdentifier: String? = NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
+        applicationScope: ApplicationOverrideScope = .live
     ) -> Bool {
         guard !Self.shouldRepeat(
             action: action,
             frontmostBundleIdentifier: frontmostBundleIdentifier,
-            enabled: settings.allowsHoldRepeat(for: button, profileID: profileID)
+            enabled: settings.allowsHoldRepeat(
+                for: button,
+                profileID: profileID,
+                applicationScope: applicationScope
+            )
         ) else { return true }
         if nonRepeatableReleaseTimers[button] != nil {
             finishNonRepeatablePress(button)
@@ -32,12 +53,17 @@ extension HIDRemoteMonitor {
         return ![.arrowUp, .arrowDown, .arrowLeft, .arrowRight, .deleteBackward].contains(action)
     }
 
-    func isDirectPassthrough(button: RemoteButton, profileID: UUID?) -> Bool {
+    func isDirectPassthrough(
+        button: RemoteButton,
+        profileID: UUID?,
+        applicationScope: ApplicationOverrideScope = .live
+    ) -> Bool {
         guard button.isDirectional else { return false }
         return settings.configuredAction(
             for: button,
             trigger: .singleClick,
-            profileID: profileID
+            profileID: profileID,
+            applicationScope: applicationScope
         ).action == .directPassthrough
     }
 
@@ -53,14 +79,19 @@ extension HIDRemoteMonitor {
         button: RemoteButton,
         action: ButtonAction,
         recognizesDoubleClick: Bool,
-        recognizesLongPress: Bool
+        recognizesLongPress: Bool,
+        applicationScope: ApplicationOverrideScope = .live
     ) -> Bool {
         guard !activeDeviceIsSeized,
               currentReportOrigin != .btleServerLog,
               !appSwitcherCoordinator.isActive,
               !recognizesDoubleClick,
               !recognizesLongPress,
-              settings.allowsHoldRepeat(for: button, profileID: profileID),
+              settings.allowsHoldRepeat(
+                  for: button,
+                  profileID: profileID,
+                  applicationScope: applicationScope
+              ),
               frontmostBundleIdentifier() != PresetApplication.remoteMic.bundleIdentifier
         else { return false }
         return (button == .left && action == .arrowLeft) ||
@@ -87,12 +118,16 @@ extension HIDRemoteMonitor {
     func cancelRepeat(for usage: UInt16) {
         repeatTokens.removeValue(forKey: usage)
         repeatTimers.removeValue(forKey: usage)?.cancel()
+        if let button = RemoteButton.usageMap[usage] {
+            clearCapturedApplicationScopeIfIdle(for: button)
+        }
     }
 
     func startRepeatIfNeeded(
         usage: UInt16,
         button: RemoteButton,
-        action: ButtonAction
+        action: ButtonAction,
+        applicationScope: ApplicationOverrideScope = .live
     ) {
         let interval = HIDRemoteTiming.repeatIntervalMilliseconds(for: action)
         guard
@@ -100,7 +135,11 @@ extension HIDRemoteMonitor {
             Self.shouldRepeat(
                 action: action,
                 frontmostBundleIdentifier: frontmostBundleIdentifier(),
-                enabled: settings.allowsHoldRepeat(for: button, profileID: profileID)
+                enabled: settings.allowsHoldRepeat(
+                    for: button,
+                    profileID: profileID,
+                    applicationScope: applicationScope
+                )
             )
         else { return }
 
@@ -120,12 +159,19 @@ extension HIDRemoteMonitor {
                 return
             }
             let configured = self.settings.configuredAction(
-                for: button, trigger: .singleClick, profileID: self.profileID
+                for: button,
+                trigger: .singleClick,
+                profileID: self.profileID,
+                applicationScope: applicationScope
             )
             if !Self.shouldRepeat(
                     action: configured.action,
                     frontmostBundleIdentifier: self.frontmostBundleIdentifier(),
-                    enabled: self.settings.allowsHoldRepeat(for: button, profileID: self.profileID)
+                    enabled: self.settings.allowsHoldRepeat(
+                        for: button,
+                        profileID: self.profileID,
+                        applicationScope: applicationScope
+                    )
                 ) {
                 self.cancelRepeat(for: usage)
                 return
@@ -143,7 +189,11 @@ extension HIDRemoteMonitor {
             self.gestureRecognizer.cancel(button)
             self.cancelDoubleClickTimeout(for: button)
             self.cancelLongPressTimeout(for: button)
-            if !self.performConfiguredAction(for: button, trigger: .singleClick) {
+            if !self.performConfiguredAction(
+                for: button,
+                trigger: .singleClick,
+                applicationScope: applicationScope
+            ) {
                 self.cancelRepeat(for: usage)
             }
         }
@@ -167,7 +217,12 @@ extension HIDRemoteMonitor {
                 diagnosticLogger(
                     "HID GESTURE button=\(button.rawValue) trigger=\(trigger.rawValue) path=recognizer"
                 )
-                guard performConfiguredAction(for: button, trigger: trigger) else { return false }
+                let captured = capturedOrCurrentApplicationScope(for: button)
+                guard performConfiguredAction(
+                    for: button,
+                    trigger: trigger,
+                    applicationScope: .fixed(captured.bundleIdentifier)
+                ) else { return false }
             }
         }
         return true
@@ -204,6 +259,7 @@ extension HIDRemoteMonitor {
             self.doubleClickTimers.removeValue(forKey: button)
             _ = self.processGestureCommands(self.gestureRecognizer.doubleClickTimedOut(button))
             self.clearBTLELogPendingGestureIfFinished(for: button)
+            self.clearCapturedApplicationScopeIfIdle(for: button)
         }
         doubleClickTimers[button] = timer
     }
@@ -221,13 +277,15 @@ extension HIDRemoteMonitor {
             self.longPressTimers.removeValue(forKey: button)
             _ = self.processGestureCommands(self.gestureRecognizer.longPressTimedOut(button))
             self.clearBTLELogPendingGestureIfFinished(for: button)
+            self.clearCapturedApplicationScopeIfIdle(for: button)
         }
         longPressTimers[button] = timer
     }
 
     func performConfiguredAction(
         for button: RemoteButton,
-        trigger: ButtonTrigger
+        trigger: ButtonTrigger,
+        applicationScope: ApplicationOverrideScope? = nil
     ) -> Bool {
         guard runtimePermissionsAreValid() else {
             releaseForRevokedPermissions()
@@ -237,10 +295,12 @@ extension HIDRemoteMonitor {
             pauseForUnavailableNativeFilter()
             return false
         }
+        let resolvedScope = applicationScope ?? .fixed(capturedOrCurrentApplicationScope(for: button).bundleIdentifier)
         let configured = settings.configuredAction(
             for: button,
             trigger: trigger,
-            profileID: profileID
+            profileID: profileID,
+            applicationScope: resolvedScope
         )
         if appSwitcherCoordinator.isActive, button == .tv {
             return performAppSwitcherAction(for: button, trigger: trigger)
@@ -319,6 +379,7 @@ extension HIDRemoteMonitor {
         longPressTimers.removeAll()
         btleLogPendingGestureButtons.removeAll()
         btleLogOwnsAppSwitcher = false
+        capturedApplicationScopes.removeAll()
         gestureRecognizer.reset()
     }
 
@@ -355,6 +416,7 @@ extension HIDRemoteMonitor {
             cancelDoubleClickTimeout(for: button)
             cancelLongPressTimeout(for: button)
             finishNonRepeatablePress(button)
+            capturedApplicationScopes.removeValue(forKey: button)
         }
         if ownsActiveBTLESwitcher {
             appSwitcherCoordinator.finishIfActive(

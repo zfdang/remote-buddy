@@ -959,6 +959,9 @@
 "onboarding.voice_tool.guide.screenshot.bageshuo_menu" = "在菜单栏点击网易叭哥说图标，选择设置。";
 "onboarding.voice_tool.guide.screenshot.bageshuo_settings" = "在设置 → 快捷键中，将“语音润色快捷键”设为“%@”，使用按一下开始、再按一下结束模式。";
 "onboarding.voice_tool.guide.screenshot.system_fn" = "在系统设置的键盘中，将按下🌐键时设为不执行任何操作。";
+"onboarding.voice_tool.guide.screenshot.example_badge" = "仅为示例\n以实际为准";
+"onboarding.voice_tool.guide.screenshot.example_notice" = "注意：上方截图中的快捷键仅为示例，请以你实际设置的快捷键“%@”为准进行设置。";
+"onboarding.voice_tool.guide.screenshot.conflict_example_notice" = "注意：上方截图中的快捷键仅为示例，请以你实际设置的快捷键“%@”为准检查是否冲突。";
 "siri_remote.activation.enable" = "启用";
 "siri_remote.activation.disable" = "停用";
 "siri_remote.activation.retry" = "重试";
@@ -1314,7 +1317,7 @@
 "onboarding.voice_tool.guide.open_chatterfly" = "打开腾讯Chatterfly";
 "onboarding.voice_tool.guide.open_chatterfly.detail" = "安装并启动腾讯Chatterfly，保持它在后台运行，然后打开设置。";
 "onboarding.voice_tool.guide.configure_chatterfly" = "设置语音快捷键与全局可用";
-"onboarding.voice_tool.guide.screenshot.chatterfly_settings" = "在腾讯Chatterfly → 设置 → 语音设置中，将“语音输入”快捷键设为“%@”，并开启“快捷键全局可用”。使用按住说话、松开结束；截图中的快捷键仅为示例，请以本次选择为准。";
+"onboarding.voice_tool.guide.screenshot.chatterfly_settings" = "在腾讯Chatterfly → 设置 → 语音设置中，将“语音输入”快捷键设为“%@”，并开启“快捷键全局可用”。使用按住说话、松开结束。";
 "onboarding.voice_tool.guide.screenshot.chatterfly_input_microphone" = "在腾讯Chatterfly → 设置 → 音频设置 → 麦克风中，选择 Remote Buddy Mic。";
 
 // Per-device Connection usage tips

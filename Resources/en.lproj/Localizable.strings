@@ -962,6 +962,9 @@
 "onboarding.voice_tool.guide.screenshot.bageshuo_menu" = "In the menu bar, click the NetEase Bageshuo icon, then select Settings.";
 "onboarding.voice_tool.guide.screenshot.bageshuo_settings" = "In Settings → Shortcuts, set the voice shortcut to “%@” and use press-to-start/stop mode.";
 "onboarding.voice_tool.guide.screenshot.system_fn" = "In System Settings → Keyboard (键盘), set Press Globe key to (按下🌐键时) to Do Nothing (不执行任何操作).";
+"onboarding.voice_tool.guide.screenshot.example_badge" = "Example only\nUse your key";
+"onboarding.voice_tool.guide.screenshot.example_notice" = "Note: The shortcut in the screenshot above is only an example. Follow your actual selected shortcut “%@”.";
+"onboarding.voice_tool.guide.screenshot.conflict_example_notice" = "Note: The shortcut in the screenshot above is only an example. Check for conflicts using your actual selected shortcut “%@”.";
 "siri_remote.activation.enable" = "Enable";
 "siri_remote.activation.disable" = "Disable";
 "siri_remote.activation.retry" = "Retry";
@@ -1312,7 +1315,7 @@
 "onboarding.voice_tool.guide.open_chatterfly" = "Open Tencent Chatterfly";
 "onboarding.voice_tool.guide.open_chatterfly.detail" = "Install and start Tencent Chatterfly, leave it running in the background, then open Settings.";
 "onboarding.voice_tool.guide.configure_chatterfly" = "Configure the global voice shortcut";
-"onboarding.voice_tool.guide.screenshot.chatterfly_settings" = "In Tencent Chatterfly → Settings → Voice Settings, set the Voice Input shortcut to “%@” and enable the global shortcut option. Hold to talk and release to finish. The screenshot shortcut is an example; use your selected shortcut.";
+"onboarding.voice_tool.guide.screenshot.chatterfly_settings" = "In Tencent Chatterfly → Settings → Voice Settings, set the Voice Input shortcut to “%@” and enable the global shortcut option. Hold to talk and release to finish.";
 "onboarding.voice_tool.guide.screenshot.chatterfly_input_microphone" = "In Tencent Chatterfly → Settings → Audio Settings → Microphone, select Remote Buddy Mic.";
 
 // Per-device Connection usage tips

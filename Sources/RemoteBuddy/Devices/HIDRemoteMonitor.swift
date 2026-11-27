@@ -340,22 +340,33 @@ final class HIDRemoteMonitor {
         if let appSwitcherCoordinator {
             self.appSwitcherCoordinator = appSwitcherCoordinator
         } else {
+            let sessionScheduler: OperationScheduler = { delay, action in
+                nonisolated(unsafe) let task = scheduler.schedule(
+                    afterMilliseconds: UInt64(max(0, (delay * 1_000).rounded())),
+                    repeatingEveryMilliseconds: nil,
+                    action
+                )
+                return ScheduledOperation { task.cancel() }
+            }
             let session: KeyboardInjector.AppSwitcherSession
             if let appSwitcherOwnedKeyStatePoster {
                 session = KeyboardInjector.AppSwitcherSession(
                     hardwareFlags: appSwitcherHardwareFlags,
-                    keyStatePoster: appSwitcherOwnedKeyStatePoster
+                    keyStatePoster: appSwitcherOwnedKeyStatePoster,
+                    scheduleRelease: sessionScheduler
                 )
             } else if let appSwitcherKeyStatePoster {
                 session = KeyboardInjector.AppSwitcherSession(
                     hardwareFlags: appSwitcherHardwareFlags,
                     keyStatePoster: { code, down, flags, _ in
                         appSwitcherKeyStatePoster(code, down, flags)
-                    }
+                    },
+                    scheduleRelease: sessionScheduler
                 )
             } else {
                 session = KeyboardInjector.AppSwitcherSession(
-                    hardwareFlags: appSwitcherHardwareFlags
+                    hardwareFlags: appSwitcherHardwareFlags,
+                    scheduleRelease: sessionScheduler
                 )
             }
             self.appSwitcherCoordinator = HIDAppSwitcherCoordinator(

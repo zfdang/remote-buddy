@@ -24,7 +24,7 @@ struct AppSwitcherReleaseRecoveryTests {
         #expect(session.triggerTemporarily(schedule: clock.voiceSchedule))
         clock.tasks.filter { $0.cancelled }.forEach { $0.fire(includingCancelled: true) }
         #expect(session.isActive)
-        #expect(session.confirm())
+        #expect(session.confirm(restoreMinimizedWindows: false))
     }
 
     @Test func persistentFailureHasBoundedRetriesAndRetainsOwnership() {
@@ -44,7 +44,7 @@ struct AppSwitcherReleaseRecoveryTests {
         #expect(clock.activeCount == 0)
         #expect(session.isActive)
         canRelease = true
-        #expect(session.confirm())
+        #expect(session.confirm(restoreMinimizedWindows: false))
         #expect(!session.isActive)
     }
 

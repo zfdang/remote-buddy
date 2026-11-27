@@ -509,7 +509,8 @@ struct InputLifecycleRegressionTests {
             keyStatePoster: { code, down, flags, _ in
                 postedEvents.append(PostedKeyEvent(code: code, down: down, command: flags.contains(.maskCommand)))
                 return true
-            }
+            },
+            scheduleRelease: clock.voiceSchedule
         )
         let coordinator = HIDAppSwitcherCoordinator(
             session: session,
@@ -591,12 +592,20 @@ struct InputLifecycleRegressionTests {
         ])
         #expect(!logs.contains { $0.contains("HID NATIVE PASSTHROUGH") })
 
-        // Remote B confirms the switcher; Command is released and subsequent arrows return to passthrough.
+        // Remote B confirms the switcher; Option is held to unminimize before Command releases.
         postedEvents.removeAll()
         send(monitorB, .ok)
         send(monitorB, nil)
         #expect(!coordinator.isActive)
-        #expect(postedEvents.last == PostedKeyEvent(code: 55, down: false, command: false))
+        #expect(postedEvents == [
+            PostedKeyEvent(code: KeyboardInjector.AppSwitcherSession.leftOptionKeyCode, down: true, command: true),
+        ])
+        clock.advance(to: clock.now + 200)
+        #expect(postedEvents == [
+            PostedKeyEvent(code: KeyboardInjector.AppSwitcherSession.leftOptionKeyCode, down: true, command: true),
+            PostedKeyEvent(code: 55, down: false, command: false),
+            PostedKeyEvent(code: KeyboardInjector.AppSwitcherSession.leftOptionKeyCode, down: false, command: false),
+        ])
 
         send(monitorB, .right)
         send(monitorB, nil)

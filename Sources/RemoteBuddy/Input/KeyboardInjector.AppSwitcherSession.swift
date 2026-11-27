@@ -5,6 +5,12 @@ extension KeyboardInjector {
     final class AppSwitcherSession: @unchecked Sendable {
         typealias OwnedKeyStatePoster = (CGKeyCode, Bool, CGEventFlags, CGEventFlags) -> Bool
 
+        static let leftOptionKeyCode: CGKeyCode = 58
+        /// Option down and Command up must arrive in separate event cycles so Dock reads
+        /// Option as still held when Command releases and restores minimized windows.
+        static let optionHoldDuration: TimeInterval = 0.06
+        static let optionReleaseDuration: TimeInterval = 0.10
+
         private let lock = NSRecursiveLock()
         private let keyStatePoster: OwnedKeyStatePoster
         private let hardwareFlags: () -> CGEventFlags
@@ -13,9 +19,12 @@ extension KeyboardInjector {
         private var ownedCommandFlags: CGEventFlags = []
         private var isBorrowingCommand = false
         private var releaseTask: ScheduledOperation?
+        private var optionReleaseTask: ScheduledOperation?
+        private var hasPendingOptionRelease = false
+        private var ownedCommandPendingRelease = false
         private var releaseGeneration: UInt64 = 0
         private var releaseAttempts = 0
-        private var scheduleRelease: OperationScheduler = ScheduledOperation.mainQueue
+        private var scheduleRelease: OperationScheduler
 
         var isActive: Bool {
             lock.withLock { active }
@@ -23,10 +32,12 @@ extension KeyboardInjector {
 
         init(
             hardwareFlags: @escaping () -> CGEventFlags = KeyboardHardwareModifierPolicy.currentForAppSwitcher,
-            keyStatePoster: @escaping OwnedKeyStatePoster = KeyboardInjector.postOwnedKeyState
+            keyStatePoster: @escaping OwnedKeyStatePoster = KeyboardInjector.postOwnedKeyState,
+            scheduleRelease: @escaping OperationScheduler = ScheduledOperation.mainQueue
         ) {
             self.hardwareFlags = hardwareFlags
             self.keyStatePoster = keyStatePoster
+            self.scheduleRelease = scheduleRelease
         }
 
         deinit {
@@ -34,6 +45,8 @@ extension KeyboardInjector {
                 releaseGeneration &+= 1
                 releaseTask?.cancel()
                 releaseTask = nil
+                optionReleaseTask?.cancel()
+                optionReleaseTask = nil
             }
         }
 
@@ -78,6 +91,7 @@ extension KeyboardInjector {
         @discardableResult
         func trigger() -> Bool {
             lock.withLock {
+                flushPendingOptionConfirmationIfNeeded()
                 if active {
                     guard releaseAttempts == 0 else { return false }
                     if !endBorrowedSessionIfCommandReleased() {
@@ -122,7 +136,7 @@ extension KeyboardInjector {
                     guard let self else { return }
                     self.lock.withLock {
                         guard self.releaseGeneration == generation else { return }
-                        _ = self.confirm()
+                        _ = self.confirm(restoreMinimizedWindows: false)
                     }
                 }
                 return true
@@ -132,6 +146,7 @@ extension KeyboardInjector {
         @discardableResult
         func cancel() -> Bool {
             lock.withLock {
+                flushPendingOptionConfirmationIfNeeded()
                 guard active else { return true }
                 if endBorrowedSessionIfCommandReleased() { return true }
                 // Releasing Command confirms the selection. Escape must dismiss the
@@ -144,10 +159,101 @@ extension KeyboardInjector {
         }
 
         @discardableResult
-        func confirm() -> Bool {
+        func confirm(restoreMinimizedWindows: Bool = true) -> Bool {
             lock.withLock {
-                releaseCommandKey()
+                guard active else { return true }
+                if endBorrowedSessionIfCommandReleased() { return true }
+                if isBorrowingCommand || !restoreMinimizedWindows {
+                    return releaseCommandKey()
+                }
+
+                releaseGeneration &+= 1
+                releaseTask?.cancel()
+                releaseTask = nil
+                optionReleaseTask?.cancel()
+                optionReleaseTask = nil
+                active = false
+                releaseAttempts = 0
+
+                guard post(
+                    Self.leftOptionKeyCode,
+                    isDown: true,
+                    flags: [.maskCommand, .maskAlternate],
+                    role: "option"
+                ) else {
+                    active = true
+                    return releaseCommandKey()
+                }
+
+                hasPendingOptionRelease = true
+                ownedCommandPendingRelease = true
+                let generation = releaseGeneration
+                let optionOwnedFlags = ShortcutEventSequence.modifierFlags(for: Self.leftOptionKeyCode)
+                let capturedCommandFlags = ownedCommandFlags
+
+                releaseTask = scheduleRelease(Self.optionHoldDuration) { [weak self] in
+                    guard let self else { return }
+                    self.lock.withLock {
+                        guard self.releaseGeneration == generation else { return }
+                        self.releaseTask = nil
+                        _ = self.post(
+                            leftCommandKeyCode,
+                            isDown: false,
+                            flags: [.maskAlternate],
+                            excludingOwned: capturedCommandFlags,
+                            role: "command"
+                        )
+                        self.ownedCommandPendingRelease = false
+                        self.ownedCommandFlags = []
+                        self.optionReleaseTask = self.scheduleRelease(Self.optionReleaseDuration) {
+                            [weak self] in
+                            guard let self else { return }
+                            self.lock.withLock {
+                                guard self.releaseGeneration == generation else { return }
+                                self.optionReleaseTask = nil
+                                _ = self.post(
+                                    Self.leftOptionKeyCode,
+                                    isDown: false,
+                                    flags: [],
+                                    excludingOwned: optionOwnedFlags,
+                                    role: "option"
+                                )
+                                self.hasPendingOptionRelease = false
+                            }
+                        }
+                    }
+                }
+                return true
             }
+        }
+
+        private func flushPendingOptionConfirmationIfNeeded() {
+            guard hasPendingOptionRelease else { return }
+            releaseGeneration &+= 1
+            releaseTask?.cancel()
+            releaseTask = nil
+            optionReleaseTask?.cancel()
+            optionReleaseTask = nil
+            if ownedCommandPendingRelease {
+                _ = post(
+                    leftCommandKeyCode,
+                    isDown: false,
+                    flags: [.maskAlternate],
+                    excludingOwned: ownedCommandFlags,
+                    role: "command"
+                )
+                ownedCommandPendingRelease = false
+                ownedCommandFlags = []
+            }
+            let optionOwnedFlags = ShortcutEventSequence.modifierFlags(for: Self.leftOptionKeyCode)
+            _ = post(
+                Self.leftOptionKeyCode,
+                isDown: false,
+                flags: [],
+                excludingOwned: optionOwnedFlags,
+                role: "option"
+            )
+            hasPendingOptionRelease = false
         }
 
         private func releaseCommandKey() -> Bool {

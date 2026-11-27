@@ -226,7 +226,7 @@ enum KeyboardInjector {
     ) -> Bool {
         guard action != .disabled else { return true }
         if action != .appSwitcher, transientAppSwitcher.isActive {
-            guard transientAppSwitcher.confirm() else { return false }
+            guard transientAppSwitcher.confirm(restoreMinimizedWindows: false) else { return false }
         }
         guard !action.requiresNonSecureInput || !secureInputEnabled() else {
             AppLogger.shared.write("BUTTON ACTION blocked reason=secure_input action=\(action.rawValue)")

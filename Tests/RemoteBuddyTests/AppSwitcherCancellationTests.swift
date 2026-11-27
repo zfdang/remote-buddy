@@ -1,4 +1,5 @@
 import CoreGraphics
+import Foundation
 import Testing
 @testable import RemoteBuddy
 
@@ -98,5 +99,90 @@ struct AppSwitcherCancellationTests {
         ])
         #expect(!events[0].1)
         #expect(!events[1].1)
+    }
+
+    @Test func hudWatchdogKeepsSessionAliveOnFrontmostChangeAndSkipsEscapeAfterTwoAbsentTicks() {
+        let clock = ControlledTestScheduler()
+        var events: [(CGKeyCode, Bool, CGEventFlags)] = []
+        var logs: [String] = []
+        var frontmost = "com.example.editor"
+        var hudVisible: Bool? = true
+
+        let coordinator = HIDAppSwitcherCoordinator(
+            session: KeyboardInjector.AppSwitcherSession(
+                hardwareFlags: { [] },
+                keyStatePoster: { code, down, flags, _ in
+                    events.append((code, down, flags))
+                    return true
+                },
+                scheduleRelease: clock.voiceSchedule
+            ),
+            scheduler: clock,
+            frontmostBundleIdentifier: { frontmost },
+            switcherHUDVisible: { hudVisible },
+            diagnosticLogger: { logs.append($0) }
+        )
+        let owner = UUID()
+        let poll = HIDRemoteTiming.appSwitcherFrontmostPollMilliseconds
+
+        #expect(coordinator.trigger(for: .home, trigger: .singleClick, owner: owner))
+        events.removeAll()
+
+        // Changing frontmost app while the HUD remains visible must NOT dismiss the switcher.
+        frontmost = "com.apple.Safari"
+        clock.advance(to: poll * 3)
+        #expect(coordinator.isActive)
+        #expect(events.isEmpty)
+
+        // Unreadable AX state (nil) must not advance the dismissal counter.
+        hudVisible = nil
+        clock.advance(to: poll * 6)
+        #expect(coordinator.isActive)
+        #expect(events.isEmpty)
+
+        // A single absent tick is tolerated and resets as soon as the HUD reads visible again.
+        hudVisible = false
+        clock.advance(to: poll * 7)
+        #expect(coordinator.isActive)
+        hudVisible = true
+        clock.advance(to: poll * 8)
+        #expect(coordinator.isActive)
+
+        // Two consecutive absent ticks end the session without sending Escape (53).
+        hudVisible = false
+        clock.advance(to: poll * 9)
+        #expect(coordinator.isActive)
+        clock.advance(to: poll * 10)
+        #expect(!coordinator.isActive)
+        #expect(events.count == 1)
+        #expect(events[0].0 == KeyboardInjector.leftCommandKeyCode)
+        #expect(events[0].1 == false)
+        #expect(logs.contains { $0.contains("ended reason=hud_dismissed confirmed=false") })
+
+        // Explicit Back button dismissal still sends Escape (53) before releasing Command.
+        events.removeAll()
+        hudVisible = true
+        #expect(coordinator.trigger(for: .home, trigger: .singleClick, owner: owner))
+        events.removeAll()
+        #expect(coordinator.handleControlPress(.back, owner: owner))
+        #expect(!coordinator.isActive)
+        #expect(events.map(\.0) == [53, 53, KeyboardInjector.leftCommandKeyCode])
+        #expect(!events[2].1)
+
+        // Direct session cancel(dismissSwitcher: false) releases Command without posting Escape.
+        let directSession = KeyboardInjector.AppSwitcherSession(
+            hardwareFlags: { [] },
+            keyStatePoster: { code, down, flags, _ in
+                events.append((code, down, flags))
+                return true
+            }
+        )
+        #expect(directSession.trigger())
+        events.removeAll()
+        #expect(directSession.cancel(dismissSwitcher: false))
+        #expect(!directSession.isActive)
+        #expect(events.count == 1)
+        #expect(events[0].0 == KeyboardInjector.leftCommandKeyCode)
+        #expect(!events[0].1)
     }
 }

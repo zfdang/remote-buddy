@@ -144,17 +144,22 @@ extension KeyboardInjector {
         }
 
         @discardableResult
-        func cancel() -> Bool {
+        func cancel(dismissSwitcher: Bool = true) -> Bool {
             lock.withLock {
                 flushPendingOptionConfirmationIfNeeded()
                 guard active else { return true }
                 if endBorrowedSessionIfCommandReleased() { return true }
-                // Releasing Command confirms the selection. Escape must dismiss the
-                // native switcher while Command is still held before we release it.
-                let pressed = post(53, isDown: true, flags: .maskCommand, role: "cancel")
-                let released = post(53, isDown: false, flags: .maskCommand, role: "cancel")
+                // Releasing Command confirms the selection. When the native switcher HUD is still
+                // active, Escape must dismiss it while Command is held before releasing Command;
+                // if the HUD was already dismissed externally, skip Escape so we don't forward it.
+                var cancelled = true
+                if dismissSwitcher {
+                    let pressed = post(53, isDown: true, flags: .maskCommand, role: "cancel")
+                    let released = post(53, isDown: false, flags: .maskCommand, role: "cancel")
+                    cancelled = pressed && released
+                }
                 let commandReleased = releaseCommandKey()
-                return pressed && released && commandReleased
+                return cancelled && commandReleased
             }
         }
 

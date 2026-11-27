@@ -516,6 +516,7 @@ struct InputLifecycleRegressionTests {
             session: session,
             scheduler: clock,
             frontmostBundleIdentifier: { "test.editor" },
+            switcherHUDVisible: { true },
             diagnosticLogger: { logs.append($0) }
         )
         let monitorA = HIDRemoteMonitor(
@@ -634,6 +635,7 @@ struct InputLifecycleRegressionTests {
             ),
             scheduler: clock,
             frontmostBundleIdentifier: { "test.editor" },
+            switcherHUDVisible: { true },
             diagnosticLogger: { _ in }
         )
         let monitorA = HIDRemoteMonitor(

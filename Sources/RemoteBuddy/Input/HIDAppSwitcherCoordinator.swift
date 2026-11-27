@@ -7,12 +7,13 @@ final class HIDAppSwitcherCoordinator {
     let session: KeyboardInjector.AppSwitcherSession
     private let scheduler: HIDRemoteScheduling
     private let frontmostBundleIdentifier: () -> String?
+    private let switcherHUDVisible: () -> Bool?
     private let diagnosticLogger: (String) -> Void
     private var timeoutTask: HIDRemoteScheduledTask?
-    private var frontmostMonitorTask: HIDRemoteScheduledTask?
+    private var hudMonitorTask: HIDRemoteScheduledTask?
     private var confirmationProbeTask: HIDRemoteScheduledTask?
-    private var originBundleIdentifier: String?
     private var ownerToken: UUID?
+    private var hudAbsentTicks = 0
 
     var isActive: Bool {
         session.isActive
@@ -28,11 +29,15 @@ final class HIDAppSwitcherCoordinator {
         frontmostBundleIdentifier: @escaping () -> String? = {
             NSWorkspace.shared.frontmostApplication?.bundleIdentifier
         },
+        switcherHUDVisible: @escaping () -> Bool? = {
+            KeyboardInjector.isAppSwitcherHUDVisible()
+        },
         diagnosticLogger: @escaping (String) -> Void = AppLogger.shared.write
     ) {
         self.session = session
         self.scheduler = scheduler
         self.frontmostBundleIdentifier = frontmostBundleIdentifier
+        self.switcherHUDVisible = switcherHUDVisible
         self.diagnosticLogger = diagnosticLogger
     }
 
@@ -42,9 +47,6 @@ final class HIDAppSwitcherCoordinator {
         owner: UUID
     ) -> Bool {
         let wasActive = session.isActive
-        if !wasActive {
-            originBundleIdentifier = frontmostBundleIdentifier()
-        }
         let phase = session.isActive ? "tab" : "start"
         let submitted = session.trigger()
         diagnosticLogger(
@@ -56,11 +58,11 @@ final class HIDAppSwitcherCoordinator {
             startLifecycle()
         } else if submitted {
             ownerToken = owner
+            hudAbsentTicks = 0
             scheduleTimeout()
         } else if wasActive {
             finishLifecycle(reason: "tab_failed", confirmed: false)
         } else {
-            originBundleIdentifier = nil
             ownerToken = nil
         }
         return submitted
@@ -87,6 +89,7 @@ final class HIDAppSwitcherCoordinator {
                 finishLifecycle(reason: "navigate_failed", confirmed: false)
             } else {
                 ownerToken = owner
+                hudAbsentTicks = 0
                 scheduleTimeout()
             }
             return true
@@ -101,13 +104,14 @@ final class HIDAppSwitcherCoordinator {
         }
     }
 
-    func finishLifecycle(reason: String, confirmed: Bool) {
+    func finishLifecycle(reason: String, confirmed: Bool, dismissSwitcher: Bool = true) {
         timeoutTask?.cancel()
         timeoutTask = nil
-        frontmostMonitorTask?.cancel()
-        frontmostMonitorTask = nil
+        hudMonitorTask?.cancel()
+        hudMonitorTask = nil
+        hudAbsentTicks = 0
         if session.isActive {
-            _ = session.cancel()
+            _ = session.cancel(dismissSwitcher: dismissSwitcher)
         }
         diagnosticLogger(
             "HID APP SWITCHER ended reason=\(reason) confirmed=\(confirmed)"
@@ -126,7 +130,6 @@ final class HIDAppSwitcherCoordinator {
                 )
             }
         }
-        originBundleIdentifier = nil
         ownerToken = nil
     }
 
@@ -162,29 +165,40 @@ final class HIDAppSwitcherCoordinator {
     private func resetState() {
         timeoutTask?.cancel()
         timeoutTask = nil
-        frontmostMonitorTask?.cancel()
-        frontmostMonitorTask = nil
+        hudMonitorTask?.cancel()
+        hudMonitorTask = nil
         confirmationProbeTask?.cancel()
         confirmationProbeTask = nil
-        originBundleIdentifier = nil
         ownerToken = nil
+        hudAbsentTicks = 0
     }
 
     private func startLifecycle() {
         scheduleTimeout()
         confirmationProbeTask?.cancel()
         confirmationProbeTask = nil
-        frontmostMonitorTask?.cancel()
-        frontmostMonitorTask = scheduler.schedule(
+        hudAbsentTicks = 0
+        hudMonitorTask?.cancel()
+        hudMonitorTask = scheduler.schedule(
             afterMilliseconds: HIDRemoteTiming.appSwitcherFrontmostPollMilliseconds,
             repeatingEveryMilliseconds: HIDRemoteTiming.appSwitcherFrontmostPollMilliseconds
         ) { [weak self] in
             guard let self, self.session.isActive else { return }
-            guard let origin = self.originBundleIdentifier,
-                  let current = self.frontmostBundleIdentifier(),
-                  current != origin
-            else { return }
-            self.finishLifecycle(reason: "frontmost_changed", confirmed: false)
+            switch self.switcherHUDVisible() {
+            case true?:
+                self.hudAbsentTicks = 0
+            case nil:
+                // An unreadable AX state must not be mistaken for dismissal.
+                return
+            case false?:
+                self.hudAbsentTicks += 1
+                guard self.hudAbsentTicks >= 2 else { return }
+                self.finishLifecycle(
+                    reason: "hud_dismissed",
+                    confirmed: false,
+                    dismissSwitcher: false
+                )
+            }
         }
     }
 

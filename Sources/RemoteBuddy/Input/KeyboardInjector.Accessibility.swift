@@ -775,4 +775,24 @@ extension KeyboardInjector {
         }
         return nil
     }
+
+    /// Returns whether the macOS App Switcher HUD (`AXProcessSwitcherList` inside Dock)
+    /// is currently visible (`true`), definitively absent (`false`), or unreadable (`nil`,
+    /// e.g. missing Accessibility permission or AX lookup failure).
+    static func isAppSwitcherHUDVisible() -> Bool? {
+        guard isAccessibilityTrusted,
+              let dock = NSRunningApplication.runningApplications(
+                  withBundleIdentifier: "com.apple.dock"
+              ).first,
+              !AXSelfTargetPolicy.isOwnProcess(dock.processIdentifier)
+        else { return nil }
+        let dockElement = AXUIElementCreateApplication(dock.processIdentifier)
+        guard let children = axAttribute(
+            dockElement,
+            attribute: kAXChildrenAttribute
+        ) as? [AXUIElement] else { return nil }
+        return children.contains {
+            axString($0, attribute: kAXSubroleAttribute) == "AXProcessSwitcherList"
+        }
+    }
 }

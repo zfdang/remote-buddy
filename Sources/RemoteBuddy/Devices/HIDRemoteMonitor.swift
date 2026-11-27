@@ -321,6 +321,7 @@ final class HIDRemoteMonitor {
         appSwitcherKeyStatePoster: KeyboardInjector.KeyStatePoster? = nil,
         appSwitcherHardwareFlags: @escaping () -> CGEventFlags = KeyboardHardwareModifierPolicy.currentForAppSwitcher,
         appSwitcherOwnedKeyStatePoster: KeyboardInjector.AppSwitcherSession.OwnedKeyStatePoster? = nil,
+        appSwitcherHUDVisible: @escaping () -> Bool? = { KeyboardInjector.isAppSwitcherHUDVisible() },
         appSwitcherCoordinator: HIDAppSwitcherCoordinator? = nil
     ) {
         self.settings = settings
@@ -373,6 +374,7 @@ final class HIDRemoteMonitor {
                 session: session,
                 scheduler: scheduler,
                 frontmostBundleIdentifier: frontmostBundleIdentifier,
+                switcherHUDVisible: appSwitcherHUDVisible,
                 diagnosticLogger: diagnosticLogger
             )
         }

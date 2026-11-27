@@ -19,6 +19,7 @@ extension BluetoothRemoteBridge {
 
     /// Called only for activity routed to this saved remote's HID profile.
     func recoverAfterRemoteActivity(reason: String) {
+        wakeRecoveryLatch.clearFailureLatch()
         guard canRecoverRemoteWake, central?.state == .poweredOn else { return }
         AppLogger.shared.write("BLE WAKE RECOVERY trigger=\(reason) phase=\(lifecycle) result=retry_now")
         remoteWakeStartedAt = ProcessInfo.processInfo.systemUptime
@@ -43,6 +44,7 @@ extension BluetoothRemoteBridge {
             return
         }
         AppLogger.shared.write("BLE WAKE RECOVERY trigger=\(reason) phase=\(lifecycle) result=system_connected")
+        wakeRecoveryLatch.clearFailureLatch()
         remoteWakeStartedAt = ProcessInfo.processInfo.systemUptime
         reconnectPolicy.reset()
         startFreshConnectionCycle()
@@ -194,6 +196,7 @@ extension BluetoothRemoteBridge {
         )
         switch decision {
         case .adoptSavedIdentity, .adoptRecognizedName:
+            wakeRecoveryLatch.clearFailureLatch()
             let cachedProfile = settings.remoteDeviceProfiles.first {
                 $0.bluetoothIdentifier == candidate.identifier
             }
@@ -404,6 +407,9 @@ extension BluetoothRemoteBridge {
         bypassCachedTarget: Bool,
         failedCachedTargetAttempt: Bool
     ) -> TimeInterval {
+        if wakeRecoveryLatch.noteAttemptFailedIfWakeInFlight() {
+            AppLogger.shared.write("BLE WAKE RECOVERY latched reason=reconnect_failure")
+        }
         let delay = reconnectPolicy.nextAutomaticDelay(
             bypassCachedTarget: bypassCachedTarget,
             failedCachedTargetAttempt: failedCachedTargetAttempt,

@@ -168,6 +168,63 @@ struct BluetoothLifecycleTests {
         ))
     }
 
+    @Test func wakeRecoveryFailureLatchesAcrossRepeatedSleepCyclesUntilManualOrActivityRecovery() {
+        var latch = BluetoothWakeRecoveryPolicy.WakeRecoveryLatch()
+        #expect(latch.shouldAllowRecovery(reason: "system_wake"))
+
+        latch.noteRecoveryStarted(reason: "system_wake")
+        let didLatch = latch.noteAttemptFailedIfWakeInFlight()
+        #expect(didLatch)
+        #expect(latch.wakeRecoveryFailed)
+        #expect(!latch.shouldAllowRecovery(reason: "system_wake"))
+        #expect(latch.shouldAllowRecovery(reason: "manual"))
+
+        latch.clearFailureLatch()
+        #expect(!latch.wakeRecoveryFailed)
+        #expect(latch.shouldAllowRecovery(reason: "system_wake"))
+    }
+
+    @Test @MainActor func bridgeSkipsRepeatedSystemWakeHandshakesAfterFailedWakeRecovery() throws {
+        let suite = UUID().uuidString
+        let values = try #require(UserDefaults(suiteName: suite))
+        defer { values.removePersistentDomain(forName: suite) }
+
+        final class DummyDelegate: BluetoothRemoteBridgeDelegate {
+            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didChange state: BluetoothBridgeState) {}
+            func bluetoothBridgeDidStartVoice(_ bridge: BluetoothRemoteBridge) {}
+            func bluetoothBridgeDidStopVoice(_ bridge: BluetoothRemoteBridge) {}
+            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didDecode samples: [Int16]) {}
+            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didUpdateBatteryLevel level: Int?) {}
+            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didIdentifyRemoteModel model: RemoteModel) {}
+            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didUpdatePowerState state: RemotePowerState?) {}
+            func bluetoothBridgeDeviceNameDidChange(_ bridge: BluetoothRemoteBridge) {}
+        }
+
+        let delegate = DummyDelegate()
+        var reconnectSchedules = 0
+        let bridge = BluetoothRemoteBridge(
+            settings: AppSettings(defaults: values),
+            delegate: delegate,
+            targetIdentifier: UUID(),
+            scheduleReconnect: { _, _ in reconnectSchedules += 1 }
+        )
+        bridge.shouldRun = true
+
+        bridge.recoverVoiceLink(reason: "system_wake")
+        #expect(reconnectSchedules == 1)
+        #expect(bridge.wakeRecoveryLatch.wakeRecoveryInFlight)
+
+        _ = bridge.nextAutomaticReconnectDelay(bypassCachedTarget: true, failedCachedTargetAttempt: false)
+        #expect(bridge.wakeRecoveryLatch.wakeRecoveryFailed)
+
+        bridge.recoverVoiceLink(reason: "system_wake")
+        #expect(reconnectSchedules == 1)
+
+        bridge.reconnectNow()
+        #expect(!bridge.wakeRecoveryLatch.wakeRecoveryFailed)
+        #expect(reconnectSchedules == 2)
+    }
+
     @Test func everyBridgeFirstReadyReappliesHIDMappingsButDuplicateReadyDoesNot() {
         #expect(BridgeAppModel.shouldReapplyHIDSettings(
             previousState: nil,

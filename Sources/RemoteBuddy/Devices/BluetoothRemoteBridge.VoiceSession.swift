@@ -462,6 +462,7 @@ extension BluetoothRemoteBridge {
         initializationTimeoutWorkItem?.cancel()
         initializationTimeoutWorkItem = nil
         reconnectPolicy.reset()
+        wakeRecoveryLatch.clearFailureLatch()
         currentAttemptUsesCachedTarget = false
         lifecycle = .ready(generation)
         finishRemoteWakeRecovery(result: "ready")

@@ -361,6 +361,39 @@ enum BluetoothCentralRecoveryEvent {
 }
 
 enum BluetoothWakeRecoveryPolicy {
+    /// Tracks single-shot system-wake recovery attempts and latches failures so
+    /// repeated sleep/wake cycles do not keep initiating BLE handshakes while a
+    /// peripheral remains unreachable.
+    struct WakeRecoveryLatch: Equatable {
+        private(set) var wakeRecoveryInFlight = false
+        private(set) var wakeRecoveryFailed = false
+
+        func shouldAllowRecovery(reason: String) -> Bool {
+            guard reason == "system_wake" else { return true }
+            return !wakeRecoveryFailed
+        }
+
+        mutating func noteRecoveryStarted(reason: String) {
+            if reason == "system_wake" {
+                wakeRecoveryInFlight = true
+            } else {
+                clearFailureLatch()
+            }
+        }
+
+        mutating func noteAttemptFailedIfWakeInFlight() -> Bool {
+            guard wakeRecoveryInFlight else { return false }
+            wakeRecoveryInFlight = false
+            wakeRecoveryFailed = true
+            return true
+        }
+
+        mutating func clearFailureLatch() {
+            wakeRecoveryInFlight = false
+            wakeRecoveryFailed = false
+        }
+    }
+
     /// Returns whether wake handling should force a fresh Bluetooth voice-link recovery cycle.
     static func shouldForceReconnect(
         event: SystemAudioLifecycleEvent,

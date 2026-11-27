@@ -54,6 +54,7 @@ extension KeyboardInjector {
         bundleIdentifier: String,
         attempt: Int
     ) -> Bool {
+        guard !AXSelfTargetPolicy.isOwnProcess(processIdentifier) else { return false }
         AccessibilityMessaging.prepareQueries()
         let applicationElement = AXUIElementCreateApplication(processIdentifier)
         let primary = AXUIElementSetAttributeValue(
@@ -105,6 +106,7 @@ extension KeyboardInjector {
         processIdentifier: pid_t,
         emitDiagnostics: Bool = false
     ) -> Bool {
+        guard !AXSelfTargetPolicy.isOwnProcess(processIdentifier) else { return false }
         let applicationElement = AXUIElementCreateApplication(processIdentifier)
         var windowCount = 0
         var candidateCount = 0
@@ -234,6 +236,7 @@ extension KeyboardInjector {
                                                 clickAttempted: inout Bool,
                                                 resynced: inout Bool,
                                                 canContinue: @escaping () -> Bool) -> ApplicationFocusResult {
+        guard !AXSelfTargetPolicy.isOwnProcess(processIdentifier) else { return .unavailable }
         let app = AXUIElementCreateApplication(processIdentifier)
         // Reading the application's standard role is the public AT handshake.
         // Electron's accessibilityRole getter enables native AX APIs on demand;
@@ -652,6 +655,7 @@ extension KeyboardInjector {
 
     private static func accessibilityHitTestMatchesTarget(_ target: AXUIElement,
                                                           processIdentifier: pid_t, point: CGPoint) -> Bool {
+        guard !AXSelfTargetPolicy.isOwnProcess(processIdentifier) else { return false }
         var hit: AXUIElement?
         guard AXUIElementCopyElementAtPosition(AXUIElementCreateSystemWide(), Float(point.x), Float(point.y), &hit) == .success,
               let hit else { return false }

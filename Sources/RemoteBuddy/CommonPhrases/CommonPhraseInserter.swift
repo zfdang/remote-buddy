@@ -159,7 +159,7 @@ final class CommonPhraseInserter: @unchecked Sendable {
 
     private static func canSubmit(to processID: pid_t) -> Bool {
         KeyboardInjector.isAccessibilityTrusted && !SecureInputMonitor.isEnabled() &&
-            processID != ProcessInfo.processInfo.processIdentifier &&
+            !AXSelfTargetPolicy.isOwnProcess(processID) &&
             NSWorkspace.shared.frontmostApplication?.processIdentifier == processID
     }
 

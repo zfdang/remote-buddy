@@ -93,10 +93,12 @@ struct ApplicationButtonProfileTests {
             bundleID: claude, button: .back, trigger: .singleClick
         )
 
-        // Even while G9N9N is selected, resolving presses for each remote uses its own app overrides.
+        // Even while G9N9N is selected, resolving presses for each remote uses its own app overrides,
+        // and an unregistered remote profileID never borrows G9N9N's overrides.
         front = claude
         #expect(settings.configuredAction(for: .back, trigger: .singleClick, profileID: g9n9nID).action == .commandCopy)
         #expect(settings.configuredAction(for: .back, trigger: .singleClick, profileID: xiaomiID).action == .commandUndo)
+        #expect(settings.applicationButtonProfiles(for: UUID()).isEmpty)
 
         // Editing a non-selected remote's base binding preserves its per-app overrides.
         settings.setBaseBinding(
@@ -238,11 +240,19 @@ struct ApplicationButtonProfileTests {
         front = notes
         #expect(settings.allowsHoldRepeat(for: .volumeDown, profileID: remoteID))
 
-        // Case 2: overriding directional singleClick to .directPassthrough suppresses secondary triggers.
+        // Case 2: overriding directional singleClick to .directPassthrough suppresses secondary triggers
+        // identically in runtime dispatch, UI display (`applicationScopedAction`), and highlight state.
         settings.setBaseBinding(
             ConfiguredButtonAction(action: .escape, shortcut: nil),
             for: .up, trigger: .doubleClick, profileID: remoteID
         )
+        settings.setApplicationScopedAction(
+            ConfiguredButtonAction(action: .commandCopy, shortcut: nil),
+            bundleID: claude, button: .up, trigger: .doubleClick
+        )
+        #expect(settings.applicationScopedAction(bundleID: claude, button: .up, trigger: .doubleClick).action == .commandCopy)
+        #expect(settings.isApplicationOverride(bundleID: claude, button: .up, trigger: .doubleClick))
+
         settings.setApplicationScopedAction(
             ConfiguredButtonAction(action: .directPassthrough, shortcut: nil),
             bundleID: claude, button: .up, trigger: .singleClick
@@ -250,6 +260,9 @@ struct ApplicationButtonProfileTests {
         front = claude
         #expect(settings.configuredAction(for: .up, trigger: .singleClick, profileID: remoteID).action == .directPassthrough)
         #expect(settings.configuredAction(for: .up, trigger: .doubleClick, profileID: remoteID).action == .disabled)
+        #expect(settings.applicationScopedAction(bundleID: claude, button: .up, trigger: .singleClick).action == .directPassthrough)
+        #expect(settings.applicationScopedAction(bundleID: claude, button: .up, trigger: .doubleClick).action == .disabled)
+        #expect(!settings.isApplicationOverride(bundleID: claude, button: .up, trigger: .doubleClick))
         front = notes
         #expect(settings.configuredAction(for: .up, trigger: .doubleClick, profileID: remoteID).action == .escape)
     }
@@ -331,7 +344,7 @@ struct ApplicationButtonProfileTests {
         #expect(identity?.name.hasSuffix(".app") == false)
     }
 
-    @Test func deferredClickAndLongPressKeepApplicationScopeCapturedOnButtonDown() throws {
+    @Test func deferredAndRepeatingAppOverridesCancelWhenFocusMovesToAnotherApp() throws {
         let (settings, defaults, suite) = try makeSettings()
         defer { defaults.removePersistentDomain(forName: suite) }
 
@@ -344,17 +357,22 @@ struct ApplicationButtonProfileTests {
             for: .ok, trigger: .doubleClick, profileID: profileID
         )
 
+        let closeTab = CustomKeyboardShortcut(keyCode: 13, modifierFlags: .command, keyLabel: "W")
         var front: String? = claude
         settings.frontmostApplicationBundleIdentifier = { front }
 
         settings.addApplicationButtonProfile(bundleID: claude, name: "Claude")
         settings.setApplicationScopedAction(
-            ConfiguredButtonAction(action: .customShortcut, shortcut: nextSession),
+            ConfiguredButtonAction(action: .customShortcut, shortcut: closeTab),
             bundleID: claude, button: .ok, trigger: .singleClick
         )
         settings.setApplicationScopedAction(
             ConfiguredButtonAction(action: .escape, shortcut: nil),
             bundleID: claude, button: .ok, trigger: .longPress
+        )
+        settings.setApplicationScopedAction(
+            ConfiguredButtonAction(action: .customShortcut, shortcut: nextSession),
+            bundleID: claude, button: .volumeDown, trigger: .singleClick
         )
 
         settings.addApplicationButtonProfile(bundleID: codex, name: "Codex")
@@ -366,6 +384,8 @@ struct ApplicationButtonProfileTests {
             ConfiguredButtonAction(action: .commandCopy, shortcut: nil),
             bundleID: codex, button: .ok, trigger: .longPress
         )
+
+        #expect(settings.allowsHoldRepeat(for: .volumeDown, profileID: profileID))
 
         let clock = ControlledTestScheduler()
         var performed: [ConfiguredButtonAction] = []
@@ -383,39 +403,62 @@ struct ApplicationButtonProfileTests {
         monitor.connectSimulatedDevice(fingerprint: "google", profileID: profileID)
         defer { monitor.disconnectSimulatedDevice() }
 
-        func sendOK(pressed: Bool) {
+        func sendButton(_ index: UInt8?) {
             monitor.handleSimulatedGoogleReport(
                 reportID: 1,
-                data: Data([1, pressed ? 7 : 0, 0]),
+                data: Data([1, index ?? 0, 0]),
                 descriptor: G9N9NProtocol.indexedConsumerDescriptor
             )
         }
 
-        // P1: press and release OK in Claude, switch focus to Codex before double-click timeout expires.
+        // 1) Deferred single-click: tap OK in Claude, switch focus to Codex before timeout -> cancelled (not sent to Codex).
         front = claude
-        sendOK(pressed: true)
-        sendOK(pressed: false)
+        sendButton(7)
+        sendButton(nil)
         #expect(performed.isEmpty)
         front = codex
         clock.advance(to: clock.now + HIDRemoteTiming.doubleClickMilliseconds)
+        #expect(performed.isEmpty)
+
+        // 2) Long-press: hold OK in Claude, switch focus to Codex before timeout -> cancelled (not sent to Codex).
+        front = claude
+        sendButton(7)
+        front = codex
+        clock.advance(to: clock.now + HIDRemoteTiming.longPressMilliseconds)
+        sendButton(nil)
+        #expect(performed.isEmpty)
+
+        // 3) Hold-repeat: hold Volume Down in Claude (fires initial press), switch focus to Codex -> repeats cancelled.
+        front = claude
+        sendButton(13)
         #expect(performed.count == 1)
         #expect(performed[0].shortcut == nextSession)
+        front = codex
+        clock.advance(to: clock.now + HIDRemoteTiming.repeatStartMilliseconds + 500)
+        sendButton(nil)
+        #expect(performed.count == 1)
 
-        // Subsequent tap in Codex resolves cleanly using Codex's scope (no stale capture from Claude).
-        sendOK(pressed: true)
-        sendOK(pressed: false)
+        // 4) Staying in the captured app continues to deliver deferred clicks and repeats normally.
+        front = codex
+        sendButton(7)
+        sendButton(nil)
         clock.advance(to: clock.now + HIDRemoteTiming.doubleClickMilliseconds)
         #expect(performed.count == 2)
         #expect(performed[1].shortcut == nextChat)
 
-        // Hold OK in Claude, switch focus to Codex before long-press timeout expires.
         front = claude
-        sendOK(pressed: true)
-        front = codex
-        clock.advance(to: clock.now + HIDRemoteTiming.longPressMilliseconds)
-        sendOK(pressed: false)
+        sendButton(7)
+        sendButton(nil)
+        clock.advance(to: clock.now + HIDRemoteTiming.doubleClickMilliseconds)
         #expect(performed.count == 3)
-        #expect(performed[2].action == .escape)
+        #expect(performed[2].shortcut == closeTab)
+
+        sendButton(13)
+        #expect(performed.count == 4)
+        clock.advance(to: clock.now + HIDRemoteTiming.repeatStartMilliseconds)
+        sendButton(nil)
+        #expect(performed.count >= 5)
+        #expect(performed[4].shortcut == nextSession)
     }
 
     @Test func appScopedHoldRepeatMatchesRuntimeAndAllowsExplicitRepeatAfterOpenURL() throws {
@@ -424,7 +467,7 @@ struct ApplicationButtonProfileTests {
 
         let remoteID = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         settings.selectRemoteProfile(remoteID)
-        var front: String? = claude
+        let front = claude
         settings.frontmostApplicationBundleIdentifier = { front }
 
         settings.addApplicationButtonProfile(bundleID: claude, name: "Claude")
@@ -494,5 +537,17 @@ struct ApplicationButtonProfileTests {
             for: .ok, trigger: .singleClick, profileID: remoteID
         )
         #expect(settings.configuredAction(for: .ok, trigger: .singleClick, profileID: remoteID).action == .space)
+
+        // Setting an app override and then changing the remote's base to match clears the override highlight.
+        settings.setApplicationScopedAction(
+            ConfiguredButtonAction(action: .commandCopy, shortcut: nil),
+            bundleID: claude, button: .ok, trigger: .singleClick
+        )
+        #expect(settings.isApplicationOverride(bundleID: claude, button: .ok, trigger: .singleClick))
+        settings.setBaseBinding(
+            ConfiguredButtonAction(action: .commandCopy, shortcut: nil),
+            for: .ok, trigger: .singleClick, profileID: remoteID
+        )
+        #expect(!settings.isApplicationOverride(bundleID: claude, button: .ok, trigger: .singleClick))
     }
 }

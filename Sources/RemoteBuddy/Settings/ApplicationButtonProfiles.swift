@@ -107,12 +107,13 @@ enum ApplicationButtonProfiles {
 extension AppSettings {
     /// Per-application overrides owned by `profileID` (or the selected remote when `nil` / matching).
     func applicationButtonProfiles(for profileID: UUID?) -> [String: ApplicationButtonProfile] {
-        if let profileID,
-           profileID != selectedRemoteProfileID,
-           let profile = remoteDeviceProfiles.first(where: { $0.id == profileID }) {
-            return profile.mappings.parsedApplicationButtonProfiles
+        guard let profileID else { return applicationButtonProfiles }
+        if profileID == selectedRemoteProfileID {
+            return applicationButtonProfiles
         }
-        return applicationButtonProfiles
+        return remoteDeviceProfiles
+            .first(where: { $0.id == profileID })?
+            .mappings.parsedApplicationButtonProfiles ?? [:]
     }
 
     /// Returns the frontmost or captured application's override for `button` and `trigger` on `profileID`, if any.
@@ -155,12 +156,14 @@ extension AppSettings {
     }
 
     /// Action displayed/edited for `bundleID` on the selected remote's mapping page.
+    /// Uses `configuredAction` so display stays identical to runtime resolution
+    /// (including suppressing secondary triggers when `.singleClick` is `.directPassthrough`).
     func applicationScopedAction(
         bundleID: String,
         button: RemoteButton,
         trigger: ButtonTrigger
     ) -> ConfiguredButtonAction {
-        configuredBaseAction(
+        configuredAction(
             for: button,
             trigger: trigger,
             profileID: selectedRemoteProfileID,
@@ -217,7 +220,15 @@ extension AppSettings {
         button: RemoteButton,
         trigger: ButtonTrigger
     ) -> Bool {
-        applicationButtonProfiles[bundleID]?.action(for: button, trigger: trigger) != nil
+        if trigger != .singleClick,
+           applicationScopedAction(bundleID: bundleID, button: button, trigger: .singleClick).action == .directPassthrough {
+            return false
+        }
+        guard let override = applicationButtonProfiles[bundleID]?.action(for: button, trigger: trigger) else {
+            return false
+        }
+        let inherited = applicationInheritedAction(bundleID: bundleID, button: button, trigger: trigger)
+        return override.normalizedForAction() != inherited.normalizedForAction()
     }
 
     func addApplicationButtonProfile(bundleID: String, name: String) {

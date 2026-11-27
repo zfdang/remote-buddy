@@ -158,6 +158,24 @@ extension HIDRemoteMonitor {
                 self.cancelRepeat(for: usage)
                 return
             }
+            guard self.isCapturedApplicationStillFrontmost(
+                      for: button,
+                      trigger: .singleClick,
+                      applicationScope: applicationScope
+                  ),
+                  self.isCapturedApplicationStillFrontmost(
+                      for: button,
+                      trigger: .longPress,
+                      applicationScope: applicationScope
+                  )
+            else {
+                self.cancelRepeat(for: usage)
+                self.diagnosticLogger(
+                    "HID ACTION cancelled reason=frontmost_application_changed " +
+                        "button=\(button.rawValue) trigger=repeat"
+                )
+                return
+            }
             let configured = self.settings.configuredAction(
                 for: button,
                 trigger: .singleClick,
@@ -282,6 +300,22 @@ extension HIDRemoteMonitor {
         longPressTimers[button] = timer
     }
 
+    func isCapturedApplicationStillFrontmost(
+        for button: RemoteButton,
+        trigger: ButtonTrigger,
+        applicationScope: ApplicationOverrideScope
+    ) -> Bool {
+        guard case let .fixed(capturedBundleID) = applicationScope,
+              settings.applicationButtonOverride(
+                  for: button,
+                  trigger: trigger,
+                  profileID: profileID,
+                  applicationScope: applicationScope
+              ) != nil
+        else { return true }
+        return settings.frontmostApplicationBundleIdentifier() == capturedBundleID
+    }
+
     func performConfiguredAction(
         for button: RemoteButton,
         trigger: ButtonTrigger,
@@ -302,6 +336,19 @@ extension HIDRemoteMonitor {
             profileID: profileID,
             applicationScope: resolvedScope
         )
+        guard isCapturedApplicationStillFrontmost(
+            for: button,
+            trigger: trigger,
+            applicationScope: resolvedScope
+        ) else {
+            cancelRepeat(for: button.hidUsage)
+            diagnosticLogger(
+                "HID ACTION cancelled reason=frontmost_application_changed " +
+                    "button=\(button.rawValue) trigger=\(trigger.rawValue) " +
+                    "action=\(configured.action.rawValue)"
+            )
+            return false
+        }
         if appSwitcherCoordinator.isActive, button == .tv {
             return performAppSwitcherAction(for: button, trigger: trigger)
         }

@@ -66,25 +66,52 @@ enum RemoteDeviceNamePolicy {
         let peers = profiles.filter { $0.model == profile.model }
         guard peers.count > 1 else { return baseModelName }
 
-        let shortID = shortIdentifier(for: profile, length: 4)
-        let collidingPeers = peers.filter { shortIdentifier(for: $0, length: 4) == shortID }
-        let resolvedShortID: String
-        if collidingPeers.count > 1 {
-            let extended = shortIdentifier(for: profile, length: 6)
-            let extendedCollisions = collidingPeers.filter {
-                shortIdentifier(for: $0, length: 6) == extended
-            }
-            if extendedCollisions.count == 1 {
-                resolvedShortID = extended
-            } else if let index = collidingPeers.firstIndex(where: { $0.id == profile.id }) {
-                resolvedShortID = "\(shortID)-\(index + 1)"
-            } else {
-                resolvedShortID = shortID
-            }
-        } else {
-            resolvedShortID = shortID
-        }
+        let resolved = resolvedShortIdentifiers(for: peers)
+        let resolvedShortID = resolved[profile.id] ?? shortIdentifier(for: profile, length: 4)
         return "\(baseModelName) #\(resolvedShortID)"
+    }
+
+    private static func resolvedShortIdentifiers(for peers: [RemoteDeviceProfile]) -> [UUID: String] {
+        var baseIDs: [UUID: String] = [:]
+        var baseGroups: [String: [RemoteDeviceProfile]] = [:]
+        for peer in peers {
+            let shortID = shortIdentifier(for: peer, length: 4)
+            baseIDs[peer.id] = shortID
+            baseGroups[shortID, default: []].append(peer)
+        }
+
+        var proposed: [UUID: String] = [:]
+        for peer in peers {
+            guard let baseID = baseIDs[peer.id], let group = baseGroups[baseID] else { continue }
+            if group.count == 1 {
+                proposed[peer.id] = baseID
+            } else if group.allSatisfy({ normalizedShortIdentifier($0.hardwareShortID) == nil }) {
+                proposed[peer.id] = shortIdentifier(for: peer, length: 6)
+            }
+        }
+
+        var candidateCounts: [String: Int] = [:]
+        for value in proposed.values {
+            candidateCounts[value, default: 0] += 1
+        }
+
+        var resolved: [UUID: String] = [:]
+        for peer in peers {
+            guard let baseID = baseIDs[peer.id], let group = baseGroups[baseID] else { continue }
+            if group.count == 1 {
+                resolved[peer.id] = baseID
+            } else if group.allSatisfy({
+                normalizedShortIdentifier($0.hardwareShortID) == nil &&
+                    proposed[$0.id].map({ candidateCounts[$0] == 1 }) == true
+            }), let uniqueExtended = proposed[peer.id] {
+                resolved[peer.id] = uniqueExtended
+            } else if let index = group.firstIndex(where: { $0.id == peer.id }) {
+                resolved[peer.id] = "\(baseID)-\(index + 1)"
+            } else {
+                resolved[peer.id] = baseID
+            }
+        }
+        return resolved
     }
 
     private static func isHexCharacter(_ character: Character) -> Bool {

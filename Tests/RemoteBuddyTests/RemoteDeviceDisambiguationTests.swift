@@ -143,6 +143,96 @@ struct RemoteDeviceDisambiguationTests {
                 for: sameB, among: [sameA, sameB], baseModelName: "T1"
             )
         )
+
+        // Two groups with colliding 4-char hardwareShortIDs sharing a 6-char fallback prefix
+        // must retain their MAC suffixes and remain unique across all same-model profiles.
+        let macA1 = RemoteDeviceProfile(
+            id: UUID(uuidString: "10000000-0000-0000-0000-000000000001")!,
+            model: .chromecastVoiceRemote,
+            hardwareShortID: "AABB",
+            bluetoothIdentifier: UUID(uuidString: "12345600-0000-0000-0000-000000000001")!,
+            hidFingerprint: "123456aaaaaa",
+            mappings: Self.emptyMappings
+        )
+        let macA2 = RemoteDeviceProfile(
+            id: UUID(uuidString: "10000000-0000-0000-0000-000000000002")!,
+            model: .chromecastVoiceRemote,
+            hardwareShortID: "AABB",
+            bluetoothIdentifier: UUID(uuidString: "AAAAAA00-0000-0000-0000-000000000002")!,
+            mappings: Self.emptyMappings
+        )
+        let macC1 = RemoteDeviceProfile(
+            id: UUID(uuidString: "20000000-0000-0000-0000-000000000001")!,
+            model: .chromecastVoiceRemote,
+            hardwareShortID: "CCDD",
+            bluetoothIdentifier: UUID(uuidString: "12345600-0000-0000-0000-000000000003")!,
+            hidFingerprint: "123456cccccc",
+            mappings: Self.emptyMappings
+        )
+        let macC2 = RemoteDeviceProfile(
+            id: UUID(uuidString: "20000000-0000-0000-0000-000000000002")!,
+            model: .chromecastVoiceRemote,
+            hardwareShortID: "CCDD",
+            bluetoothIdentifier: UUID(uuidString: "CCCCCC00-0000-0000-0000-000000000004")!,
+            mappings: Self.emptyMappings
+        )
+        let crossHardwareGroup = [macA1, macA2, macC1, macC2]
+        let hardwareLabels = crossHardwareGroup.map {
+            RemoteDeviceNamePolicy.disambiguatedModelName(
+                for: $0, among: crossHardwareGroup, baseModelName: "G9N9N"
+            )
+        }
+        #expect(hardwareLabels == [
+            "G9N9N #AABB-1",
+            "G9N9N #AABB-2",
+            "G9N9N #CCDD-1",
+            "G9N9N #CCDD-2",
+        ])
+        #expect(Set(hardwareLabels).count == 4)
+
+        // Two non-hardware colliding groups whose 6-char fallbacks collide across groups
+        // must also stay unique across all same-model profiles.
+        let fallbackA1 = RemoteDeviceProfile(
+            id: UUID(uuidString: "30000000-0000-0000-0000-000000000001")!,
+            model: .rc001,
+            bluetoothIdentifier: UUID(uuidString: "12345600-0000-0000-0000-000000000001")!,
+            hidFingerprint: "A1B2",
+            mappings: Self.emptyMappings
+        )
+        let fallbackA2 = RemoteDeviceProfile(
+            id: UUID(uuidString: "30000000-0000-0000-0000-000000000002")!,
+            model: .rc001,
+            bluetoothIdentifier: UUID(uuidString: "AAAAAA00-0000-0000-0000-000000000002")!,
+            hidFingerprint: "A1B2",
+            mappings: Self.emptyMappings
+        )
+        let fallbackC1 = RemoteDeviceProfile(
+            id: UUID(uuidString: "40000000-0000-0000-0000-000000000001")!,
+            model: .rc001,
+            bluetoothIdentifier: UUID(uuidString: "12345600-0000-0000-0000-000000000003")!,
+            hidFingerprint: "C3D4",
+            mappings: Self.emptyMappings
+        )
+        let fallbackC2 = RemoteDeviceProfile(
+            id: UUID(uuidString: "40000000-0000-0000-0000-000000000002")!,
+            model: .rc001,
+            bluetoothIdentifier: UUID(uuidString: "CCCCCC00-0000-0000-0000-000000000004")!,
+            hidFingerprint: "C3D4",
+            mappings: Self.emptyMappings
+        )
+        let crossFallbackGroup = [fallbackA1, fallbackA2, fallbackC1, fallbackC2]
+        let fallbackLabels = crossFallbackGroup.map {
+            RemoteDeviceNamePolicy.disambiguatedModelName(
+                for: $0, among: crossFallbackGroup, baseModelName: "Xiaomi"
+            )
+        }
+        #expect(fallbackLabels == [
+            "Xiaomi #A1B2-1",
+            "Xiaomi #A1B2-2",
+            "Xiaomi #C3D4-1",
+            "Xiaomi #C3D4-2",
+        ])
+        #expect(Set(fallbackLabels).count == 4)
     }
 
     @Test func readsShortIDsFromBluetoothAddressesAndIgnoresAmbiguousFingerprints() {

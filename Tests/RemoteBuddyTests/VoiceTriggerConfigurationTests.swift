@@ -603,6 +603,41 @@ struct VoiceTriggerConfigurationTests {
             })
         }
     }
+
+    @Test func voiceTriggerPickerHighlightsMatchingInstructionInBothLanguages() throws {
+        let zhSettings = AppSettings(defaults: EphemeralUserDefaults())
+        zhSettings.applicationLanguage = .simplifiedChinese
+        let zhStore = LocalizationStore(settings: zhSettings)
+        let enSettings = AppSettings(defaults: EphemeralUserDefaults())
+        enSettings.applicationLanguage = .english
+        let enStore = LocalizationStore(settings: enSettings)
+
+        for store in [zhStore, enStore] {
+            let chordText = VoiceTriggerPicker.helpText(for: .suggestedShortcut, localization: store)
+            let chordHighlight = store.text("connection.voice_key.chord_help.highlight")
+            let chordStyledRuns = chordText.runs.filter {
+                $0.attributes[AttributeScopes.SwiftUIAttributes.ForegroundColorAttribute.self] == .red
+            }
+            #expect(chordStyledRuns.count == 1)
+            #expect(String(chordText[chordStyledRuns[0].range].characters) == chordHighlight)
+            #expect(chordStyledRuns[0].attributes[AttributeScopes.SwiftUIAttributes.FontAttribute.self] == .caption.bold())
+
+            let optionText = VoiceTriggerPicker.helpText(for: .rightOption, localization: store)
+            let optionHighlight = store.text("connection.voice_key_mode.help.highlight")
+            let optionStyledRuns = optionText.runs.filter {
+                $0.attributes[AttributeScopes.SwiftUIAttributes.ForegroundColorAttribute.self] == .red
+            }
+            #expect(optionStyledRuns.count == 1)
+            #expect(String(optionText[optionStyledRuns[0].range].characters) == optionHighlight)
+            #expect(optionStyledRuns[0].attributes[AttributeScopes.SwiftUIAttributes.FontAttribute.self] == .caption.bold())
+
+            let fnText = VoiceTriggerPicker.helpText(for: .function, localization: store)
+            #expect(fnText.runs.allSatisfy {
+                $0.attributes[AttributeScopes.SwiftUIAttributes.ForegroundColorAttribute.self] == nil &&
+                    $0.attributes[AttributeScopes.SwiftUIAttributes.FontAttribute.self] == nil
+            })
+        }
+    }
 }
 
 @Suite("Held voice shortcuts")

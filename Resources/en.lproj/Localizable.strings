@@ -341,6 +341,7 @@
 "connection.voice_key.mode.left_option" = "Left Option (⌥)";
 "connection.voice_key.mode.right_option" = "Right Option (⌥)";
 "connection.voice_key_mode.help" = "Set the same voice shortcut and recording mode in your input tool in the next step (avoid Fn/Globe when possible, as it is frequently claimed by macOS or apps like WeChat).";
+"connection.voice_key_mode.help.highlight" = "Set the same voice shortcut and recording mode";
 "connection.voice_key_mode.fn_caution_help" = "Tip: avoid Fn/Globe unless required (e.g., macOS Dictation). Fn is easily claimed or conflicted by macOS Globe actions, WeChat, and other apps—Ctrl (⌃) + Shift (⇧) + R is recommended instead.";
 "onboarding.voice_trigger.save_hint" = "New settings take effect after the voice test passes.";
 "connection.voice_key_mode.command_permission" = "Modifier-key mode requires Accessibility permission";
@@ -1276,6 +1277,7 @@
 "shortcut.keyboard.main_key_required" = "Choose a main key, or keep just one standalone modifier.";
 
 "connection.voice_key.chord_help" = "Set the same chord and recording mode in your input tool in the next step, and avoid shortcuts already used by other apps (avoid Fn/Globe when possible, as it is often claimed by macOS or apps like WeChat).";
+"connection.voice_key.chord_help.highlight" = "Set the same chord and recording mode";
 
 "shortcut.keyboard.help" = "Combine modifier and main keys, or record a shortcut directly. Left and right modifiers are distinct.";
 "shortcut.keyboard.use_shortcut" = "Use This Shortcut";

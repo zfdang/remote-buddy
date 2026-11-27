@@ -77,6 +77,49 @@ enum ForeignVoiceRemoteProduct {
     }
 }
 
+/// First-stage pre-filter for CoreBluetooth discovery callbacks on the main thread.
+/// Skips unrelated surrounding BLE peripherals before full admission or log formatting,
+/// while summarizing ignored advertisement counts at scan end.
+enum BluetoothDiscoveryScanPolicy {
+    static func shouldInspect(
+        identifier: UUID,
+        targetIdentifier: UUID?,
+        knownIdentifiers: Set<UUID>,
+        advertisesVoiceService: Bool,
+        advertisedName: String?,
+        peripheralName: String?,
+        allowsG9N9N: Bool = true,
+        allowsT1Remote: Bool = true
+    ) -> Bool {
+        if let targetIdentifier {
+            return identifier == targetIdentifier
+        }
+        if knownIdentifiers.contains(identifier) {
+            return true
+        }
+        if advertisesVoiceService {
+            return true
+        }
+        if XiaomiVoiceRemoteNameMatcher.matches(advertisedName) ||
+            XiaomiVoiceRemoteNameMatcher.matches(peripheralName) {
+            return true
+        }
+        if allowsG9N9N,
+           G9N9NProtocol.isCandidateName(advertisedName) || G9N9NProtocol.isCandidateName(peripheralName) {
+            return true
+        }
+        if allowsT1Remote,
+           T1RemoteProtocol.isCandidateName(advertisedName) || T1RemoteProtocol.isCandidateName(peripheralName) {
+            return true
+        }
+        if ForeignVoiceRemoteProduct.isRejected(name: advertisedName) ||
+            ForeignVoiceRemoteProduct.isRejected(name: peripheralName) {
+            return true
+        }
+        return false
+    }
+}
+
 /// 遥控器发现准入结论。
 ///
 /// 为什么必须是「白名单 + 明确结论」而不是布尔值：App 里每款遥控器都有**真机图片**和按键页，

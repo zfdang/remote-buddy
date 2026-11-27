@@ -225,6 +225,92 @@ struct BluetoothLifecycleTests {
         #expect(reconnectSchedules == 2)
     }
 
+    @Test func discoveryScanPreFilterRejectsUnrelatedPeripheralsAndAdmitsSupportedRemotes() {
+        let target = UUID()
+        let other = UUID()
+
+        #expect(BluetoothDiscoveryScanPolicy.shouldInspect(
+            identifier: target,
+            targetIdentifier: target,
+            knownIdentifiers: [],
+            advertisesVoiceService: false,
+            advertisedName: nil,
+            peripheralName: nil
+        ))
+        #expect(!BluetoothDiscoveryScanPolicy.shouldInspect(
+            identifier: other,
+            targetIdentifier: target,
+            knownIdentifiers: [],
+            advertisesVoiceService: true,
+            advertisedName: "Xiaomi Bluetooth Remote 2",
+            peripheralName: "Xiaomi Bluetooth Remote 2"
+        ))
+        #expect(BluetoothDiscoveryScanPolicy.shouldInspect(
+            identifier: other,
+            targetIdentifier: nil,
+            knownIdentifiers: [other],
+            advertisesVoiceService: false,
+            advertisedName: nil,
+            peripheralName: nil
+        ))
+        #expect(BluetoothDiscoveryScanPolicy.shouldInspect(
+            identifier: other,
+            targetIdentifier: nil,
+            knownIdentifiers: [],
+            advertisesVoiceService: true,
+            advertisedName: nil,
+            peripheralName: nil
+        ))
+        #expect(BluetoothDiscoveryScanPolicy.shouldInspect(
+            identifier: other,
+            targetIdentifier: nil,
+            knownIdentifiers: [],
+            advertisesVoiceService: false,
+            advertisedName: "G9N9N",
+            peripheralName: nil
+        ))
+        #expect(BluetoothDiscoveryScanPolicy.shouldInspect(
+            identifier: other,
+            targetIdentifier: nil,
+            knownIdentifiers: [],
+            advertisesVoiceService: false,
+            advertisedName: "T1-Remote",
+            peripheralName: nil
+        ))
+        #expect(BluetoothDiscoveryScanPolicy.shouldInspect(
+            identifier: other,
+            targetIdentifier: nil,
+            knownIdentifiers: [],
+            advertisesVoiceService: false,
+            advertisedName: nil,
+            peripheralName: "小米蓝牙语音遥控器"
+        ))
+        #expect(BluetoothDiscoveryScanPolicy.shouldInspect(
+            identifier: other,
+            targetIdentifier: nil,
+            knownIdentifiers: [],
+            advertisesVoiceService: false,
+            advertisedName: "Chromecast Remote",
+            peripheralName: nil
+        ))
+        #expect(!BluetoothDiscoveryScanPolicy.shouldInspect(
+            identifier: other,
+            targetIdentifier: nil,
+            knownIdentifiers: [],
+            advertisesVoiceService: false,
+            advertisedName: "AirPods Pro",
+            peripheralName: "AirPods Pro"
+        ))
+        #expect(!BluetoothDiscoveryScanPolicy.shouldInspect(
+            identifier: other,
+            targetIdentifier: nil,
+            knownIdentifiers: [],
+            advertisesVoiceService: false,
+            advertisedName: "Apple Watch",
+            peripheralName: nil
+        ))
+    }
+
     @Test func everyBridgeFirstReadyReappliesHIDMappingsButDuplicateReadyDoesNot() {
         #expect(BridgeAppModel.shouldReapplyHIDSettings(
             previousState: nil,

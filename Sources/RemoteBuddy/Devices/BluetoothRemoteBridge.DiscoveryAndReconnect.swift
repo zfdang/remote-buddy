@@ -9,6 +9,12 @@ extension BluetoothRemoteBridge {
             MainActor.assumeIsolated { SharedBluetoothScanner.shared.unsubscribe(scanSubscription) }
         }
         scanSubscription = nil
+        if ignoredUnrelatedDiscoveryCount > 0 {
+            AppLogger.shared.write(
+                "BLE DISCOVERY summary ignored_unrelated=\(ignoredUnrelatedDiscoveryCount)"
+            )
+            ignoredUnrelatedDiscoveryCount = 0
+        }
     }
 
     var canRecoverRemoteWake: Bool {
@@ -98,6 +104,7 @@ extension BluetoothRemoteBridge {
               central.state == .poweredOn
         else { return }
         resetPeripheral()
+        ignoredUnrelatedDiscoveryCount = 0
 
         BluetoothDiscoverySequence.run(
             cachedTarget: { () -> CBPeripheral? in
@@ -140,6 +147,23 @@ extension BluetoothRemoteBridge {
                               self.acceptsCandidateIdentifier(advertisement.identifier) else { return }
                         let serviceMatch = (advertisement.data[CBAdvertisementDataServiceUUIDsKey] as? [CBUUID])?
                             .contains(self.serviceUUID) == true
+                        let advertisedName = advertisement.data[CBAdvertisementDataLocalNameKey] as? String
+                        let knownIdentifiers = Set(
+                            self.settings.remoteDeviceProfiles.compactMap(\.bluetoothIdentifier)
+                        )
+                        guard BluetoothDiscoveryScanPolicy.shouldInspect(
+                            identifier: advertisement.identifier,
+                            targetIdentifier: self.targetIdentifier,
+                            knownIdentifiers: knownIdentifiers,
+                            advertisesVoiceService: serviceMatch,
+                            advertisedName: advertisedName,
+                            peripheralName: advertisement.name,
+                            allowsG9N9N: self.allowsG9N9N,
+                            allowsT1Remote: self.allowsT1Remote
+                        ) else {
+                            self.ignoredUnrelatedDiscoveryCount &+= 1
+                            return
+                        }
                         let decision = VoiceRemoteAdmission.decide(identifier: advertisement.identifier,
                             targetIdentifier: self.targetIdentifier, advertisesVoiceService: serviceMatch,
                             name: advertisement.name, advertisedName: advertisement.name,

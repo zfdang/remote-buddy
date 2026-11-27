@@ -116,6 +116,7 @@ final class BluetoothRemoteBridge: NSObject {
     let excludedIdentifiers: () -> Set<UUID>
     /// 已被判定为「别的产品」的标识；本桥此后一律不再连接，也不再走扫描回退。
     var rejectedIdentifiers = Set<UUID>()
+    var ignoredUnrelatedDiscoveryCount = 0
     var central: CBCentralManager?
     var centralGeneration: UInt64?
     var peripheral: CBPeripheral?

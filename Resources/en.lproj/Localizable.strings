@@ -362,7 +362,6 @@
 "audio.compatibility.help" = "Install the compatible microphone and select it here. The device is named Remote Buddy Mic.";
 "audio.compatibility.help_plain" = "If your voice typing app receives no audio, select the compatible microphone included with the installer. Existing audio devices are not replaced.";
 "button_mapping.page.title" = "Button Mapping";
-"button_mapping.page.subtitle" = "Click a button to change its settings";
 "button_mapping.faq_link" = "Voice & Buttons FAQ ↗";
 "button_mapping.t1.subtitle" = "Click Back, Home, Menu, Mute, Volume, or Power to customize; press and release Voice to start talking, then press again to stop (OK, arrows, air mouse, and back keyboard keep default system input)";
 "t1.remote.keyboard_airmouse_note" = "Back, Home, Menu, Mute, Volume, and Power support single, double, and long-press mapping. OK, direction keys, air mouse movement, and the back QWERTY keyboard keep default system input (typing and cursor control).";

@@ -61,12 +61,12 @@ extension SettingsView {
 
     private var mappingPageHeader: some View {
         let model = settings.selectedRemoteProfile?.model
-        let subtitleKey = if isSelectedChromecastBluetoothLogRecovery {
+        let subtitleKey: String? = if isSelectedChromecastBluetoothLogRecovery {
             "button_mapping.google.btle_log_subtitle"
         } else if model?.isT1Remote == true {
             "button_mapping.t1.subtitle"
         } else {
-            "button_mapping.page.subtitle"
+            nil
         }
         return VStack(alignment: .leading, spacing: 6) {
             PageHeader(
@@ -76,10 +76,12 @@ extension SettingsView {
                 linkAccessibilityIdentifier: "button-mapping.faq-link"
             )
             .fixedSize(horizontal: true, vertical: false)
-            Text(localization.text(subtitleKey))
-                .font(.system(size: 13))
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+            if let subtitleKey {
+                Text(localization.text(subtitleKey))
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

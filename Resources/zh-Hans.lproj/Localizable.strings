@@ -362,7 +362,6 @@
 "audio.compatibility.help" = "安装兼容麦克风后在这里选中。设备名称为 Remote Buddy Mic。";
 "audio.compatibility.help_plain" = "如果常用的语音工具收不到声音，可选择随安装包提供的兼容麦克风；已有音频设备不会被替换。";
 "button_mapping.page.title" = "按键映射";
-"button_mapping.page.subtitle" = "点击按键进行设置";
 "button_mapping.faq_link" = "语音触发与按键模式 (FAQ) ↗";
 "button_mapping.t1.subtitle" = "点击返回、主页、菜单、静音、音量或电源键自定义；语音键按一下松开开始说话，再按一下结束（确认、方向键、飞鼠与背面全键盘保持系统默认输入）";
 "t1.remote.keyboard_airmouse_note" = "返回、主页、菜单、静音、音量与电源键支持单击、双击与长按映射；确认、方向键、空中飞鼠与背面 QWERTY 全键盘保持系统默认输入（直接打字和移动鼠标）。";

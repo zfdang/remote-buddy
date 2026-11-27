@@ -263,14 +263,14 @@ struct RemoteMappingCanvas: View {
         path.move(to: start)
         path.addCurve(to: arrowTip, control1: controls.start, control2: controls.end)
 
-        let color = selected
-            ? Color.accentColor
-            : (highlighted ? Color.accentColor.opacity(0.75) : Color.secondary.opacity(0.42))
+        let color = highlighted
+            ? Color.orange.opacity(selected ? 1.0 : 0.85)
+            : (selected ? Color.accentColor : Color.secondary.opacity(0.42))
         context.stroke(
             path,
             with: .color(color),
             style: StrokeStyle(
-                lineWidth: selected ? 1.6 : (highlighted ? 1.4 : 1.0),
+                lineWidth: selected ? 1.6 : (highlighted ? 1.5 : 1.0),
                 lineCap: .round,
                 lineJoin: .round
             )
@@ -299,14 +299,14 @@ struct RemoteMappingCanvas: View {
             HStack(spacing: 6) {
                 icon(for: button)
                     .frame(width: 14)
-                    .foregroundStyle(hasOverride ? Color.accentColor : .primary)
+                    .foregroundStyle(hasOverride ? Color.orange : .primary)
                 Text(button.displayName(using: localization))
                     .font(.system(size: 13, weight: .semibold))
                     .lineLimit(1)
                 Spacer(minLength: 0)
                 if hasOverride {
                     Circle()
-                        .fill(Color.accentColor)
+                        .fill(Color.orange)
                         .frame(width: 7, height: 7)
                 }
             }
@@ -323,7 +323,7 @@ struct RemoteMappingCanvas: View {
                                 .font(.system(size: 12, weight: overridden ? .semibold : .medium))
                                 .foregroundStyle(
                                     overridden
-                                        ? Color(nsColor: .alternateSelectedControlTextColor).opacity(0.88)
+                                        ? Color.white.opacity(0.92)
                                         : .secondary
                                 )
                             Text(actionSummary(button, trigger))
@@ -333,7 +333,7 @@ struct RemoteMappingCanvas: View {
                                 ))
                                 .foregroundStyle(
                                     overridden
-                                        ? Color(nsColor: .alternateSelectedControlTextColor)
+                                        ? Color.white
                                         : .primary
                                 )
                                 .lineLimit(1)
@@ -342,7 +342,7 @@ struct RemoteMappingCanvas: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 5)
                         .background(
-                            overridden ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.quaternary),
+                            overridden ? AnyShapeStyle(Color.orange) : AnyShapeStyle(.quaternary),
                             in: RoundedRectangle(cornerRadius: 5, style: .continuous)
                         )
                     }
@@ -359,9 +359,9 @@ struct RemoteMappingCanvas: View {
         .onTapGesture { selectedButton = button }
         .background(
             active
-                ? Color.orange.opacity(0.12)
+                ? Color.orange.opacity(0.24)
                 : hasOverride
-                    ? Color.accentColor.opacity(selected ? 0.18 : 0.11)
+                    ? Color.orange.opacity(selected ? 0.18 : 0.11)
                     : selected
                         ? Color.accentColor.opacity(0.10)
                         : Color.primary.opacity(0.035),
@@ -371,13 +371,13 @@ struct RemoteMappingCanvas: View {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .stroke(
                     active
-                        ? Color.orange.opacity(0.65)
+                        ? Color.orange.opacity(0.95)
                         : hasOverride
-                            ? Color.accentColor.opacity(selected ? 0.85 : 0.65)
+                            ? Color.orange.opacity(selected ? 0.90 : 0.70)
                             : selected
                                 ? Color.accentColor.opacity(0.45)
                                 : Color.secondary.opacity(0.15),
-                    lineWidth: (hasOverride || active) ? 1.5 : 1.0
+                    lineWidth: active ? 2.0 : (hasOverride ? 1.5 : 1.0)
                 )
         }
         .accessibilityElement(children: .contain)

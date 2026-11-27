@@ -16,6 +16,7 @@ private struct OnboardingReturnConfiguration: Codable {
     let selectedRemoteProfileID: UUID?
     let initialRemoteProfileIDs: [UUID]
     let initialG9N9NInputModes: [UUID: G9N9NInputMode]?
+    let bypassInputSourceSwitching: Bool?
 }
 
 extension AppSettings {
@@ -52,7 +53,8 @@ extension AppSettings {
                 uniqueKeysWithValues: remoteDeviceProfiles
                     .filter { $0.model.isChromecastRemote }
                     .map { ($0.id, $0.effectiveG9N9NInputMode) }
-            )
+            ),
+            bypassInputSourceSwitching: bypassInputSourceSwitching
         )
         if let data = try? JSONEncoder().encode(configuration) {
             defaults.set(data, forKey: Self.onboardingReturnConfigurationKey)
@@ -108,6 +110,9 @@ extension AppSettings {
         voiceKeyMode = configuration.voiceKeyMode
         voiceFnTapModeEnabled = configuration.fnTapModeEnabled
         customMappingEnabled = configuration.customMappingEnabled
+        if let savedBypass = configuration.bypassInputSourceSwitching {
+            bypassInputSourceSwitching = savedBypass
+        }
         if let profileID = configuration.selectedRemoteProfileID {
             selectRemoteProfile(profileID)
         }
@@ -256,12 +261,15 @@ extension AppSettings {
 
     func verifyOnboardingVoiceBinding(at date: Date = Date()) {
         guard let stagedVoiceToolBinding else { return }
+        let previousTool = verifiedVoiceToolBinding?.tool ?? onboardingVoiceTool
         let verified = stagedVoiceToolBinding.verified(at: date)
         voiceKeyMode = verified.shortcut
         voiceFnTapModeEnabled = verified.gestureMode == .toggle
         onboardingVoiceTrigger = nil
         verifiedVoiceToolBinding = verified
-        bypassInputSourceSwitching = false
+        if verified.tool != previousTool || verified.tool.preferredInputSourceID == nil {
+            bypassInputSourceSwitching = false
+        }
         self.stagedVoiceToolBinding = nil
         defaults.removeObject(forKey: Keys.onboardingStagedVoiceBinding)
         AppLogger.shared.write(
@@ -294,6 +302,7 @@ extension AppSettings {
     }
 
     func completeOnboarding() {
+        let previousTool = onboardingReturnConfiguration?.voiceTool
         completedOnboardingDestination = onboardingPurpose.completionDestination
         let confirmedProfiles = confirmedTransientOnboardingProfile().map { [$0] } ?? []
         for profileID in unconfirmedTransientRemoteProfileIDs() {
@@ -304,7 +313,10 @@ extension AppSettings {
         recordFirstUseEvent(.completed, step: .complete)
         onboardingStep = .complete
         onboardingCompletedVersion = Self.currentOnboardingVersion
-        bypassInputSourceSwitching = false
+        if onboardingVoiceTool.preferredInputSourceID == nil ||
+            (previousTool != nil && previousTool != onboardingVoiceTool) {
+            bypassInputSourceSwitching = false
+        }
     }
 
     func restartOnboarding() {

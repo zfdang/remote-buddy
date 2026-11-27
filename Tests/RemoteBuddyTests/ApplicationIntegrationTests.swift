@@ -101,9 +101,11 @@ struct ApplicationIntegrationTests {
             settings.voiceKeyMode = mode
             let model = BridgeAppModel(settings: settings)
             var focusDone: ((ApplicationFocusResult) -> Void)?
+            var resyncFlags: [Bool] = []
             var events: [String] = []
             let controller = ApplicationIntegrationController(settings: settings, notifications: NotificationCenter(),
-                frontmost: { (ApplicationIntegration.weChat.bundleIdentifier, 42) }, focus: { _, _, done in
+                frontmost: { (ApplicationIntegration.weChat.bundleIdentifier, 42) }, focusWithResync: { _, _, resync, done in
+                    resyncFlags.append(resync)
                     events.append("focus_requested")
                     focusDone = done
                     return ScheduledOperation {}
@@ -122,18 +124,79 @@ struct ApplicationIntegrationTests {
             defer { controller.stop() }
             #expect(model.updateVoiceKeyState(streaming: true, forceSoftware: false, owner: .bluetooth,
                 keySetter: { _, down in events.append(down ? "voice_down" : "voice_up"); return true }))
-            #expect(events == ["focus_requested"])
+            #expect(events == ["select_source", "source_ready", "focus_requested"])
+            #expect(resyncFlags == [true])
             let buffered = model.voiceSession.commandAudio.appendIfWaiting([1, 2, 3])
             #expect(buffered)
             events.append("focus_confirmed")
             let finishFocus = try #require(focusDone)
             finishFocus(.focused)
-            #expect(events == ["focus_requested", "focus_confirmed", "select_source", "source_ready", "voice_down"])
+            #expect(events == ["select_source", "source_ready", "focus_requested", "focus_confirmed", "voice_down"])
             #expect(model.voiceSession.commandAudio.drain() == [1, 2, 3])
             #expect(model.applicationIntegrationStatus == .voiceTriggered)
             #expect(model.updateVoiceKeyState(streaming: false, forceSoftware: true, owner: .bluetooth,
                 keySetter: { _, down in events.append(down ? "voice_down" : "voice_up"); return true }))
             #expect(events.last == "voice_up")
+        }
+    }
+
+    @Test(arguments: [false, true])
+    func focusResyncRequestedOnlyWhenInputSourceSwitched(tapMode: Bool) throws {
+        try withSettings { settings, _ in
+            settings.setAllApplicationIntegrations(enabled: true)
+            settings.setOnboardingVoiceTool(.weixin)
+            settings.voiceKeyMode = .leftCommand
+            settings.voiceFnTapModeEnabled = tapMode
+            let target = try #require(OnboardingVoiceTool.weixin.preferredInputSourceID)
+            for caseConfig in [(source: "ABC", bypass: false, expectedResync: true),
+                               (source: target, bypass: false, expectedResync: false),
+                               (source: "ABC", bypass: true, expectedResync: false)] {
+                settings.bypassInputSourceSwitching = caseConfig.bypass
+                var source = caseConfig.source
+                var resyncFlags: [Bool] = []
+                let model = BridgeAppModel(settings: settings)
+                let controller = ApplicationIntegrationController(settings: settings, notifications: NotificationCenter(),
+                    frontmost: { (ApplicationIntegration.antigravity.bundleIdentifier, 42) },
+                    focusWithResync: { _, _, resync, done in
+                        resyncFlags.append(resync)
+                        done(.preserved)
+                        return ScheduledOperation {}
+                    }, onStateChange: { model.recordApplicationIntegrationStatus($0) })
+                model.applicationIntegrationController = controller
+                model.voiceInputDestinationCoordinator = VoiceInputDestinationCoordinator(snapshot: {
+                    VoiceInputDestinationSnapshot(bundleIdentifier: ApplicationIntegration.antigravity.bundleIdentifier,
+                        role: "AXTextArea", subrole: "", enabled: true, editable: true, protectedContent: false,
+                        semanticText: "Message input")
+                })
+                model.preferredInputSourceMonitor = PreferredInputSourceMonitor(
+                    voiceTool: { .weixin },
+                    bypassInputSourceSwitching: { settings.bypassInputSourceSwitching },
+                    prepareInputSource: { _ in source = target; return .selected },
+                    isInputSourceAvailable: { _ in true },
+                    currentInputSourceID: { source },
+                    restoreInputSource: { source = $0; return .selected },
+                    waitForInputSourceActivation: { _, _, _, done in done(true) },
+                    installMonitor: { _ in nil }, logger: { _ in })
+                controller.start()
+                defer { controller.stop() }
+                if tapMode {
+                    let clock = ControlledTestScheduler()
+                    let session = VoiceFnTapSessionController(schedule: clock.voiceSchedule,
+                        destinationReadiness: { model.prepareIntegratedVoiceInputDestination(completion: $0, schedule: clock.voiceSchedule) },
+                        setTriggerPressed: { _ in true }, enqueueAudio: { _ in },
+                        drainAudio: { _, done in done() }, onFailure: { _ in })
+                    session.setEnabled(true)
+                    #expect(session.startVoice())
+                    clock.runAll()
+                    session.shutdown()
+                } else {
+                    #expect(model.updateVoiceKeyState(streaming: true, forceSoftware: true, owner: .bluetooth,
+                        keySetter: { _, _ in true }))
+                    #expect(model.updateVoiceKeyState(streaming: false, forceSoftware: true, owner: .bluetooth,
+                        keySetter: { _, _ in true }))
+                }
+                #expect(resyncFlags == [caseConfig.expectedResync])
+            }
         }
     }
 
@@ -470,6 +533,70 @@ struct ApplicationIntegrationTests {
         #expect(KeyboardInjector.accessibilityAncestorChainContains(hit: 1, target: 1, equal: ==, parent: { _ in nil }))
         #expect(!KeyboardInjector.accessibilityAncestorChainContains(hit: 3, target: 1,
             equal: ==, parent: { [3: 2, 2: 3][$0] }))
+    }
+
+    @Test func resyncFocusedIntegratedComposerClicksOnlyVerifiedUnoccludedComposer() {
+        var clicks = 0
+        var pauses = 0
+        let resynced = KeyboardInjector.resyncFocusedIntegratedComposer(
+            candidate("Message input"),
+            integration: .antigravity,
+            windowFrame: window,
+            canContinue: { true },
+            hitTest: { _ in true },
+            postClick: { _ in clicks += 1; return true },
+            isFocused: { pauses == 1 },
+            pause: { pauses += 1 }
+        )
+        #expect(resynced)
+        #expect(clicks == 1)
+        #expect(pauses == 1)
+
+        for disallowed in [candidate("Search messages"), candidate("code editor")] {
+            #expect(!KeyboardInjector.resyncFocusedIntegratedComposer(
+                disallowed,
+                integration: .antigravity,
+                windowFrame: window,
+                canContinue: { true },
+                hitTest: { _ in true },
+                postClick: { _ in Issue.record("Non-composer must not be clicked"); return true },
+                isFocused: { true },
+                pause: {}
+            ))
+        }
+        for app in [ApplicationIntegration.weChat, .chatGPT] {
+            #expect(!KeyboardInjector.resyncFocusedIntegratedComposer(
+                candidate("Message input"),
+                integration: app,
+                windowFrame: window,
+                canContinue: { true },
+                hitTest: { _ in true },
+                postClick: { _ in Issue.record("App without verified click target must not be clicked"); return true },
+                isFocused: { true },
+                pause: {}
+            ))
+        }
+        #expect(!KeyboardInjector.resyncFocusedIntegratedComposer(
+            candidate("Message input"),
+            integration: .antigravity,
+            windowFrame: window,
+            canContinue: { true },
+            hitTest: { _ in false },
+            postClick: { _ in Issue.record("Occluded composer must not be clicked"); return true },
+            isFocused: { true },
+            pause: {}
+        ))
+        #expect(!KeyboardInjector.resyncFocusedIntegratedComposer(
+            candidate("Message input"),
+            integration: .antigravity,
+            windowFrame: window,
+            canContinue: { true },
+            preserveOtherFocus: { true },
+            hitTest: { _ in true },
+            postClick: { _ in Issue.record("Moved focus must not be clicked"); return true },
+            isFocused: { true },
+            pause: {}
+        ))
     }
 
     @Test func automaticIntegrationSourceCannotEnableUndocumentedAccessibilityAttributes() throws {

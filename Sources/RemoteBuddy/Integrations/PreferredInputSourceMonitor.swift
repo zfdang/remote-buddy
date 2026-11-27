@@ -41,6 +41,7 @@ final class PreferredInputSourceMonitor {
     private var explicitVoiceSessionActivationPending = false
     private var explicitVoiceObservationActive = false
     private var explicitActivationGeneration: UInt64 = 0
+    private(set) var lastExplicitVoiceSessionSwitchedInputSource = false
     private var managedInputSourceSession: ManagedInputSourceSession?
     private static let activationTimeout: TimeInterval = 0.5
     private static let activationPollInterval: TimeInterval = 0.02
@@ -149,6 +150,7 @@ final class PreferredInputSourceMonitor {
             explicitVoiceSessionActivationPending = false
             explicitVoiceObservationActive = false
             explicitActivationGeneration &+= 1
+            lastExplicitVoiceSessionSwitchedInputSource = false
         }
         finishManagedInputSourceSession(
             reason: "monitor_stop",
@@ -218,6 +220,7 @@ final class PreferredInputSourceMonitor {
     /// session instead of by every ordinary Command press on the Mac keyboard.
     func beginVoiceSession(completion: @escaping (Bool) -> Void) {
         logger("VOICE KEY OBSERVER installed=\(monitor != nil) scope=explicit_voice target_response=unknown")
+        lastExplicitVoiceSessionSwitchedInputSource = false
         explicitVoiceObservationActive = true
         explicitActivationGeneration &+= 1
         let generation = explicitActivationGeneration
@@ -262,6 +265,7 @@ final class PreferredInputSourceMonitor {
         explicitVoiceObservationActive = false
         explicitVoiceSessionActivationPending = false
         explicitActivationGeneration &+= 1
+        lastExplicitVoiceSessionSwitchedInputSource = false
         finishManagedInputSourceSession(
             reason: "voice_session_end",
             owner: .explicitVoice
@@ -323,6 +327,7 @@ final class PreferredInputSourceMonitor {
             session.owners.insert(owner)
             session.activationPending = true
             managedInputSourceSession = session
+            lastExplicitVoiceSessionSwitchedInputSource = true
             return true
         }
 
@@ -343,6 +348,9 @@ final class PreferredInputSourceMonitor {
             onSourcePreparationFailure?(selectedVoiceTool, result)
             return false
         }
+        if owner == .explicitVoice {
+            lastExplicitVoiceSessionSwitchedInputSource = true
+        }
         managedInputSourceSession = ManagedInputSourceSession(
             previousInputSourceID: previousInputSourceID,
             targetInputSourceID: targetInputSourceID,
@@ -359,6 +367,7 @@ final class PreferredInputSourceMonitor {
         selectedVoiceTool: OnboardingVoiceTool
     ) -> Bool {
         guard activated, activationShouldContinue() else {
+            lastExplicitVoiceSessionSwitchedInputSource = false
             let activationResult = activationShouldContinue()
                 ? "activation_timeout"
                 : "activation_cancelled"
@@ -384,6 +393,7 @@ final class PreferredInputSourceMonitor {
               session.owners.contains(.explicitVoice),
               session.targetInputSourceID == targetInputSourceID
         else {
+            lastExplicitVoiceSessionSwitchedInputSource = false
             if var abandoned = managedInputSourceSession {
                 abandoned.activationPending = false
                 managedInputSourceSession = abandoned

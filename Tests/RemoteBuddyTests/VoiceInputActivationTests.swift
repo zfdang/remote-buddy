@@ -29,8 +29,13 @@ struct VoiceInputActivationTests {
         })
     }
 
-    @Test(arguments: [false, true])
-    func foregroundSwitchAfterFocusCancelsVoiceStart(tapMode: Bool) throws {
+    @Test(arguments: [
+        (tapMode: false, switchDuringFocus: false),
+        (tapMode: true, switchDuringFocus: false),
+        (tapMode: false, switchDuringFocus: true),
+        (tapMode: true, switchDuringFocus: true),
+    ])
+    func foregroundSwitchAfterFocusCancelsVoiceStart(tapMode: Bool, switchDuringFocus: Bool) throws {
         let (model, defaults, suite) = try makeModel()
         defer { defaults.removePersistentDomain(forName: suite) }
         model.settings.setApplicationIntegration(.chatGPT, enabled: true)
@@ -68,12 +73,19 @@ struct VoiceInputActivationTests {
             #expect(model.updateVoiceKeyState(streaming: true, forceSoftware: true, owner: .bluetooth,
                 keySetter: { _, down in edges.append(down); return true }))
         }
-        let focus = try #require(focusDone)
-        focus(.preserved)
         let activate = try #require(sourceDone)
-        foreground = ("com.apple.TextEdit", 43)
-        center.post(name: NSWorkspace.didActivateApplicationNotification, object: nil)
-        activate(true)
+        if switchDuringFocus {
+            activate(true)
+            let focus = try #require(focusDone)
+            foreground = ("com.apple.TextEdit", 43)
+            center.post(name: NSWorkspace.didActivateApplicationNotification, object: nil)
+            focus(.preserved)
+        } else {
+            foreground = ("com.apple.TextEdit", 43)
+            center.post(name: NSWorkspace.didActivateApplicationNotification, object: nil)
+            activate(true)
+            #expect(focusDone == nil)
+        }
 
         #expect(edges.isEmpty)
         #expect(model.applicationIntegrationStatus == .cancelled(.targetChanged))
@@ -881,20 +893,62 @@ struct VoiceInputActivationTests {
         let (model, defaults, suite) = try makeModel()
         defer { defaults.removePersistentDomain(forName: suite) }
 
+        let profile = model.settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+        model.settings.selectRemoteProfile(profile)
+        model.settings.setOnboardingControlSource(.chromecastRemote)
+        model.settings.completeOnboarding()
         #expect(model.settings.bypassInputSourceSwitching == false)
 
         model.settings.bypassInputSourceSwitching = true
         #expect(model.settings.bypassInputSourceSwitching == true)
 
-        // Switching tool resets to false
+        // Preserved across completing onboarding or verifying the same input-method tool.
+        model.settings.completeOnboarding()
+        #expect(model.settings.bypassInputSourceSwitching == true)
+
+        let weixinPlan = try #require(OnboardingVoicePairingPlan.resolve(
+            tool: .weixin, controlSource: .chromecastRemote
+        ))
+        model.settings.beginOnboardingVoiceTrial(weixinPlan)
+        model.settings.verifyOnboardingVoiceBinding()
+        #expect(model.settings.bypassInputSourceSwitching == true)
+
+        // Preserved across adding a new device and re-configuring the same integration tool.
+        SettingsPageBehavior.beginDeviceSetup(settings: model.settings)
+        model.settings.completeOnboarding()
+        #expect(model.settings.bypassInputSourceSwitching == true)
+
+        SettingsPageBehavior.beginIntegrationSetup(tool: .weixin, settings: model.settings)
+        #expect(model.settings.bypassInputSourceSwitching == true)
+        model.settings.beginOnboardingVoiceTrial(weixinPlan)
+        model.settings.verifyOnboardingVoiceBinding()
+        model.settings.completeOnboarding()
+        #expect(model.settings.bypassInputSourceSwitching == true)
+
+        // Cancelling integration setup after switching to another tool restores true.
+        SettingsPageBehavior.beginIntegrationSetup(tool: .doubao, settings: model.settings)
+        #expect(model.settings.bypassInputSourceSwitching == false)
+        model.settings.dismissOnboarding()
+        #expect(model.settings.onboardingVoiceTool == .weixin)
+        #expect(model.settings.bypassInputSourceSwitching == true)
+
+        // Switching to a different tool resets to false.
         model.settings.setOnboardingVoiceTool(.doubao)
         #expect(model.settings.bypassInputSourceSwitching == false)
 
         model.settings.bypassInputSourceSwitching = true
         #expect(model.settings.bypassInputSourceSwitching == true)
-
-        // Completing onboarding resets to false
         model.settings.completeOnboarding()
+        #expect(model.settings.bypassInputSourceSwitching == true)
+
+        // Switching to a standalone tool without an input source resets to false.
+        model.settings.setOnboardingVoiceTool(.voiceBuddy)
+        #expect(model.settings.bypassInputSourceSwitching == false)
+
+        // Full onboarding restart resets to false.
+        model.settings.setOnboardingVoiceTool(.weixin)
+        model.settings.bypassInputSourceSwitching = true
+        model.settings.restartOnboarding()
         #expect(model.settings.bypassInputSourceSwitching == false)
     }
 

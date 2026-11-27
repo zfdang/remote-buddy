@@ -36,7 +36,7 @@
 "button_mapping.status.system_managed" = "按键由 macOS 原生处理";
 "button_mapping.status.interrupted" = "按键映射已暂停，回到应用后将重试";
 "button_mapping.permission.input_monitoring_required" = "需要输入监控权限；未读取遥控器按键";
-"button_mapping.permission.accessibility_required" = "需要辅助功能权限；未发送映射动作";
+"button_mapping.permission.accessibility_required" = "需要辅助功能（新名称：设备控制和数据访问）权限；未发送映射动作";
 "button_mapping.error.remote_read_failed" = "无法读取遥控器（错误 %1$@）";
 "button_mapping.status.waiting_for_device" = "正在等待遥控器按键连接";
 "button_mapping.error.device_open_failed" = "无法打开遥控器按键设备";
@@ -49,7 +49,7 @@
 "button_mapping.status.connected_fallback" = "按键功能已连接";
 "button_mapping.status.connected_system_actions_may_remain" = "按键功能已连接；部分系统原操作可能仍会触发";
 "button_mapping.status.disconnected" = "遥控器按键已断开";
-"button_mapping.permission.accessibility_expired" = "辅助功能权限已失效；已释放遥控器";
+"button_mapping.permission.accessibility_expired" = "辅助功能（新名称：设备控制和数据访问）权限已失效；已释放遥控器";
 "button_mapping.permission.system_expired" = "系统权限已失效；已释放遥控器";
 "common.status.stopped" = "已停止";
 "connection.status.searching" = "正在查找遥控器";
@@ -422,7 +422,7 @@
 "shortcut.editor.not_recorded" = "尚未录入";
 "shortcut.editor.recording_prompt" = "现在请按下单个按键、组合键或单独修饰键；本次按键不会触发原本绑定的动作。";
 "shortcut.editor.success" = "快捷键录入成功";
-"shortcut.editor.permission_required" = "录入系统快捷键需要辅助功能权限。请完成系统授权后再次点击录入。";
+"shortcut.editor.permission_required" = "录入系统快捷键需要辅助功能（新名称：设备控制和数据访问）权限。请完成系统授权后再次点击录入。";
 "shortcut.editor.capture_unavailable" = "无法启动快捷键录入，请检查辅助功能和输入监控权限，或重新打开遥控搭子后再试。";
 "shortcut.modifier.control" = "Control";
 "shortcut.modifier.option" = "Option";
@@ -787,7 +787,7 @@
 "onboarding.recovery.permission.input_monitoring_denied.detail" = "允许输入监控后，才能收到遥控器的实体按键。";
 "onboarding.recovery.permission.input_monitoring_denied.action" = "允许按键访问";
 "onboarding.recovery.permission.accessibility_denied.title" = "还需要操作权限";
-"onboarding.recovery.permission.accessibility_denied.detail" = "允许辅助功能后，才能执行你设置的语音和按键操作。";
+"onboarding.recovery.permission.accessibility_denied.detail" = "允许辅助功能（新名称：设备控制和数据访问）后，才能执行你设置的语音和按键操作。";
 "onboarding.recovery.permission.accessibility_denied.action" = "允许执行操作";
 "onboarding.recovery.permission.post_event_restricted.title" = "系统限制了全局模拟按键权限";
 "onboarding.recovery.permission.post_event_restricted.detail" = "辅助功能显示已开启，但系统仍在拦截全局按键注入（例如在 macOS 27.3+ 的“System & App Protection Override”中仅授权了指定 App）。遥控器语音快捷键和按键映射需要全局发送按键事件，请打开“隐私与安全性”，在 macOS 27.3+ 中进入“System & App Protection Override”（旧版系统为“辅助功能”）为遥控搭子授予完整权限后重试。";
@@ -949,7 +949,7 @@
 "common_phrases.error.resource_unavailable" = "常用语无法加载。请重新安装；已有内容可从导出的文件恢复。";
 "common_phrases.error.edit_failed" = "无法保存。请检查内容或导入文件格式；原有数据未被修改。";
 "common_phrases.error.no_phrase" = "这个按键尚未分配常用语，请在常用语页面设置。";
-"common_phrases.error.accessibility_required" = "请在系统设置中允许遥控搭子使用辅助功能。";
+"common_phrases.error.accessibility_required" = "请在系统设置中允许遥控搭子使用“辅助功能（新名称：设备控制和数据访问）”。";
 "common_phrases.error.input_unavailable" = "无法确认当前输入位置。请先点击目标输入框再试；部分非标准界面应用可能不支持 macOS 辅助功能定位。";
 "common_phrases.error.target_changed" = "输入目标已改变，请重新打开常用语。";
 "common_phrases.error.clipboard_write_failed" = "无法安全暂存或写入剪贴板。如系统询问，请允许剪贴板访问后重试。";

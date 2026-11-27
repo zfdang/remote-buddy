@@ -36,7 +36,7 @@
 "button_mapping.status.system_managed" = "Buttons are handled natively by macOS";
 "button_mapping.status.interrupted" = "Button mapping paused; return to the app to retry";
 "button_mapping.permission.input_monitoring_required" = "Allow Input Monitoring to use remote buttons.";
-"button_mapping.permission.accessibility_required" = "Allow Accessibility to run button actions.";
+"button_mapping.permission.accessibility_required" = "Allow Accessibility (new name: Device Control and Data Access) to run button actions.";
 "button_mapping.error.remote_read_failed" = "Unable to read the remote (error %1$@)";
 "button_mapping.status.waiting_for_device" = "Waiting for remote button controls";
 "button_mapping.error.device_open_failed" = "Unable to open the remote button device";
@@ -49,7 +49,7 @@
 "button_mapping.status.connected_fallback" = "Button controls connected";
 "button_mapping.status.connected_system_actions_may_remain" = "Button controls connected; some original system actions may still occur";
 "button_mapping.status.disconnected" = "Remote buttons disconnected";
-"button_mapping.permission.accessibility_expired" = "Accessibility access is unavailable. Button controls have stopped.";
+"button_mapping.permission.accessibility_expired" = "Accessibility (new name: Device Control and Data Access) permission is unavailable. Button controls have stopped.";
 "button_mapping.permission.system_expired" = "Required permissions are no longer available. Button controls have stopped.";
 "common.status.stopped" = "Stopped";
 "connection.status.searching" = "Looking for a remote";
@@ -422,7 +422,7 @@
 "shortcut.editor.not_recorded" = "Not Recorded";
 "shortcut.editor.recording_prompt" = "Press a single key, key combination, or standalone modifier now. This key press will not trigger its existing action.";
 "shortcut.editor.success" = "Shortcut recorded successfully";
-"shortcut.editor.permission_required" = "Recording system shortcuts requires Accessibility permission. Grant access, then click Record Shortcut again.";
+"shortcut.editor.permission_required" = "Recording system shortcuts requires Accessibility (new name: Device Control and Data Access) permission. Grant access, then click Record Shortcut again.";
 "shortcut.editor.capture_unavailable" = "Shortcut recording could not start. Check Accessibility and Input Monitoring permissions, or reopen Remote Buddy and try again.";
 "shortcut.modifier.control" = "Control";
 "shortcut.modifier.option" = "Option";
@@ -790,7 +790,7 @@
 "onboarding.recovery.permission.input_monitoring_denied.detail" = "Allow Input Monitoring so physical remote buttons can be detected.";
 "onboarding.recovery.permission.input_monitoring_denied.action" = "Allow Button Access";
 "onboarding.recovery.permission.accessibility_denied.title" = "Action access is still needed";
-"onboarding.recovery.permission.accessibility_denied.detail" = "Allow Accessibility so Remote Buddy can run your configured voice and button actions.";
+"onboarding.recovery.permission.accessibility_denied.detail" = "Allow Accessibility (new name: Device Control and Data Access) so Remote Buddy can run your configured voice and button actions.";
 "onboarding.recovery.permission.accessibility_denied.action" = "Allow Actions";
 "onboarding.recovery.permission.post_event_restricted.title" = "Global key simulation is restricted by macOS";
 "onboarding.recovery.permission.post_event_restricted.detail" = "Accessibility appears enabled, but macOS is still blocking global key-event injection (for example, when System & App Protection Override on macOS 27.3+ is limited to specific apps). Voice shortcuts and remote button mapping require global key events. Open Privacy & Security Settings, then go to System & App Protection Override on macOS 27.3+ (or Accessibility on earlier macOS) to grant Remote Buddy full access, then try again.";
@@ -952,7 +952,7 @@
 "common_phrases.error.resource_unavailable" = "Phrases could not load. Reinstall, or restore your exported phrases.";
 "common_phrases.error.edit_failed" = "Could not save. Check the content or imported format. Existing data was kept.";
 "common_phrases.error.no_phrase" = "No phrase is assigned to this button. Assign one in Common Phrases.";
-"common_phrases.error.accessibility_required" = "Allow Remote Buddy in System Settings → Accessibility.";
+"common_phrases.error.accessibility_required" = "Allow Remote Buddy in System Settings → Accessibility (new name: Device Control and Data Access).";
 "common_phrases.error.input_unavailable" = "The current input location could not be verified. Click the target input field and try again; some apps may not support macOS Accessibility field detection.";
 "common_phrases.error.target_changed" = "The input target changed. Open Common Phrases again.";
 "common_phrases.error.clipboard_write_failed" = "Could not safely save or write the clipboard. Allow clipboard access if prompted, then try again.";

@@ -203,6 +203,92 @@ extension AppSettings {
         }
     }
 
+    /// Removes stored per-application overrides on `profileID` that now match their inherited action
+    /// after updating a base binding, preventing hidden overrides from reappearing later.
+    func pruneMatchingApplicationOverrides(
+        for button: RemoteButton,
+        trigger: ButtonTrigger,
+        profileID: UUID?
+    ) {
+        let resolvedProfileID = profileID ?? selectedRemoteProfileID
+        let triggers: [ButtonTrigger] = trigger == .singleClick ? [.singleClick, .longPress] : [trigger]
+        pruneApplicationOverrides(buttons: [button], triggers: triggers, profileID: resolvedProfileID)
+    }
+
+    func pruneAllMatchingApplicationOverrides(for profileID: UUID?) {
+        let resolvedProfileID = profileID ?? selectedRemoteProfileID
+        pruneApplicationOverrides(
+            buttons: RemoteButton.allCases,
+            triggers: [.singleClick, .doubleClick, .longPress],
+            profileID: resolvedProfileID
+        )
+    }
+
+    private func pruneApplicationOverrides(
+        buttons: [RemoteButton],
+        triggers: [ButtonTrigger],
+        profileID: UUID?
+    ) {
+        var profiles = applicationButtonProfiles(for: profileID)
+        guard !profiles.isEmpty else { return }
+
+        // Prune `.singleClick` before `.longPress` so `.longPress` inheritance observes cleared `.singleClick` state.
+        let orderedTriggers = triggers.sorted { left, right in
+            (left == .longPress ? 1 : 0) < (right == .longPress ? 1 : 0)
+        }
+        var didChange = false
+        for trigger in orderedTriggers {
+            for bundleID in Array(profiles.keys) {
+                guard var profile = profiles[bundleID] else { continue }
+                var profileChanged = false
+                for button in buttons {
+                    guard let override = profile.action(for: button, trigger: trigger) else { continue }
+                    let inherited = inheritedBaseAction(
+                        for: button,
+                        trigger: trigger,
+                        profileID: profileID,
+                        applicationScope: .fixed(bundleID)
+                    )
+                    if override.normalizedForAction() == inherited.normalizedForAction() {
+                        profile.setAction(nil, for: button, trigger: trigger)
+                        profileChanged = true
+                    }
+                }
+                if profileChanged {
+                    profiles[bundleID] = profile
+                    didChange = true
+                }
+            }
+            if trigger == .singleClick, didChange {
+                storeApplicationButtonProfiles(profiles, for: profileID)
+            }
+        }
+        if didChange {
+            storeApplicationButtonProfiles(profiles, for: profileID)
+        }
+    }
+
+    private func storeApplicationButtonProfiles(
+        _ profiles: [String: ApplicationButtonProfile],
+        for profileID: UUID?
+    ) {
+        if let profileID, profileID != selectedRemoteProfileID {
+            guard let index = remoteDeviceProfiles.firstIndex(where: { $0.id == profileID }) else { return }
+            let mappings = remoteDeviceProfiles[index].mappings
+            remoteDeviceProfiles[index].mappings = RemoteDeviceMappings(
+                buttonBindings: mappings.parsedButtonBindings,
+                buttonShortcuts: mappings.parsedButtonShortcuts,
+                buttonApplicationProfileIDs: mappings.parsedButtonApplicationProfileIDs,
+                buttonURLs: mappings.parsedButtonURLs,
+                secondaryButtonBindings: mappings.parsedSecondaryButtonBindings,
+                applicationButtonProfiles: profiles
+            )
+            saveRemoteDeviceProfiles()
+            return
+        }
+        applicationButtonProfiles = profiles
+    }
+
     private func pruneRedundantLongPressOverride(bundleID: String, button: RemoteButton) {
         guard var profile = applicationButtonProfiles[bundleID],
               let longPress = profile.action(for: button, trigger: .longPress)

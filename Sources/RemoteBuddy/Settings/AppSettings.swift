@@ -189,6 +189,7 @@ final class AppSettings: ObservableObject {
                 secondaryButtonBindings[button] = secondary
             }
         }
+        pruneMatchingApplicationOverrides(for: button, trigger: trigger, profileID: profileID)
     }
 
     @Published var buttonBindings: [RemoteButton: ButtonAction] {

@@ -805,6 +805,7 @@ extension AppSettings {
             secondaryButtonBindings = mappings.parsedSecondaryButtonBindings
         }
         saveSelectedRemoteProfileMappings()
+        pruneAllMatchingApplicationOverrides(for: selectedRemoteProfileID)
         AppLogger.shared.write("SETTINGS MAPPING reset profile_scoped=\(selectedRemoteProfileID != nil)")
     }
 }

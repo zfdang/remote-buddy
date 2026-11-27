@@ -158,17 +158,17 @@ extension HIDRemoteMonitor {
                 self.cancelRepeat(for: usage)
                 return
             }
-            guard self.isCapturedApplicationStillFrontmost(
-                      for: button,
-                      trigger: .singleClick,
-                      applicationScope: applicationScope
-                  ),
-                  self.isCapturedApplicationStillFrontmost(
-                      for: button,
-                      trigger: .longPress,
-                      applicationScope: applicationScope
-                  )
-            else {
+            let configured = self.settings.configuredAction(
+                for: button,
+                trigger: .singleClick,
+                profileID: self.profileID,
+                applicationScope: applicationScope
+            )
+            guard self.allowsRepeatInCurrentFrontmostApplication(
+                for: button,
+                capturedScope: applicationScope,
+                resolvedAction: configured
+            ) else {
                 self.cancelRepeat(for: usage)
                 self.diagnosticLogger(
                     "HID ACTION cancelled reason=frontmost_application_changed " +
@@ -176,12 +176,6 @@ extension HIDRemoteMonitor {
                 )
                 return
             }
-            let configured = self.settings.configuredAction(
-                for: button,
-                trigger: .singleClick,
-                profileID: self.profileID,
-                applicationScope: applicationScope
-            )
             if !Self.shouldRepeat(
                     action: configured.action,
                     frontmostBundleIdentifier: self.frontmostBundleIdentifier(),
@@ -300,20 +294,59 @@ extension HIDRemoteMonitor {
         longPressTimers[button] = timer
     }
 
-    func isCapturedApplicationStillFrontmost(
+    func allowsDeliveryInCurrentFrontmostApplication(
         for button: RemoteButton,
         trigger: ButtonTrigger,
-        applicationScope: ApplicationOverrideScope
+        capturedScope: ApplicationOverrideScope,
+        resolvedAction: ConfiguredButtonAction
     ) -> Bool {
-        guard case let .fixed(capturedBundleID) = applicationScope,
-              settings.applicationButtonOverride(
-                  for: button,
-                  trigger: trigger,
-                  profileID: profileID,
-                  applicationScope: applicationScope
-              ) != nil
-        else { return true }
-        return settings.frontmostApplicationBundleIdentifier() == capturedBundleID
+        guard case let .fixed(capturedBundleID) = capturedScope else { return true }
+        let currentBundleID = settings.frontmostApplicationBundleIdentifier()
+        guard currentBundleID != capturedBundleID else { return true }
+        if settings.applicationButtonOverride(
+            for: button,
+            trigger: trigger,
+            profileID: profileID,
+            applicationScope: capturedScope
+        ) != nil {
+            return false
+        }
+        let destinationAction = settings.configuredAction(
+            for: button,
+            trigger: trigger,
+            profileID: profileID,
+            applicationScope: .fixed(currentBundleID)
+        )
+        return destinationAction.normalizedForAction() == resolvedAction.normalizedForAction()
+    }
+
+    func allowsRepeatInCurrentFrontmostApplication(
+        for button: RemoteButton,
+        capturedScope: ApplicationOverrideScope,
+        resolvedAction: ConfiguredButtonAction
+    ) -> Bool {
+        guard allowsDeliveryInCurrentFrontmostApplication(
+            for: button,
+            trigger: .singleClick,
+            capturedScope: capturedScope,
+            resolvedAction: resolvedAction
+        ) else { return false }
+        guard case let .fixed(capturedBundleID) = capturedScope else { return true }
+        let currentBundleID = settings.frontmostApplicationBundleIdentifier()
+        guard currentBundleID != capturedBundleID else { return true }
+        if settings.applicationButtonOverride(
+            for: button,
+            trigger: .longPress,
+            profileID: profileID,
+            applicationScope: capturedScope
+        ) != nil {
+            return false
+        }
+        return settings.allowsHoldRepeat(
+            for: button,
+            profileID: profileID,
+            applicationScope: .fixed(currentBundleID)
+        )
     }
 
     func performConfiguredAction(
@@ -336,10 +369,11 @@ extension HIDRemoteMonitor {
             profileID: profileID,
             applicationScope: resolvedScope
         )
-        guard isCapturedApplicationStillFrontmost(
+        guard allowsDeliveryInCurrentFrontmostApplication(
             for: button,
             trigger: trigger,
-            applicationScope: resolvedScope
+            capturedScope: resolvedScope,
+            resolvedAction: configured
         ) else {
             cancelRepeat(for: button.hidUsage)
             diagnosticLogger(

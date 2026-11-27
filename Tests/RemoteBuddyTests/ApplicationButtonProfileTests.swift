@@ -550,4 +550,159 @@ struct ApplicationButtonProfileTests {
         )
         #expect(!settings.isApplicationOverride(bundleID: claude, button: .ok, trigger: .singleClick))
     }
+
+    @Test func defaultActionDeferredClickAndRepeatCancelWhenDestinationAppDisablesOrChangesButton() throws {
+        let (settings, defaults, suite) = try makeSettings()
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        settings.customMappingEnabled = true
+        settings.onboardingStep = .complete
+        let profileID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+        settings.selectRemoteProfile(profileID)
+
+        let closeTab = CustomKeyboardShortcut(keyCode: 13, modifierFlags: .command, keyLabel: "W")
+        settings.setBaseBinding(
+            ConfiguredButtonAction(action: .customShortcut, shortcut: closeTab),
+            for: .ok, trigger: .singleClick, profileID: profileID
+        )
+        settings.setBaseBinding(
+            ConfiguredButtonAction(action: .commandUndo, shortcut: nil),
+            for: .ok, trigger: .doubleClick, profileID: profileID
+        )
+        settings.setBaseBinding(
+            ConfiguredButtonAction(action: .arrowDown, shortcut: nil),
+            for: .volumeDown, trigger: .singleClick, profileID: profileID
+        )
+
+        var front: String? = notes
+        settings.frontmostApplicationBundleIdentifier = { front }
+
+        // Codex disables OK single-click and disables Volume Down repeat; Notes and Claude keep defaults.
+        settings.addApplicationButtonProfile(bundleID: codex, name: "Codex")
+        settings.setApplicationScopedAction(
+            ConfiguredButtonAction.disabled,
+            bundleID: codex, button: .ok, trigger: .singleClick
+        )
+        settings.setApplicationScopedAction(
+            ConfiguredButtonAction.disabled,
+            bundleID: codex, button: .volumeDown, trigger: .longPress
+        )
+
+        let clock = ControlledTestScheduler()
+        var performed: [ConfiguredButtonAction] = []
+        let monitor = HIDRemoteMonitor(
+            settings: settings,
+            profileID: profileID,
+            scheduler: clock,
+            runtimePermissions: { true },
+            actionPerformer: { _, _, configured in
+                performed.append(configured)
+                return true
+            },
+            diagnosticLogger: { _ in }
+        )
+        monitor.connectSimulatedDevice(fingerprint: "google", profileID: profileID)
+        defer { monitor.disconnectSimulatedDevice() }
+
+        func sendButton(_ index: UInt8?) {
+            monitor.handleSimulatedGoogleReport(
+                reportID: 1,
+                data: Data([1, index ?? 0, 0]),
+                descriptor: G9N9NProtocol.indexedConsumerDescriptor
+            )
+        }
+
+        // 1) Tap OK in Notes (uses default Command-W), switch to Codex (which disables OK) before timeout -> cancelled.
+        front = notes
+        sendButton(7)
+        sendButton(nil)
+        front = codex
+        clock.advance(to: clock.now + HIDRemoteTiming.doubleClickMilliseconds)
+        #expect(performed.isEmpty)
+
+        // 2) Tap OK in Notes, switch to Codex when Codex overrides OK to a different action -> cancelled.
+        settings.setApplicationScopedAction(
+            ConfiguredButtonAction(action: .escape, shortcut: nil),
+            bundleID: codex, button: .ok, trigger: .singleClick
+        )
+        front = notes
+        sendButton(7)
+        sendButton(nil)
+        front = codex
+        clock.advance(to: clock.now + HIDRemoteTiming.doubleClickMilliseconds)
+        #expect(performed.isEmpty)
+
+        // 3) Hold Volume Down in Notes (fires initial arrowDown), switch to Codex (which disables repeat) -> repeats cancelled.
+        front = notes
+        sendButton(13)
+        #expect(performed.count == 1)
+        #expect(performed[0].action == .arrowDown)
+        front = codex
+        clock.advance(to: clock.now + HIDRemoteTiming.repeatStartMilliseconds + 500)
+        sendButton(nil)
+        #expect(performed.count == 1)
+
+        // 4) Switching between two apps that share the exact same default action still delivers cleanly.
+        front = notes
+        sendButton(7)
+        sendButton(nil)
+        front = claude
+        clock.advance(to: clock.now + HIDRemoteTiming.doubleClickMilliseconds)
+        #expect(performed.count == 2)
+        #expect(performed[1].shortcut == closeTab)
+    }
+
+    @Test func changingDefaultToMatchOverridePrunesStorageAcrossConsecutiveDefaultChanges() throws {
+        let (settings, defaults, suite) = try makeSettings()
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let xiaomiID = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
+        let g9n9nID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+        var front: String? = claude
+        settings.frontmostApplicationBundleIdentifier = { front }
+
+        // Selected remote: set Claude OK to Copy, change default to Copy, then change default to Undo.
+        settings.selectRemoteProfile(g9n9nID)
+        settings.addApplicationButtonProfile(bundleID: claude, name: "Claude")
+        settings.setApplicationScopedAction(
+            ConfiguredButtonAction(action: .commandCopy, shortcut: nil),
+            bundleID: claude, button: .ok, trigger: .singleClick
+        )
+
+        settings.setBaseBinding(
+            ConfiguredButtonAction(action: .commandCopy, shortcut: nil),
+            for: .ok, trigger: .singleClick, profileID: g9n9nID
+        )
+        #expect(!settings.isApplicationOverride(bundleID: claude, button: .ok, trigger: .singleClick))
+        #expect(settings.applicationButtonProfiles[claude]?.action(for: .ok, trigger: .singleClick) == nil)
+
+        settings.setBaseBinding(
+            ConfiguredButtonAction(action: .commandUndo, shortcut: nil),
+            for: .ok, trigger: .singleClick, profileID: g9n9nID
+        )
+        front = claude
+        #expect(settings.configuredAction(for: .ok, trigger: .singleClick, profileID: g9n9nID).action == .commandUndo)
+        #expect(!settings.isApplicationOverride(bundleID: claude, button: .ok, trigger: .singleClick))
+
+        // Non-selected remote: same consecutive default changes must prune stored overrides on Xiaomi too.
+        settings.selectRemoteProfile(xiaomiID)
+        settings.addApplicationButtonProfile(bundleID: claude, name: "Claude")
+        settings.setApplicationScopedAction(
+            ConfiguredButtonAction(action: .commandCopy, shortcut: nil),
+            bundleID: claude, button: .ok, trigger: .singleClick
+        )
+        settings.selectRemoteProfile(g9n9nID)
+
+        settings.setBaseBinding(
+            ConfiguredButtonAction(action: .commandCopy, shortcut: nil),
+            for: .ok, trigger: .singleClick, profileID: xiaomiID
+        )
+        #expect(settings.applicationButtonProfiles(for: xiaomiID)[claude]?.action(for: .ok, trigger: .singleClick) == nil)
+
+        settings.setBaseBinding(
+            ConfiguredButtonAction(action: .commandUndo, shortcut: nil),
+            for: .ok, trigger: .singleClick, profileID: xiaomiID
+        )
+        #expect(settings.configuredAction(for: .ok, trigger: .singleClick, profileID: xiaomiID).action == .commandUndo)
+    }
 }

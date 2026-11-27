@@ -578,22 +578,29 @@ struct VoiceTriggerConfigurationTests {
                 fontSize: 12
             )
             #expect(String(highlighted.characters) == sampleCaption)
-            let styledRuns = highlighted.runs.filter { $0.foregroundColor == .red }
+            let styledRuns = highlighted.runs.filter {
+                $0.attributes[AttributeScopes.SwiftUIAttributes.ForegroundColorAttribute.self] == .red
+            }
             #expect(styledRuns.count == 1)
             for run in highlighted.runs {
                 let runText = String(highlighted[run.range].characters)
+                let color = run.attributes[AttributeScopes.SwiftUIAttributes.ForegroundColorAttribute.self]
+                let font = run.attributes[AttributeScopes.SwiftUIAttributes.FontAttribute.self]
                 if runText == shortcut {
-                    #expect(run.foregroundColor == .red)
-                    #expect(run.font == .system(size: 12, weight: .bold))
+                    #expect(color == .red)
+                    #expect(font == .system(size: 12, weight: .bold))
                 } else {
-                    #expect(run.foregroundColor == nil)
-                    #expect(run.font == nil)
+                    #expect(color == nil)
+                    #expect(font == nil)
                 }
             }
 
             let unchanged = OnboardingView.highlightedGuideText(sampleCaption, highlighting: "")
             #expect(String(unchanged.characters) == sampleCaption)
-            #expect(unchanged.runs.allSatisfy { $0.foregroundColor == nil && $0.font == nil })
+            #expect(unchanged.runs.allSatisfy {
+                $0.attributes[AttributeScopes.SwiftUIAttributes.ForegroundColorAttribute.self] == nil &&
+                    $0.attributes[AttributeScopes.SwiftUIAttributes.FontAttribute.self] == nil
+            })
         }
     }
 }

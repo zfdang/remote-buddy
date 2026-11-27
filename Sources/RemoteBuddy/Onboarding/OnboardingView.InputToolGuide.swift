@@ -618,11 +618,17 @@ extension OnboardingView {
         var attributed = AttributedString(text)
         guard !shortcutDisplayName.isEmpty else { return attributed }
 
+        var highlight = AttributeContainer()
+        highlight[AttributeScopes.SwiftUIAttributes.ForegroundColorAttribute.self] = .red
+        highlight[AttributeScopes.SwiftUIAttributes.FontAttribute.self] = .system(
+            size: fontSize,
+            weight: .bold
+        )
+
         var searchStart = attributed.startIndex
         while searchStart < attributed.endIndex,
               let range = attributed[searchStart..<attributed.endIndex].range(of: shortcutDisplayName) {
-            attributed[range].foregroundColor = .red
-            attributed[range].font = .system(size: fontSize, weight: .bold)
+            attributed[range].mergeAttributes(highlight)
             searchStart = range.upperBound
         }
         return attributed

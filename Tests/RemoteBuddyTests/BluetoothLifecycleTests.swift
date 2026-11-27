@@ -1370,4 +1370,177 @@ struct BluetoothLifecycleTests {
         workingRestoreMapper.restore()
         #expect(backingMappings == [originalUserMapping])
     }
+
+    @Test func nonCompleteMappingRollbackVerifiesReadbackAndRetainsJournalWhenUnrestored() throws {
+        let suite = UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let originalUserMapping = HIDUsageMapping(
+            source: RemoteHIDKeyMappingPolicy.remoteVoiceKey.source,
+            destination: 0x0000_0007_0000_0040
+        )
+        var backingMappings: [HIDUsageMapping] = [originalUserMapping]
+        var writeAttempt = 0
+        let mapper = RemoteHIDKeyMapper(
+            serviceProvider: {
+                [
+                    RemoteHIDMappingService(
+                        registryID: 58,
+                        locationID: 80,
+                        hasVirtualNamePrefix: false,
+                        family: .xiaomi,
+                        readMappings: { backingMappings },
+                        setMappings: { _ in
+                            writeAttempt += 1
+                            if writeAttempt == 1 {
+                                // Write leaves stale power suppression -> readback fails even with neutralizeVoiceKey=false.
+                                backingMappings = [
+                                    RemoteHIDKeyMappingPolicy.remoteVoiceKey,
+                                    RemoteHIDKeyMappingPolicy.suppressedRemotePowerKey,
+                                ]
+                                return true
+                            }
+                            // Single-service rollback lies and returns true without restoring originalUserMapping.
+                            return true
+                        }
+                    ),
+                ]
+            },
+            recoveryDefaults: defaults,
+            bootID: "non-complete-rollback"
+        )
+
+        #expect(!mapper.apply(suppressPowerKey: false, neutralizeVoiceKey: false))
+        #expect(mapper.lastApplyFailedVerification)
+        #expect(writeAttempt == 2)
+
+        // Fresh mapper must still find the preserved journal entry and restore originalUserMapping.
+        let restartedMapper = RemoteHIDKeyMapper(
+            serviceProvider: {
+                [
+                    RemoteHIDMappingService(
+                        registryID: 58,
+                        locationID: 80,
+                        hasVirtualNamePrefix: false,
+                        family: .xiaomi,
+                        readMappings: { backingMappings },
+                        setMappings: { restored in
+                            backingMappings = restored
+                            return true
+                        }
+                    ),
+                ]
+            },
+            recoveryDefaults: defaults,
+            bootID: "non-complete-rollback"
+        )
+        restartedMapper.restore()
+        #expect(backingMappings == [originalUserMapping])
+    }
+
+    @Test func restoreExpiresJournalAfterMaximumOnlineFailuresWhilePreservingOfflineEntries() throws {
+        let suite = UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let originalOnlineMapping = HIDUsageMapping(
+            source: RemoteHIDKeyMappingPolicy.remoteVoiceKey.source,
+            destination: 0x0000_0007_0000_0041
+        )
+        let originalOfflineMapping = HIDUsageMapping(
+            source: RemoteHIDKeyMappingPolicy.remoteVoiceKey.source,
+            destination: 0x0000_0007_0000_0042
+        )
+        var onlineMappings: [HIDUsageMapping] = [originalOnlineMapping]
+        var offlineMappings: [HIDUsageMapping] = [originalOfflineMapping]
+        var offlineServicePresent = true
+
+        let mapper = RemoteHIDKeyMapper(
+            serviceProvider: {
+                var list = [
+                    RemoteHIDMappingService(
+                        registryID: 61,
+                        locationID: 91,
+                        hasVirtualNamePrefix: false,
+                        family: .xiaomi,
+                        readMappings: { onlineMappings },
+                        setMappings: { onlineMappings = $0; return true }
+                    ),
+                ]
+                if offlineServicePresent {
+                    list.append(
+                        RemoteHIDMappingService(
+                            registryID: 62,
+                            locationID: 92,
+                            hasVirtualNamePrefix: false,
+                            family: .xiaomi,
+                            readMappings: { offlineMappings },
+                            setMappings: { offlineMappings = $0; return true }
+                        )
+                    )
+                }
+                return list
+            },
+            recoveryDefaults: defaults,
+            bootID: "restore-max-attempts"
+        )
+        #expect(mapper.apply(suppressPowerKey: false, neutralizeVoiceKey: true))
+        #expect(onlineMappings == [RemoteHIDKeyMappingPolicy.neutralRemoteVoiceKey])
+        #expect(offlineMappings == [RemoteHIDKeyMappingPolicy.neutralRemoteVoiceKey])
+
+        // Device 62 goes offline while Device 61 fails readback on `maximumRestoreFailureAttempts` online restores.
+        offlineServicePresent = false
+        for _ in 0 ..< RemoteHIDKeyMapper.maximumRestoreFailureAttempts {
+            let failingMapper = RemoteHIDKeyMapper(
+                serviceProvider: {
+                    [
+                        RemoteHIDMappingService(
+                            registryID: 61,
+                            locationID: 91,
+                            hasVirtualNamePrefix: false,
+                            family: .xiaomi,
+                            readMappings: { onlineMappings },
+                            setMappings: { _ in true }
+                        ),
+                    ]
+                },
+                recoveryDefaults: defaults,
+                bootID: "restore-max-attempts"
+            )
+            failingMapper.restore()
+        }
+
+        // Device 61's journal entry is now exhausted & cleared, whereas Device 62 (offline) still restores once reconnected.
+        var onlineSetCalls = 0
+        var offlineSetCalls = 0
+        let finalMapper = RemoteHIDKeyMapper(
+            serviceProvider: {
+                [
+                    RemoteHIDMappingService(
+                        registryID: 61,
+                        locationID: 91,
+                        hasVirtualNamePrefix: false,
+                        family: .xiaomi,
+                        readMappings: { onlineMappings },
+                        setMappings: { onlineSetCalls += 1; onlineMappings = $0; return true }
+                    ),
+                    RemoteHIDMappingService(
+                        registryID: 62,
+                        locationID: 92,
+                        hasVirtualNamePrefix: false,
+                        family: .xiaomi,
+                        readMappings: { offlineMappings },
+                        setMappings: { offlineSetCalls += 1; offlineMappings = $0; return true }
+                    ),
+                ]
+            },
+            recoveryDefaults: defaults,
+            bootID: "restore-max-attempts"
+        )
+        finalMapper.restore()
+        #expect(onlineSetCalls == 0)
+        #expect(offlineSetCalls == 1)
+        #expect(offlineMappings == [originalOfflineMapping])
+    }
 }

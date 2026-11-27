@@ -127,6 +127,68 @@ struct AudioEngineStartCoordinatorTests {
         #expect(cleanupDone.wait(timeout: .now() + 1) == .success)
     }
 
+    @Test func coordinatorRunsSecondCleanupAfterLateWorkBuildsGraphPostTimeout() {
+        let workStarted = DispatchSemaphore(value: 0)
+        let firstCleanupDone = DispatchSemaphore(value: 0)
+        let allowLateBuild = DispatchSemaphore(value: 0)
+        let lateCleanupDone = DispatchSemaphore(value: 0)
+        defer { allowLateBuild.signal() }
+
+        let lock = NSLock()
+        nonisolated(unsafe) var hasLateGraph = false
+        nonisolated(unsafe) var tornDownLateGraph = false
+        nonisolated(unsafe) var cleanupCalls = 0
+
+        let coordinator = AudioEngineStartCoordinator(timeout: 0.05)
+        let outcome: AudioEngineStartOutcome<Int> = coordinator.run(
+            operationID: 4,
+            attempt: 1,
+            work: { _ in
+                workStarted.signal()
+                _ = allowLateBuild.wait(timeout: .now() + 5)
+                lock.lock()
+                hasLateGraph = true
+                lock.unlock()
+                return 11
+            },
+            cleanup: {
+                lock.lock()
+                cleanupCalls += 1
+                let built = hasLateGraph
+                if built {
+                    tornDownLateGraph = true
+                }
+                let callNumber = cleanupCalls
+                lock.unlock()
+                if callNumber == 1 {
+                    firstCleanupDone.signal()
+                }
+                if built {
+                    lateCleanupDone.signal()
+                }
+            }
+        )
+
+        #expect(workStarted.wait(timeout: .now() + 1) == .success)
+        guard case .timedOut = outcome else {
+            Issue.record("Expected timedOut outcome")
+            return
+        }
+        #expect(firstCleanupDone.wait(timeout: .now() + 1) == .success)
+        lock.lock()
+        #expect(!tornDownLateGraph)
+        lock.unlock()
+
+        // Allow blocked work to finish creating the orphaned graph after timeout;
+        // late-completion safety net must re-run cleanup and tear it down.
+        allowLateBuild.signal()
+        #expect(lateCleanupDone.wait(timeout: .now() + 1) == .success)
+        lock.lock()
+        #expect(tornDownLateGraph)
+        #expect(cleanupCalls == 2)
+        lock.unlock()
+    }
+
     @Test func blockedAudioGraphBuildTimesOutBoundedlyAndKeepsQueueMoving() async {
         guard let device = CoreAudioDeviceCatalog.outputDevices().first else { return }
         let logs = LockedLogBox()

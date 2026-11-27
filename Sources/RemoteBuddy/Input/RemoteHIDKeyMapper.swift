@@ -227,6 +227,8 @@ final class RemoteHIDKeyMapper {
 
     private nonisolated(unsafe) static let mappingProperty = "UserKeyMapping" as CFString
 
+    static let maximumRestoreFailureAttempts = 5
+
     private struct OriginalMappings: Codable {
         let voice: HIDUsageMapping?
         let power: HIDUsageMapping?
@@ -234,6 +236,7 @@ final class RemoteHIDKeyMapper {
         let t1Search: HIDUsageMapping?
         let t1Hold: HIDUsageMapping?
         let t1Power: HIDUsageMapping?
+        let failedRestoreAttempts: Int?
 
         init(
             voice: HIDUsageMapping? = nil,
@@ -241,7 +244,8 @@ final class RemoteHIDKeyMapper {
             family: RemoteHIDMappingFamily? = nil,
             t1Search: HIDUsageMapping? = nil,
             t1Hold: HIDUsageMapping? = nil,
-            t1Power: HIDUsageMapping? = nil
+            t1Power: HIDUsageMapping? = nil,
+            failedRestoreAttempts: Int? = nil
         ) {
             self.voice = voice
             self.power = power
@@ -249,6 +253,19 @@ final class RemoteHIDKeyMapper {
             self.t1Search = t1Search
             self.t1Hold = t1Hold
             self.t1Power = t1Power
+            self.failedRestoreAttempts = failedRestoreAttempts
+        }
+
+        func withFailedRestoreAttempts(_ count: Int) -> OriginalMappings {
+            OriginalMappings(
+                voice: voice,
+                power: power,
+                family: family,
+                t1Search: t1Search,
+                t1Hold: t1Hold,
+                t1Power: t1Power,
+                failedRestoreAttempts: count
+            )
         }
     }
 
@@ -662,7 +679,24 @@ final class RemoteHIDKeyMapper {
                     return false
                 }
                 if writeSucceeded, let snapshot = snapshots[index] {
-                    _ = service.setMappings(snapshot)
+                    let snapshotWritten = service.setMappings(snapshot)
+                    let rollbackVerified = snapshotWritten && RemoteHIDKeyMappingPolicy.readbackMatchesExpected(
+                        desired: snapshot,
+                        readback: service.readMappings(),
+                        family: service.family
+                    )
+                    if rollbackVerified, newlyStoredRegistryIDs.contains(registryID) {
+                        originalMappings.removeValue(forKey: registryID)
+                        _ = persistRecoveryJournal()
+                    } else if !rollbackVerified {
+                        AppLogger.shared.write(
+                            "HID NATIVE MAPPING phase=rollback registry=\(String(format: "0x%llx", registryID)) " +
+                                "result=unverified"
+                        )
+                    }
+                } else if !writeSucceeded, newlyStoredRegistryIDs.contains(registryID) {
+                    originalMappings.removeValue(forKey: registryID)
+                    _ = persistRecoveryJournal()
                 }
                 continue
             }
@@ -738,7 +772,7 @@ final class RemoteHIDKeyMapper {
                 )
             }
             let writeSucceeded = service.setMappings(restored)
-            let restoreVerified = writeSucceeded && RemoteHIDKeyMappingPolicy.readbackMatchesManagedSources(
+            let restoreVerified = writeSucceeded && RemoteHIDKeyMappingPolicy.readbackMatchesExpected(
                 desired: restored,
                 readback: service.readMappings(),
                 family: family
@@ -746,6 +780,21 @@ final class RemoteHIDKeyMapper {
             if restoreVerified {
                 restoredCount += 1
                 originalMappings.removeValue(forKey: registryID)
+            } else {
+                let attempts = (original.failedRestoreAttempts ?? 0) + 1
+                AppLogger.shared.write(
+                    "HID NATIVE MAPPING phase=restore registry=\(String(format: "0x%llx", registryID)) " +
+                        "result=unverified attempt=\(attempts) max_attempts=\(Self.maximumRestoreFailureAttempts)"
+                )
+                if attempts >= Self.maximumRestoreFailureAttempts {
+                    AppLogger.shared.write(
+                        "HID NATIVE MAPPING phase=restore registry=\(String(format: "0x%llx", registryID)) " +
+                            "result=exhausted attempts=\(attempts)"
+                    )
+                    originalMappings.removeValue(forKey: registryID)
+                } else {
+                    originalMappings[registryID] = original.withFailedRestoreAttempts(attempts)
+                }
             }
         }
 
@@ -772,7 +821,7 @@ final class RemoteHIDKeyMapper {
                 continue
             }
             let writeSucceeded = services[index].setMappings(snapshot)
-            let rollbackVerified = writeSucceeded && RemoteHIDKeyMappingPolicy.readbackMatchesManagedSources(
+            let rollbackVerified = writeSucceeded && RemoteHIDKeyMappingPolicy.readbackMatchesExpected(
                 desired: snapshot,
                 readback: services[index].readMappings(),
                 family: services[index].family

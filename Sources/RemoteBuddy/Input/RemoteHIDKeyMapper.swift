@@ -136,6 +136,19 @@ enum RemoteHIDKeyMappingPolicy {
         return true
     }
 
+    static func readbackMatchesExpected(
+        desired: [HIDUsageMapping],
+        readback: [HIDUsageMapping],
+        family: RemoteHIDMappingFamily
+    ) -> Bool {
+        desired.allSatisfy { readback.contains($0) } &&
+            readbackMatchesManagedSources(
+                desired: desired,
+                readback: readback,
+                family: family
+            )
+    }
+
     static func restoring(
         originalVoiceMapping: HIDUsageMapping?,
         originalPowerMapping: HIDUsageMapping?,
@@ -623,7 +636,7 @@ final class RemoteHIDKeyMapper {
             }
             let writeSucceeded = service.setMappings(desired)
             let readback = writeSucceeded ? service.readMappings() : []
-            let readbackVerified = writeSucceeded && RemoteHIDKeyMappingPolicy.readbackMatchesManagedSources(
+            let readbackVerified = writeSucceeded && RemoteHIDKeyMappingPolicy.readbackMatchesExpected(
                 desired: desired,
                 readback: readback,
                 family: service.family
@@ -707,8 +720,9 @@ final class RemoteHIDKeyMapper {
             guard let registryID = service.registryID,
                   let original = originalMappings[registryID]
             else { continue }
+            let family = original.family ?? service.family
             let restored: [HIDUsageMapping]
-            switch original.family ?? service.family {
+            switch family {
             case .xiaomi:
                 restored = RemoteHIDKeyMappingPolicy.restoring(
                     originalVoiceMapping: original.voice,
@@ -723,7 +737,13 @@ final class RemoteHIDKeyMapper {
                     in: service.readMappings()
                 )
             }
-            if service.setMappings(restored) {
+            let writeSucceeded = service.setMappings(restored)
+            let restoreVerified = writeSucceeded && RemoteHIDKeyMappingPolicy.readbackMatchesManagedSources(
+                desired: restored,
+                readback: service.readMappings(),
+                family: family
+            )
+            if restoreVerified {
                 restoredCount += 1
                 originalMappings.removeValue(forKey: registryID)
             }
@@ -751,7 +771,13 @@ final class RemoteHIDKeyMapper {
                 }
                 continue
             }
-            if services[index].setMappings(snapshot) {
+            let writeSucceeded = services[index].setMappings(snapshot)
+            let rollbackVerified = writeSucceeded && RemoteHIDKeyMappingPolicy.readbackMatchesManagedSources(
+                desired: snapshot,
+                readback: services[index].readMappings(),
+                family: services[index].family
+            )
+            if rollbackVerified {
                 rollbackCount += 1
             } else if let registryID = services[index].registryID {
                 registryIDsNeedingRestore.insert(registryID)

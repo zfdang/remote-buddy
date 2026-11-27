@@ -72,7 +72,7 @@ final class VoiceSilenceNoticeController {
         size.width = min(max(size.width, 180), 432)
         size.height = max(size.height, 88)
 
-        let panel = NSPanel(
+        let panel = VoiceSilenceNoticePanel(
             contentRect: NSRect(origin: .zero, size: size),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
@@ -120,4 +120,9 @@ final class VoiceSilenceNoticeController {
         self.window = nil
         logger("VOICE SILENCE NOTICE phase=hidden reason=\(reason)")
     }
+}
+
+private final class VoiceSilenceNoticePanel: NSPanel {
+    override var canBecomeKey: Bool { false }
+    override var canBecomeMain: Bool { false }
 }

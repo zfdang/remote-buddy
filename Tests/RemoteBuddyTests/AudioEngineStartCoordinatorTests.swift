@@ -98,6 +98,35 @@ struct AudioEngineStartCoordinatorTests {
         #expect(tokenCancelledAfterUnblock.current == 1)
     }
 
+    @Test func coordinatorRunsCleanupOnIndependentQueueEvenWhileWorkRemainsBlocked() {
+        let workGate = DispatchSemaphore(value: 0)
+        let workStarted = DispatchSemaphore(value: 0)
+        let cleanupDone = DispatchSemaphore(value: 0)
+        defer { workGate.signal() }
+
+        let coordinator = AudioEngineStartCoordinator(timeout: 0.05)
+        let outcome: AudioEngineStartOutcome<Int> = coordinator.run(
+            operationID: 3,
+            attempt: 1,
+            work: { _ in
+                workStarted.signal()
+                _ = workGate.wait(timeout: .now() + 5)
+                return 7
+            },
+            cleanup: {
+                cleanupDone.signal()
+            }
+        )
+
+        #expect(workStarted.wait(timeout: .now() + 1) == .success)
+        guard case .timedOut = outcome else {
+            Issue.record("Expected timedOut outcome")
+            return
+        }
+        // Assert cleanup completes while work is STILL blocked on `workGate` (no signal yet).
+        #expect(cleanupDone.wait(timeout: .now() + 1) == .success)
+    }
+
     @Test func blockedAudioGraphBuildTimesOutBoundedlyAndKeepsQueueMoving() async {
         guard let device = CoreAudioDeviceCatalog.outputDevices().first else { return }
         let logs = LockedLogBox()

@@ -1367,7 +1367,7 @@
 "notice.accessibility.warning_prefix" = "Warning: ";
 "notice.accessibility.error_prefix" = "Error: ";
 "voice.silence_notice.title" = "Remote microphone is still listening";
-"voice.silence_notice.body" = "Press Voice or another button on the remote to finish hands-free listening.";
+"voice.silence_notice.body" = "No speech detected for 60 seconds. Press Voice or another button on the remote when you're done to stop hands-free listening.";
 
 // Action feedback HUD and visibility settings
 "notice.action.open_system_settings" = "Open System Settings";

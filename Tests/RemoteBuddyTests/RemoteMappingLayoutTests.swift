@@ -99,7 +99,7 @@ struct RemoteMappingLayoutTests {
         }
     }
 
-    @Test func g9n9nPlacementsGroupDPadLeftAndSideVolumeRightInDescendingOrder() {
+    @Test func g9n9nPlacementsGroupDPadLeftAndSideVolumeRightTopToBottom() {
         let left = G9N9NMappingLayout.placements.filter { $0.side == .left }
         let right = G9N9NMappingLayout.placements.filter { $0.side == .right }
         #expect(left.map(\.button) == [.up, .left, .ok, .down, .back, .home, .youtube, .power])

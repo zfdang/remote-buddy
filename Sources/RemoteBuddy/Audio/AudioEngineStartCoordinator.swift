@@ -35,13 +35,16 @@ struct AudioEngineStartCoordinator {
 
     private let timeout: TimeInterval
     private let queueFactory: QueueFactory
+    private let cleanupQueue: DispatchQueue
 
     init(
         timeout: TimeInterval = Self.defaultTimeout,
-        queueFactory: @escaping QueueFactory = Self.makeQueue
+        queueFactory: @escaping QueueFactory = Self.makeQueue,
+        cleanupQueue: DispatchQueue = DispatchQueue.global(qos: .userInitiated)
     ) {
         self.timeout = timeout
         self.queueFactory = queueFactory
+        self.cleanupQueue = cleanupQueue
     }
 
     func run<Value>(
@@ -67,6 +70,11 @@ struct AudioEngineStartCoordinator {
             } catch {
                 result = token.isCancelled ? .timedOut : .failed(error)
             }
+            if token.isCancelled {
+                // Run cleanup once more after late work finishes in case the graph was
+                // constructed after the immediate off-queue timeout cleanup ran.
+                cleanup()
+            }
             resultLock.lock()
             outcome = result
             resultLock.unlock()
@@ -75,7 +83,7 @@ struct AudioEngineStartCoordinator {
 
         if semaphore.wait(timeout: .now() + timeout) == .timedOut {
             token.cancel()
-            queue.async(execute: cleanup)
+            cleanupQueue.async(execute: cleanup)
             return .timedOut
         }
 

@@ -1197,5 +1197,177 @@ struct BluetoothLifecycleTests {
             readback: t1StaleReadback,
             family: .t1Remote
         ))
+
+        // Preserved user mappings missing from readback must also fail verification.
+        let existingUserMapping = HIDUsageMapping(
+            source: 0x0000_0007_0000_0039,
+            destination: 0x0000_0007_0000_00E0
+        )
+        var droppedUserResult: [HIDUsageMapping] = [existingUserMapping]
+        let userMappingMapper = RemoteHIDKeyMapper(
+            serviceProvider: {
+                [
+                    RemoteHIDMappingService(
+                        registryID: 89,
+                        locationID: 100,
+                        hasVirtualNamePrefix: false,
+                        family: .xiaomi,
+                        readMappings: { droppedUserResult },
+                        setMappings: { _ in
+                            // System returns success while silently dropping existing user custom mapping.
+                            droppedUserResult = [RemoteHIDKeyMappingPolicy.remoteVoiceKey]
+                            return true
+                        }
+                    ),
+                ]
+            },
+            recoveryDefaults: defaults,
+            bootID: "dropped-user-mapping"
+        )
+        #expect(!userMappingMapper.apply(suppressPowerKey: false, neutralizeVoiceKey: false))
+        #expect(userMappingMapper.lastApplyFailedVerification)
+    }
+
+    @Test func rollbackReturningTrueWithoutRestoringPreservesJournalForRestart() throws {
+        let suite = UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let originalUserMapping = HIDUsageMapping(
+            source: RemoteHIDKeyMappingPolicy.remoteVoiceKey.source,
+            destination: 0x0000_0007_0000_0040
+        )
+        var backingMappings: [HIDUsageMapping] = [originalUserMapping]
+        var writeAttempt = 0
+        let mapper = RemoteHIDKeyMapper(
+            serviceProvider: {
+                [
+                    RemoteHIDMappingService(
+                        registryID: 56,
+                        locationID: 78,
+                        hasVirtualNamePrefix: false,
+                        family: .xiaomi,
+                        readMappings: { backingMappings },
+                        setMappings: { _ in
+                            writeAttempt += 1
+                            if writeAttempt == 1 {
+                                // Partial write leaves neutral voice key without power suppression.
+                                backingMappings = [RemoteHIDKeyMappingPolicy.neutralRemoteVoiceKey]
+                                return true
+                            }
+                            // Rollback lies and returns true without actually restoring backingMappings.
+                            return true
+                        }
+                    ),
+                ]
+            },
+            recoveryDefaults: defaults,
+            bootID: "rollback-true-unrestored"
+        )
+
+        #expect(!mapper.apply(suppressPowerKey: true, neutralizeVoiceKey: true))
+        #expect(mapper.lastApplyFailedVerification)
+        #expect(writeAttempt == 2)
+        #expect(backingMappings == [RemoteHIDKeyMappingPolicy.neutralRemoteVoiceKey])
+
+        // Restarting with a fresh mapper must still find the journal and restore the user's original mapping.
+        let restartedMapper = RemoteHIDKeyMapper(
+            serviceProvider: {
+                [
+                    RemoteHIDMappingService(
+                        registryID: 56,
+                        locationID: 78,
+                        hasVirtualNamePrefix: false,
+                        family: .xiaomi,
+                        readMappings: { backingMappings },
+                        setMappings: { restored in
+                            backingMappings = restored
+                            return true
+                        }
+                    ),
+                ]
+            },
+            recoveryDefaults: defaults,
+            bootID: "rollback-true-unrestored"
+        )
+
+        restartedMapper.restore()
+        #expect(backingMappings == [originalUserMapping])
+    }
+
+    @Test func restoreReturningTrueWithoutRestoringRetainsJournalUntilReadbackMatches() throws {
+        let suite = UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let originalUserMapping = HIDUsageMapping(
+            source: RemoteHIDKeyMappingPolicy.remoteVoiceKey.source,
+            destination: 0x0000_0007_0000_0040
+        )
+        var backingMappings: [HIDUsageMapping] = [originalUserMapping]
+        let mapper = RemoteHIDKeyMapper(
+            serviceProvider: {
+                [
+                    RemoteHIDMappingService(
+                        registryID: 57,
+                        locationID: 79,
+                        hasVirtualNamePrefix: false,
+                        family: .xiaomi,
+                        readMappings: { backingMappings },
+                        setMappings: { updated in
+                            backingMappings = updated
+                            return true
+                        }
+                    ),
+                ]
+            },
+            recoveryDefaults: defaults,
+            bootID: "restore-true-unrestored"
+        )
+        #expect(mapper.apply(suppressPowerKey: false, neutralizeVoiceKey: true))
+        #expect(backingMappings == [RemoteHIDKeyMappingPolicy.neutralRemoteVoiceKey])
+
+        // First restart: restore write returns true without actually restoring hardware state -> journal kept.
+        let lyingRestoreMapper = RemoteHIDKeyMapper(
+            serviceProvider: {
+                [
+                    RemoteHIDMappingService(
+                        registryID: 57,
+                        locationID: 79,
+                        hasVirtualNamePrefix: false,
+                        family: .xiaomi,
+                        readMappings: { backingMappings },
+                        setMappings: { _ in true }
+                    ),
+                ]
+            },
+            recoveryDefaults: defaults,
+            bootID: "restore-true-unrestored"
+        )
+        lyingRestoreMapper.restore()
+        #expect(backingMappings == [RemoteHIDKeyMappingPolicy.neutralRemoteVoiceKey])
+
+        // Second restart: journal is still intact, and a functioning write restores original mapping.
+        let workingRestoreMapper = RemoteHIDKeyMapper(
+            serviceProvider: {
+                [
+                    RemoteHIDMappingService(
+                        registryID: 57,
+                        locationID: 79,
+                        hasVirtualNamePrefix: false,
+                        family: .xiaomi,
+                        readMappings: { backingMappings },
+                        setMappings: { restored in
+                            backingMappings = restored
+                            return true
+                        }
+                    ),
+                ]
+            },
+            recoveryDefaults: defaults,
+            bootID: "restore-true-unrestored"
+        )
+        workingRestoreMapper.restore()
+        #expect(backingMappings == [originalUserMapping])
     }
 }

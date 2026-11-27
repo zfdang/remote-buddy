@@ -155,4 +155,15 @@ struct UpdatePackageFallbackTests {
         #expect(!coordinator.hasPendingFallback)
         #expect(coordinator.downloadURLOverride(forVersion: "868", fileURL: primary) == nil)
     }
+
+    @Test func updateVersionNormalizesAndOrdersAcrossThreeAndFourDigitSuffixes() {
+        #expect(UpdateVersion.normalized("v26-11-15.867") == "26.11.15.867")
+        #expect(UpdateVersion.normalized("v26-11-15.0999") == "26.11.15.0999")
+        #expect(UpdateVersion.normalized("v26-11-15.1000") == "26.11.15.1000")
+
+        #expect(UpdateVersion.isNewer("v26-11-15.1000", than: "v26-11-15.999"))
+        #expect(UpdateVersion.isNewer("v26-11-15.1000", than: "v26-11-15.0999"))
+        #expect(!UpdateVersion.isNewer("v26-11-15.999", than: "v26-11-15.1000"))
+        #expect(!UpdateVersion.isNewer("v26-11-15.0999", than: "v26-11-15.999"))
+    }
 }

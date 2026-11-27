@@ -78,9 +78,7 @@ struct VoiceDeliveryReadinessTests {
     }
 
     @Test @MainActor func completedModelSnapshotDoesNotLeakIntoTheNextVoiceSession() throws {
-        let name = "completed-delivery-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let model = BridgeAppModel(settings: AppSettings(defaults: defaults))
         var value = attempt()
         value.outputAtObservation.pendingBuffers = 0

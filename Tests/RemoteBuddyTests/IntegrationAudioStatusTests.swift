@@ -7,9 +7,7 @@ import Testing
 @MainActor
 struct IntegrationAudioStatusTests {
     @Test func integrationDestinationSurvivesIdleEngineAndDetectsMissingDriver() throws {
-        let name = UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: name))
-        defer { values.removePersistentDomain(forName: name) }
+        let values = EphemeralUserDefaults()
         let model = BridgeAppModel(settings: AppSettings(defaults: values))
         model.audioDevices = [AudioDeviceInfo(id: 111, uid: BuddyMicrophoneDevicePolicy.deviceUID,
             name: BuddyMicrophoneDevicePolicy.deviceName)]
@@ -25,9 +23,7 @@ struct IntegrationAudioStatusTests {
     }
 
     @Test func devicePropertyTeardownCleansUpObservedDeviceProperties() throws {
-        let name = UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: name))
-        defer { values.removePersistentDomain(forName: name) }
+        let values = EphemeralUserDefaults()
         let model = BridgeAppModel(settings: AppSettings(defaults: values))
         var removedDeviceProperties: [(AudioObjectID, AudioObjectPropertySelector)] = []
         model.audio.devicePropertyListenerRemover = { objectID, address, _, _ in
@@ -56,9 +52,7 @@ struct IntegrationAudioStatusTests {
     }
 
     @Test func deviceMuteNotificationInvalidatesCachedOutputReadiness() async throws {
-        let name = UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: name))
-        defer { values.removePersistentDomain(forName: name) }
+        let values = EphemeralUserDefaults()
         let model = BridgeAppModel(settings: AppSettings(defaults: values))
         model.started = true
         model.isAudioOutputReady = true

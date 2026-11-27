@@ -7,9 +7,7 @@ import Testing
 @MainActor
 struct RemoteGainAndDriverTests {
     @Test func repeatedSliderValuesDoNotRewriteTheProfileLibrary() throws {
-        let name = "gain-writes-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let profile = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         settings.selectRemoteProfile(profile)
@@ -25,9 +23,7 @@ struct RemoteGainAndDriverTests {
     }
 
     @Test func gainsPersistIndependentlyAndFollowTheRecordingDevice() throws {
-        let suite = "remote-gain-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let firstBluetooth = UUID(), secondBluetooth = UUID()
         let first = settings.registerBluetoothRemote(identifier: firstBluetooth, model: .rc003)
@@ -52,9 +48,7 @@ struct RemoteGainAndDriverTests {
     }
 
     @Test func firstRemoteAdoptsThePreparedGainWithoutChangingLaterDeviceDefaults() throws {
-        let suite = "first-remote-gain-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         settings.gainDB = 18
         let first = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
@@ -67,9 +61,7 @@ struct RemoteGainAndDriverTests {
     }
 
     @Test func fixedOutputCannotBeOverriddenByStoredSelection() throws {
-        let suite = "fixed-output-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         defaults.set("speaker", forKey: "selectedAudioDeviceUID")
         defaults.set("BlackHole2ch_UID", forKey: "lastKnownAudioDeviceUID")
         let settings = AppSettings(defaults: defaults)
@@ -95,9 +87,7 @@ struct RemoteGainAndDriverTests {
     }
 
     @Test func permissionsCheckIncludesAudioAndFifthStepSelectsTheTrigger() throws {
-        let name = "driver-navigation-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         settings.setOnboardingStep(.permissions)
         let device = AudioDeviceInfo(id: 1, uid: BuddyMicrophoneDevicePolicy.deviceUID,

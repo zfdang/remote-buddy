@@ -58,9 +58,7 @@ struct ReviewInputBoundaryTests {
     }
 
     @Test @MainActor func corruptGainCannotReachIntegerFormatting() throws {
-        let name = "review-gain-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         for (value, expected) in [(Double.nan, 10.0), (.infinity, 10), (-20, 0), (30, 24), (12, 12)] {
             defaults.set(value, forKey: "gainDB")
             #expect(AppSettings(defaults: defaults).gainDB == expected)
@@ -68,9 +66,7 @@ struct ReviewInputBoundaryTests {
     }
 
     @Test @MainActor func directGainAssignmentNormalizesBeforePublishingOrPersisting() throws {
-        let name = UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         for (value, expected) in [(Double.nan, 10.0), (.infinity, 10), (-1, 0), (99, 24)] {
             settings.gainDB = value
@@ -81,9 +77,7 @@ struct ReviewInputBoundaryTests {
     }
 
     @Test @MainActor func powerMappingRemainsFreelyEditableAndResettable() throws {
-        let name = "power-mapping-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
 
         settings.setAction(.commandReturn, for: .power, trigger: .singleClick)

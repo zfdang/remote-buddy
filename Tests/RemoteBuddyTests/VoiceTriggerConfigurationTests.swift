@@ -9,9 +9,7 @@ import SwiftUI
 @MainActor
 struct VoiceTriggerConfigurationTests {
     private func withSettings(_ body: (AppSettings, UserDefaults) throws -> Void) throws {
-        let name = "voice-trigger-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         try body(AppSettings(defaults: defaults), defaults)
     }
 
@@ -222,9 +220,7 @@ struct VoiceTriggerConfigurationTests {
 
     @Test(arguments: [OnboardingVoiceToolAvailability.notInstalled, .available])
     func chatterflyHoldBannerFollowsInstallationPriority(availability: OnboardingVoiceToolAvailability) async throws {
-        let name = "chatterfly-hold-banner-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         settings.voiceFnTapModeEnabled = true
         settings.setOnboardingControlSource(.xiaomiRemote)

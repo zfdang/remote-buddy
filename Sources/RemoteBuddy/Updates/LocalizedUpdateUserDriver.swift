@@ -406,9 +406,7 @@ final class LocalizedUpdateUserDriver: NSObject, SPUUserDriver, NSWindowDelegate
     static func runPreviewIfRequested() -> Bool {
         let environment = ProcessInfo.processInfo.environment
         guard let stage = environment["REMOTE_BUDDY_UPDATE_UI_PREVIEW"] else { return false }
-        let suite = "remote-buddy.update-preview." + UUID().uuidString
-        guard let defaults = UserDefaults(suiteName: suite) else { return true }
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let localization = LocalizationStore(settings: AppSettings(defaults: defaults),
             resourceBundle: RemoteBuddyResourceBundle.mainOrDevelopment)
         localization.select(environment["REMOTE_BUDDY_UPDATE_UI_LANGUAGE"] == "en" ? .english : .simplifiedChinese)

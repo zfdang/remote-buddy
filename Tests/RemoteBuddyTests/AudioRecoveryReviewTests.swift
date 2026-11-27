@@ -6,9 +6,7 @@ import Testing
 @MainActor
 struct AudioRecoveryReviewTests {
     @Test func automaticRecoveryDoesNotStopContinuousRecordingBeforeRebinding() throws {
-        let suite = UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let model = BridgeAppModel(settings: AppSettings(defaults: defaults), initialAudioDevices: [])
         model.started = true
         defer {
@@ -28,9 +26,7 @@ struct AudioRecoveryReviewTests {
 
     @Test(arguments: [true, false])
     func continuousRecordingStopsOnlyOnFailedRebindWhenOutputIsNotReady(configured: Bool) throws {
-        let suite = UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let model = BridgeAppModel(settings: AppSettings(defaults: defaults), initialAudioDevices: [])
         model.started = true
         defer {
@@ -49,9 +45,7 @@ struct AudioRecoveryReviewTests {
     }
 
     @Test func lateEngineNotificationAfterReleaseDoesNotReconfigureOrReportDegraded() throws {
-        let suite = UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: suite))
-        defer { values.removePersistentDomain(forName: suite) }
+        let values = EphemeralUserDefaults()
         let model = BridgeAppModel(settings: AppSettings(defaults: values))
         model.started = true
         defer { model.started = false }
@@ -69,9 +63,7 @@ struct AudioRecoveryReviewTests {
 
     @Test(arguments: [false, true])
     func voiceEndingDuringRecoveryIsIgnoredButActiveFailureIsReported(hasTail: Bool) throws {
-        let suite = UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: suite))
-        defer { values.removePersistentDomain(forName: suite) }
+        let values = EphemeralUserDefaults()
         let model = BridgeAppModel(settings: AppSettings(defaults: values))
         model.started = true
         model.voiceSession.isActive = true
@@ -101,9 +93,7 @@ struct AudioRecoveryReviewTests {
 
     @Test(arguments: [false, true])
     func idleQueuedAudioUsesRealApplySettingsDrainWithoutDegradedRecovery(releaseFirst: Bool) async throws {
-        let suite = UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: suite))
-        defer { values.removePersistentDomain(forName: suite) }
+        let values = EphemeralUserDefaults()
         let clock = ControlledTestScheduler()
         let output = VirtualAudioOutput(logger: { _ in },
             uptime: { Double(clock.now) / 1_000 }, scheduleDrainDeadline: clock.voiceSchedule)
@@ -146,9 +136,7 @@ struct AudioRecoveryReviewTests {
     }
 
     @Test func stoppedActiveOutputRequestsRecoveryWithoutTheDebounceGap() async throws {
-        let name = UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: name))
-        defer { values.removePersistentDomain(forName: name) }
+        let values = EphemeralUserDefaults()
         let model = BridgeAppModel(settings: AppSettings(defaults: values))
         model.started = true
         model.voiceSession.isActive = true
@@ -163,9 +151,7 @@ struct AudioRecoveryReviewTests {
 
     @Test(arguments: ["hardware_change", "engine_configuration_change"])
     func healthySelectedOutputKeepsActiveAndQueuedSpeech(reason: String) throws {
-        let name = UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: name))
-        defer { values.removePersistentDomain(forName: name) }
+        let values = EphemeralUserDefaults()
         let model = BridgeAppModel(settings: AppSettings(defaults: values))
         model.started = true
         defer { model.started = false }
@@ -199,9 +185,7 @@ struct AudioRecoveryReviewTests {
     }
 
     @Test func inaudibleVirtualDeviceTriggersRecoveryEvenWhenEngineAndPlayerAreRunning() throws {
-        let name = UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: name))
-        defer { values.removePersistentDomain(forName: name) }
+        let values = EphemeralUserDefaults()
         let model = BridgeAppModel(settings: AppSettings(defaults: values))
         model.started = true
         model.voiceSession.isActive = true
@@ -228,9 +212,7 @@ struct AudioRecoveryReviewTests {
     }
 
     @Test func normalVolumeAdjustmentKeepsAudioOutputReadyAndDoesNotTriggerReconfiguration() throws {
-        let name = UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: name))
-        defer { values.removePersistentDomain(forName: name) }
+        let values = EphemeralUserDefaults()
         let model = BridgeAppModel(settings: AppSettings(defaults: values))
         model.started = true
         model.voiceSession.isActive = true
@@ -259,9 +241,7 @@ struct AudioRecoveryReviewTests {
     }
 
     @Test func healthyVolumeAfterPriorUnreadyRestoresAudioOutputReady() throws {
-        let name = UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: name))
-        defer { values.removePersistentDomain(forName: name) }
+        let values = EphemeralUserDefaults()
         let model = BridgeAppModel(settings: AppSettings(defaults: values))
         model.started = true
         model.voiceSession.isActive = true

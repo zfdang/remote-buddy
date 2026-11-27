@@ -95,9 +95,7 @@ struct BluetoothReconnectWakeTests {
     }
 
     @Test @MainActor func hidConnectionNotificationCarriesTheRemoteIdentity() throws {
-        let suite = "remote-wake-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let monitor = HIDRemoteMonitor(settings: AppSettings(defaults: defaults),
             runtimePermissions: { true }, actionPerformer: { _, _, _ in true }, diagnosticLogger: { _ in })
         let profile = UUID()

@@ -56,9 +56,7 @@ struct RemoteDeviceInformationTests {
         #expect(info0110.hidVersionValue == "0x0110")
         #expect(info011B.hidVersionValue == "0x011B")
 
-        let suite = "device-info-locale-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let localization = LocalizationStore(settings: AppSettings(defaults: defaults))
         localization.select(.english)
         let english = localization.text("connection.device.hid_version")

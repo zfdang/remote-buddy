@@ -7,13 +7,12 @@ import Testing
 @Suite("Ordered voice input activation")
 @MainActor
 struct VoiceInputActivationTests {
-    private func makeModel() throws -> (model: BridgeAppModel, defaults: UserDefaults, suite: String) {
-        let suite = "voice-activation-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
+    private func makeModel() -> (model: BridgeAppModel, defaults: UserDefaults) {
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         settings.setOnboardingVoiceTool(.weixin)
         settings.voiceKeyMode = .function
-        return (BridgeAppModel(settings: settings, initialAudioDevices: []), defaults, suite)
+        return (BridgeAppModel(settings: settings, initialAudioDevices: []), defaults)
     }
 
     private func beginInlineSession(_ monitor: PreferredInputSourceMonitor) -> Bool {
@@ -36,8 +35,7 @@ struct VoiceInputActivationTests {
         (tapMode: true, switchDuringFocus: true),
     ])
     func foregroundSwitchAfterFocusCancelsVoiceStart(tapMode: Bool, switchDuringFocus: Bool) throws {
-        let (model, defaults, suite) = try makeModel()
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let (model, _) = makeModel()
         model.settings.setApplicationIntegration(.chatGPT, enabled: true)
         useReadyDestination(model)
         var foreground = ("com.openai.codex", pid_t(42))
@@ -96,8 +94,7 @@ struct VoiceInputActivationTests {
 
     @Test(arguments: [false, true])
     func foregroundSwitchFromNonIntegratedToIntegratedDuringSourceWaitCancelsVoiceStart(tapMode: Bool) throws {
-        let (model, defaults, suite) = try makeModel()
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let (model, _) = makeModel()
         model.settings.setApplicationIntegration(.antigravity, enabled: true)
         useReadyDestination(model)
         var foreground = ("com.apple.TextEdit", pid_t(41))
@@ -157,8 +154,7 @@ struct VoiceInputActivationTests {
 
     @Test(arguments: [false, true])
     func abortedComposerResyncBlocksVoiceShortcutAndRollsBackInputSource(tapMode: Bool) throws {
-        let (model, defaults, suite) = try makeModel()
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let (model, _) = makeModel()
         model.settings.setApplicationIntegration(.antigravity, enabled: true)
         useReadyDestination(model)
         var edges: [Bool] = []
@@ -211,8 +207,7 @@ struct VoiceInputActivationTests {
     }
 
     @Test func dictationRechecksNonIntegratedForegroundBeforeSecondTap() throws {
-        let (model, defaults, suite) = try makeModel()
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let (model, _) = makeModel()
         model.settings.setOnboardingVoiceTool(.macosDictation)
         model.settings.setAllApplicationIntegrations(enabled: false)
         useReadyDestination(model)
@@ -242,8 +237,7 @@ struct VoiceInputActivationTests {
 
     @Test func tapPreparationWaitsForWeixinAndDoubaoAndCancelsLateActivation() throws {
         for tool in [OnboardingVoiceTool.weixin, .doubao] {
-            let (model, defaults, suite) = try makeModel()
-            defer { defaults.removePersistentDomain(forName: suite) }
+            let (model, _) = makeModel()
             useReadyDestination(model)
             model.settings.setOnboardingVoiceTool(tool)
             let target = try #require(tool.preferredInputSourceID)
@@ -276,8 +270,7 @@ struct VoiceInputActivationTests {
     }
 
     @Test func productionTapSessionMarksSuccessfulTriggerAndRetainsInputSource() throws {
-        let (model, defaults, suite) = try makeModel()
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let (model, _) = makeModel()
         let target = try #require(OnboardingVoiceTool.weixin.preferredInputSourceID)
         var source = "ABC"
         var edges: [Bool] = []
@@ -304,8 +297,7 @@ struct VoiceInputActivationTests {
     }
 
     @Test func firstFnWaitsForActivationAndLeavesSourceSelectedAfterStop() throws {
-        let (model, defaults, suite) = try makeModel()
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let (model, _) = makeModel()
         let target = try #require(OnboardingVoiceTool.weixin.preferredInputSourceID)
         var source = "previous"
         var events: [String] = []
@@ -339,8 +331,7 @@ struct VoiceInputActivationTests {
     }
 
     @Test func cancelledActivationCannotSendFnDownOrBlockTheNextSession() throws {
-        let (model, defaults, suite) = try makeModel()
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let (model, _) = makeModel()
         var source = "previous"
         var cancel = true
         var posted: [Bool] = []
@@ -376,8 +367,7 @@ struct VoiceInputActivationTests {
     }
 
     @Test func activationTimeoutRollsBackBeforePostingAnyKey() throws {
-        let (model, defaults, suite) = try makeModel()
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let (model, _) = makeModel()
         var source = "previous"
         var posts = 0
         model.preferredInputSourceMonitor = PreferredInputSourceMonitor(
@@ -394,8 +384,7 @@ struct VoiceInputActivationTests {
     }
 
     @Test func failedFnUpAndConfirmedCleanupBothRetainSourceForComposition() throws {
-        let (model, defaults, suite) = try makeModel()
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let (model, _) = makeModel()
         var source = "previous"
         model.preferredInputSourceMonitor = PreferredInputSourceMonitor(
             voiceTool: { .weixin }, prepareInputSource: { tool in source = tool.preferredInputSourceID!; return .selected },
@@ -447,8 +436,7 @@ struct VoiceInputActivationTests {
     }
 
     @Test func delayedResultRemainsAttachedAfterKeyUpAndMonitorStop() throws {
-        let (model, defaults, suite) = try makeModel()
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let (model, _) = makeModel()
         let target = try #require(OnboardingVoiceTool.weixin.preferredInputSourceID)
         var source = "previous"
         var restores = 0
@@ -606,8 +594,7 @@ struct VoiceInputActivationTests {
 
     @Test func failedSourceSelectionOrFnDownNeverLeavesTheSourceOwned() throws {
         for selection in [OnboardingInputSourceSwitchResult.failed, .selected] {
-            let (model, defaults, suite) = try makeModel()
-            defer { defaults.removePersistentDomain(forName: suite) }
+            let (model, _) = makeModel()
             var source = "previous"
             var posts = 0
             model.preferredInputSourceMonitor = PreferredInputSourceMonitor(
@@ -646,8 +633,7 @@ struct VoiceInputActivationTests {
     }
 
     @Test func multipleVoiceOwnersReleaseKeysWithoutRestoringTheSource() throws {
-        let (model, defaults, suite) = try makeModel()
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let (model, _) = makeModel()
         var source = "previous"
         var posts: [Bool] = []
         model.preferredInputSourceMonitor = PreferredInputSourceMonitor(
@@ -668,8 +654,7 @@ struct VoiceInputActivationTests {
         #expect(posts == [true, false])
     }
     @Test func toolChangesRemainPendingUntilBothRecordingAndKeyCleanupEnd() throws {
-        let (model, defaults, suite) = try makeModel()
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let (model, _) = makeModel()
         model.settings.setAllApplicationIntegrations(enabled: false)
         model.started = true
         model.isStreaming = true
@@ -731,8 +716,7 @@ struct VoiceInputActivationTests {
     }
 
     @Test func cancelledDeferredActivationCannotPostOrMutateNewSession() throws {
-        let (model, defaults, suite) = try makeModel()
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let (model, _) = makeModel()
         model.settings.setApplicationIntegration(.antigravity, enabled: true)
         var resyncFlags: [Bool] = []
         let controller = ApplicationIntegrationController(
@@ -777,8 +761,7 @@ struct VoiceInputActivationTests {
     }
 
     @Test func unavailableInputSourceTriggersThrottledPromptWithoutPostingVoiceKey() throws {
-        let (model, defaults, suite) = try makeModel()
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let (model, _) = makeModel()
         model.settings.setOnboardingVoiceTool(.doubao)
         var failures: [(OnboardingVoiceTool, OnboardingInputSourceSwitchResult)] = []
         model.preferredInputSourceMonitor = PreferredInputSourceMonitor(
@@ -820,8 +803,7 @@ struct VoiceInputActivationTests {
     }
 
     @Test func missingApplicationVoiceToolTriggersPromptAndBlocksAllTriggerModes() throws {
-        let (model, defaults, suite) = try makeModel()
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let (model, _) = makeModel()
 
         var available = false
         model.voiceToolAvailabilityChecker = { _ in available ? .available : .notInstalled }
@@ -913,8 +895,7 @@ struct VoiceInputActivationTests {
     }
 
     @Test func unavailableVoiceToolAlertCopyNavigationAndReentrancy() throws {
-        let (model, defaults, suite) = try makeModel()
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let (model, _) = makeModel()
         let localization = LocalizationStore(settings: model.settings)
 
         for language in [AppLanguage.english, .simplifiedChinese] {
@@ -990,8 +971,7 @@ struct VoiceInputActivationTests {
     }
 
     @Test func bypassInputSourceSwitchingSkipsPrepareAndActivation() throws {
-        let (_, defaults, suite) = try makeModel()
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let (_, _) = makeModel()
         let source = "ABC"
         var prepared = false
         var activated = false
@@ -1025,8 +1005,7 @@ struct VoiceInputActivationTests {
     }
 
     @Test func bypassInputSourceSwitchingSettingsLifecycle() throws {
-        let (model, defaults, suite) = try makeModel()
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let (model, _) = makeModel()
 
         let profile = model.settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         model.settings.selectRemoteProfile(profile)
@@ -1102,8 +1081,7 @@ struct VoiceInputActivationTests {
     }
 
     @Test func bypassInputSourceSwitchingBlocksAndReportsUnavailableWhenToolMissing() throws {
-        let (model, defaults, suite) = try makeModel()
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let (model, _) = makeModel()
         model.settings.setOnboardingVoiceTool(.doubao)
         model.settings.bypassInputSourceSwitching = true
 
@@ -1142,8 +1120,7 @@ struct VoiceInputActivationTests {
     }
 
     @Test func bypassInputSourceSwitchingUsesModelAvailabilityChecker() throws {
-        let (model, defaults, suite) = try makeModel()
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let (model, _) = makeModel()
         model.settings.setOnboardingVoiceTool(.doubao)
         model.settings.bypassInputSourceSwitching = true
         model.voiceToolAvailabilityChecker = { _ in .notInstalled }

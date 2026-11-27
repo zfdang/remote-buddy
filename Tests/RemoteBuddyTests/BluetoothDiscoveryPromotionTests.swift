@@ -6,9 +6,7 @@ import Testing
 @MainActor
 struct BluetoothDiscoveryPromotionTests {
     @Test func dailyRuntimeStopsDiscoveryWithoutStoppingRegisteredBridges() throws {
-        let suite = UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         settings.onboardingCompletedVersion = AppSettings.currentOnboardingVersion
         let model = BridgeAppModel(settings: settings)
@@ -31,9 +29,7 @@ struct BluetoothDiscoveryPromotionTests {
     }
 
     @Test func discoveryRemainsAvailableForFirstDeviceSetupAndOnboardingSteps() throws {
-        let suite = UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         settings.onboardingCompletedVersion = AppSettings.currentOnboardingVersion
         let model = BridgeAppModel(settings: settings)
@@ -51,9 +47,7 @@ struct BluetoothDiscoveryPromotionTests {
 
     @Test(arguments: ["step", "completion", "profile"])
     func settingsPublisherStopsDiscoveryAfterValuesAreCommitted(change: String) async throws {
-        let suite = UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         settings.onboardingCompletedVersion = change == "profile" ? AppSettings.currentOnboardingVersion : 0
         settings.onboardingStep = .controls
@@ -77,9 +71,7 @@ struct BluetoothDiscoveryPromotionTests {
     }
 
     @Test func registrationPinsTheKnownBridgeIdentity() throws {
-        let suite = "bluetooth-registration-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let model = BridgeAppModel(settings: settings)
         let identifier = UUID()
@@ -99,9 +91,7 @@ struct BluetoothDiscoveryPromotionTests {
     }
 
     @Test func promotedDiscoveryBridgeRetainsItsDeviceAndCanReconnect() throws {
-        let suite = "bluetooth-promotion-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let model = BridgeAppModel(settings: settings)
         let identifier = UUID()
@@ -133,9 +123,7 @@ struct BluetoothDiscoveryPromotionTests {
     }
 
     @Test func discoveryStillExcludesRegisteredDevicesAndBoundBridgeAllowsScanFallback() throws {
-        let suite = "bluetooth-exclusions-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let model = BridgeAppModel(settings: settings)
         let identifier = UUID()
@@ -156,9 +144,7 @@ struct BluetoothDiscoveryPromotionTests {
     }
 
     @Test func removeAndAddReplacementEnablesDiscoveryStartsFreshAndReconnectMatchesBluetoothProfile() throws {
-        let suite = "bluetooth-remove-add-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let firstID = UUID()
         let keptID = UUID()

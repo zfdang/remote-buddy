@@ -21,9 +21,8 @@ struct ATVVCommandTransmissionTests {
             let item = DispatchWorkItem(block: work)
             return ScheduledOperation { item.cancel() }
         }
-    ) throws -> (BluetoothRemoteBridge, DummyDelegate, UserDefaults, String) {
-        let suite = UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
+    ) -> (BluetoothRemoteBridge, DummyDelegate, UserDefaults) {
+        let defaults = EphemeralUserDefaults()
         let delegate = DummyDelegate()
         let bridge = BluetoothRemoteBridge(
             settings: AppSettings(defaults: defaults),
@@ -31,12 +30,11 @@ struct ATVVCommandTransmissionTests {
             targetIdentifier: UUID(),
             scheduleMicrophoneClose: schedule
         )
-        return (bridge, delegate, defaults, suite)
+        return (bridge, delegate, defaults)
     }
 
     @Test func submissionClassifiesMissingPeripheralAndQueueCongestionCleanly() throws {
-        let (bridge, delegate, defaults, suite) = try makeBridge()
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let (bridge, delegate, _) = makeBridge()
         _ = delegate
 
         #expect(bridge.submitControlWrite(ATVVProtocol.getCapabilitiesV10) == .rejected(.missingPeripheral))
@@ -50,8 +48,7 @@ struct ATVVCommandTransmissionTests {
     }
 
     @Test func failedMicOpenDoesNotMarkMicrophoneOpened() throws {
-        let (bridge, delegate, defaults, suite) = try makeBridge()
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let (bridge, delegate, _) = makeBridge()
         _ = delegate
 
         bridge.simulateChromecastReadyStateForTesting()
@@ -67,8 +64,7 @@ struct ATVVCommandTransmissionTests {
 
     @Test func micClosePendingRetryRecoversOrClearsOnWatchdogTimeout() throws {
         let clock = ControlledTestScheduler()
-        let (bridge, delegate, defaults, suite) = try makeBridge(schedule: clock.voiceSchedule)
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let (bridge, delegate, _) = makeBridge(schedule: clock.voiceSchedule)
         _ = delegate
 
         bridge.simulateChromecastReadyStateForTesting()

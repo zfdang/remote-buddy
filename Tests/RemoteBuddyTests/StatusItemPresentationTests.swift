@@ -39,9 +39,7 @@ struct StatusItemPresentationTests {
         #expect(states == [.connected, .preparing, .streaming, .connected, .preparing, .connected, .disconnected])
     }
     @Test @MainActor func modelPreparationRemainsVisibleThroughReadinessAndCancellation() throws {
-        let suite = "status-preparation-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         settings.setApplicationIntegration(.chatGPT, enabled: true)
         let model = BridgeAppModel(settings: settings)
@@ -85,9 +83,7 @@ struct StatusItemPresentationTests {
     }
 
     @Test @MainActor func releaseDuringInputSourceWaitClearsTheRealModelPreparation() throws {
-        let suite = "status-source-wait-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         settings.setApplicationIntegration(.chatGPT, enabled: true)
         let model = BridgeAppModel(settings: settings)

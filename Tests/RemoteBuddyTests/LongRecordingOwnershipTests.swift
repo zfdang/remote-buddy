@@ -6,9 +6,7 @@ import Testing
 @MainActor
 struct LongRecordingOwnershipTests {
     private func withRemotes(_ body: (BridgeAppModel, BluetoothRemoteBridge, BluetoothRemoteBridge, UUID) throws -> Void) throws {
-        let name = "long-recording-owner-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let ownerID = UUID(), otherID = UUID()
         let ownerProfile = settings.registerBluetoothRemote(identifier: ownerID, model: .rc003)

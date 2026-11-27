@@ -20,9 +20,7 @@ struct BluetoothVoiceStopDiagnosticTests {
     @Test(arguments: [BluetoothVoiceStopReason.remoteNotification, .remoteMicrophoneRefused,
         .localStop, .bridgeStopped, .systemSuspended, .closeUnacknowledged, .closeRetryExhausted])
     func reportsTheObservedStopWithoutClaimingAPhysicalRelease(reason: BluetoothVoiceStopReason) async {
-        let suite = "voice-stop-diagnostics-" + UUID().uuidString
-        let defaults = UserDefaults(suiteName: suite)!
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let clock = ControlledTestScheduler()
         let delegate = Delegate()
         let queue = DispatchQueue(label: "voice-stop-diagnostics")
@@ -61,9 +59,7 @@ struct BluetoothVoiceStopDiagnosticTests {
     }
 
     @Test func drainingAnOldStreamDoesNotSetTheNewStreamsStopReason() async {
-        let suite = "voice-stop-overlap-" + UUID().uuidString
-        let defaults = UserDefaults(suiteName: suite)!
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let delegate = Delegate()
         let queue = DispatchQueue(label: "voice-stop-overlap")
         var logs: [String] = []
@@ -99,9 +95,7 @@ struct BluetoothVoiceStopDiagnosticTests {
     }
 
     @Test func rejectUnsupportedAudioResetsVoiceState() async {
-        let suite = "voice-stop-reject-" + UUID().uuidString
-        let defaults = UserDefaults(suiteName: suite)!
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let delegate = Delegate()
         let queue = DispatchQueue(label: "voice-stop-reject")
         let bridge = BluetoothRemoteBridge(settings: AppSettings(defaults: defaults), delegate: delegate,
@@ -124,9 +118,7 @@ struct BluetoothVoiceStopDiagnosticTests {
     }
 
     @Test func failInitializationResetsVoiceState() async {
-        let suite = "voice-stop-fail-" + UUID().uuidString
-        let defaults = UserDefaults(suiteName: suite)!
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let delegate = Delegate()
         let queue = DispatchQueue(label: "voice-stop-fail")
         let bridge = BluetoothRemoteBridge(settings: AppSettings(defaults: defaults), delegate: delegate,

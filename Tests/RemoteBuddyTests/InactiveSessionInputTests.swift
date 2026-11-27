@@ -6,9 +6,7 @@ import Testing
 struct InactiveSessionInputTests {
     @Test(arguments: [SystemAudioLifecycleEvent.sessionDidResignActive, .screenDidSleep, .systemWillSleep])
     func suspensionRejectsNewInputAndAllowsKeyCleanup(event: SystemAudioLifecycleEvent) throws {
-        let suite = "inactive-input-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let model = BridgeAppModel(settings: AppSettings(defaults: defaults))
         var edges: [Bool] = []
         #expect(model.updateVoiceKeyState(streaming: true, forceSoftware: true, owner: .bluetooth,

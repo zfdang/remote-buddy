@@ -7,9 +7,7 @@ import Testing
 @MainActor
 struct KeyboardFilterRecoveryTests {
     @Test func transientDisableReturnsBeforePermissionQueriesOrDeviceTeardown() throws {
-        let name = "filter-recovery-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let model = BridgeAppModel(settings: settings)
         let monitor = HIDRemoteMonitor(settings: settings, profileID: nil,
@@ -67,9 +65,7 @@ struct KeyboardFilterRecoveryTests {
     }
 
     @Test func unavailableNativeFilterBlocksMappedActionsDuringRecovery() throws {
-        let name = "filter-recovery-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let clock = ControlledTestScheduler()
         var available = true
@@ -91,9 +87,7 @@ struct KeyboardFilterRecoveryTests {
     }
 
     @Test func hidFilterRetryReplacementAndStopCancelPreviousTimersAndGuardStaleCallbacks() throws {
-        let name = "filter-retry-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let model = BridgeAppModel(settings: AppSettings(defaults: defaults))
         model.started = true
         defer {

@@ -257,9 +257,7 @@ struct LocalDiagnosticTests {
     }
 
     @Test @MainActor func diagnosticLoggingPreferenceDefaultsTrueAndPersists() throws {
-        let suite = "diagnostic-logging-\(UUID().uuidString)"
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
 
         #expect(AppLogger.shouldEnableSharedLogging(arguments: ["RemoteBuddy"], environment: [:], defaults: defaults))
         #expect(!AppLogger.shouldEnableSharedLogging(arguments: ["TestBundle.xctest"], environment: [:], defaults: defaults))

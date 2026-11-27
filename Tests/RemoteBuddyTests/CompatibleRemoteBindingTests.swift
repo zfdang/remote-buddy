@@ -7,9 +7,7 @@ import Testing
 struct CompatibleRemoteBindingTests {
     private let alternate = RemoteHIDIdentity(vendorID: 0x1234, productID: 0x5678)
     private func withSettings(_ body: @MainActor (AppSettings) throws -> Void) throws {
-        let suite = "compatible-remote-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         try body(AppSettings(defaults: defaults))
     }
 
@@ -31,9 +29,7 @@ struct CompatibleRemoteBindingTests {
     }
 
     @Test func alternateIdentityPersistsWithoutChangingOtherDeviceMappings() throws {
-        let suite = "compatible-persist-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let first = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         let google = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
@@ -224,9 +220,7 @@ struct CompatibleRemoteBindingTests {
     }
 
     @Test func replacingWhitelistRestoresMappingsWhileOldServicesAreStillReachable() throws {
-        let suite = "compatible-mapper-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let original = HIDUsageMapping(source: RemoteHIDKeyMappingPolicy.remoteVoiceKey.source, destination: 99)
         var mappings = [original]
         var mapper: RemoteHIDKeyMapper!

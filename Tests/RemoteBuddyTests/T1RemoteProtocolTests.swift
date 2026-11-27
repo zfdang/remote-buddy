@@ -57,9 +57,7 @@ struct T1RemoteProtocolTests {
     }
 
     @Test @MainActor func airMouseReportsPreserveHeldButtonsAndReport1TracksVoiceHoldRelease() throws {
-        let suite = "t1-monitor-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
 
         let profileID = UUID()
@@ -206,9 +204,7 @@ struct T1RemoteProtocolTests {
     }
 
     @Test func keyMapperNeutralizesSpotlightVoiceKeysAndPowerThenRestores() {
-        let suite = "t1-mapper-" + UUID().uuidString
-        let defaults = UserDefaults(suiteName: suite)!
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
 
         var t1Mappings: [HIDUsageMapping] = []
         let mapper = RemoteHIDKeyMapper(
@@ -254,9 +250,7 @@ struct T1RemoteProtocolTests {
     }
 
     @Test func defaultFnValidityDetectsMissingT1KeysAndFailedRepairs() {
-        let suite = "t1-default-repair-" + UUID().uuidString
-        let defaults = UserDefaults(suiteName: suite)!
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         var mappings: [HIDUsageMapping] = []
         var allowWrites = true
         var connected = true
@@ -313,9 +307,7 @@ struct T1RemoteProtocolTests {
     }
 
     @Test func defaultT1WriteFailureRollsBackEarlierServices() {
-        let suite = "t1-default-rollback-" + UUID().uuidString
-        let defaults = UserDefaults(suiteName: suite)!
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let original = [HIDUsageMapping(source: 42, destination: 43)]
         var mappings = original
         let mapper = RemoteHIDKeyMapper(serviceProvider: {
@@ -332,9 +324,7 @@ struct T1RemoteProtocolTests {
     }
 
     @Test func keyMapperRollsBackMixedXiaomiAndT1ServicesWhenT1WriteFails() {
-        let suite = "t1-mixed-rollback-" + UUID().uuidString
-        let defaults = UserDefaults(suiteName: suite)!
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
 
         var xiaomiMappings: [HIDUsageMapping] = []
         let t1Mappings: [HIDUsageMapping] = []
@@ -368,9 +358,7 @@ struct T1RemoteProtocolTests {
     }
 
     @Test @MainActor func logsIgnoredT1VendorAndChangedMouseReportsWithoutFlooding() {
-        let suite = "t1-ignored-log-" + UUID().uuidString
-        let defaults = UserDefaults(suiteName: suite)!
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
 
         let settings = AppSettings(defaults: defaults)
         var logs: [String] = []
@@ -462,9 +450,7 @@ struct T1RemoteProtocolTests {
         #expect(state.update(reportID: T1RemoteProtocol.consumerReportID, usages: []) == [0x65])
         #expect(state.update(reportID: T1RemoteProtocol.keyboardReportID, usages: []) == [])
 
-        let suite = "t1-per-report-state-" + UUID().uuidString
-        let defaults = UserDefaults(suiteName: suite)!
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
 
         let settings = AppSettings(defaults: defaults)
         let monitor = HIDRemoteMonitor(
@@ -509,9 +495,7 @@ struct T1RemoteProtocolTests {
     }
 
     @Test @MainActor func t1FirstVoiceReleaseDoesNotCloseActiveToggleStream() throws {
-        let suite = "t1-toggle-release-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
 
         let settings = AppSettings(defaults: defaults)
 
@@ -594,9 +578,7 @@ struct T1RemoteProtocolTests {
     }
 
     @Test @MainActor func interleavedReport2SearchPreservesVolumeHoldUntilZeroRelease() throws {
-        let suite = "t1-report2-interleave-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
 
         let monitor = HIDRemoteMonitor(
@@ -626,9 +608,7 @@ struct T1RemoteProtocolTests {
     }
 
     @Test @MainActor func t1IgnoredReportsRefreshHeldExpiryAndCancelEmitsVoiceHoldRelease() throws {
-        let suite = "t1-ignored-expiry-reset-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
 
         let clock = ControlledTestScheduler()
@@ -698,9 +678,7 @@ struct T1RemoteProtocolTests {
             func bluetoothBridgeDeviceNameDidChange(_ bridge: BluetoothRemoteBridge) {}
         }
 
-        let suite = "t1-atvv-keepalive-watchdog-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
 
         let clock = ControlledTestScheduler()
@@ -804,9 +782,7 @@ struct T1RemoteProtocolTests {
             func bluetoothBridgeDeviceNameDidChange(_ bridge: BluetoothRemoteBridge) {}
         }
 
-        let suite = "t1-atvv-keepalive-duration-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         settings.voiceAutoStopDuration = .threeMinutes
 
@@ -886,9 +862,7 @@ struct T1RemoteProtocolTests {
         #expect(decodedShiftOK.result == .usages([], voiceHoldPressed: false))
         #expect(decodedShiftOK.observedPassthroughUsages.isEmpty)
 
-        let suite = "t1-passthrough-observe-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let profileID = UUID()
         settings.setBaseBinding(
@@ -942,9 +916,7 @@ struct T1RemoteProtocolTests {
     }
 
     @Test @MainActor func t1PassthroughRoutingAvoidsSwitchingSelectedRemoteOutsideSetupAndPublishesFirstPressWhenSelectedInSetup() throws {
-        let suite = "t1-passthrough-routing-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
 
         let emptyMappings = RemoteDeviceMappings(
@@ -1001,9 +973,7 @@ struct T1RemoteProtocolTests {
     }
 
     @Test @MainActor func t1DirectionalAndOKPassthroughTemporarilyInterceptedForCommonPhrases() throws {
-        let suite = "t1-common-phrases-modal-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
 
         let profileID = UUID()
@@ -1085,9 +1055,7 @@ struct T1RemoteProtocolTests {
     }
 
     @Test @MainActor func t1DirectionalAndOKPassthroughDrivesAppSwitcherSessionWithoutDismissing() throws {
-        let suite = "t1-app-switcher-modal-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
 
         let profile = RemoteDeviceProfile(
@@ -1198,9 +1166,7 @@ struct T1RemoteProtocolTests {
     }
 
     @Test @MainActor func t1ModalMissingReleaseRecoveryClearsHeldRoutingAndAllowsNextSameDirectionSelection() throws {
-        let suite = "t1-modal-missing-release-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
 
         let clock = ControlledTestScheduler()

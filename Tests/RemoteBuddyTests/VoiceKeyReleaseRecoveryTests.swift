@@ -6,9 +6,7 @@ import Testing
 @MainActor
 struct VoiceKeyReleaseRecoveryTests {
     @Test func failedDisconnectReleaseRetriesWithoutAnotherDeviceEvent() throws {
-        let name = "voice-release-" + UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: name))
-        defer { values.removePersistentDomain(forName: name) }
+        let values = EphemeralUserDefaults()
         let model = BridgeAppModel(settings: AppSettings(defaults: values))
         let clock = ControlledTestScheduler()
         model.scheduleVoiceKeyReleaseRetry = clock.voiceSchedule

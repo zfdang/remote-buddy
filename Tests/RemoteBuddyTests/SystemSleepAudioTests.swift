@@ -8,9 +8,7 @@ struct SystemSleepAudioTests {
     private final class MonitorToken {}
 
     @Test func actualSleepEndsActiveVoiceEvenDuringStartup() async throws {
-        let name = "system-sleep-" + UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: name))
-        defer { values.removePersistentDomain(forName: name) }
+        let values = EphemeralUserDefaults()
         let model = BridgeAppModel(settings: AppSettings(defaults: values), initialAudioDevices: [])
         model.started = true
         defer { model.started = false }
@@ -36,9 +34,7 @@ struct SystemSleepAudioTests {
     }
 
     @Test func screenSleepPreservesActiveVoice() throws {
-        let name = "screen-sleep-" + UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: name))
-        defer { values.removePersistentDomain(forName: name) }
+        let values = EphemeralUserDefaults()
         let model = BridgeAppModel(settings: AppSettings(defaults: values), initialAudioDevices: [])
         model.started = true
         defer { model.started = false }
@@ -55,9 +51,7 @@ struct SystemSleepAudioTests {
         attachReadyBridge: Bool = true,
         _ body: (BridgeAppModel, BluetoothRemoteBridge, () -> [DispatchWorkItem]) throws -> Void
     ) throws {
-        let name = "sleep-lifecycle-" + UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: name))
-        defer { values.removePersistentDomain(forName: name) }
+        let values = EphemeralUserDefaults()
         let settings = AppSettings(defaults: values)
 
         let bridgeID = UUID()

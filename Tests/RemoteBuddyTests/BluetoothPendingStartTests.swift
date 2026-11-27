@@ -6,9 +6,7 @@ import Testing
 @MainActor
 struct BluetoothPendingStartTests {
     @Test func busyRemoteDoesNotRegisterOrSelectTheRejectedDevice() throws {
-        let suite = "bluetooth-busy-selection-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let model = BridgeAppModel(settings: settings)
         let owner = UUID(), rejected = UUID()
@@ -42,9 +40,7 @@ struct BluetoothPendingStartTests {
     }
 
     @Test func disconnectClearsOnlyThePendingStartOwnedByThatBridge() throws {
-        let suite = "bluetooth-pending-disconnect-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let model = BridgeAppModel(settings: settings)
         let owner = UUID()
@@ -64,9 +60,7 @@ struct BluetoothPendingStartTests {
     }
 
     @Test func microphoneCloseFailureRetainsClosePendingAndDoesNotPretendClosed() throws {
-        let suite = "bluetooth-close-pending-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let model = BridgeAppModel(settings: settings)
         let owner = UUID()
@@ -91,9 +85,7 @@ struct BluetoothPendingStartTests {
     }
 
     @Test func closeTimeoutClearsOpenStateAndCancelledTimeoutCannotCloseANewRequest() throws {
-        let suite = "bluetooth-close-timeout-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let clock = ControlledTestScheduler()
         let settings = AppSettings(defaults: defaults)
         let model = BridgeAppModel(settings: settings)
@@ -120,9 +112,7 @@ struct BluetoothPendingStartTests {
     }
 
     @Test func remoteStreamStopClearsMicrophoneClosePendingAndPreventsWatchdogReconnect() throws {
-        let suite = "bluetooth-close-stop-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let model = BridgeAppModel(settings: settings)
         let owner = UUID()
@@ -143,9 +133,7 @@ struct BluetoothPendingStartTests {
     }
 
     @Test func localStopStreamingPreservesMicrophoneClosePendingForRetry() throws {
-        let suite = "bluetooth-local-stop-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let model = BridgeAppModel(settings: settings)
         let owner = UUID()

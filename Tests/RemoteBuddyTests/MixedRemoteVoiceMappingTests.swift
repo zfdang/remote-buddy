@@ -7,9 +7,7 @@ import Testing
 struct MixedRemoteVoiceMappingTests {
     @Test(arguments: VoiceKeyMode.allCases, [false, true])
     func googleSelectionPreservesTheXiaomiTriggerPolicy(mode: VoiceKeyMode, tapMode: Bool) throws {
-        let name = "mixed-voice-mapping-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         settings.setAllApplicationIntegrations(enabled: false)
         let xiaomi = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
@@ -36,9 +34,7 @@ struct MixedRemoteVoiceMappingTests {
     }
 
     @Test func orderedInputSourceActivationKeepsNativeFnNeutralForEitherSelection() throws {
-        let name = "mixed-voice-mapping-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         settings.setAllApplicationIntegrations(enabled: false)
         let xiaomi = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)

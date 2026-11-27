@@ -68,9 +68,7 @@ struct ConnectionDeviceUsageGuideTests {
     }
 
     @Test @MainActor func allGuideKeysResolveInEnglishAndSimplifiedChinese() throws {
-        let suite = "connection-guide-locale-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let localization = LocalizationStore(settings: AppSettings(defaults: defaults))
 
         let guides = [
@@ -104,9 +102,7 @@ struct ConnectionDeviceUsageGuideTests {
     }
 
     @Test @MainActor func safetyLimitItemsFormatConfiguredMinutesInBothLanguages() throws {
-        let suite = "connection-guide-duration-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let localization = LocalizationStore(settings: AppSettings(defaults: defaults))
 
         for profile in [

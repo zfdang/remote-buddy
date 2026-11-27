@@ -6,9 +6,8 @@ import Testing
 @Suite("Session recovery")
 @MainActor
 struct SessionRecoveryTests {
-    private func defaults() -> (UserDefaults, String) {
-        let name = "session-recovery-" + UUID().uuidString
-        return (UserDefaults(suiteName: name)!, name)
+    private func defaults() -> UserDefaults {
+        EphemeralUserDefaults()
     }
 
     @Test func disabledSessionCompletesCleanupWithoutWaitingForLostRemoteStop() {
@@ -152,8 +151,7 @@ struct SessionRecoveryTests {
     }
 
     @Test func recoveryJournalIsAtomicAndFailurePreventsSystemWrite() throws {
-        let (values, name) = defaults()
-        defer { values.removePersistentDomain(forName: name) }
+        let values = defaults()
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let url = directory.appendingPathComponent("journal.json")
@@ -164,7 +162,7 @@ struct SessionRecoveryTests {
         let first = RemoteHIDKeyMapper(serviceProvider: services, recoveryDefaults: values, bootID: "boot", recoveryJournalURL: url)
         #expect(first.apply())
         #expect(FileManager.default.fileExists(atPath: url.path))
-        values.removePersistentDomain(forName: name)
+        values.removePersistentDomain(forName: "ephemeral")
         let restarted = RemoteHIDKeyMapper(serviceProvider: services, recoveryDefaults: values, bootID: "boot", recoveryJournalURL: url)
         restarted.restore()
         #expect(mappings == [original])

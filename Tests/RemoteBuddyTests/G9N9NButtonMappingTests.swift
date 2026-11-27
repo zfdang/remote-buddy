@@ -7,9 +7,7 @@ import Testing
 struct G9N9NButtonMappingTests {
     @Test(arguments: [ButtonTrigger.doubleClick, .longPress])
     func configuredGesturesUseTheSharedMappingEngine(trigger: ButtonTrigger) throws {
-        let suite = "g9n9n-gestures-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         settings.onboardingStep = .complete
         settings.setAction(.escape, for: .ok, trigger: .doubleClick)
@@ -40,9 +38,7 @@ struct G9N9NButtonMappingTests {
     }
 
     @Test func allFourteenSingleButtonsHaveIndependentPressAndReleaseEdges() throws {
-        let suite = "g9n9n-buttons-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         settings.onboardingStep = .complete
         let profile = UUID()
@@ -74,9 +70,7 @@ struct G9N9NButtonMappingTests {
     }
 
     @Test func simultaneousButtonsUseConfiguredActionsInsteadOfAFixedEnter() throws {
-        let suite = "g9n9n-independent-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         settings.onboardingStep = .complete
         settings.setAction(.escape, for: .ok)

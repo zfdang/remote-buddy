@@ -6,9 +6,7 @@ import Testing
 @MainActor
 struct ApplicationTerminationTests {
     @Test func acceptedQuitClosesVoiceAdmissionBeforeRuntimeTeardown() throws {
-        let name = UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: name))
-        defer { values.removePersistentDomain(forName: name) }
+        let values = EphemeralUserDefaults()
         let model = BridgeAppModel(settings: AppSettings(defaults: values))
         model.started = true
         defer { model.started = false }

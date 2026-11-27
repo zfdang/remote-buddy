@@ -6,9 +6,7 @@ import Testing
 struct OnboardingRemoteSelectionTests {
     @Test(arguments: [OnboardingControlSource.xiaomiRemote, .chromecastRemote])
     func selectsTheOnlyConnectedRemoteMatchingTheChosenFamily(source: OnboardingControlSource) throws {
-        let name = "onboarding-selection-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let xiaomi = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         let google = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
@@ -23,9 +21,7 @@ struct OnboardingRemoteSelectionTests {
     }
 
     @Test func waitsForAConnectionAndDoesNotGuessBetweenMultipleMatchingRemotes() throws {
-        let name = "onboarding-selection-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let first = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         let second = settings.registerBluetoothRemote(identifier: UUID(), model: .rc001)
@@ -48,9 +44,7 @@ struct OnboardingRemoteSelectionTests {
     }
 
     @Test func explicitUnsupportedDeviceSelectionSurvivesConnectedRemotePreselection() throws {
-        let name = "onboarding-unsupported-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let xiaomi = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         settings.setOnboardingStep(.remoteAvailability)
@@ -72,9 +66,7 @@ struct OnboardingRemoteSelectionTests {
     }
 
     @Test func otherStepsKeepTheCurrentDeviceSelection() throws {
-        let name = "onboarding-selection-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let xiaomi = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         let google = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)

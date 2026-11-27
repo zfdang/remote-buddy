@@ -11,9 +11,7 @@ struct HoldRepeatConfigurationTests {
     }
 
     private func withSettings(_ body: (AppSettings) throws -> Void) throws {
-        let name = "hold-repeat-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         try body(AppSettings(defaults: defaults))
     }
 

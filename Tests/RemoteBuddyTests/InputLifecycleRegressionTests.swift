@@ -7,9 +7,8 @@ import Testing
 @MainActor
 struct InputLifecycleRegressionTests {
     private final class Probe {}
-    private func defaults() -> (UserDefaults, String) {
-        let name = "input-lifecycle-" + UUID().uuidString
-        return (UserDefaults(suiteName: name)!, name)
+    private func defaults() -> UserDefaults {
+        EphemeralUserDefaults()
     }
 
     @Test func accessibilityTimeoutFailureIsReportedWithoutRetries() {
@@ -37,8 +36,7 @@ struct InputLifecycleRegressionTests {
     }
 
     @Test func systemDisabledSharedFilterAlsoStopsDeviceMappings() {
-        let (values, name) = defaults()
-        defer { values.removePersistentDomain(forName: name) }
+        let values = defaults()
         let settings = AppSettings(defaults: values)
         let model = BridgeAppModel(settings: settings)
         let monitor = HIDRemoteMonitor(settings: settings, profileID: nil,
@@ -65,8 +63,7 @@ struct InputLifecycleRegressionTests {
 
     @Test(arguments: [VoiceKeyMode.function, .leftCommand, .rightOption])
     func deniedVoiceReleaseKeepsLatchUntilSuccessfulRetry(mode: VoiceKeyMode) {
-        let (values, name) = defaults()
-        defer { values.removePersistentDomain(forName: name) }
+        let values = defaults()
         let model = BridgeAppModel(settings: AppSettings(defaults: values))
         _ = model.voiceKeyLatch.transition(streaming: true, owner: .bluetooth)
         model.heldVoiceKeyMode = mode
@@ -141,8 +138,7 @@ struct InputLifecycleRegressionTests {
     }
 
     @Test func revokedPermissionsClearSharedFilterBeforeInputReset() throws {
-        let (values, name) = defaults()
-        defer { values.removePersistentDomain(forName: name) }
+        let values = defaults()
         let settings = AppSettings(defaults: values)
         var granted = true
         let filter = KeyboardEventSuppressor(uptime: { 0 })
@@ -196,8 +192,7 @@ struct InputLifecycleRegressionTests {
     }
 
     @Test func mixedReportDeliversReleaseDespiteRejectedNewPress() {
-        let (values, name) = defaults()
-        defer { values.removePersistentDomain(forName: name) }
+        let values = defaults()
         let settings = AppSettings(defaults: values)
         for button in RemoteButton.allCases {
             settings.setAction(.escape, for: button, trigger: .singleClick)
@@ -222,8 +217,7 @@ struct InputLifecycleRegressionTests {
     }
 
     @Test func stoppedMonitorDoesNotDispatchRemainingPressesInSameReport() {
-        let (values, name) = defaults()
-        defer { values.removePersistentDomain(forName: name) }
+        let values = defaults()
         let settings = AppSettings(defaults: values)
         for button in RemoteButton.allCases {
             settings.setAction(.escape, for: button, trigger: .singleClick)
@@ -247,8 +241,7 @@ struct InputLifecycleRegressionTests {
 
     @Test(arguments: [false, true])
     func appSwitcherNavigationOwnsNativeArrowsOnUnseizedDevice(delayedNativeEvents: Bool) throws {
-        let (values, name) = defaults()
-        defer { values.removePersistentDomain(forName: name) }
+        let values = defaults()
         let settings = AppSettings(defaults: values)
         settings.setAction(.appSwitcher, for: .tv)
         settings.setAction(.arrowRight, for: .right)
@@ -292,8 +285,7 @@ struct InputLifecycleRegressionTests {
     }
 
     @Test func rejectedActionDoesNotDisableMonitorWhilePermissionsRemainValid() {
-        let (values, name) = defaults()
-        defer { values.removePersistentDomain(forName: name) }
+        let values = defaults()
         let settings = AppSettings(defaults: values)
         let profile = UUID()
         var actions: [RemoteButton] = []
@@ -337,8 +329,7 @@ struct InputLifecycleRegressionTests {
     }
 
     @Test func restartWizardClearsPriorValidationHistory() throws {
-        let (values, name) = defaults()
-        defer { values.removePersistentDomain(forName: name) }
+        let values = defaults()
         let binding = VoiceToolUserBinding(tool: .weixin, shortcut: .function,
             gestureMode: .hold, source: .manuallyConfirmed, validationState: .verified)
         values.set(try JSONEncoder().encode(binding), forKey: "onboarding.verifiedVoiceBinding")
@@ -398,8 +389,7 @@ struct InputLifecycleRegressionTests {
     }
 
     @Test func mappingJournalSurvivesRestartAndOfflineRestore() {
-        let (values, name) = defaults()
-        defer { values.removePersistentDomain(forName: name) }
+        let values = defaults()
         let original = HIDUsageMapping(source: RemoteHIDKeyMappingPolicy.remoteVoiceKey.source, destination: 99)
         var mappings = [original]
         var online = true
@@ -426,8 +416,7 @@ struct InputLifecycleRegressionTests {
     }
 
     @Test func mappingJournalDoesNotCrossSystemBoots() {
-        let (values, name) = defaults()
-        defer { values.removePersistentDomain(forName: name) }
+        let values = defaults()
         let source = RemoteHIDKeyMappingPolicy.remoteVoiceKey.source
         var mappings = [HIDUsageMapping(source: source, destination: 99)]
         let provider = { [RemoteHIDMappingService(registryID: 123,
@@ -469,8 +458,7 @@ struct InputLifecycleRegressionTests {
             let down: Bool
             let command: Bool
         }
-        let (values, name) = defaults()
-        defer { values.removePersistentDomain(forName: name) }
+        let values = defaults()
         let settings = AppSettings(defaults: values)
         let remoteAProfile = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         let remoteBProfile = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
@@ -607,8 +595,7 @@ struct InputLifecycleRegressionTests {
     }
 
     @Test func nonOwnerMonitorResetDoesNotCancelActiveAppSwitcher() {
-        let (values, name) = defaults()
-        defer { values.removePersistentDomain(forName: name) }
+        let values = defaults()
         let settings = AppSettings(defaults: values)
         let remoteAProfile = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         let remoteBProfile = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
@@ -667,8 +654,7 @@ struct InputLifecycleRegressionTests {
     }
 
     @Test @MainActor func bridgeAppModelSharesAppSwitcherCoordinatorAcrossHIDMonitors() throws {
-        let (values, name) = defaults()
-        defer { values.removePersistentDomain(forName: name) }
+        let values = defaults()
         let settings = AppSettings(defaults: values)
         let model = BridgeAppModel(settings: settings, initialAudioDevices: [])
         let xiaomiID = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
@@ -680,8 +666,7 @@ struct InputLifecycleRegressionTests {
     }
 
     @Test @MainActor func cancelPendingButtonActionsCleansActiveUsagesAndTimers() throws {
-        let (values, name) = defaults()
-        defer { values.removePersistentDomain(forName: name) }
+        let values = defaults()
         let settings = AppSettings(defaults: values)
         let profile = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         var activeButtonsHistory: [Set<RemoteButton>] = []
@@ -709,8 +694,7 @@ struct InputLifecycleRegressionTests {
     }
 
     @Test @MainActor func bridgeAppModelCancelAllScheduledWorkCleansTimers() throws {
-        let (values, name) = defaults()
-        defer { values.removePersistentDomain(forName: name) }
+        let values = defaults()
         let settings = AppSettings(defaults: values)
         let model = BridgeAppModel(settings: settings, initialAudioDevices: [])
         model.completedUpdateHIDRecoveryWorkItem = DispatchWorkItem {}
@@ -726,8 +710,7 @@ struct InputLifecycleRegressionTests {
             let down: Bool
             let command: Bool
         }
-        let (values, name) = defaults()
-        defer { values.removePersistentDomain(forName: name) }
+        let values = defaults()
         let settings = AppSettings(defaults: values)
         let profile = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         settings.setBaseBinding(.init(action: .appSwitcher, shortcut: nil), for: .home, trigger: .singleClick, profileID: profile)

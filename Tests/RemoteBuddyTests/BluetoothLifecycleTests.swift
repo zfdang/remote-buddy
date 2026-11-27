@@ -75,9 +75,7 @@ struct BluetoothLifecycleTests {
     }
 
     @Test @MainActor func batteryPollingDoesNotRestartWhileSystemSuspended() throws {
-        let name = "battery-suspend-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         final class DummyDelegate: BluetoothRemoteBridgeDelegate {
             func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didChange state: BluetoothBridgeState) {}
             func bluetoothBridgeDidStartVoice(_ bridge: BluetoothRemoteBridge) {}
@@ -185,9 +183,7 @@ struct BluetoothLifecycleTests {
     }
 
     @Test @MainActor func bridgeSkipsRepeatedSystemWakeHandshakesAfterFailedWakeRecovery() throws {
-        let suite = UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: suite))
-        defer { values.removePersistentDomain(forName: suite) }
+        let values = EphemeralUserDefaults()
 
         final class DummyDelegate: BluetoothRemoteBridgeDelegate {
             func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didChange state: BluetoothBridgeState) {}
@@ -226,9 +222,7 @@ struct BluetoothLifecycleTests {
     }
 
     @Test @MainActor func cachedTargetHitPreservesWakeRecoveryUntilReadySoHandshakeFailureLatches() throws {
-        let suite = UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: suite))
-        defer { values.removePersistentDomain(forName: suite) }
+        let values = EphemeralUserDefaults()
 
         final class DummyDelegate: BluetoothRemoteBridgeDelegate {
             func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didChange state: BluetoothBridgeState) {}
@@ -444,9 +438,7 @@ struct BluetoothLifecycleTests {
     }
 
     @Test func readbackMismatchTriggersRollbackAndVerificationFailureFlag() {
-        let suite = UUID().uuidString
-        let defaults = UserDefaults(suiteName: suite)!
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
 
         var realMappings: [HIDUsageMapping] = []
         let mapper = RemoteHIDKeyMapper(
@@ -951,9 +943,7 @@ struct BluetoothLifecycleTests {
     }
 
     @Test @MainActor func unacknowledgedWriteQueueCanSendReturnsFalseWithoutTransmitCharacteristic() throws {
-        let suite = "bt-can-send-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let bridge = BluetoothRemoteBridge(
             settings: AppSettings(defaults: defaults),
             delegate: NoopBridgeDelegate()
@@ -966,9 +956,7 @@ struct BluetoothLifecycleTests {
     }
 
     @Test @MainActor func bridgeIsolatesCachedFailureBudgetAndResetsOnPowerOnRecovery() throws {
-        let suite = "bt-cached-pause-bridge-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let bridge = BluetoothRemoteBridge(
             settings: AppSettings(defaults: defaults),
             delegate: NoopBridgeDelegate(),
@@ -1008,9 +996,7 @@ struct BluetoothLifecycleTests {
     }
 
     @Test @MainActor func t1VerificationFailureSchedulesRetryAndSuccessfulApplyResetsCounter() throws {
-        let suite = UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
 
         let settings = AppSettings(defaults: defaults)
         let t1ID = settings.registerBluetoothRemote(identifier: UUID(), model: .t1Remote)
@@ -1083,9 +1069,7 @@ struct BluetoothLifecycleTests {
     }
 
     @Test func failedRollbackPreservesRecoveryJournalAndRestoresAfterRestart() throws {
-        let suite = UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
 
         let originalUserMapping = HIDUsageMapping(
             source: RemoteHIDKeyMappingPolicy.remoteVoiceKey.source,
@@ -1150,9 +1134,7 @@ struct BluetoothLifecycleTests {
     }
 
     @Test func readbackRejectsLingeringRemovedManagedMappingsWhenExpectedVoiceMappingExists() throws {
-        let suite = UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
 
         let staleMappings = [
             RemoteHIDKeyMappingPolicy.remoteVoiceKey,
@@ -1228,9 +1210,7 @@ struct BluetoothLifecycleTests {
     }
 
     @Test func rollbackReturningTrueWithoutRestoringPreservesJournalForRestart() throws {
-        let suite = UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
 
         let originalUserMapping = HIDUsageMapping(
             source: RemoteHIDKeyMappingPolicy.remoteVoiceKey.source,
@@ -1295,9 +1275,7 @@ struct BluetoothLifecycleTests {
     }
 
     @Test func restoreReturningTrueWithoutRestoringRetainsJournalUntilReadbackMatches() throws {
-        let suite = UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
 
         let originalUserMapping = HIDUsageMapping(
             source: RemoteHIDKeyMappingPolicy.remoteVoiceKey.source,
@@ -1371,9 +1349,7 @@ struct BluetoothLifecycleTests {
     }
 
     @Test func nonCompleteMappingRollbackVerifiesReadbackAndRetainsJournalWhenUnrestored() throws {
-        let suite = UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
 
         let originalUserMapping = HIDUsageMapping(
             source: RemoteHIDKeyMappingPolicy.remoteVoiceKey.source,
@@ -1439,9 +1415,7 @@ struct BluetoothLifecycleTests {
     }
 
     @Test func restoreExpiresJournalAfterMaximumOnlineFailuresWhilePreservingOfflineEntries() throws {
-        let suite = UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
 
         let originalOnlineMapping = HIDUsageMapping(
             source: RemoteHIDKeyMappingPolicy.remoteVoiceKey.source,

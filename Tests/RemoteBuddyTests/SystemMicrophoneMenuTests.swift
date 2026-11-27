@@ -173,9 +173,7 @@ struct SystemMicrophoneMenuTests {
     }
 
     @Test func statusMenuPlacesSystemMicrophoneDirectlyBelowOpenSettings() throws {
-        let suite = "system-mic-menu-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let localization = LocalizationStore(settings: AppSettings(defaults: defaults))
         localization.select(.english)
 
@@ -203,9 +201,7 @@ struct SystemMicrophoneMenuTests {
     }
 
     @Test func systemMicrophoneStringsResolveInBothLanguages() throws {
-        let suite = "system-mic-l10n-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let localization = LocalizationStore(settings: AppSettings(defaults: defaults))
 
         for key in ["menu.system_microphone", "menu.system_microphone.note", "menu.system_microphone.none"] {

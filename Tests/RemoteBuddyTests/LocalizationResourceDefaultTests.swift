@@ -5,9 +5,7 @@ import Testing
 @Suite("Default localization resource lookup") @MainActor
 struct LocalizationResourceDefaultTests {
     @Test func bareExecutableUsesResourcesAndLanguageChangesKeepOldSnapshotsStable() throws {
-        let name = "locale-default-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let store = LocalizationStore(settings: AppSettings(defaults: defaults))
         for key in [SettingsSection.permissions.titleKey, SettingsSection.general.titleKey, SettingsSection.about.titleKey] {
             store.select(.english)
@@ -24,9 +22,7 @@ struct LocalizationResourceDefaultTests {
     }
 
     @Test func rc003VoiceExtensionTestResolvesInBothLanguages() throws {
-        let name = "locale-rc003-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let store = LocalizationStore(settings: AppSettings(defaults: defaults))
         let key = "about.preferences.rc003_voice_extension_test"
         store.select(.english)
@@ -38,9 +34,7 @@ struct LocalizationResourceDefaultTests {
     }
 
     @Test func statusItemShowMenuResolvesInBothLanguages() throws {
-        let name = "locale-status-menu-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let store = LocalizationStore(settings: AppSettings(defaults: defaults))
         let key = "status_item.accessibility.show_menu"
         store.select(.english)
@@ -52,9 +46,7 @@ struct LocalizationResourceDefaultTests {
     }
 
     @Test func helpAndSupportResolvesInBothLanguages() throws {
-        let name = "locale-help-support-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let store = LocalizationStore(settings: AppSettings(defaults: defaults))
         let key = "menu.help_and_support"
         store.select(.english)
@@ -66,9 +58,7 @@ struct LocalizationResourceDefaultTests {
     }
 
     @Test func websiteURLResolvesPerLocale() throws {
-        let name = "locale-website-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let store = LocalizationStore(settings: AppSettings(defaults: defaults))
         store.select(.english)
         #expect(store.snapshot.localizedWebsiteURL == URL(string: "https://remote.zfdang.com/index.en.html")!)
@@ -85,9 +75,7 @@ struct LocalizationResourceDefaultTests {
     }
 
     @Test func unknownAndSiriRemoteModelDisplayNamesResolveInBothLanguages() throws {
-        let name = "locale-remote-names-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let store = LocalizationStore(settings: AppSettings(defaults: defaults))
 
         store.select(.simplifiedChinese)

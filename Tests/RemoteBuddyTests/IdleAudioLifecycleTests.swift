@@ -9,9 +9,7 @@ struct IdleAudioLifecycleTests {
         audioOutput: VirtualAudioOutput = VirtualAudioOutput(),
         _ body: (BridgeAppModel, BluetoothRemoteBridge) async throws -> Void
     ) async throws {
-        let name = UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: name))
-        defer { values.removePersistentDomain(forName: name) }
+        let values = EphemeralUserDefaults()
         let model = BridgeAppModel(
             settings: AppSettings(defaults: values),
             initialAudioDevices: [],

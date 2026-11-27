@@ -172,9 +172,7 @@ struct RuntimePermissionDiagnosticsTests {
     }
 
     @Test func appModelDetectsSystemDisabledEventTapAsDesyncEvenWhenPermissionsReportGranted() throws {
-        let suiteName = "runtime-perm-tap-disabled-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suiteName))
-        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let defaults = EphemeralUserDefaults()
 
         let model = BridgeAppModel(
             settings: AppSettings(defaults: defaults),
@@ -273,9 +271,7 @@ struct RuntimePermissionDiagnosticsTests {
     }
 
     @Test func relaunchApplicationValidatesBundleTerminationAndProcessLaunch() throws {
-        let suiteName = "runtime-perm-relaunch-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suiteName))
-        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let defaults = EphemeralUserDefaults()
 
         let model = BridgeAppModel(settings: AppSettings(defaults: defaults))
         var launchedCalls: [(executable: String, arguments: [String])] = []
@@ -356,9 +352,7 @@ struct RuntimePermissionDiagnosticsTests {
     }
 
     @Test func newPermissionAndDiagnosticLocalizationKeysExistInEnglishAndChinese() throws {
-        let suiteName = "locale-runtime-perm-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suiteName))
-        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let defaults = EphemeralUserDefaults()
         let store = LocalizationStore(settings: AppSettings(defaults: defaults))
 
         let keys = [
@@ -494,9 +488,7 @@ struct RuntimePermissionDiagnosticsTests {
     }
 
     @Test func appModelFirstUseAndSettingsDiagnosticsReflectRestrictedPostEventAccess() throws {
-        let suiteName = "runtime-perm-post-event-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suiteName))
-        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let defaults = EphemeralUserDefaults()
 
         var postEventGranted = false
         let model = BridgeAppModel(
@@ -738,9 +730,7 @@ struct RuntimePermissionDiagnosticsTests {
             )
         )
 
-        let suiteName = "runtime-perm-no-hid-rebuild-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suiteName))
-        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let defaults = EphemeralUserDefaults()
 
         var postEventGranted = true
         let model = BridgeAppModel(

@@ -15,12 +15,10 @@ struct G9N9NSmartToggleTests {
         clock: ControlledTestScheduler,
         flushAudio: () async -> Void,
         defaults: UserDefaults,
-        suite: String,
         writtenCommands: () -> [Data],
         keyEdges: () -> [Bool]
     ) {
-        let suite = "g9n9n-smart-toggle-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         settings.voiceKeyMode = .rightOption
         settings.voiceFnTapModeEnabled = fnTapModeEnabled
@@ -105,7 +103,12 @@ struct G9N9NSmartToggleTests {
         model.cancelVirtualAudioReleaseIfPending(trigger: "smart_toggle_fixture")
         model.audio.output.simulateReadyForTesting(device: micDevice)
 
-        return (model, bridge, clock, flushAudio, defaults, suite, { commands }, { recordedKeys })
+        return (
+            model,
+            bridge,
+            clock,
+            flushAudio,
+            defaults, { commands }, { recordedKeys })
     }
 
     @Test func smartToggleStateMachineEnforcesThresholdsAndSecondPressTriggers() {
@@ -215,9 +218,7 @@ struct G9N9NSmartToggleTests {
     }
 
     @Test func voiceButtonModeDefaultsSmartToggleAndPersistsForChromecastOnly() throws {
-        let suite = "g9n9n-voice-mode-pref-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
 
         let settings = AppSettings(defaults: defaults)
         let googleID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
@@ -257,11 +258,10 @@ struct G9N9NSmartToggleTests {
 
     @Test func shortTapReopensHandsFreeAndSecondPress0x08StopsCleanly() async throws {
         let fixture = try makeSmartToggleFixture(voiceButtonMode: .smartToggle)
-        let (model, bridge, clock, flushAudio, defaults, suite, writtenCommands, keyEdges) = fixture
+        let (model, bridge, clock, flushAudio, _, writtenCommands, keyEdges) = fixture
         defer {
             model.started = false
             bridge.stop()
-            defaults.removePersistentDomain(forName: suite)
         }
 
         // 1. First physical press: 0x04 03 02 01 starts session and holds voice key down once.
@@ -316,11 +316,10 @@ struct G9N9NSmartToggleTests {
 
     @Test func secondPressAudioStart040302ClosesSessionInsteadOfReplacingStream() async throws {
         let fixture = try makeSmartToggleFixture(voiceButtonMode: .smartToggle)
-        let (model, bridge, clock, flushAudio, defaults, suite, writtenCommands, keyEdges) = fixture
+        let (model, bridge, clock, flushAudio, _, writtenCommands, keyEdges) = fixture
         defer {
             model.started = false
             bridge.stop()
-            defaults.removePersistentDomain(forName: suite)
         }
 
         bridge.simulateControlPacketForTesting(Data([0x04, 0x03, 0x02, 0x01]))
@@ -362,11 +361,10 @@ struct G9N9NSmartToggleTests {
 
     @Test func longHoldInSmartToggleModeStopsOnReleaseWithoutReopening() async throws {
         let fixture = try makeSmartToggleFixture(voiceButtonMode: .smartToggle)
-        let (model, bridge, clock, flushAudio, defaults, suite, writtenCommands, keyEdges) = fixture
+        let (model, bridge, clock, flushAudio, _, writtenCommands, keyEdges) = fixture
         defer {
             model.started = false
             bridge.stop()
-            defaults.removePersistentDomain(forName: suite)
         }
 
         bridge.simulateControlPacketForTesting(Data([0x04, 0x03, 0x02, 0x01]))
@@ -387,11 +385,10 @@ struct G9N9NSmartToggleTests {
 
     @Test func shortTapInHoldToTalkModeDoesNotReopen() async throws {
         let fixture = try makeSmartToggleFixture(voiceButtonMode: .holdToTalk)
-        let (model, bridge, clock, flushAudio, defaults, suite, writtenCommands, keyEdges) = fixture
+        let (model, bridge, clock, flushAudio, _, writtenCommands, keyEdges) = fixture
         defer {
             model.started = false
             bridge.stop()
-            defaults.removePersistentDomain(forName: suite)
         }
 
         bridge.simulateControlPacketForTesting(Data([0x04, 0x03, 0x02, 0x01]))
@@ -408,11 +405,10 @@ struct G9N9NSmartToggleTests {
 
     @Test func secondPressWhileAwaitingReopenCancelsAndRejectsLateAudioStart() async throws {
         let fixture = try makeSmartToggleFixture(voiceButtonMode: .smartToggle)
-        let (model, bridge, clock, flushAudio, defaults, suite, writtenCommands, keyEdges) = fixture
+        let (model, bridge, clock, flushAudio, _, writtenCommands, keyEdges) = fixture
         defer {
             model.started = false
             bridge.stop()
-            defaults.removePersistentDomain(forName: suite)
         }
 
         bridge.simulateControlPacketForTesting(Data([0x04, 0x03, 0x02, 0x01]))
@@ -445,11 +441,10 @@ struct G9N9NSmartToggleTests {
             voiceButtonMode: .smartToggle,
             fnTapModeEnabled: true
         )
-        let (model, bridge, clock, flushAudio, defaults, suite, writtenCommands, keyEdges) = fixture
+        let (model, bridge, clock, flushAudio, _, writtenCommands, keyEdges) = fixture
         defer {
             model.started = false
             bridge.stop()
-            defaults.removePersistentDomain(forName: suite)
         }
 
         bridge.simulateControlPacketForTesting(Data([0x04, 0x03, 0x02, 0x01]))
@@ -482,11 +477,10 @@ struct G9N9NSmartToggleTests {
 
     @Test func disconnectDuringHandsFreeClearsSmartToggleAndReleasesKey() async throws {
         let fixture = try makeSmartToggleFixture(voiceButtonMode: .smartToggle)
-        let (model, bridge, clock, flushAudio, defaults, suite, _, keyEdges) = fixture
+        let (model, bridge, clock, flushAudio, _, _, keyEdges) = fixture
         defer {
             model.started = false
             bridge.stop()
-            defaults.removePersistentDomain(forName: suite)
         }
 
         bridge.simulateControlPacketForTesting(Data([0x04, 0x03, 0x02, 0x01]))
@@ -515,11 +509,10 @@ struct G9N9NSmartToggleTests {
 
     @Test func holdDurationUsesProtocolStartTimestampAcrossDelayedStartDelivery() async throws {
         let fixture = try makeSmartToggleFixture(voiceButtonMode: .smartToggle)
-        let (model, bridge, clock, flushAudio, defaults, suite, writtenCommands, keyEdges) = fixture
+        let (model, bridge, clock, flushAudio, _, writtenCommands, keyEdges) = fixture
         defer {
             model.started = false
             bridge.stop()
-            defaults.removePersistentDomain(forName: suite)
         }
 
         // Physical press starts at 1_000, but audio/HID start delivery completes 500ms later.
@@ -541,11 +534,10 @@ struct G9N9NSmartToggleTests {
 
     @Test func secondPress0x04FollowedBy0x08SendsSingleMicClose() async throws {
         let fixture = try makeSmartToggleFixture(voiceButtonMode: .smartToggle)
-        let (model, bridge, clock, flushAudio, defaults, suite, writtenCommands, keyEdges) = fixture
+        let (model, bridge, clock, flushAudio, _, writtenCommands, keyEdges) = fixture
         defer {
             model.started = false
             bridge.stop()
-            defaults.removePersistentDomain(forName: suite)
         }
 
         bridge.simulateControlPacketForTesting(Data([0x04, 0x03, 0x02, 0x01]))
@@ -573,11 +565,10 @@ struct G9N9NSmartToggleTests {
 
     @Test func retransmittedAudioStartDuringClosingKeepsWatchdogIntact() async throws {
         let fixture = try makeSmartToggleFixture(voiceButtonMode: .smartToggle)
-        let (model, bridge, clock, flushAudio, defaults, suite, writtenCommands, keyEdges) = fixture
+        let (model, bridge, clock, flushAudio, _, writtenCommands, keyEdges) = fixture
         defer {
             model.started = false
             bridge.stop()
-            defaults.removePersistentDomain(forName: suite)
         }
 
         bridge.simulateControlPacketForTesting(Data([0x04, 0x03, 0x02, 0x01]))

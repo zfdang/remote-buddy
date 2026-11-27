@@ -13,9 +13,7 @@ struct BluetoothVoiceHoldStopTests {
     }
 
     @Test func remoteStopPreservesHeldKeyAndQueuedTail() throws {
-        let suite = "hold-tail-remote-stop-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let model = makeModel(defaults)
         let identifier = UUID()
         let bridge = BluetoothRemoteBridge(settings: model.settings, delegate: model,
@@ -43,9 +41,7 @@ struct BluetoothVoiceHoldStopTests {
         .shortcut(CustomKeyboardShortcut(keyCode: 9, modifierFlags: [.control, .shift], keyLabel: "V")),
     ])
     func releasesKeyOnlyAfterPlaybackCompletes(outcome: VirtualAudioDrainOutcome, mode: VoiceKeyMode) throws {
-        let suite = "hold-tail-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let model = makeModel(defaults, mode: mode)
         var completion: ((VirtualAudioDrainOutcome) -> Void)?
         var releases = 0
@@ -82,9 +78,7 @@ struct BluetoothVoiceHoldStopTests {
     }
 
     @Test func emptyPlaybackQueueDoesNotAddAStopDelay() throws {
-        let suite = "hold-tail-empty-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let model = makeModel(defaults)
         var releases = 0
         model.finishBluetoothVoicePlayback(deviceIdentifier: UUID(), handledByFnTapMode: false,
@@ -98,9 +92,7 @@ struct BluetoothVoiceHoldStopTests {
     }
 
     @Test func forcedCleanupInvalidatesCompletionBeforeNextSession() throws {
-        let suite = "hold-tail-cancel-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let model = makeModel(defaults)
         var completion: ((VirtualAudioDrainOutcome) -> Void)?
         model.finishBluetoothVoicePlayback(deviceIdentifier: UUID(), handledByFnTapMode: false,
@@ -120,9 +112,7 @@ struct BluetoothVoiceHoldStopTests {
     }
 
     @Test func fnTapKeepsItsExistingDrainOwner() throws {
-        let suite = "hold-tail-fn-tap-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let model = makeModel(defaults)
         var releases = 0
         model.finishBluetoothVoicePlayback(deviceIdentifier: UUID(), handledByFnTapMode: true,

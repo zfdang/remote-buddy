@@ -70,11 +70,7 @@ enum SettingsScreenshotRenderer {
             withIntermediateDirectories: true
         )
 
-        let suiteName = "RemoteBuddy.SettingsScreenshot.\(UUID().uuidString)"
-        guard let defaults = UserDefaults(suiteName: suiteName) else {
-            throw RenderingError.bitmapCreationFailed
-        }
-        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let defaults = EphemeralUserDefaults()
 
         let settings = AppSettings(defaults: defaults)
         settings.applicationLanguage = language

@@ -6,9 +6,7 @@ import Testing
 struct OnboardingPauseTests {
     @Test(arguments: [VoiceKeyMode.function, .leftCommand])
     func resumingDictationVoiceTestRestoresTheTrialAndRetainsCancellation(mode: VoiceKeyMode) throws {
-        let name = "resume-dictation-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         settings.voiceKeyMode = mode
         settings.voiceFnTapModeEnabled = false
@@ -37,9 +35,7 @@ struct OnboardingPauseTests {
     }
 
     @Test func leavingVoiceTestingStillRollsBackAnInterruptedTrial() throws {
-        let name = "rollback-dictation-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         settings.voiceKeyMode = .leftCommand
         settings.voiceFnTapModeEnabled = false
@@ -58,9 +54,7 @@ struct OnboardingPauseTests {
 
     @Test(arguments: [OnboardingStep.voiceTrigger, .permissions, .voiceTest])
     func pausePreservesStepAcrossRelaunchWithoutCompletingValidation(step: OnboardingStep) throws {
-        let name = "pause-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         settings.setOnboardingStep(step)
         let model = BridgeAppModel(settings: settings)

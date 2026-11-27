@@ -7,15 +7,13 @@ import Testing
 @Suite("Runtime boundaries")
 @MainActor
 struct RuntimeBoundaryTests {
-    private func values() -> (UserDefaults, String) {
-        let name = "runtime-boundary-" + UUID().uuidString
-        return (UserDefaults(suiteName: name)!, name)
+    private func values() -> UserDefaults {
+        EphemeralUserDefaults()
     }
 
     @Test(arguments: [OnboardingStep.remote, .controls])
     func validationObservesButtonsWithoutExecutingConfiguredActions(step: OnboardingStep) {
-        let (defaults, name) = values()
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = values()
         let settings = AppSettings(defaults: defaults)
         settings.setAction(.commandQuit, for: .right)
         let profile = UUID()
@@ -39,8 +37,7 @@ struct RuntimeBoundaryTests {
     }
 
     @Test func resetPreservesReleaseOfNativePassthroughArrow() throws {
-        let (defaults, name) = values()
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = values()
         let settings = AppSettings(defaults: defaults)
         let filter = KeyboardEventSuppressor(uptime: { 0 })
         let profile = UUID()
@@ -62,8 +59,7 @@ struct RuntimeBoundaryTests {
 
     @Test(arguments: [ButtonTrigger.singleClick, .doubleClick, .longPress])
     func clearingGesturePersistsWithoutChangingOtherGestures(trigger: ButtonTrigger) {
-        let (defaults, name) = values()
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = values()
         let settings = AppSettings(defaults: defaults)
         for gesture in ButtonTrigger.allCases {
             settings.setBaseBinding(.init(action: .commandCopy, shortcut: nil),
@@ -81,8 +77,7 @@ struct RuntimeBoundaryTests {
     }
 
     @Test func corruptedMappingsAreReportedAndPreservedWhileDefaultsRecover() {
-        let (defaults, name) = values()
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = values()
         let corrupt = Data("not json".utf8)
         defaults.set(corrupt, forKey: "buttonBindings")
         let settings = AppSettings(defaults: defaults)
@@ -103,8 +98,7 @@ struct RuntimeBoundaryTests {
 
     @Test func modelDestructionRemovesHALListenersWithoutExplicitStopAndNeverRemovesTwice() {
         for explicitlyStopped in [false, true] {
-            let (defaults, name) = values()
-            defer { defaults.removePersistentDomain(forName: name) }
+            let defaults = values()
             var model: BridgeAppModel? = BridgeAppModel(settings: AppSettings(defaults: defaults), initialAudioDevices: [])
             weak var released = model
             let selectors: [AudioObjectPropertySelector] = [kAudioHardwarePropertyDevices,
@@ -227,8 +221,7 @@ struct RuntimeBoundaryTests {
             ) == true
         )
 
-        let (defaults, name) = values()
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = values()
         let settings = AppSettings(defaults: defaults)
         let emptyMappings = RemoteDeviceMappings(
             buttonBindings: [:],

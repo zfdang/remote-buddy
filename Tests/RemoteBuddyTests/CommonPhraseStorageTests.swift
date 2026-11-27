@@ -13,9 +13,7 @@ struct CommonPhraseStorageTests {
             bindings: ["ok": "builtin-one", "left": "builtin-one", "up": "builtin-two", "home": "builtin-two"])
     }
     private func run(_ body: (CommonPhraseStore, UserDefaults, Data) throws -> Void) throws {
-        let name = "phrase-unit-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let data = try JSONEncoder().encode(bundled)
         let store = CommonPhraseStore(defaults: defaults, builtInData: data)
         #expect(store.isAvailable)
@@ -56,9 +54,7 @@ struct CommonPhraseStorageTests {
     }
 
     @Test func characterCountAndBoundaryFeedbackLocalizationKeysResolveInBothLanguages() throws {
-        let name = "locale-phrase-feedback-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let store = LocalizationStore(settings: AppSettings(defaults: defaults))
 
         for (lang, expectedCountSingular, expectedCountPlural, trailingKeySnippet, leadingKeySnippet, bothKeySnippet) in [
@@ -214,9 +210,7 @@ struct CommonPhraseStorageTests {
     }
 
     @Test func reopeningSavedArchiveWithOnlyBaseBindingsBackfillsNewlyIntroducedKeysWithoutRefillingClearedBaseKeys() throws {
-        let name = "phrase-upgrade-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let oldSaved = CommonPhraseArchive(
             entries: [phrase("builtin-one"), phrase("builtin-two", text: "第二项")],
             // Simulate a pre-upgrade user who cleared .left (e.g. reassigned then deleted that phrase)
@@ -241,9 +235,7 @@ struct CommonPhraseStorageTests {
     }
 
     @Test func reopeningSavedArchiveWithoutPowerBindingKeyBackfillsPowerDefaultOnce() throws {
-        let name = "phrase-power-backfill-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let entries = [phrase("builtin-001"), phrase("builtin-011", text: "不对，再检查一下")]
         let builtIn = CommonPhraseArchive(
             entries: entries,
@@ -325,9 +317,7 @@ struct CommonPhraseStorageTests {
     }
 
     @Test func allPhraseButtonLocalizationKeysResolveInBothLanguages() throws {
-        let name = "phrase-l10n-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let store = LocalizationStore(settings: AppSettings(defaults: defaults))
         for button in CommonPhraseStore.buttons {
             let key = "common_phrases.key.\(button.rawValue)"
@@ -378,19 +368,15 @@ struct CommonPhraseStorageTests {
 @Suite("Common phrase voice key")
 @MainActor
 struct CommonPhraseVoiceKeyTests {
-    private func profile(_ model: RemoteModel) throws -> (RemoteDeviceProfile, () -> Void) {
-        let name = "phrase-voice-key-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        let settings = AppSettings(defaults: defaults)
+    private func profile(_ model: RemoteModel) throws -> RemoteDeviceProfile {
+        let settings = AppSettings(defaults: EphemeralUserDefaults())
         let id = settings.registerBluetoothRemote(identifier: UUID(), model: model)
-        let profile = try #require(settings.remoteDeviceProfiles.first { $0.id == id })
-        return (profile, { defaults.removePersistentDomain(forName: name) })
+        return try #require(settings.remoteDeviceProfiles.first { $0.id == id })
     }
 
     @Test(arguments: [RemoteModel.chromecastVoiceRemote, .rc001, .rc003, .t1Remote])
     func supportedRemoteVoiceKeyTargetsItsOwnPanel(model: RemoteModel) throws {
-        let (remote, cleanup) = try profile(model)
-        defer { cleanup() }
+        let remote = try profile(model)
         #expect(BridgeAppModel.commonPhraseVoiceKeySource(profile: remote, longRecordingRequested: false)
             == BridgeAppModel.commonPhraseHIDSource(remote.id))
         #expect(BridgeAppModel.commonPhraseVoiceKeySource(profile: remote, longRecordingRequested: true) == nil)
@@ -398,16 +384,13 @@ struct CommonPhraseVoiceKeyTests {
 
     @Test(arguments: [RemoteModel.appleSiriRemoteA2854, .appleSiriRemoteA2540])
     func siriRemotesDoNotTargetVoiceKeyPanel(model: RemoteModel) throws {
-        let (other, cleanup) = try profile(model)
-        defer { cleanup() }
+        let other = try profile(model)
         #expect(BridgeAppModel.commonPhraseVoiceKeySource(profile: other, longRecordingRequested: false) == nil)
         #expect(BridgeAppModel.commonPhraseVoiceKeySource(profile: nil, longRecordingRequested: false) == nil)
     }
 
     @Test func sourceProfileResolvesModelButtonsEvenWhenAnotherRemoteIsSelected() throws {
-        let name = "phrase-source-buttons-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let xiaomiID = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         let t1ID = settings.registerBluetoothRemote(identifier: UUID(), model: .t1Remote)
@@ -421,9 +404,7 @@ struct CommonPhraseVoiceKeyTests {
     }
 
     @Test func hiddenPanelIgnoresVoiceKey() throws {
-        let name = "phrase-voice-hidden-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let data = try JSONEncoder().encode(CommonPhraseArchive(
             entries: [CommonPhrase(id: "builtin-one", text: "好的", label: "好的")], bindings: [:]))
         let controller = CommonPhraseController(store: CommonPhraseStore(defaults: defaults, builtInData: data))
@@ -432,9 +413,7 @@ struct CommonPhraseVoiceKeyTests {
 
     @Test(arguments: [RemoteModel.chromecastVoiceRemote, .rc003, .t1Remote])
     func openPanelClosesOnMatchingBluetoothVoiceKeyAndRejectsForeignSource(model: RemoteModel) throws {
-        let name = "phrase-voice-open-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let bluetoothID = UUID()
         let profileID = settings.registerBluetoothRemote(identifier: bluetoothID, model: model)
@@ -464,9 +443,7 @@ struct CommonPhraseVoiceKeyTests {
 
     @Test(arguments: [RemoteModel.chromecastVoiceRemote, .rc003, .t1Remote])
     func bluetoothBridgeDidStartVoiceClosesOwningPanelWithoutStartingVoice(remoteModel: RemoteModel) throws {
-        let name = "phrase-bridge-voice-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let ownerBluetoothID = UUID()
         let foreignBluetoothID = UUID()
@@ -576,9 +553,7 @@ struct CommonPhraseOwnershipTests {
         #expect(chromecastRouting.handle(.power, phase: .release, source: "first") == .consumed)
     }
     @Test @MainActor func openPanelHintReflectsWhetherPowerClosesOrInserts() throws {
-        let name = "phrase-panel-hint-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let localization = LocalizationStore(settings: settings)
         let data = try JSONEncoder().encode(CommonPhraseArchive(

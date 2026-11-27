@@ -52,9 +52,7 @@ struct SettingsOverviewTests {
     }
 
     @Test @MainActor func summariesNameMissingRequirementsAndReflectRepairs() throws {
-        let suite = "overview.tests.\(UUID().uuidString)"
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let localization = LocalizationStore(settings: AppSettings(defaults: defaults))
         for language in [AppLanguage.english, .simplifiedChinese] {
             localization.select(language)
@@ -73,9 +71,7 @@ struct SettingsOverviewTests {
     }
 
     @Test @MainActor func unavailableIntegrationToolIsFlaggedInOverview() throws {
-        let suite = "overview.tests.\(UUID().uuidString)"
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let localization = LocalizationStore(settings: AppSettings(defaults: defaults))
 
         let missing = state(tool: .doubao, availability: .notInstalled)

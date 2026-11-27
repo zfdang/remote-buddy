@@ -9,7 +9,6 @@ struct HIDHotPathIdempotencyTests {
 
     @MainActor
     private struct Harness {
-        let suite: String
         let defaults: UserDefaults
         let settings: AppSettings
         let model: BridgeAppModel
@@ -77,7 +76,6 @@ struct HIDHotPathIdempotencyTests {
             model.connections.bridges.removeAll()
             model.connections.states.removeAll()
             model.started = false
-            defaults.removePersistentDomain(forName: suite)
         }
     }
 
@@ -118,8 +116,7 @@ struct HIDHotPathIdempotencyTests {
         hasMatchingHIDServices: Bool = true,
         secondaryServiceEnabled: Bool = false
     ) throws -> Harness {
-        let suite = "hid-idempotency-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         settings.setAllApplicationIntegrations(enabled: false)
         settings.voiceKeyMode = voiceKeyMode
@@ -263,7 +260,6 @@ struct HIDHotPathIdempotencyTests {
         model.started = true
 
         return Harness(
-            suite: suite,
             defaults: defaults,
             settings: settings,
             model: model,

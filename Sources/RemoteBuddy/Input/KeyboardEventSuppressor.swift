@@ -270,9 +270,7 @@ final class KeyboardEventSuppressor {
         guard let descriptor = descriptor(type: type, event: event) else { return false }
 
         let now = uptime()
-        let isRepeat = descriptor.edge == .down && (type == .keyDown
-            ? event.getIntegerValueField(.keyboardEventAutorepeat) != 0
-            : (NSEvent(cgEvent: event)?.data1 ?? 0) & 1 != 0)
+        let isRepeat = descriptor.edge == .down && descriptor.isAutorepeat
         lock.lock()
         // A continuing native repeat is evidence that the same mapped hold is alive.
         // Keep expiry for lost releases, but do not expire an actively repeating hold.
@@ -361,24 +359,25 @@ final class KeyboardEventSuppressor {
     private func descriptor(
         type: CGEventType,
         event: CGEvent
-    ) -> (event: RemoteNativeEvent, edge: RemoteEventEdge)? {
+    ) -> (event: RemoteNativeEvent, edge: RemoteEventEdge, isAutorepeat: Bool)? {
         if type.rawValue == Self.systemDefinedEventTypeRawValue {
-            guard let nsEvent = NSEvent(cgEvent: event) else { return nil }
-            let systemKeyType = Int32((nsEvent.data1 & 0xFFFF_0000) >> 16)
-            let keyState = (nsEvent.data1 & 0x0000_FF00) >> 8
+            guard let data1 = SystemKeyEventDecoder.data1(from: event) else { return nil }
+            let systemKeyType = Int32((data1 & 0xFFFF_0000) >> 16)
+            let keyState = (data1 & 0x0000_FF00) >> 8
             let edge: RemoteEventEdge
             switch keyState {
             case 0xA: edge = .down
             case 0xB: edge = .up
             default: return nil
             }
-            return (.systemKey(type: systemKeyType), edge)
+            return (.systemKey(type: systemKeyType), edge, (data1 & 1) != 0)
         }
 
         switch type {
         case .keyDown, .keyUp:
             let keyCode = UInt16(event.getIntegerValueField(.keyboardEventKeycode))
-            return (.keyboard(keyCode: keyCode), type == .keyDown ? .down : .up)
+            let isAutorepeat = type == .keyDown && event.getIntegerValueField(.keyboardEventAutorepeat) != 0
+            return (.keyboard(keyCode: keyCode), type == .keyDown ? .down : .up, isAutorepeat)
         default:
             return nil
         }

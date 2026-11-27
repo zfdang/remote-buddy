@@ -11,6 +11,7 @@ struct EphemeralUserDefaultsTests {
         let payload = Data([0x01, 0x02, 0x03])
 
         defaults.set(true, forKey: "flag")
+        defaults.set(false, forKey: "disabledFlag")
         defaults.set(42, forKey: "count")
         defaults.set(Float(1.5), forKey: "ratio")
         defaults.set(-6.25, forKey: "gain")
@@ -21,10 +22,12 @@ struct EphemeralUserDefaultsTests {
         defaults.set(url, forKey: "appURL")
 
         #expect(defaults.bool(forKey: "flag") == true)
+        #expect(defaults.bool(forKey: "disabledFlag") == false)
         #expect((defaults.object(forKey: "count") as? NSNumber)?.intValue == 42)
         #expect(defaults.integer(forKey: "count") == 42)
         #expect(defaults.string(forKey: "count") == "42")
-        #expect(defaults.string(forKey: "flag") == nil)
+        #expect(defaults.string(forKey: "flag") == "1")
+        #expect(defaults.string(forKey: "disabledFlag") == "0")
         #expect(defaults.float(forKey: "ratio") == 1.5)
         #expect(defaults.double(forKey: "gain") == -6.25)
         #expect(defaults.string(forKey: probeKey) == "hello")
@@ -53,6 +56,26 @@ struct EphemeralUserDefaultsTests {
 
         defaults.removePersistentDomain(forName: "any")
         #expect(defaults.persistentDomain(forName: "any") == nil)
+    }
+
+    @Test func matchesFoundationStringFormattingForBooleans() {
+        let trueKey = "ephemeral-bool-true-\(UUID().uuidString)"
+        let falseKey = "ephemeral-bool-false-\(UUID().uuidString)"
+        let foundation = UserDefaults()
+        foundation.register(defaults: [trueKey: true, falseKey: false])
+
+        let ephemeral = EphemeralUserDefaults()
+        ephemeral.set(true, forKey: "typedTrue")
+        ephemeral.set(false, forKey: "typedFalse")
+        ephemeral.set(true as Any, forKey: "anyTrue")
+        ephemeral.set(false as Any, forKey: "anyFalse")
+
+        #expect(foundation.string(forKey: trueKey) == "1")
+        #expect(foundation.string(forKey: falseKey) == "0")
+        #expect(ephemeral.string(forKey: "typedTrue") == foundation.string(forKey: trueKey))
+        #expect(ephemeral.string(forKey: "typedFalse") == foundation.string(forKey: falseKey))
+        #expect(ephemeral.string(forKey: "anyTrue") == foundation.string(forKey: trueKey))
+        #expect(ephemeral.string(forKey: "anyFalse") == foundation.string(forKey: falseKey))
     }
 
     @Test func doesNotCreatePreferenceFilesOnDisk() throws {

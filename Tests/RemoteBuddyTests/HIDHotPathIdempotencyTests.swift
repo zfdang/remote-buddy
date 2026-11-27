@@ -1455,4 +1455,80 @@ struct HIDHotPathIdempotencyTests {
         #expect(!counters.hidMappings.contains(RemoteHIDKeyMappingPolicy.suppressedRemotePowerKey))
         #expect(counters.hidMappings.contains(originalPower))
     }
+
+    @Test func revokingAccessibilityWithPendingFnTapReleaseRestoresPowerWhilePreservingVoiceMapping() throws {
+        let originalPower = HIDUsageMapping(
+            source: RemoteHIDKeyMappingPolicy.suppressedRemotePowerKey.source,
+            destination: 0x0007_0000_0045
+        )
+        let harness = try makeHarness(
+            configureProfile: true,
+            modelType: .rc001,
+            voiceKeyMode: .function,
+            voiceFnTapModeEnabled: true,
+            hasMatchingHIDServices: true,
+            initialHIDMappings: [originalPower]
+        )
+        defer { harness.cleanup(expectNoFnTapLogs: false) }
+        let model = harness.model
+        let settings = harness.settings
+        let counters = harness.counters
+
+        let clock = ControlledTestScheduler()
+        var canRelease = false
+        model.voiceFnTapSession = VoiceFnTapSessionController(
+            startDelay: 0,
+            tapDuration: 0.1,
+            schedule: clock.voiceSchedule,
+            setTriggerPressed: { down in down || canRelease },
+            enqueueAudio: { _ in },
+            drainAudio: { _, done in done() },
+            onFailure: { _ in },
+            logger: { counters.logs.append($0) }
+        )
+
+        model.applyHIDSettings()
+        #expect(model.voiceFunctionMapper.isPowerKeySuppressed)
+        #expect(model.voiceFunctionMapper.isVoiceKeyNeutralized)
+        #expect(counters.hidMappings.contains(RemoteHIDKeyMappingPolicy.suppressedRemotePowerKey))
+        #expect(counters.hidMappings.contains(RemoteHIDKeyMappingPolicy.neutralRemoteVoiceKey))
+
+        // Start a Fn-tap voice session whose release fails, leaving cleanup pending.
+        #expect(model.voiceFnTapSession.startVoice())
+        clock.advance(to: 100)
+        #expect(model.voiceFnTapSession.requiresCleanupBeforeMapping)
+
+        // Disable Fn tap mode and revoke Accessibility before release succeeds.
+        settings.voiceFnTapModeEnabled = false
+        counters.permissionSnapshot = HIDPermissionSnapshot(
+            inputMonitoringGranted: true,
+            accessibilityGranted: false
+        )
+        model.refreshHIDAfterPermissionChange()
+
+        #expect(model.voiceFnTapSession.requiresCleanupBeforeMapping)
+        #expect(!model.hidEventSuppressor.isRunning)
+        #expect(model.hidMonitors.values.allSatisfy { !$0.isMonitoring })
+        #expect(model.discoveryHIDMonitor?.isMonitoring != true)
+        #expect(!model.voiceFunctionMapper.isPowerKeySuppressed)
+        #expect(!counters.hidMappings.contains(RemoteHIDKeyMappingPolicy.suppressedRemotePowerKey))
+        #expect(counters.hidMappings.contains(originalPower))
+        #expect(model.voiceFunctionMapper.isVoiceKeyNeutralized)
+        #expect(counters.hidMappings.contains(RemoteHIDKeyMappingPolicy.neutralRemoteVoiceKey))
+
+        // Restore Accessibility and allow release; cleanup completes and re-applies HID settings.
+        counters.permissionSnapshot = HIDPermissionSnapshot(
+            inputMonitoringGranted: true,
+            accessibilityGranted: true
+        )
+        canRelease = true
+        model.refreshHIDAfterPermissionChange()
+        clock.advance(to: 1200)
+
+        #expect(!model.voiceFnTapSession.requiresCleanupBeforeMapping)
+        #expect(model.voiceFunctionMapper.isPowerKeySuppressed)
+        #expect(counters.hidMappings.contains(RemoteHIDKeyMappingPolicy.suppressedRemotePowerKey))
+        #expect(!model.voiceFunctionMapper.isVoiceKeyNeutralized)
+        #expect(!counters.hidMappings.contains(RemoteHIDKeyMappingPolicy.neutralRemoteVoiceKey))
+    }
 }

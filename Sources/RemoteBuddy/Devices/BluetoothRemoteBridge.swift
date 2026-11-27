@@ -529,8 +529,8 @@ final class BluetoothRemoteBridge: NSObject {
                 "central_state=\(centralState) " +
                 "generation=\(generationCounter)"
         )
-        reconnectNow(clearWakeFailureLatch: reason != "system_wake")
         wakeRecoveryLatch.noteRecoveryStarted(reason: reason)
+        reconnectNow(clearWakeFailureLatch: reason != "system_wake")
     }
 
     func setSystemSuspended(_ suspended: Bool, reason: String) {

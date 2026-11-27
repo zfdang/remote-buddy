@@ -185,4 +185,123 @@ struct AppSwitcherCancellationTests {
         #expect(events[0].0 == KeyboardInjector.leftCommandKeyCode)
         #expect(!events[0].1)
     }
+
+    @Test func confirmRetriesFailedCommandAndOptionReleasesAndFlushPreservesFailedOwnership() {
+        struct PostedEdge: Equatable {
+            let code: CGKeyCode
+            let down: Bool
+        }
+
+        // 1. Command release fails on first attempt, retries after 50ms, then Option releases 100ms later.
+        do {
+            let clock = ControlledTestScheduler()
+            var failNextCommandUp = true
+            var posted: [(CGKeyCode, Bool, CGEventFlags)] = []
+            let session = KeyboardInjector.AppSwitcherSession(
+                hardwareFlags: { [] },
+                keyStatePoster: { code, down, flags, _ in
+                    if code == KeyboardInjector.leftCommandKeyCode && !down && failNextCommandUp {
+                        failNextCommandUp = false
+                        return false
+                    }
+                    posted.append((code, down, flags))
+                    return true
+                },
+                scheduleRelease: clock.voiceSchedule
+            )
+            #expect(session.trigger())
+            posted.removeAll()
+            #expect(session.confirm())
+            #expect(posted.map(\.0) == [KeyboardInjector.AppSwitcherSession.leftOptionKeyCode])
+
+            // At 60ms, Command up fails; Option must remain held until Command retry succeeds.
+            clock.advance(to: 60)
+            #expect(posted.count == 1)
+
+            // Retry fires after +50ms (110ms total): Command up succeeds.
+            clock.advance(to: 110)
+            #expect(posted.map(\.0) == [
+                KeyboardInjector.AppSwitcherSession.leftOptionKeyCode,
+                KeyboardInjector.leftCommandKeyCode,
+            ])
+            #expect(!posted[1].1)
+
+            // Option releases +100ms later (210ms total).
+            clock.advance(to: 210)
+            #expect(posted.map(\.0) == [
+                KeyboardInjector.AppSwitcherSession.leftOptionKeyCode,
+                KeyboardInjector.leftCommandKeyCode,
+                KeyboardInjector.AppSwitcherSession.leftOptionKeyCode,
+            ])
+            #expect(!posted[2].1)
+        }
+
+        // 2. Option release fails on first attempt and succeeds on bounded retry.
+        do {
+            let clock = ControlledTestScheduler()
+            var failNextOptionUp = true
+            var posted: [PostedEdge] = []
+            let session = KeyboardInjector.AppSwitcherSession(
+                hardwareFlags: { [] },
+                keyStatePoster: { code, down, _, _ in
+                    if code == KeyboardInjector.AppSwitcherSession.leftOptionKeyCode && !down && failNextOptionUp {
+                        failNextOptionUp = false
+                        return false
+                    }
+                    posted.append(PostedEdge(code: code, down: down))
+                    return true
+                },
+                scheduleRelease: clock.voiceSchedule
+            )
+            #expect(session.trigger())
+            posted.removeAll()
+            #expect(session.confirm())
+            clock.advance(to: 160)
+            #expect(posted == [
+                PostedEdge(code: KeyboardInjector.AppSwitcherSession.leftOptionKeyCode, down: true),
+                PostedEdge(code: KeyboardInjector.leftCommandKeyCode, down: false),
+            ])
+
+            clock.advance(to: 210)
+            #expect(posted == [
+                PostedEdge(code: KeyboardInjector.AppSwitcherSession.leftOptionKeyCode, down: true),
+                PostedEdge(code: KeyboardInjector.leftCommandKeyCode, down: false),
+                PostedEdge(code: KeyboardInjector.AppSwitcherSession.leftOptionKeyCode, down: false),
+            ])
+        }
+
+        // 3. Early flush (retrigger before deferred release completes) preserves stuck modifiers and retries.
+        do {
+            let clock = ControlledTestScheduler()
+            var failNextOptionUp = true
+            var posted: [PostedEdge] = []
+            let session = KeyboardInjector.AppSwitcherSession(
+                hardwareFlags: { [] },
+                keyStatePoster: { code, down, _, _ in
+                    if code == KeyboardInjector.AppSwitcherSession.leftOptionKeyCode && !down && failNextOptionUp {
+                        failNextOptionUp = false
+                        return false
+                    }
+                    posted.append(PostedEdge(code: code, down: down))
+                    return true
+                },
+                scheduleRelease: clock.voiceSchedule
+            )
+            #expect(session.trigger())
+            #expect(session.confirm())
+            posted.removeAll()
+
+            // Retrigger immediately before Option release runs; Option up fails, so trigger refuses
+            // to start a polluted session and schedules a retry instead of forgetting Option.
+            #expect(!session.trigger())
+            #expect(posted == [PostedEdge(code: KeyboardInjector.leftCommandKeyCode, down: false)])
+
+            clock.advance(to: 50)
+            #expect(posted == [
+                PostedEdge(code: KeyboardInjector.leftCommandKeyCode, down: false),
+                PostedEdge(code: KeyboardInjector.AppSwitcherSession.leftOptionKeyCode, down: false),
+            ])
+            #expect(session.trigger())
+        }
+    }
 }

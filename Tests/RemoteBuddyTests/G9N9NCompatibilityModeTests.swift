@@ -819,6 +819,7 @@ struct G9N9NCompatibilityModeTests {
                 logActions.append((button, trigger, configured.action))
                 return true
             },
+            frontmostBundleIdentifier: { "test.editor" },
             diagnosticLogger: { _ in }
         )
         logMonitor.connectSimulatedDevice(fingerprint: "fp-g9n9n-cancel", profileID: googleID, isSeized: true)
@@ -839,6 +840,7 @@ struct G9N9NCompatibilityModeTests {
                 nativeActions.append((button, trigger, configured.action))
                 return true
             },
+            frontmostBundleIdentifier: { "test.editor" },
             diagnosticLogger: { _ in }
         )
         nativeMonitor.connectSimulatedDevice(fingerprint: "fp-native-other", profileID: nativeID, isSeized: true)

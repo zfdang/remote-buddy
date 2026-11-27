@@ -610,7 +610,9 @@ final class AppSettings: ObservableObject {
         voiceAutoStopDuration = storedVoiceAutoStopMinutes
             .flatMap(VoiceAutoStopDuration.init(rawValue:)) ?? .fiveMinutes
         hideAllActionFeedback = defaults.bool(forKey: Keys.hideAllActionFeedback)
-        hideSuccessActionFeedback = defaults.bool(forKey: Keys.hideSuccessActionFeedback)
+        hideSuccessActionFeedback = defaults.object(forKey: Keys.hideSuccessActionFeedback) == nil
+            ? true
+            : defaults.bool(forKey: Keys.hideSuccessActionFeedback)
         onboardingPurpose = defaults.string(forKey: Keys.onboardingPurpose)
             .flatMap(OnboardingPurpose.init(rawValue:)) ?? .initialSetup
         onboardingCompletedVersion = defaults.integer(forKey: Keys.onboardingCompletedVersion)

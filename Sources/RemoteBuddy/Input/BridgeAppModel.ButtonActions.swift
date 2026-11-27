@@ -30,7 +30,7 @@ extension BridgeAppModel {
             customApplicationName: applicationProfile?.displayName
         )
         let feedbackStrings = ActionFeedbackStrings(localization: localization)
-        let retryHandler: @MainActor () -> Void = { [weak self] in
+        let retryHandler: @MainActor @Sendable () -> Void = { [weak self] in
             _ = self?.performExternalConfiguredAction(
                 configured,
                 customApplicationOpener: customApplicationOpener,
@@ -39,71 +39,77 @@ extension BridgeAppModel {
                 sender: sender
             )
         }
-        func elapsedMs() -> Int {
+        let isAsyncFocusInput = (configured.action == .focusInput)
+        let feedbackGate = ActionFeedbackCompletionGate()
+        let presentsSuccess = !settings.hideAllActionFeedback
+            && !settings.hideSuccessActionFeedback
+            && configured.showsActionSuccessFeedback
+        let presentsFailure = !settings.hideAllActionFeedback
+        let record: @MainActor @Sendable (ActionFeedbackResult, ActionFeedbackActionHandlers?) -> Void = {
+            [weak self] result, extraHandlers in
+            guard let self, feedbackGate.take() else { return }
             let now = DispatchTime.now().uptimeNanoseconds
-            return Int((now >= startedAt ? now - startedAt : 0) / 1_000_000)
-        }
-        func record(_ result: ActionFeedbackResult, extraHandlers: ActionFeedbackActionHandlers? = nil) {
+            let elapsedMs = Int((now >= startedAt ? now - startedAt : 0) / 1_000_000)
             let handlers = extraHandlers ?? ActionFeedbackActionHandlers(retry: retryHandler)
             let event = ActionFeedbackEvent(
                 operationID: operationID,
                 actionID: configured.action.rawValue,
                 actionName: actionName,
                 result: result,
-                elapsedMilliseconds: elapsedMs(),
-                presentsSuccess: !settings.hideAllActionFeedback
-                    && !settings.hideSuccessActionFeedback
-                    && configured.showsActionSuccessFeedback,
-                presentsFailure: !settings.hideAllActionFeedback
+                elapsedMilliseconds: elapsedMs,
+                presentsSuccess: presentsSuccess,
+                presentsFailure: presentsFailure
             )
-            actionFeedbackCenter.record(event, strings: feedbackStrings, handlers: handlers)
+            self.actionFeedbackCenter.record(event, strings: feedbackStrings, handlers: handlers)
         }
 
         guard !audio.suspensionState.isSuspended else {
-            record(.failure(.notStarted))
+            record(.failure(.notStarted), nil)
             return false
         }
         if configured.action == .openCustomApplication {
             guard let profile = applicationProfile,
                 KeyboardInjector.resolveCustomApplicationURL(profile) != nil
             else {
-                record(.failure(.targetMissing))
+                record(.failure(.targetMissing), nil)
                 return false
             }
         }
         if configured.action == .openURL {
             guard CustomActionURLPolicy.validatedURL(from: configured.urlString) != nil else {
-                record(.failure(.configurationUnavailable))
+                record(.failure(.configurationUnavailable), nil)
                 return false
             }
         }
         if configured.action == .customShortcut, configured.shortcut == nil {
-            record(.failure(.configurationUnavailable))
+            record(.failure(.configurationUnavailable), nil)
             return false
         }
         if configured.action.requiresNonSecureInput, secureInputEnabled() {
-            record(.failure(.shortcutNotDelivered))
+            record(.failure(.shortcutNotDelivered), nil)
             return false
         }
         if configured.action.requiresAccessibilityForAction, !accessibilityTrusted() {
-            record(.failure(.permissionDenied))
+            record(.failure(.permissionDenied), nil)
             return false
         }
 
         let sendAction: (UInt64?) -> Bool = { [weak self] requestID in
             guard let self else { return false }
             let completion: @Sendable (Bool) -> Void = { [weak self] succeeded in
-                guard let requestID else { return }
+                let finish: @MainActor @Sendable () -> Void = { [weak self] in
+                    if let requestID {
+                        self?.voiceInputDestinationCoordinator.completeFocusOperation(
+                            requestID: requestID, succeeded: succeeded)
+                    }
+                    if isAsyncFocusInput {
+                        record(succeeded ? .success : .failure(.executionFailed), nil)
+                    }
+                }
                 if Thread.isMainThread {
-                    MainActor.assumeIsolated {
-                        self?.voiceInputDestinationCoordinator.completeFocusOperation(
-                            requestID: requestID, succeeded: succeeded)
-                    }
+                    MainActor.assumeIsolated { finish() }
                 } else {
-                    DispatchQueue.main.async { [weak self] in
-                        self?.voiceInputDestinationCoordinator.completeFocusOperation(
-                            requestID: requestID, succeeded: succeeded)
-                    }
+                    DispatchQueue.main.async { finish() }
                 }
             }
             let handled: Bool
@@ -131,24 +137,24 @@ extension BridgeAppModel {
             voiceInputDestinationCoordinator.beginTargetSwitch(intent: intent) { [weak self] requestID in
                 guard self != nil else { return }
                 let ok = sendAction(requestID)
-                if ok {
-                    record(.success)
-                } else {
-                    record(.failure(.executionFailed))
+                if !ok {
+                    record(.failure(.executionFailed), nil)
+                } else if !isAsyncFocusInput {
+                    record(.success, nil)
                 }
             }
             return true
         }
         let handled = sendAction(nil)
-        if handled {
-            record(.success)
-        } else {
-            let handlers = ActionFeedbackActionHandlers(
-                openApplication: (configured.action.presetApplication != nil || configured.action == .openCustomApplication)
-                    ? retryHandler : nil,
-                retry: retryHandler
-            )
-            record(.failure(.executionFailed), extraHandlers: handlers)
+        if !handled {
+            let canOpenApp = configured.action.presetApplication != nil || configured.action == .openCustomApplication
+            var handlers = ActionFeedbackActionHandlers(retry: retryHandler)
+            if canOpenApp {
+                handlers.openApplication = retryHandler
+            }
+            record(.failure(.executionFailed), handlers)
+        } else if !isAsyncFocusInput {
+            record(.success, nil)
         }
         return handled
     }

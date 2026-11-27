@@ -225,6 +225,60 @@ struct BluetoothLifecycleTests {
         #expect(reconnectSchedules == 2)
     }
 
+    @Test @MainActor func cachedTargetHitPreservesWakeRecoveryUntilReadySoHandshakeFailureLatches() throws {
+        let suite = UUID().uuidString
+        let values = try #require(UserDefaults(suiteName: suite))
+        defer { values.removePersistentDomain(forName: suite) }
+
+        final class DummyDelegate: BluetoothRemoteBridgeDelegate {
+            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didChange state: BluetoothBridgeState) {}
+            func bluetoothBridgeDidStartVoice(_ bridge: BluetoothRemoteBridge) {}
+            func bluetoothBridgeDidStopVoice(_ bridge: BluetoothRemoteBridge) {}
+            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didDecode samples: [Int16]) {}
+            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didUpdateBatteryLevel level: Int?) {}
+            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didIdentifyRemoteModel model: RemoteModel) {}
+            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didUpdatePowerState state: RemotePowerState?) {}
+            func bluetoothBridgeDeviceNameDidChange(_ bridge: BluetoothRemoteBridge) {}
+        }
+
+        let targetID = UUID()
+        let delegate = DummyDelegate()
+        var reconnectSchedules = 0
+        let bridge = BluetoothRemoteBridge(
+            settings: AppSettings(defaults: values),
+            delegate: delegate,
+            targetIdentifier: targetID,
+            scheduleReconnect: { _, _ in reconnectSchedules += 1 }
+        )
+        bridge.shouldRun = true
+
+        // 1. Wake triggers recovery and marks wakeRecoveryInFlight.
+        bridge.recoverVoiceLink(reason: "system_wake")
+        #expect(reconnectSchedules == 1)
+        #expect(bridge.wakeRecoveryLatch.wakeRecoveryInFlight)
+
+        // 2. Adopting a cached CoreBluetooth peripheral must NOT clear wakeRecoveryInFlight.
+        let decision = bridge.admitCandidate(
+            identifier: targetID,
+            advertisesVoiceService: true,
+            name: "MI RC",
+            advertisedName: nil
+        )
+        #expect(decision.isAdopted)
+        #expect(bridge.wakeRecoveryLatch.wakeRecoveryInFlight)
+        #expect(!bridge.wakeRecoveryLatch.wakeRecoveryFailed)
+
+        // 3. Subsequent initialization/handshake failure schedules a reconnect and latches the wake failure.
+        bridge.failInitialization(LocalizedMessage("connection.error.voice_service_timeout"))
+        #expect(reconnectSchedules == 2)
+        #expect(!bridge.wakeRecoveryLatch.wakeRecoveryInFlight)
+        #expect(bridge.wakeRecoveryLatch.wakeRecoveryFailed)
+
+        // 4. Next wake must NOT initiate another handshake while latched.
+        bridge.recoverVoiceLink(reason: "system_wake")
+        #expect(reconnectSchedules == 2)
+    }
+
     @Test func discoveryScanPreFilterRejectsUnrelatedPeripheralsAndAdmitsSupportedRemotes() {
         let target = UUID()
         let other = UUID()

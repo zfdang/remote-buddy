@@ -57,13 +57,20 @@ final class VoiceSilenceNoticeController {
 
     func present(title: String, text: String) {
         dismiss(reason: "replaced")
-        let hosting = NSHostingView(rootView: NoticeBubble(tier: .tip, title: title, text: text))
-        hosting.layoutSubtreeIfNeeded()
-        let size = hosting.fittingSize
-        guard size.width > 0, size.height > 0 else {
-            logger("VOICE SILENCE NOTICE phase=shown result=failed reason=empty_measurement")
+        guard let screen = ActionFeedbackScreenResolver.preferredScreen() else {
+            logger("VOICE SILENCE NOTICE phase=shown result=failed reason=no_screen")
             return
         }
+        let hosting = NSHostingView(
+            rootView: NoticeBubble(tier: .tip, title: title, text: text)
+                .padding(ActionFeedbackLayout.contentPadding)
+        )
+        hosting.sizingOptions = [.intrinsicContentSize]
+        hosting.autoresizingMask = [.width, .height]
+        hosting.layoutSubtreeIfNeeded()
+        var size = hosting.fittingSize
+        size.width = min(max(size.width, 180), 432)
+        size.height = max(size.height, 88)
 
         let panel = NSPanel(
             contentRect: NSRect(origin: .zero, size: size),
@@ -82,13 +89,11 @@ final class VoiceSilenceNoticeController {
         panel.contentView = hosting
         panel.setContentSize(size)
 
-        let screen = NSScreen.main?.visibleFrame ?? NSRect(origin: .zero, size: size)
-        panel.setFrameOrigin(
-            NSPoint(
-                x: screen.midX - size.width / 2,
-                y: screen.midY - size.height / 2
-            )
+        let origin = ActionFeedbackLayout.origin(
+            visibleFrame: screen.visibleFrame,
+            panelSize: size
         )
+        panel.setFrame(NSRect(origin: origin, size: size), display: true)
 
         window = panel
         panel.orderFrontRegardless()

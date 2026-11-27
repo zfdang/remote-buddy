@@ -12,6 +12,14 @@ enum HIDReportCallbackPath: Equatable, Sendable {
         case .simulated: "simulated"
         }
     }
+
+    var oppositeReportPath: HIDReportCallbackPath? {
+        switch self {
+        case .manager: .device
+        case .device: .manager
+        case .simulated: nil
+        }
+    }
 }
 
 enum HIDReportClock {
@@ -41,12 +49,13 @@ struct HIDReportDeduplicationKey: Equatable {
 /// Deduplicates physical reports when both manager-level and per-device HID
 /// callbacks deliver the same packet on macOS 27+.
 ///
-/// Deduplication is strictly based on actual arrivals within a 50 ms window
-/// rather than callback registration state, so manager fallback stays active
-/// whenever a registered device callback silently stops firing.
+/// Deduplication matches and consumes pairs strictly across opposite callback
+/// paths (`manager` <-> `device`) within a 50 ms window so rapid repeated
+/// presses on a single path are never swallowed.
 struct HIDReportDeduplicationCache {
     struct Entry {
         let key: HIDReportDeduplicationKey
+        let path: HIDReportCallbackPath
         let timestampNanoseconds: UInt64
     }
 
@@ -58,18 +67,22 @@ struct HIDReportDeduplicationCache {
 
     mutating func shouldDrop(
         key: HIDReportDeduplicationKey,
+        path: HIDReportCallbackPath,
         timestampNanoseconds: UInt64
     ) -> Bool {
+        guard let pairedPath = path.oppositeReportPath else { return false }
         entries.removeAll {
             Self.distance($0.timestampNanoseconds, timestampNanoseconds) > Self.retentionNanoseconds
         }
-        if entries.contains(where: {
+        if let matchIndex = entries.firstIndex(where: {
             $0.key == key &&
+                $0.path == pairedPath &&
                 Self.distance($0.timestampNanoseconds, timestampNanoseconds) <= Self.duplicateWindowNanoseconds
         }) {
+            entries.remove(at: matchIndex)
             return true
         }
-        entries.append(Entry(key: key, timestampNanoseconds: timestampNanoseconds))
+        entries.append(Entry(key: key, path: path, timestampNanoseconds: timestampNanoseconds))
         if entries.count > Self.maximumEntries {
             entries.removeFirst(entries.count - Self.maximumEntries)
         }

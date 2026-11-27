@@ -298,6 +298,7 @@ extension HIDRemoteMonitor {
             )
             let duplicate = reportDeduplicationCache.shouldDrop(
                 key: dedupKey,
+                path: path,
                 timestampNanoseconds: timestampNanoseconds
             )
             recordPathReport(

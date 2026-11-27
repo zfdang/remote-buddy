@@ -196,6 +196,50 @@ extension BluetoothRemoteBridge {
         )
     }
 
+    /// Evaluates candidate admission and updates remote family flags without resetting
+    /// the wake recovery latch so cached-target hits preserve failure tracking until ready.
+    @discardableResult
+    func admitCandidate(
+        identifier: UUID,
+        advertisesVoiceService: Bool,
+        name: String?,
+        advertisedName: String?
+    ) -> VoiceRemoteAdmissionDecision {
+        let decision = VoiceRemoteAdmission.decide(
+            identifier: identifier,
+            targetIdentifier: targetIdentifier,
+            advertisesVoiceService: advertisesVoiceService,
+            name: name,
+            advertisedName: advertisedName,
+            allowsG9N9N: allowsG9N9N,
+            allowsT1Remote: allowsT1Remote,
+            adoptUnidentifiedATVVAsT1: adoptUnidentifiedATVVAsT1()
+        )
+        switch decision {
+        case .adoptSavedIdentity, .adoptRecognizedName:
+            let cachedProfile = settings.remoteDeviceProfiles.first {
+                $0.bluetoothIdentifier == identifier
+            }
+            let resolvedName = VoiceRemoteAdmission.resolvedName(
+                advertisedName: advertisedName,
+                peripheralName: name
+            )
+            googleCandidate = allowsG9N9N && (
+                G9N9NProtocol.isCandidateName(resolvedName) ||
+                cachedProfile?.model.isChromecastRemote == true
+            )
+            t1Candidate = !googleCandidate && allowsT1Remote && (
+                T1RemoteProtocol.isCandidateName(resolvedName) ||
+                cachedProfile?.model.isT1Remote == true ||
+                (adoptUnidentifiedATVVAsT1() &&
+                    XiaomiVoiceRemoteNameMatcher.recognizedName(resolvedName) == nil)
+            )
+        default:
+            break
+        }
+        return decision
+    }
+
     /// 三条发现路径——已保存标识、系统已连接设备、扫描广播——**必须共用这一份判定**。
     /// 分成三份写就会出现「某条路径漏掉/误收」这类只在特定配对状态下复现的缺陷。
     @discardableResult
@@ -208,36 +252,14 @@ extension BluetoothRemoteBridge {
         advertisedName: String?,
         usesCachedTarget: Bool = false
     ) -> Bool {
-        let decision = VoiceRemoteAdmission.decide(
+        let decision = admitCandidate(
             identifier: candidate.identifier,
-            targetIdentifier: targetIdentifier,
             advertisesVoiceService: advertisesVoiceService,
             name: candidate.name,
-            advertisedName: advertisedName,
-            allowsG9N9N: allowsG9N9N,
-            allowsT1Remote: allowsT1Remote,
-            adoptUnidentifiedATVVAsT1: adoptUnidentifiedATVVAsT1()
+            advertisedName: advertisedName
         )
         switch decision {
         case .adoptSavedIdentity, .adoptRecognizedName:
-            wakeRecoveryLatch.clearFailureLatch()
-            let cachedProfile = settings.remoteDeviceProfiles.first {
-                $0.bluetoothIdentifier == candidate.identifier
-            }
-            let resolvedName = VoiceRemoteAdmission.resolvedName(
-                advertisedName: advertisedName,
-                peripheralName: candidate.name
-            )
-            googleCandidate = allowsG9N9N && (
-                G9N9NProtocol.isCandidateName(resolvedName) ||
-                cachedProfile?.model.isChromecastRemote == true
-            )
-            t1Candidate = !googleCandidate && allowsT1Remote && (
-                T1RemoteProtocol.isCandidateName(resolvedName) ||
-                cachedProfile?.model.isT1Remote == true ||
-                (adoptUnidentifiedATVVAsT1() &&
-                    XiaomiVoiceRemoteNameMatcher.recognizedName(resolvedName) == nil)
-            )
             connect(
                 candidate,
                 using: central,

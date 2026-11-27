@@ -172,7 +172,14 @@ struct ActionFeedbackTests {
         let visibleFrame = CGRect(x: 0, y: 0, width: 1440, height: 900)
         let origin = ActionFeedbackLayout.origin(visibleFrame: visibleFrame, panelSize: CGSize(width: 300, height: 80))
         #expect(origin.x == 570)
-        #expect(origin.y == ActionFeedbackLayout.bubbleBottomInset - ActionFeedbackLayout.contentPadding)
+        let expectedBottomY = ActionFeedbackLayout.bubbleBottomInset + (visibleFrame.height * ActionFeedbackLayout.bottomHeightRatio).rounded()
+        #expect(origin.y == expectedBottomY - ActionFeedbackLayout.contentPadding)
+        let zeroPaddingOrigin = ActionFeedbackLayout.origin(
+            visibleFrame: visibleFrame,
+            panelSize: CGSize(width: 300, height: 80),
+            contentPadding: 0
+        )
+        #expect(zeroPaddingOrigin.y == expectedBottomY)
 
         let screen0 = CGRect(x: 0, y: 0, width: 1440, height: 900)
         let screen1 = CGRect(x: 1440, y: 0, width: 1920, height: 1080)
@@ -200,21 +207,15 @@ struct ActionFeedbackTests {
 
         let settings = AppSettings(defaults: defaults)
         #expect(!settings.hideAllActionFeedback)
-        #expect(!settings.hideSuccessActionFeedback)
+        #expect(settings.hideSuccessActionFeedback)
 
-        settings.hideSuccessActionFeedback = true
-        settings.hideAllActionFeedback = true
-        let reloaded = AppSettings(defaults: defaults)
-        #expect(reloaded.hideSuccessActionFeedback)
-        #expect(reloaded.hideAllActionFeedback)
-
+        // Default behavior hides discrete action successes while continuing to surface failures.
         let center = ActionFeedbackCenter(now: Date.init, log: { _ in }, pasteboardWriter: { _ in })
         let model = BridgeAppModel(settings: settings, initialAudioDevices: [])
         model.actionFeedbackCenter = center
 
-        // With hideAllActionFeedback=true, neither success nor failure is presented, yet actions still run.
         var executedCount = 0
-        let ran = model.performExternalConfiguredAction(
+        let defaultSuccess = model.performExternalConfiguredAction(
             ConfiguredButtonAction(action: .screenshot, shortcut: nil),
             accessibilityTrusted: { true },
             secureInputEnabled: { false },
@@ -223,33 +224,39 @@ struct ActionFeedbackTests {
                 return true
             }
         )
-        #expect(ran)
+        #expect(defaultSuccess)
         #expect(executedCount == 1)
         #expect(center.presentation == nil)
 
-        // When only hideSuccessActionFeedback=true, failures still appear and carry permission recovery,
-        // while successes stay hidden.
-        settings.hideAllActionFeedback = false
-        let denied = model.performExternalConfiguredAction(
+        let defaultFailure = model.performExternalConfiguredAction(
             ConfiguredButtonAction(action: .commandPaste, shortcut: nil),
             accessibilityTrusted: { false },
             secureInputEnabled: { false },
             sender: { _, _, _ in true }
         )
-        #expect(!denied)
+        #expect(!defaultFailure)
         #expect(center.presentation?.kind == .failure)
         center.dismiss()
 
-        let suppressedSuccess = model.performExternalConfiguredAction(
-            ConfiguredButtonAction(action: .screenshot, shortcut: nil),
-            accessibilityTrusted: { true },
+        // Persisting explicit toggle changes survives reload.
+        settings.hideSuccessActionFeedback = false
+        settings.hideAllActionFeedback = true
+        let reloaded = AppSettings(defaults: defaults)
+        #expect(!reloaded.hideSuccessActionFeedback)
+        #expect(reloaded.hideAllActionFeedback)
+
+        // With hideAllActionFeedback=true, neither success nor failure is presented, yet actions still run.
+        let suppressedAll = model.performExternalConfiguredAction(
+            ConfiguredButtonAction(action: .commandPaste, shortcut: nil),
+            accessibilityTrusted: { false },
             secureInputEnabled: { false },
             sender: { _, _, _ in true }
         )
-        #expect(suppressedSuccess)
+        #expect(!suppressedAll)
         #expect(center.presentation == nil)
 
-        // When both toggles are off, discrete action success HUD renders normally.
+        // With both toggles turned off, discrete action success HUD renders normally.
+        settings.hideAllActionFeedback = false
         settings.hideSuccessActionFeedback = false
         let shownSuccess = model.performExternalConfiguredAction(
             ConfiguredButtonAction(action: .screenshot, shortcut: nil),
@@ -259,5 +266,105 @@ struct ActionFeedbackTests {
         )
         #expect(shownSuccess)
         #expect(center.presentation?.kind == .success)
+    }
+
+    @Test(arguments: [false, true])
+    @MainActor func focusInputDefersFeedbackUntilAsyncCompletion(fnTapModeEnabled: Bool) throws {
+        let suite = "action-feedback-focus-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let settings = AppSettings(defaults: defaults)
+        settings.hideAllActionFeedback = false
+        settings.hideSuccessActionFeedback = false
+        settings.voiceFnTapModeEnabled = fnTapModeEnabled
+
+        var recordedLogs: [String] = []
+        let center = ActionFeedbackCenter(
+            now: Date.init,
+            log: { recordedLogs.append($0) },
+            pasteboardWriter: { _ in }
+        )
+        let model = BridgeAppModel(settings: settings, initialAudioDevices: [])
+        model.actionFeedbackCenter = center
+        let clock = ControlledTestScheduler()
+        model.voiceInputDestinationCoordinator = VoiceInputDestinationCoordinator(
+            schedule: clock.voiceSchedule,
+            snapshot: {
+                VoiceInputDestinationSnapshot(
+                    bundleIdentifier: "com.example.editor",
+                    role: "AXTextArea",
+                    subrole: "",
+                    enabled: true,
+                    editable: true,
+                    protectedContent: false,
+                    semanticText: "Editor"
+                )
+            }
+        )
+
+        var capturedCompletion: (@Sendable (Bool) -> Void)?
+        let submitted = model.performExternalConfiguredAction(
+            ConfiguredButtonAction(action: .focusInput, shortcut: nil),
+            accessibilityTrusted: { true },
+            secureInputEnabled: { false },
+            sender: { _, _, completion in
+                capturedCompletion = completion
+                return true
+            }
+        )
+        #expect(submitted)
+        #expect(capturedCompletion != nil)
+        // Must NOT show success prematurely before async focus completion runs.
+        #expect(center.presentation == nil)
+        #expect(recordedLogs.isEmpty)
+
+        // When async focus completion fails, exactly one failure presentation is recorded.
+        capturedCompletion?(false)
+        #expect(center.presentation?.kind == .failure)
+        #expect(center.presentation?.count == 1)
+        #expect(recordedLogs.count == 1)
+
+        // Late second completion does not emit another feedback event.
+        capturedCompletion?(true)
+        #expect(recordedLogs.count == 1)
+
+        // Async focus completion succeeding records a single success presentation.
+        center.dismiss()
+        recordedLogs.removeAll()
+        var succeededCompletion: (@Sendable (Bool) -> Void)?
+        let okSubmitted = model.performExternalConfiguredAction(
+            ConfiguredButtonAction(action: .focusInput, shortcut: nil),
+            accessibilityTrusted: { true },
+            secureInputEnabled: { false },
+            sender: { _, _, completion in
+                succeededCompletion = completion
+                return true
+            }
+        )
+        #expect(okSubmitted)
+        #expect(center.presentation == nil)
+        succeededCompletion?(true)
+        #expect(center.presentation?.kind == .success)
+        #expect(recordedLogs.count == 1)
+
+        // Immediate synchronous dispatch failure fails at once without waiting for completion.
+        center.dismiss()
+        recordedLogs.removeAll()
+        var unusedCompletion: (@Sendable (Bool) -> Void)?
+        let syncFail = model.performExternalConfiguredAction(
+            ConfiguredButtonAction(action: .focusInput, shortcut: nil),
+            accessibilityTrusted: { true },
+            secureInputEnabled: { false },
+            sender: { _, _, completion in
+                unusedCompletion = completion
+                return false
+            }
+        )
+        #expect(fnTapModeEnabled ? syncFail : !syncFail)
+        #expect(center.presentation?.kind == .failure)
+        #expect(recordedLogs.count == 1)
+        unusedCompletion?(true)
+        #expect(recordedLogs.count == 1)
     }
 }

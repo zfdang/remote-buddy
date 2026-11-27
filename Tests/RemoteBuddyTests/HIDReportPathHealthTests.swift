@@ -4,21 +4,54 @@ import Testing
 
 @Suite("HID report path health and deduplication")
 struct HIDReportPathHealthTests {
-    @Test func dedupCacheDropsDuplicateReportWithinFiftyMillisecondsAndKeepsPressRelease() {
+    @Test func dedupCacheDropsCrossPathDuplicateWithinFiftyMillisecondsAndKeepsPressRelease() {
         var cache = HIDReportDeduplicationCache()
         let press = HIDReportDeduplicationKey(devicePointer: 1, reportID: 1, data: Data([0x41, 0x00]))
         let release = HIDReportDeduplicationKey(devicePointer: 1, reportID: 1, data: Data([0x00, 0x00]))
 
-        let firstPress = cache.shouldDrop(key: press, timestampNanoseconds: 1_000_000_000)
-        let dupPress = cache.shouldDrop(key: press, timestampNanoseconds: 1_020_000_000)
-        let firstRelease = cache.shouldDrop(key: release, timestampNanoseconds: 1_025_000_000)
-        // After 50 ms, identical payload is accepted again.
-        let laterPress = cache.shouldDrop(key: press, timestampNanoseconds: 1_071_000_000)
+        let firstPress = cache.shouldDrop(key: press, path: .manager, timestampNanoseconds: 1_000_000_000)
+        let dupPress = cache.shouldDrop(key: press, path: .device, timestampNanoseconds: 1_020_000_000)
+        let firstRelease = cache.shouldDrop(key: release, path: .manager, timestampNanoseconds: 1_025_000_000)
+        // After 50 ms, identical payload on opposite path is accepted again.
+        let laterPress = cache.shouldDrop(key: press, path: .manager, timestampNanoseconds: 1_071_000_000)
 
         #expect(!firstPress)
         #expect(dupPress)
         #expect(!firstRelease)
         #expect(!laterPress)
+    }
+
+    @Test func dedupCachePreservesRapidPressReleasePressOnSinglePath() {
+        var cache = HIDReportDeduplicationCache()
+        let press = HIDReportDeduplicationKey(devicePointer: 1, reportID: 1, data: Data([0x41, 0x00]))
+        let release = HIDReportDeduplicationKey(devicePointer: 1, reportID: 1, data: Data([0x00, 0x00]))
+
+        // Rapid "press -> release -> press" within 50 ms on a single callback path must retain both presses.
+        for path in [HIDReportCallbackPath.manager, .device] {
+            var singlePathCache = HIDReportDeduplicationCache()
+            let p1 = singlePathCache.shouldDrop(key: press, path: path, timestampNanoseconds: 1_000_000_000)
+            let r1 = singlePathCache.shouldDrop(key: release, path: path, timestampNanoseconds: 1_010_000_000)
+            let p2 = singlePathCache.shouldDrop(key: press, path: path, timestampNanoseconds: 1_020_000_000)
+            let r2 = singlePathCache.shouldDrop(key: release, path: path, timestampNanoseconds: 1_030_000_000)
+            #expect(!p1)
+            #expect(!r1)
+            #expect(!p2)
+            #expect(!r2)
+        }
+
+        // Cross-path matching consumes the pair 1-to-1 so a subsequent second physical report is accepted.
+        let m1 = cache.shouldDrop(key: press, path: .manager, timestampNanoseconds: 2_000_000_000)
+        let d1 = cache.shouldDrop(key: press, path: .device, timestampNanoseconds: 2_002_000_000)
+        let mr1 = cache.shouldDrop(key: release, path: .manager, timestampNanoseconds: 2_010_000_000)
+        let dr1 = cache.shouldDrop(key: release, path: .device, timestampNanoseconds: 2_012_000_000)
+        let d2 = cache.shouldDrop(key: press, path: .device, timestampNanoseconds: 2_020_000_000)
+        let m2 = cache.shouldDrop(key: press, path: .manager, timestampNanoseconds: 2_022_000_000)
+        #expect(!m1)
+        #expect(d1)
+        #expect(!mr1)
+        #expect(dr1)
+        #expect(!d2)
+        #expect(m2)
     }
 
     @Test func dedupCachePartitionsByDeviceAndReportIDAndCapsEntries() {
@@ -27,9 +60,9 @@ struct HIDReportPathHealthTests {
         let device2 = HIDReportDeduplicationKey(devicePointer: 2, reportID: 1, data: Data([0x01]))
         let report2 = HIDReportDeduplicationKey(devicePointer: 1, reportID: 2, data: Data([0x01]))
 
-        let d1 = cache.shouldDrop(key: device1, timestampNanoseconds: 1_000_000_000)
-        let d2 = cache.shouldDrop(key: device2, timestampNanoseconds: 1_005_000_000)
-        let r2 = cache.shouldDrop(key: report2, timestampNanoseconds: 1_010_000_000)
+        let d1 = cache.shouldDrop(key: device1, path: .manager, timestampNanoseconds: 1_000_000_000)
+        let d2 = cache.shouldDrop(key: device2, path: .device, timestampNanoseconds: 1_005_000_000)
+        let r2 = cache.shouldDrop(key: report2, path: .device, timestampNanoseconds: 1_010_000_000)
 
         #expect(!d1)
         #expect(!d2)
@@ -37,7 +70,7 @@ struct HIDReportPathHealthTests {
 
         for index in UInt32(10)..<UInt32(25) {
             let key = HIDReportDeduplicationKey(devicePointer: 99, reportID: index, data: Data([0xAA]))
-            _ = cache.shouldDrop(key: key, timestampNanoseconds: 1_020_000_000)
+            _ = cache.shouldDrop(key: key, path: .manager, timestampNanoseconds: 1_020_000_000)
         }
         #expect(cache.entries.count <= 8)
     }

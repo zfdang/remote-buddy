@@ -106,7 +106,6 @@ final class ActionFeedbackWindowCoordinator {
             return
         }
         guard let screen = ActionFeedbackScreenResolver.preferredScreen() else { return }
-        let host = ensureHostingView()
         let view = ActionFeedbackView(
             presentation: presentation,
             isCopied: copiedID == presentation.id,
@@ -115,16 +114,20 @@ final class ActionFeedbackWindowCoordinator {
             onClose: { [weak center] in center?.dismiss() },
             onHover: { [weak center] hovering in center?.setHovering(hovering) }
         )
-        host.rootView = AnyView(view)
+        // Fresh NSHostingView ensures SwiftUI computes an uncached intrinsic fittingSize
+        // rather than reusing stale height from an earlier presentation or EmptyView.
+        let host = NSHostingView(rootView: AnyView(view))
+        host.sizingOptions = [.intrinsicContentSize]
+        host.autoresizingMask = [.width, .height]
         host.layoutSubtreeIfNeeded()
         var size = host.fittingSize
-        if size.width < 1 || size.height < 1 {
-            size = NSSize(width: 412, height: 120)
-        }
-        size.width = min(max(size.width, 120), 432)
-        size.height = max(size.height, 1)
+        let minimumHeight: CGFloat = presentation.kind == .success ? 76 : 120
+        size.width = min(max(size.width, 140), 432)
+        size.height = max(size.height, minimumHeight)
         let panel = ensurePanel()
         panel.ignoresMouseEvents = presentation.kind == .success
+        hostingView = host
+        panel.contentView = host
         panel.setContentSize(size)
         let origin = ActionFeedbackLayout.origin(
             visibleFrame: screen.visibleFrame,
@@ -232,7 +235,6 @@ enum ActionFeedbackScreenResolver {
                 )
             return (screen, frame)
         }
-        var best: (screen: NSScreen, area: CGFloat)?
         for window in windows {
             guard let ownerPID = (window[kCGWindowOwnerPID as String] as? NSNumber)?.int32Value,
                   ownerPID == frontmostPID,
@@ -241,14 +243,18 @@ enum ActionFeedbackScreenResolver {
                   let frame = CGRect(dictionaryRepresentation: bounds as CFDictionary),
                   frame.width > 1, frame.height > 1
             else { continue }
+            var windowBest: (screen: NSScreen, area: CGFloat)?
             for entry in displayFrames {
                 let area = entry.frame.intersection(frame).area
-                if area > (best?.area ?? 0) {
-                    best = (entry.screen, area)
+                if area > (windowBest?.area ?? 0) {
+                    windowBest = (entry.screen, area)
                 }
             }
+            if let matched = windowBest, matched.area > 0 {
+                return matched.screen
+            }
         }
-        return best?.screen ?? fallback
+        return fallback
     }
 
     static func bestScreenIndex(

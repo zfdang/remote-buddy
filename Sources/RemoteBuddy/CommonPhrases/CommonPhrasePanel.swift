@@ -184,8 +184,13 @@ final class CommonPhraseController: ObservableObject {
                 .multilineTextAlignment(.center).foregroundStyle(.white).padding(16)
                 .frame(width: size.width, height: size.height)
                 .background(Color(white: 0.075), in: RoundedRectangle(cornerRadius: 16)).opacity(0.8))
-        if let frame = NSScreen.main?.frame {
-            window.setFrameOrigin(NSPoint(x: frame.midX - size.width / 2, y: frame.midY - size.height / 2))
+        if let screen = ActionFeedbackScreenResolver.preferredScreen() {
+            let origin = ActionFeedbackLayout.origin(
+                visibleFrame: screen.visibleFrame,
+                panelSize: size,
+                contentPadding: 0
+            )
+            window.setFrameOrigin(origin)
         }
         feedbackPanel = window
         window.orderFrontRegardless()

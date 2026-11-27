@@ -66,9 +66,12 @@ struct ShortcutSequenceTests {
             (.commandFind, 3, .maskCommand), (.commandSave, 1, .maskCommand),
             (.commandRefresh, 15, .maskCommand),
             (.commandDelete, 51, .maskCommand), (.showDesktop, 103, .maskSecondaryFn),
-            (.missionControl, 126, .maskControl), (.notificationCenter, 45, .maskSecondaryFn),
-            (.spotlight, 49, .maskCommand), (.spaceLeft, 123, .maskControl),
-            (.spaceRight, 124, .maskControl), (.lockScreen, 12, [.maskControl, .maskCommand]),
+            (.missionControl, 126, [.maskControl, .maskSecondaryFn, .maskNumericPad]),
+            (.notificationCenter, 45, .maskSecondaryFn),
+            (.spotlight, 49, .maskCommand),
+            (.spaceLeft, 123, [.maskControl, .maskSecondaryFn, .maskNumericPad]),
+            (.spaceRight, 124, [.maskControl, .maskSecondaryFn, .maskNumericPad]),
+            (.lockScreen, 12, [.maskControl, .maskCommand]),
             (.screenshot, 23, [.maskCommand, .maskShift]),
         ]
         for (action, code, flags) in shortcuts {
@@ -255,6 +258,87 @@ struct ShortcutSequenceTests {
         clock.runAll()
         #expect(releases == 10)
         #expect(clock.activeCount == 0)
+    }
+
+    @Test func arrowShortcutPreservesIntrinsicFnAndNumpadWithoutSyntheticFnKey() {
+        let customArrow = CustomKeyboardShortcut(
+            keyCode: 123,
+            modifierFlags: [.control, .function],
+            keyLabel: "←"
+        )
+        #expect(!customArrow.modifierFlags.contains(.function))
+        let cases: [(ButtonAction, CustomKeyboardShortcut?, UInt16)] = [
+            (.spaceLeft, nil, 123),
+            (.spaceRight, nil, 124),
+            (.missionControl, nil, 126),
+            (.customShortcut, customArrow, 123),
+        ]
+        let relevantFlags: CGEventFlags = [
+            .maskControl, .maskCommand, .maskAlternate, .maskShift, .maskSecondaryFn, .maskNumericPad,
+        ]
+        for (action, shortcut, expectedArrowCode) in cases {
+            var posted: [Posted] = []
+            #expect(KeyboardInjector.send(
+                action,
+                shortcut: shortcut,
+                accessibilityTrusted: { true },
+                secureInputEnabled: { false },
+                shortcutEventPoster: { posted.append(Posted($0)); return true },
+                shortcutHardwareFlags: { [] }
+            ))
+            #expect(posted.map(\.code) == [59, expectedArrowCode, expectedArrowCode, 59])
+            #expect(posted.map(\.type) == [.flagsChanged, .keyDown, .keyUp, .flagsChanged])
+            #expect(!posted[0].flags.contains(.maskSecondaryFn))
+            #expect(!posted[0].flags.contains(.maskNumericPad))
+            #expect(posted[1].flags.intersection(relevantFlags) == [.maskControl, .maskSecondaryFn, .maskNumericPad])
+            #expect(posted[2].flags.intersection(relevantFlags) == [.maskControl, .maskSecondaryFn, .maskNumericPad])
+            #expect(posted[3].flags.intersection(relevantFlags).isEmpty)
+        }
+    }
+
+    @Test func ordinaryShortcutExcludesFnAndNumpadDespitePollutedHardwareFlags() {
+        let pollutedFlags = CGEventFlags(rawValue: 0xA00100)
+        let cases: [(CGKeyCode, CGEventFlags)] = [
+            (48, .maskControl), // Ctrl+Tab
+            (8, .maskCommand),  // Cmd+C
+        ]
+        for (keyCode, modifier) in cases {
+            var posted: [Posted] = []
+            #expect(ShortcutEventSequence.send(
+                keyCode: keyCode,
+                modifiers: modifier,
+                hardwareFlags: { pollutedFlags },
+                eventPoster: { posted.append(Posted($0)); return true },
+                logger: { _ in }
+            ))
+            let keyEvents = posted.filter { $0.type == .keyDown || $0.type == .keyUp }
+            #expect(keyEvents.count == 2)
+            #expect(keyEvents.allSatisfy {
+                $0.flags.contains(modifier) &&
+                    !$0.flags.contains(.maskSecondaryFn) &&
+                    !$0.flags.contains(.maskNumericPad)
+            })
+        }
+    }
+
+    @Test func functionKeyShortcutPreservesIntrinsicFnWithoutNumpad() {
+        var posted: [Posted] = []
+        #expect(ShortcutEventSequence.send(
+            keyCode: 103, // F11
+            modifiers: .maskControl,
+            hardwareFlags: { [] },
+            eventPoster: { posted.append(Posted($0)); return true },
+            logger: { _ in }
+        ))
+        #expect(posted.map(\.code) == [59, 103, 103, 59])
+        #expect(posted.map(\.type) == [.flagsChanged, .keyDown, .keyUp, .flagsChanged])
+        #expect(!posted[0].flags.contains(.maskSecondaryFn))
+        #expect(!posted[0].flags.contains(.maskNumericPad))
+        #expect(posted[1].flags.contains([.maskControl, .maskSecondaryFn]))
+        #expect(!posted[1].flags.contains(.maskNumericPad))
+        #expect(posted[2].flags.contains([.maskControl, .maskSecondaryFn]))
+        #expect(!posted[2].flags.contains(.maskNumericPad))
+        #expect(posted[3].flags.isEmpty)
     }
 
 }

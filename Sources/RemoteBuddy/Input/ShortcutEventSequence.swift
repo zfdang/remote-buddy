@@ -164,8 +164,16 @@ enum ShortcutEventSequence {
             guard let event = CGEvent(keyboardEventSource: source, virtualKey: code, keyDown: down)
             else { return false }
             if modifier { event.type = .flagsChanged }
+            // Preserve key-intrinsic flags macOS attaches to arrow, function, navigation,
+            // and keypad keys (e.g. maskSecondaryFn | maskNumericPad on 123...126) so
+            // system symbolic hotkeys such as Move Left/Right a Space (0x840000) and
+            // Mission Control match, without leaking them onto modifier flagsChanged edges
+            // or ordinary keys.
+            let intrinsicKeyFlags: CGEventFlags = modifier
+                ? []
+                : event.flags.intersection([.maskSecondaryFn, .maskNumericPad])
             // Read again on release: do not clear a physical key pressed mid-sequence.
-            event.flags = synthetic.union(hardwareFlags())
+            event.flags = synthetic.union(hardwareFlags()).union(intrinsicKeyFlags)
             event.setIntegerValueField(.eventSourceUserData, value: KeyboardInjector.syntheticEventMarker)
             let accepted = eventPoster(event)
             logger("\(prefix) phase=event key_code=\(code) edge=\(down ? "down" : "up") " +

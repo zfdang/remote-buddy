@@ -216,10 +216,29 @@ extension BridgeAppModel {
         applyHIDSettings()
     }
 
+    func nextHIDPermissionRequest(
+        permissionSnapshot: HIDPermissionSnapshot
+    ) -> HIDPermissionRequest {
+        let requiresInputMonitoring = settings.onboardingControlMethod.requiresInputMonitoringPermission
+            || !settings.remoteDeviceProfiles.isEmpty
+        let requiresAccessibility = settings.effectiveVoiceFnTapModeEnabled
+            || requiresOrderedVoiceFn
+            || settings.effectiveVoiceKeyMode.requiresAccessibility
+            || !settings.enabledApplicationIntegrations.isEmpty
+        return HIDPermissionGate.nextPermissionRequest(
+            requiresInputMonitoring: requiresInputMonitoring,
+            requiresAccessibility: requiresAccessibility,
+            inputMonitoringGranted: permissionSnapshot.inputMonitoringGranted,
+            accessibilityGranted: permissionSnapshot.accessibilityGranted
+        )
+    }
+
     func requestNextHIDPermissionIfNeeded() {
-        let request = HIDPermissionGate.nextPermissionRequest(
-            inputMonitoringGranted: HIDRemoteMonitor.isInputMonitoringGranted,
-            accessibilityGranted: KeyboardInjector.isAccessibilityTrusted
+        let request = nextHIDPermissionRequest(
+            permissionSnapshot: HIDPermissionSnapshot(
+                inputMonitoringGranted: HIDRemoteMonitor.isInputMonitoringGranted,
+                accessibilityGranted: KeyboardInjector.isAccessibilityTrusted
+            )
         )
         switch request {
         case .none:

@@ -768,4 +768,99 @@ struct RuntimePermissionDiagnosticsTests {
         #expect(model.appliedHIDMonitoringConfiguration == initialConfig)
         #expect(model.appliedHIDPermissionSnapshot == granted)
     }
+
+    @Test func nextPermissionRequestScopesPromptsByControlAndVoiceNeeds() {
+        #expect(
+            HIDPermissionGate.nextPermissionRequest(
+                requiresInputMonitoring: false,
+                requiresAccessibility: false,
+                inputMonitoringGranted: false,
+                accessibilityGranted: false
+            ) == .none
+        )
+        #expect(
+            HIDPermissionGate.nextPermissionRequest(
+                requiresInputMonitoring: false,
+                requiresAccessibility: true,
+                inputMonitoringGranted: false,
+                accessibilityGranted: false
+            ) == .accessibility
+        )
+        #expect(
+            HIDPermissionGate.nextPermissionRequest(
+                requiresInputMonitoring: false,
+                requiresAccessibility: true,
+                inputMonitoringGranted: false,
+                accessibilityGranted: true
+            ) == .none
+        )
+        #expect(
+            HIDPermissionGate.nextPermissionRequest(
+                requiresInputMonitoring: true,
+                requiresAccessibility: false,
+                inputMonitoringGranted: false,
+                accessibilityGranted: false
+            ) == .inputMonitoring
+        )
+        #expect(
+            HIDPermissionGate.nextPermissionRequest(
+                requiresInputMonitoring: true,
+                requiresAccessibility: false,
+                inputMonitoringGranted: true,
+                accessibilityGranted: false
+            ) == .accessibility
+        )
+        #expect(
+            HIDPermissionGate.nextPermissionRequest(
+                requiresInputMonitoring: true,
+                requiresAccessibility: true,
+                inputMonitoringGranted: true,
+                accessibilityGranted: true
+            ) == .none
+        )
+
+        let missingBoth = HIDPermissionSnapshot(inputMonitoringGranted: false, accessibilityGranted: false)
+        let missingAccessibility = HIDPermissionSnapshot(inputMonitoringGranted: true, accessibilityGranted: false)
+        let allGranted = HIDPermissionSnapshot(inputMonitoringGranted: true, accessibilityGranted: true)
+
+        let settings = AppSettings(defaults: EphemeralUserDefaults())
+        settings.setAllApplicationIntegrations(enabled: false)
+        let model = BridgeAppModel(settings: settings, initialAudioDevices: [])
+
+        // Fresh default uses .suggestedShortcut with unselected control method: requests Accessibility directly.
+        #expect(settings.onboardingControlMethod == .unselected)
+        #expect(settings.remoteDeviceProfiles.isEmpty)
+        #expect(model.nextHIDPermissionRequest(permissionSnapshot: missingBoth) == .accessibility)
+
+        // Plain Fn with unselected control method, no remotes, and no integrations needs neither permission.
+        settings.voiceKeyMode = .function
+        #expect(model.nextHIDPermissionRequest(permissionSnapshot: missingBoth) == .none)
+
+        // Enabling Fn tap, a non-Fn voice shortcut, or an app integration requests Accessibility directly.
+        settings.voiceFnTapModeEnabled = true
+        #expect(model.nextHIDPermissionRequest(permissionSnapshot: missingBoth) == .accessibility)
+        settings.voiceFnTapModeEnabled = false
+
+        settings.voiceKeyMode = .rightOption
+        #expect(model.nextHIDPermissionRequest(permissionSnapshot: missingBoth) == .accessibility)
+        settings.voiceKeyMode = .function
+
+        settings.setApplicationIntegration(.chatGPT, enabled: true)
+        #expect(model.nextHIDPermissionRequest(permissionSnapshot: missingBoth) == .accessibility)
+        #expect(model.nextHIDPermissionRequest(permissionSnapshot: allGranted) == .none)
+        settings.setAllApplicationIntegrations(enabled: false)
+
+        // Selecting physical remote control or having a configured remote requests Input Monitoring first.
+        settings.setOnboardingControlSource(.xiaomiRemote)
+        #expect(settings.onboardingControlMethod == .physicalRemote)
+        #expect(model.nextHIDPermissionRequest(permissionSnapshot: missingBoth) == .inputMonitoring)
+        #expect(model.nextHIDPermissionRequest(permissionSnapshot: missingAccessibility) == .accessibility)
+        #expect(model.nextHIDPermissionRequest(permissionSnapshot: allGranted) == .none)
+
+        settings.setOnboardingControlSource(.unselected)
+        _ = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
+        #expect(model.nextHIDPermissionRequest(permissionSnapshot: missingBoth) == .inputMonitoring)
+        #expect(model.nextHIDPermissionRequest(permissionSnapshot: missingAccessibility) == .accessibility)
+        #expect(model.nextHIDPermissionRequest(permissionSnapshot: allGranted) == .none)
+    }
 }

@@ -30,11 +30,15 @@ enum HIDPermissionGate {
     }
 
     static func nextPermissionRequest(
+        requiresInputMonitoring: Bool,
+        requiresAccessibility: Bool,
         inputMonitoringGranted: Bool,
         accessibilityGranted: Bool
     ) -> HIDPermissionRequest {
-        if !inputMonitoringGranted { return .inputMonitoring }
-        if !accessibilityGranted { return .accessibility }
+        if requiresInputMonitoring, !inputMonitoringGranted { return .inputMonitoring }
+        if (requiresInputMonitoring || requiresAccessibility), !accessibilityGranted {
+            return .accessibility
+        }
         return .none
     }
 }

@@ -228,6 +228,61 @@ struct BluetoothLifecycleTests {
         ) == nil)
     }
 
+    @Test func verificationFailureRetriesWithBoundedBackoffEvenWhenServicesExist() {
+        let delays = (0 ... 5).map {
+            HIDMappingRecoveryPolicy.verificationFailedRetryDelay(
+                forAttempt: $0,
+                started: true
+            )
+        }
+        #expect(delays == [0.5, 1, 2, 4, 8, nil])
+        #expect(HIDMappingRecoveryPolicy.verificationFailedRetryDelay(
+            forAttempt: 0,
+            started: false
+        ) == nil)
+        #expect(HIDMappingRecoveryPolicy.verificationFailedRetryDelay(
+            forAttempt: -1,
+            started: true
+        ) == nil)
+    }
+
+    @Test func readbackMismatchTriggersRollbackAndVerificationFailureFlag() {
+        let suite = UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        var realMappings: [HIDUsageMapping] = []
+        let mapper = RemoteHIDKeyMapper(
+            serviceProvider: {
+                [
+                    RemoteHIDMappingService(
+                        registryID: 1,
+                        locationID: 10,
+                        hasVirtualNamePrefix: false,
+                        family: .xiaomi,
+                        readMappings: { realMappings },
+                        setMappings: { realMappings = $0; return true }
+                    ),
+                    RemoteHIDMappingService(
+                        registryID: 2,
+                        locationID: nil,
+                        hasVirtualNamePrefix: true,
+                        family: .xiaomi,
+                        readMappings: { [] },
+                        setMappings: { _ in true }
+                    ),
+                ]
+            },
+            recoveryDefaults: defaults,
+            bootID: "readback-mismatch"
+        )
+
+        #expect(!mapper.apply(suppressPowerKey: true, neutralizeVoiceKey: true))
+        #expect(mapper.lastApplyFailedVerification)
+        #expect(mapper.hasMatchingServices)
+        #expect(realMappings.isEmpty)
+    }
+
     @Test func generationAndPhaseRejectStaleCallbacks() {
         let phase = BluetoothLifecyclePhase.connecting(1)
         #expect(phase.acceptsDidConnect(generation: 1))

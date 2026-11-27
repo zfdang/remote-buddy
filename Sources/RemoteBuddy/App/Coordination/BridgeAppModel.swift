@@ -297,6 +297,7 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
     var hidFilterRetryToken: UUID?
     var hidMappingRecoveryWorkItem: DispatchWorkItem?
     var hidMappingRecoveryAttempt = 0
+    var hidVerificationRecoveryAttempt = 0
     var hidMappingRecoveryGeneration: UInt64 = 0
     lazy var audioHardwareListener = Self.makeAudioHardwareListener(owner: self)
 

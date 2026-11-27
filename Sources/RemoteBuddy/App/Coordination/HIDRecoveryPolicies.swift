@@ -88,6 +88,17 @@ enum HIDMappingRecoveryPolicy {
         else { return nil }
         return retryDelays[attempt]
     }
+
+    /// Services exist in IOHIDEventSystem, yet mapping write/readback failed (e.g. a
+    /// transient duplicate virtual HID service appeared during reconnect). Retries use
+    /// the same bounded backoff without gating on `!hasMatchingServices`.
+    static func verificationFailedRetryDelay(
+        forAttempt attempt: Int,
+        started: Bool
+    ) -> TimeInterval? {
+        guard started, retryDelays.indices.contains(attempt) else { return nil }
+        return retryDelays[attempt]
+    }
 }
 
 enum BluetoothStatusKeys {

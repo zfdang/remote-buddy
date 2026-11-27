@@ -524,6 +524,7 @@ final class HIDRemoteMonitor {
                 manager, CFRunLoopGetMain(), CFRunLoopMode.commonModes.rawValue
             )
         }
+        unregisterAllDeviceReportCallbacks()
         callbackContext?.monitor = nil
         callbackContext = nil
         if let opaque = callbackOpaqueContext {
@@ -531,7 +532,6 @@ final class HIDRemoteMonitor {
             callbackOpaqueContext = nil
         }
         resetInputState()
-        unregisterAllDeviceReportCallbacks()
         reportDeduplicationCache = HIDReportDeduplicationCache()
         pathHealth = HIDReportPathHealth()
         let closingDeviceCount = probedDevices.count + (activeDevice == nil ? 0 : 1)
@@ -554,11 +554,6 @@ final class HIDRemoteMonitor {
             activeDeviceIsSeized = false
         }
         guard let manager else { return }
-        IOHIDManagerUnscheduleFromRunLoop(
-            manager,
-            CFRunLoopGetMain(),
-            CFRunLoopMode.commonModes.rawValue
-        )
         IOHIDManagerClose(manager, IOOptionBits(kIOHIDOptionsTypeNone))
         self.manager = nil
     }

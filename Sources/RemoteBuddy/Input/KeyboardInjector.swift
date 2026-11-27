@@ -192,16 +192,12 @@ enum KeyboardInjector {
         _ action: ButtonAction,
         shortcut: CustomKeyboardShortcut? = nil,
         applicationProfile: CustomApplicationProfile? = nil,
-        applicationURL: (String) -> URL? = {
-            if $0 == PresetApplication.remoteMic.bundleIdentifier {
-                return Bundle.main.bundleURL
-            }
-            return NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0)
-        },
+        applicationURL: (String) -> URL? = defaultPresetApplicationURL,
         applicationOpener: ApplicationOpener = { openApplication(at: $0, application: $1, completion: $2) },
         applicationFocuser: @escaping ApplicationFocuser = {
             focusApplication(at: $0, application: $1, processIdentifier: $2, requestID: $3)
         },
+        applicationOpenCompletion: @escaping @Sendable (Bool) -> Void = { _ in },
         customApplicationURL: (CustomApplicationProfile) -> URL? = resolveCustomApplicationURL,
         customApplicationOpener: CustomApplicationOpener = {
             openCustomApplication(at: $0, application: $1, completion: $2)
@@ -238,29 +234,29 @@ enum KeyboardInjector {
         }
         if let application = action.presetApplication {
             let focusRequestID = focusRequests.begin()
-            open(
+            return open(
                 application,
                 focusRequestID: focusRequestID,
                 applicationURL: applicationURL,
                 applicationOpener: applicationOpener,
-                applicationFocuser: applicationFocuser
+                applicationFocuser: applicationFocuser,
+                completion: applicationOpenCompletion
             )
-            return true
         }
         if action == .openCustomApplication {
             guard let applicationProfile else {
                 AppLogger.shared.write("APP ACTION custom unavailable reason=profile_missing")
-                return true
+                return false
             }
             let focusRequestID = focusRequests.begin()
-            open(
+            return open(
                 applicationProfile,
                 focusRequestID: focusRequestID,
                 applicationURL: customApplicationURL,
                 applicationOpener: customApplicationOpener,
-                applicationFocuser: customApplicationFocuser
+                applicationFocuser: customApplicationFocuser,
+                completion: applicationOpenCompletion
             )
-            return true
         }
         if action == .openURL {
             guard let url = CustomActionURLPolicy.validatedURL(from: urlString) else {

@@ -63,13 +63,39 @@ struct ActionFeedbackView: View {
 @MainActor
 final class ActionFeedbackWindowCoordinator {
     private let center: ActionFeedbackCenter
+    private let preferredVisibleFrame: () -> CGRect?
+    private let announce: (NSView, String) -> Void
     private var panel: ActionFeedbackPanel?
     private var hostingView: NSHostingView<AnyView>?
     private var cancellable: AnyCancellable?
     private var loggedPresentationID: UUID?
+    private var renderedPresentationID: UUID?
+    private var announcedPresentationID: UUID?
 
-    init(center: ActionFeedbackCenter? = nil) {
+#if DEBUG
+    var hostingViewForTesting: NSHostingView<AnyView>? { hostingView }
+#endif
+
+    init(
+        center: ActionFeedbackCenter? = nil,
+        preferredVisibleFrame: @escaping () -> CGRect? = {
+            ActionFeedbackScreenResolver.preferredScreen()?.visibleFrame
+        },
+        announce: @escaping (NSView, String) -> Void = { element, announcement in
+            let userInfo: [NSAccessibility.NotificationUserInfoKey: Any] = [
+                .announcement: announcement,
+                .priority: NSAccessibilityPriorityLevel.high.rawValue,
+            ]
+            NSAccessibility.post(
+                element: element,
+                notification: .announcementRequested,
+                userInfo: userInfo
+            )
+        }
+    ) {
         self.center = center ?? .shared
+        self.preferredVisibleFrame = preferredVisibleFrame
+        self.announce = announce
     }
 
     func start() {
@@ -90,22 +116,26 @@ final class ActionFeedbackWindowCoordinator {
         panel?.contentView = nil
         panel = nil
         hostingView = nil
+        loggedPresentationID = nil
+        renderedPresentationID = nil
+        announcedPresentationID = nil
     }
 
-    private func render(
+    func render(
         _ presentation: ActionFeedbackPresentation?,
         copiedID: UUID?
     ) {
         guard let presentation else {
             panel?.ignoresMouseEvents = true
             panel?.orderOut(nil)
+            renderedPresentationID = nil
+            announcedPresentationID = nil
             if loggedPresentationID != nil {
                 loggedPresentationID = nil
                 AppLogger.shared.write("ACTION FEEDBACK panel phase=hidden")
             }
             return
         }
-        guard let screen = ActionFeedbackScreenResolver.preferredScreen() else { return }
         let view = ActionFeedbackView(
             presentation: presentation,
             isCopied: copiedID == presentation.id,
@@ -114,6 +144,16 @@ final class ActionFeedbackWindowCoordinator {
             onClose: { [weak center] in center?.dismiss() },
             onHover: { [weak center] hovering in center?.setHovering(hovering) }
         )
+        if renderedPresentationID == presentation.id,
+           let host = hostingView,
+           let panel {
+            // Preserve the active NSHostingView when only copied state updates so active
+            // `.onHover` tracking is undisturbed and VoiceOver does not re-announce.
+            host.rootView = AnyView(view)
+            panel.orderFrontRegardless()
+            return
+        }
+        guard let visibleFrame = preferredVisibleFrame() else { return }
         // Fresh NSHostingView ensures SwiftUI computes an uncached intrinsic fittingSize
         // rather than reusing stale height from an earlier presentation or EmptyView.
         let host = NSHostingView(rootView: AnyView(view))
@@ -130,12 +170,13 @@ final class ActionFeedbackWindowCoordinator {
         panel.contentView = host
         panel.setContentSize(size)
         let origin = ActionFeedbackLayout.origin(
-            visibleFrame: screen.visibleFrame,
+            visibleFrame: visibleFrame,
             panelSize: size
         )
         panel.setFrame(NSRect(origin: origin, size: size), display: true)
         host.frame = NSRect(origin: .zero, size: size)
         panel.orderFrontRegardless()
+        renderedPresentationID = presentation.id
         if loggedPresentationID != presentation.id {
             loggedPresentationID = presentation.id
             AppLogger.shared.write(
@@ -143,32 +184,18 @@ final class ActionFeedbackWindowCoordinator {
                     "width=\(Int(size.width)) height=\(Int(size.height)) " +
                     "x=\(Int(origin.x)) y=\(Int(origin.y)) " +
                     "window_number=\(panel.windowNumber) " +
-                    "screen_width=\(Int(screen.visibleFrame.width)) " +
-                    "screen_height=\(Int(screen.visibleFrame.height)) " +
+                    "screen_width=\(Int(visibleFrame.width)) " +
+                    "screen_height=\(Int(visibleFrame.height)) " +
                     "ignores_mouse=\(presentation.kind == .success)"
             )
         }
         if presentation.announces,
+           announcedPresentationID != presentation.id,
            let announcement = presentation.accessibilityAnnouncement,
            let contentView = panel.contentView {
-            let userInfo: [NSAccessibility.NotificationUserInfoKey: Any] = [
-                .announcement: announcement,
-                .priority: NSAccessibilityPriorityLevel.high.rawValue,
-            ]
-            NSAccessibility.post(
-                element: contentView,
-                notification: .announcementRequested,
-                userInfo: userInfo
-            )
+            announcedPresentationID = presentation.id
+            announce(contentView, announcement)
         }
-    }
-
-    private func ensureHostingView() -> NSHostingView<AnyView> {
-        if let hostingView { return hostingView }
-        let host = NSHostingView(rootView: AnyView(EmptyView()))
-        host.autoresizingMask = [.width, .height]
-        hostingView = host
-        return host
     }
 
     private func ensurePanel() -> ActionFeedbackPanel {
@@ -195,7 +222,6 @@ final class ActionFeedbackWindowCoordinator {
         panel.animationBehavior = .none
         panel.becomesKeyOnlyIfNeeded = true
         panel.isMovable = false
-        panel.contentView = ensureHostingView()
         self.panel = panel
         return panel
     }

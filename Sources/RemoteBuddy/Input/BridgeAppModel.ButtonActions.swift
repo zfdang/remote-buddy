@@ -8,6 +8,13 @@ import Foundation
 extension BridgeAppModel {
     func performExternalConfiguredAction(
         _ configured: ConfiguredButtonAction,
+        presetApplicationURL: @escaping (String) -> URL? = KeyboardInjector.defaultPresetApplicationURL,
+        presetApplicationOpener: @escaping KeyboardInjector.ApplicationOpener = {
+            KeyboardInjector.openApplication(at: $0, application: $1, completion: $2)
+        },
+        customApplicationURL: @escaping (CustomApplicationProfile) -> URL? = {
+            KeyboardInjector.resolveCustomApplicationURL($0)
+        },
         customApplicationOpener: @escaping KeyboardInjector.CustomApplicationOpener = {
             KeyboardInjector.openCustomApplication(at: $0, application: $1, completion: $2)
         },
@@ -33,13 +40,27 @@ extension BridgeAppModel {
         let retryHandler: @MainActor @Sendable () -> Void = { [weak self] in
             _ = self?.performExternalConfiguredAction(
                 configured,
+                presetApplicationURL: presetApplicationURL,
+                presetApplicationOpener: presetApplicationOpener,
+                customApplicationURL: customApplicationURL,
                 customApplicationOpener: customApplicationOpener,
                 accessibilityTrusted: accessibilityTrusted,
                 secureInputEnabled: secureInputEnabled,
                 sender: sender
             )
         }
+        let canOpenApp = configured.action.presetApplication != nil
+            || configured.action == .openCustomApplication
+        let failureHandlers: () -> ActionFeedbackActionHandlers = {
+            var handlers = ActionFeedbackActionHandlers(retry: retryHandler)
+            if canOpenApp {
+                handlers.openApplication = retryHandler
+            }
+            return handlers
+        }
         let isAsyncFocusInput = (configured.action == .focusInput)
+        let isAsyncAppLaunch = sender == nil && canOpenApp
+        let isAsyncFeedback = isAsyncFocusInput || isAsyncAppLaunch
         let feedbackGate = ActionFeedbackCompletionGate()
         let presentsSuccess = !settings.hideAllActionFeedback
             && !settings.hideSuccessActionFeedback
@@ -67,9 +88,18 @@ extension BridgeAppModel {
             record(.failure(.notStarted), nil)
             return false
         }
+        if let presetApp = configured.action.presetApplication, sender == nil {
+            guard KeyboardInjector.resolvePresetApplicationURL(
+                presetApp,
+                applicationURL: presetApplicationURL
+            ) != nil else {
+                record(.failure(.targetMissing), nil)
+                return false
+            }
+        }
         if configured.action == .openCustomApplication {
             guard let profile = applicationProfile,
-                KeyboardInjector.resolveCustomApplicationURL(profile) != nil
+                customApplicationURL(profile) != nil
             else {
                 record(.failure(.targetMissing), nil)
                 return false
@@ -96,33 +126,57 @@ extension BridgeAppModel {
 
         let sendAction: (UInt64?) -> Bool = { [weak self] requestID in
             guard let self else { return false }
-            let completion: @Sendable (Bool) -> Void = { [weak self] succeeded in
-                let finish: @MainActor @Sendable () -> Void = { [weak self] in
-                    if let requestID {
-                        self?.voiceInputDestinationCoordinator.completeFocusOperation(
-                            requestID: requestID, succeeded: succeeded)
-                    }
-                    if isAsyncFocusInput {
-                        record(succeeded ? .success : .failure(.executionFailed), nil)
+            func dispatchCompletion(
+                _ body: @escaping @MainActor @Sendable (Bool) -> Void
+            ) -> @Sendable (Bool) -> Void {
+                { succeeded in
+                    if Thread.isMainThread {
+                        MainActor.assumeIsolated { body(succeeded) }
+                    } else {
+                        DispatchQueue.main.async { body(succeeded) }
                     }
                 }
-                if Thread.isMainThread {
-                    MainActor.assumeIsolated { finish() }
-                } else {
-                    DispatchQueue.main.async { finish() }
+            }
+            let focusCompletion = dispatchCompletion { [weak self] succeeded in
+                if let requestID {
+                    self?.voiceInputDestinationCoordinator.completeFocusOperation(
+                        requestID: requestID,
+                        succeeded: succeeded
+                    )
+                }
+                if isAsyncFocusInput {
+                    record(succeeded ? .success : .failure(.executionFailed), nil)
+                }
+            }
+            let launchCompletion = dispatchCompletion { [weak self] succeeded in
+                if !succeeded, let requestID {
+                    self?.voiceInputDestinationCoordinator.cancel(
+                        requestID: requestID,
+                        reason: .actionFailed
+                    )
+                }
+                if isAsyncAppLaunch {
+                    record(
+                        succeeded ? .success : .failure(.executionFailed),
+                        succeeded ? nil : failureHandlers()
+                    )
                 }
             }
             let handled: Bool
             if let sender {
-                handled = sender(configured, applicationProfile, completion)
+                handled = sender(configured, applicationProfile, focusCompletion)
             } else {
                 handled = KeyboardInjector.send(
                     configured.action,
                     shortcut: configured.shortcut,
                     applicationProfile: applicationProfile,
+                    applicationURL: presetApplicationURL,
+                    applicationOpener: presetApplicationOpener,
+                    applicationOpenCompletion: launchCompletion,
+                    customApplicationURL: customApplicationURL,
                     customApplicationOpener: customApplicationOpener,
                     urlString: configured.urlString,
-                    focusInputCompletion: completion,
+                    focusInputCompletion: focusCompletion,
                     accessibilityTrusted: accessibilityTrusted,
                     secureInputEnabled: secureInputEnabled
                 )
@@ -138,8 +192,8 @@ extension BridgeAppModel {
                 guard self != nil else { return }
                 let ok = sendAction(requestID)
                 if !ok {
-                    record(.failure(.executionFailed), nil)
-                } else if !isAsyncFocusInput {
+                    record(.failure(.executionFailed), failureHandlers())
+                } else if !isAsyncFeedback {
                     record(.success, nil)
                 }
             }
@@ -147,13 +201,8 @@ extension BridgeAppModel {
         }
         let handled = sendAction(nil)
         if !handled {
-            let canOpenApp = configured.action.presetApplication != nil || configured.action == .openCustomApplication
-            var handlers = ActionFeedbackActionHandlers(retry: retryHandler)
-            if canOpenApp {
-                handlers.openApplication = retryHandler
-            }
-            record(.failure(.executionFailed), handlers)
-        } else if !isAsyncFocusInput {
+            record(.failure(.executionFailed), failureHandlers())
+        } else if !isAsyncFeedback {
             record(.success, nil)
         }
         return handled

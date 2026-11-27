@@ -1006,4 +1006,80 @@ struct BluetoothLifecycleTests {
         #expect(bridge.cachedTargetFailureCountForTesting == 0)
         #expect(bridge.allowsCachedTargetRetrievalForTesting)
     }
+
+    @Test @MainActor func t1VerificationFailureSchedulesRetryAndSuccessfulApplyResetsCounter() throws {
+        let suite = UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let settings = AppSettings(defaults: defaults)
+        settings.customMappingEnabled = true
+        let t1ID = settings.registerBluetoothRemote(identifier: UUID(), model: .t1Remote)
+        settings.selectRemoteProfile(t1ID)
+
+        var shouldFailVerification = true
+        var appliedMappings: [HIDUsageMapping] = []
+        let mapper = RemoteHIDKeyMapper(
+            serviceProvider: {
+                [
+                    RemoteHIDMappingService(
+                        registryID: 101,
+                        locationID: 202,
+                        hasVirtualNamePrefix: false,
+                        family: .t1Remote,
+                        readMappings: { shouldFailVerification ? [] : appliedMappings },
+                        setMappings: {
+                            appliedMappings = $0
+                            return true
+                        }
+                    ),
+                ]
+            },
+            recoveryDefaults: defaults,
+            bootID: "t1-verification-recovery"
+        )
+        var tapEnabled = false
+        let suppressor = KeyboardEventSuppressor(
+            tapOperations: .init(
+                start: { tapEnabled = true; return true },
+                stop: { tapEnabled = false },
+                isEnabled: { tapEnabled }
+            )
+        )
+        let model = BridgeAppModel(
+            settings: settings,
+            initialAudioDevices: [],
+            voiceFunctionMapper: mapper,
+            hidEventSuppressor: suppressor,
+            permissionSnapshotProvider: {
+                HIDPermissionSnapshot(inputMonitoringGranted: true, accessibilityGranted: true)
+            }
+        )
+        model.preferredInputSourceMonitor = PreferredInputSourceMonitor(
+            voiceTool: { .unselected },
+            installMonitor: { _ in NSObject() },
+            removeMonitor: { _ in }
+        )
+        model.started = true
+        defer {
+            model.stopHIDMonitors()
+            model.preferredInputSourceMonitor.stop()
+            model.cancelHIDMappingRecovery(reason: "test_cleanup")
+            model.started = false
+        }
+
+        // First apply fails readback verification on the T1 service -> must schedule verification retry.
+        model.applyHIDSettings()
+        #expect(mapper.lastApplyFailedVerification)
+        #expect(mapper.hasMatchingServices)
+        #expect(model.hidVerificationRecoveryAttempt == 1)
+        #expect(model.hidMappingRecoveryWorkItem != nil)
+
+        // Next apply succeeds -> must cancel recovery work item and reset verification attempt counter.
+        shouldFailVerification = false
+        model.applyHIDSettings()
+        #expect(!mapper.lastApplyFailedVerification)
+        #expect(model.hidVerificationRecoveryAttempt == 0)
+        #expect(model.hidMappingRecoveryWorkItem == nil)
+    }
 }

@@ -74,7 +74,9 @@ extension BridgeAppModel {
             )
             if settings.selectedRemoteProfile?.model.isT1Remote == true {
                 completeHIDMappingRecoveryIfNeeded()
-                if !voiceFunctionMapper.hasMatchingServices {
+                if voiceFunctionMapper.lastApplyFailedVerification, settings.customMappingEnabled {
+                    scheduleHIDMappingRecoveryIfNeeded(verificationFailed: true)
+                } else if !voiceFunctionMapper.hasMatchingServices {
                     scheduleHIDMappingRecoveryIfNeeded()
                 }
             }
@@ -295,16 +297,32 @@ extension BridgeAppModel {
     }
 
     private func completeHIDMappingRecoveryIfNeeded() {
-        guard voiceFunctionMapper.hasMatchingServices,
-              hidMappingRecoveryWorkItem != nil || hidMappingRecoveryAttempt > 0
+        guard voiceFunctionMapper.hasMatchingServices else { return }
+        if voiceFunctionMapper.lastApplyFailedVerification {
+            if hidMappingRecoveryAttempt > 0 {
+                hidMappingRecoveryAttempt = 0
+                if hidVerificationRecoveryAttempt == 0, hidMappingRecoveryWorkItem != nil {
+                    hidMappingRecoveryGeneration &+= 1
+                    hidMappingRecoveryWorkItem?.cancel()
+                    hidMappingRecoveryWorkItem = nil
+                }
+            }
+            return
+        }
+        guard hidMappingRecoveryWorkItem != nil
+            || hidMappingRecoveryAttempt > 0
+            || hidVerificationRecoveryAttempt > 0
         else { return }
         let attempts = hidMappingRecoveryAttempt
+        let verificationAttempts = hidVerificationRecoveryAttempt
         hidMappingRecoveryGeneration &+= 1
         hidMappingRecoveryWorkItem?.cancel()
         hidMappingRecoveryWorkItem = nil
         hidMappingRecoveryAttempt = 0
+        hidVerificationRecoveryAttempt = 0
         AppLogger.shared.write(
             "HID MAPPING RECOVERY completed attempts=\(attempts) " +
+                "verification_attempts=\(verificationAttempts) " +
                 "matched=\(voiceFunctionMapper.matchedServiceCount)"
         )
     }

@@ -674,8 +674,14 @@ enum ActionFeedbackLayout {
         let x = maximumX >= minimumX
             ? min(max(preferredX, minimumX), maximumX)
             : minimumX
-        let minimumY = visibleFrame.minY + edgeMargin - contentPadding
-        let maximumY = visibleFrame.maxY - panelSize.height - edgeMargin
+        let minimumY = max(
+            visibleFrame.minY,
+            visibleFrame.minY + edgeMargin - contentPadding
+        )
+        let maximumY = min(
+            visibleFrame.maxY - panelSize.height,
+            visibleFrame.maxY - panelSize.height - edgeMargin + contentPadding
+        )
         let preferredY = visibleFrame.minY
             + (bubbleBottomInset + visibleFrame.height * bottomHeightRatio).rounded()
             - contentPadding

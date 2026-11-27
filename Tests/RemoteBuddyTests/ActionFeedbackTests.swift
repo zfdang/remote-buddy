@@ -1,5 +1,7 @@
+import AppKit
 import CoreGraphics
 import Foundation
+import os
 import Testing
 @testable import RemoteBuddy
 
@@ -180,6 +182,16 @@ struct ActionFeedbackTests {
             contentPadding: 0
         )
         #expect(zeroPaddingOrigin.y == expectedBottomY)
+
+        // Short screen with a Dock inset clamps panel strictly inside visibleFrame.
+        let shortFrame = CGRect(x: 0, y: 70, width: 1280, height: 600)
+        let shortSize = CGSize(width: 300, height: 120)
+        let shortOrigin = ActionFeedbackLayout.origin(
+            visibleFrame: shortFrame,
+            panelSize: shortSize
+        )
+        #expect(shortOrigin.y >= shortFrame.minY)
+        #expect(shortOrigin.y + shortSize.height <= shortFrame.maxY)
 
         let screen0 = CGRect(x: 0, y: 0, width: 1440, height: 900)
         let screen1 = CGRect(x: 1440, y: 0, width: 1920, height: 1080)
@@ -366,5 +378,172 @@ struct ActionFeedbackTests {
         #expect(recordedLogs.count == 1)
         unusedCompletion?(true)
         #expect(recordedLogs.count == 1)
+    }
+
+    @Test(arguments: [false, true])
+    @MainActor func applicationLaunchesReportMissingTargetsAndAsyncFailures(fnTapModeEnabled: Bool) throws {
+        let suite = "action-feedback-apps-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let settings = AppSettings(defaults: defaults)
+        settings.hideAllActionFeedback = false
+        settings.hideSuccessActionFeedback = false
+        settings.voiceFnTapModeEnabled = fnTapModeEnabled
+
+        let center = ActionFeedbackCenter(now: Date.init, log: { _ in }, pasteboardWriter: { _ in })
+        center.configureStandardActions(openSystemSettings: {}, reselectAction: {})
+        let model = BridgeAppModel(settings: settings, initialAudioDevices: [])
+        model.actionFeedbackCenter = center
+        let clock = ControlledTestScheduler()
+        model.voiceInputDestinationCoordinator = VoiceInputDestinationCoordinator(
+            schedule: clock.voiceSchedule,
+            snapshot: {
+                VoiceInputDestinationSnapshot(
+                    bundleIdentifier: "com.apple.Safari",
+                    role: "AXTextArea",
+                    subrole: "",
+                    enabled: true,
+                    editable: true,
+                    protectedContent: false,
+                    semanticText: "Search"
+                )
+            }
+        )
+
+        // 1. Uninstalled preset app fails synchronously with target_missing.
+        let missingPreset = model.performExternalConfiguredAction(
+            ConfiguredButtonAction(action: .openSafari, shortcut: nil),
+            presetApplicationURL: { _ in nil }
+        )
+        #expect(!missingPreset)
+        #expect(center.presentation?.kind == .failure)
+        #expect(center.presentation?.action == .reselectAction)
+
+        // 2. Installed preset app waits for async opener completion: no premature success.
+        center.dismiss()
+        let presetCompletion = OSAllocatedUnfairLock<(@Sendable (pid_t?, Error?) -> Void)?>(initialState: nil)
+        let presetStarted = model.performExternalConfiguredAction(
+            ConfiguredButtonAction(action: .openSafari, shortcut: nil),
+            presetApplicationURL: { _ in URL(fileURLWithPath: "/Applications/Safari.app") },
+            presetApplicationOpener: { _, _, completion in
+                presetCompletion.withLock { $0 = completion }
+            }
+        )
+        #expect(presetStarted)
+        let capturedPresetCompletion = presetCompletion.withLock { $0 }
+        #expect(capturedPresetCompletion != nil)
+        #expect(center.presentation == nil)
+
+        capturedPresetCompletion?(nil, NSError(domain: "LaunchError", code: -1))
+        #expect(center.presentation?.kind == .failure)
+        #expect(center.presentation?.action == .retry)
+
+        center.dismiss()
+        let presetSuccessCompletion = OSAllocatedUnfairLock<(@Sendable (pid_t?, Error?) -> Void)?>(initialState: nil)
+        let presetSecondStart = model.performExternalConfiguredAction(
+            ConfiguredButtonAction(action: .openSafari, shortcut: nil),
+            presetApplicationURL: { _ in URL(fileURLWithPath: "/Applications/Safari.app") },
+            presetApplicationOpener: { _, _, completion in
+                presetSuccessCompletion.withLock { $0 = completion }
+            }
+        )
+        #expect(presetSecondStart)
+        #expect(center.presentation == nil)
+        presetSuccessCompletion.withLock { $0 }?(42, nil)
+        #expect(center.presentation?.kind == .success)
+
+        // 3. Custom app async opener failure reports failure rather than premature success.
+        center.dismiss()
+        let profileID = settings.addCustomApplicationProfile(
+            CustomApplicationProfile(
+                displayName: "CustomApp",
+                bundleIdentifier: "com.example.custom",
+                applicationPath: "/Applications/CustomApp.app"
+            )
+        )
+        let customCompletion = OSAllocatedUnfairLock<(@Sendable (pid_t?, Error?) -> Void)?>(initialState: nil)
+        let customStarted = model.performExternalConfiguredAction(
+            ConfiguredButtonAction(
+                action: .openCustomApplication,
+                shortcut: nil,
+                applicationProfileID: profileID
+            ),
+            customApplicationURL: { _ in URL(fileURLWithPath: "/Applications/CustomApp.app") },
+            customApplicationOpener: { _, _, completion in
+                customCompletion.withLock { $0 = completion }
+            }
+        )
+        #expect(customStarted)
+        #expect(center.presentation == nil)
+        customCompletion.withLock { $0 }?(nil, NSError(domain: "LaunchError", code: -2))
+        #expect(center.presentation?.kind == .failure)
+    }
+
+    @Test @MainActor func coordinatorReusesHostingViewAndSkipsDuplicateVoiceOverOnCopyUpdate() {
+        let center = ActionFeedbackCenter(now: Date.init, log: { _ in }, pasteboardWriter: { _ in })
+        var announcements: [String] = []
+        let coordinator = ActionFeedbackWindowCoordinator(
+            center: center,
+            preferredVisibleFrame: { CGRect(x: 0, y: 0, width: 1440, height: 900) },
+            announce: { _, message in
+                announcements.append(message)
+            }
+        )
+        defer { coordinator.stop() }
+
+        let firstID = UUID()
+        let firstFailure = ActionFeedbackPresentation(
+            id: firstID,
+            kind: .failure,
+            operationID: "op-1",
+            title: "Action failed",
+            context: "No accessibility",
+            detail: "Enable access",
+            action: .retry,
+            actionTitle: "Retry",
+            copyTitle: "Copy diagnostics",
+            copiedTitle: "Copied",
+            diagnostics: "diag",
+            count: 1,
+            announces: true,
+            accessibilityAnnouncement: "Error: Action failed",
+            errorPrefix: "Error: ",
+            closeLabel: "Close"
+        )
+
+        coordinator.render(firstFailure, copiedID: nil)
+        let initialHost = coordinator.hostingViewForTesting
+        #expect(initialHost != nil)
+        #expect(announcements == ["Error: Action failed"])
+
+        // Copying and resetting copied badge keeps the exact same NSHostingView and does not re-announce.
+        coordinator.render(firstFailure, copiedID: firstID)
+        coordinator.render(firstFailure, copiedID: nil)
+        #expect(coordinator.hostingViewForTesting === initialHost)
+        #expect(announcements == ["Error: Action failed"])
+
+        // A distinct new failure creates a fresh host and announces once.
+        let secondFailure = ActionFeedbackPresentation(
+            id: UUID(),
+            kind: .failure,
+            operationID: "op-2",
+            title: "Second failure",
+            context: "Failed",
+            detail: "Retry",
+            action: .retry,
+            actionTitle: "Retry",
+            copyTitle: "Copy diagnostics",
+            copiedTitle: "Copied",
+            diagnostics: "diag2",
+            count: 1,
+            announces: true,
+            accessibilityAnnouncement: "Error: Second failure",
+            errorPrefix: "Error: ",
+            closeLabel: "Close"
+        )
+        coordinator.render(nil, copiedID: nil)
+        coordinator.render(secondFailure, copiedID: nil)
+        #expect(announcements == ["Error: Action failed", "Error: Second failure"])
     }
 }

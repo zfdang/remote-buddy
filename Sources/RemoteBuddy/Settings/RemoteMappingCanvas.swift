@@ -98,21 +98,23 @@ enum G9N9NMappingLayout {
     static let canvasHeight: CGFloat = 650
     static let remoteSize = CGSize(width: 160, height: 480)
     static let voiceAnchor = UnitPoint(x: 0.71, y: 0.38)
+    // Left: D-pad (up, left, OK, down) then left-hand buttons, top to bottom.
+    // Right: right, then the side volume pair together, then right-hand buttons.
     static let placements: [RemoteMappingPlacement] = [
         .init(button: .up, side: .left, anchor: .init(x: 0.50, y: 0.072), targetY: 0.065),
-        .init(button: .left, side: .left, anchor: .init(x: 0.15, y: 0.185), targetY: 0.21),
-        .init(button: .back, side: .left, anchor: .init(x: 0.27, y: 0.38), targetY: 0.355),
-        .init(button: .home, side: .left, anchor: .init(x: 0.27, y: 0.505), targetY: 0.50),
-        .init(button: .youtube, side: .left, anchor: .init(x: 0.27, y: 0.625), targetY: 0.645),
-        .init(button: .volumeUp, side: .left, anchor: .init(x: 0.95, y: 0.25), targetY: 0.79),
-        .init(button: .power, side: .left, anchor: .init(x: 0.27, y: 0.74), targetY: 0.935),
+        .init(button: .left, side: .left, anchor: .init(x: 0.15, y: 0.185), targetY: 0.19),
+        .init(button: .ok, side: .left, anchor: .init(x: 0.50, y: 0.185), targetY: 0.315),
+        .init(button: .down, side: .left, anchor: .init(x: 0.50, y: 0.295), targetY: 0.44),
+        .init(button: .back, side: .left, anchor: .init(x: 0.27, y: 0.38), targetY: 0.565),
+        .init(button: .home, side: .left, anchor: .init(x: 0.27, y: 0.505), targetY: 0.69),
+        .init(button: .youtube, side: .left, anchor: .init(x: 0.27, y: 0.625), targetY: 0.815),
+        .init(button: .power, side: .left, anchor: .init(x: 0.27, y: 0.74), targetY: 0.94),
         .init(button: .right, side: .right, anchor: .init(x: 0.83, y: 0.185), targetY: 0.195),
-        .init(button: .ok, side: .right, anchor: .init(x: 0.50, y: 0.185), targetY: 0.32),
-        .init(button: .down, side: .right, anchor: .init(x: 0.50, y: 0.295), targetY: 0.445),
+        .init(button: .volumeUp, side: .right, anchor: .init(x: 0.95, y: 0.25), targetY: 0.32),
+        .init(button: .volumeDown, side: .right, anchor: .init(x: 0.95, y: 0.30), targetY: 0.445),
         .init(button: .mute, side: .right, anchor: .init(x: 0.71, y: 0.505), targetY: 0.57),
         .init(button: .netflix, side: .right, anchor: .init(x: 0.71, y: 0.625), targetY: 0.695),
-        .init(button: .volumeDown, side: .right, anchor: .init(x: 0.95, y: 0.30), targetY: 0.82),
-        .init(button: .input, side: .right, anchor: .init(x: 0.71, y: 0.74), targetY: 0.94),
+        .init(button: .input, side: .right, anchor: .init(x: 0.71, y: 0.74), targetY: 0.82),
     ]
 }
 

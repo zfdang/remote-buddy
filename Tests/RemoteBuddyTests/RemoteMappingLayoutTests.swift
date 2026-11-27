@@ -98,4 +98,18 @@ struct RemoteMappingLayoutTests {
             #expect((pair.1 - pair.0) * T1RemoteMappingLayout.canvasHeight > 72)
         }
     }
+
+    @Test func g9n9nPlacementsGroupDPadLeftAndSideVolumeRightInDescendingOrder() {
+        let left = G9N9NMappingLayout.placements.filter { $0.side == .left }
+        let right = G9N9NMappingLayout.placements.filter { $0.side == .right }
+        #expect(left.map(\.button) == [.up, .left, .ok, .down, .back, .home, .youtube, .power])
+        #expect(right.map(\.button) == [.right, .volumeUp, .volumeDown, .mute, .netflix, .input])
+
+        for pair in zip(left.map(\.targetY), left.map(\.targetY).dropFirst()) {
+            #expect(pair.1 > pair.0)
+        }
+        for pair in zip(right.map(\.targetY), right.map(\.targetY).dropFirst()) {
+            #expect(pair.1 > pair.0)
+        }
+    }
 }

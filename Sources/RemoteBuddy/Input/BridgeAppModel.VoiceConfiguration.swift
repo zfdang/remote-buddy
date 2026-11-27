@@ -85,9 +85,11 @@ extension BridgeAppModel {
         onTarget: @escaping (ApplicationIntegrationController.VoiceInputTarget) -> Void = { _ in }
     ) -> VoiceInputDestinationWait {
         clearApplicationIntegrationStatus()
-        let initialIntegrationTarget = applicationIntegrationController.currentEnabledVoiceInputTarget()
+        let initialIntegrationTarget = applicationIntegrationController.currentVoiceInputTarget()
         if let initialIntegrationTarget {
-            recordApplicationIntegrationStatus(.waiting)
+            if applicationIntegrationController.isEnabledVoiceInputTarget(initialIntegrationTarget) {
+                recordApplicationIntegrationStatus(.waiting)
+            }
             onTarget(initialIntegrationTarget)
         }
         let report: (VoiceInputDestinationWaitResult) -> Void = { [weak self] result in

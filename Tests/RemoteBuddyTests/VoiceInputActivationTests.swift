@@ -94,6 +94,67 @@ struct VoiceInputActivationTests {
         #expect(model.voiceFnTapSession.phase == .idle)
     }
 
+    @Test(arguments: [false, true])
+    func foregroundSwitchFromNonIntegratedToIntegratedDuringSourceWaitCancelsVoiceStart(tapMode: Bool) throws {
+        let (model, defaults, suite) = try makeModel()
+        defer { defaults.removePersistentDomain(forName: suite) }
+        model.settings.setApplicationIntegration(.antigravity, enabled: true)
+        useReadyDestination(model)
+        var foreground = ("com.apple.TextEdit", pid_t(41))
+        var focusCalls = 0
+        var sourceDone: ((Bool) -> Void)?
+        var edges: [Bool] = []
+        let controller = ApplicationIntegrationController(
+            settings: model.settings,
+            notifications: NotificationCenter(),
+            frontmost: { foreground },
+            focusWithResync: { _, _, _, done in
+                focusCalls += 1
+                done(.preserved)
+                return ScheduledOperation {}
+            },
+            onStateChange: { model.recordApplicationIntegrationStatus($0) }
+        )
+        model.applicationIntegrationController = controller
+        controller.start()
+        defer { controller.stop() }
+
+        let target = try #require(OnboardingVoiceTool.weixin.preferredInputSourceID)
+        var inputSource = "previous"
+        model.preferredInputSourceMonitor = PreferredInputSourceMonitor(
+            voiceTool: { .weixin },
+            prepareInputSource: { _ in inputSource = target; return .selected },
+            currentInputSourceID: { inputSource },
+            restoreInputSource: { inputSource = $0; return .selected },
+            waitForInputSourceActivation: { _, _, _, done in sourceDone = done },
+            installMonitor: { _ in nil },
+            logger: { _ in }
+        )
+        if tapMode {
+            model.voiceTapTrigger = VoiceTapTrigger(selectedMode: { .function }, setKey: { _, down in
+                edges.append(down)
+                return true
+            })
+            model.voiceFnTapSession = model.makeVoiceFnTapSession()
+            model.voiceFnTapSession.setEnabled(true)
+            #expect(model.voiceFnTapSession.startVoice())
+        } else {
+            #expect(model.updateVoiceKeyState(streaming: true, forceSoftware: true, owner: .bluetooth,
+                keySetter: { _, down in edges.append(down); return true }))
+        }
+
+        let activate = try #require(sourceDone)
+        foreground = (ApplicationIntegration.antigravity.bundleIdentifier, pid_t(42))
+        activate(true)
+
+        #expect(focusCalls == 0)
+        #expect(edges.isEmpty)
+        #expect(inputSource == "previous")
+        #expect(model.applicationIntegrationStatus == .cancelled(.targetChanged))
+        #expect(!model.voiceKeyLatch.isHeld)
+        #expect(model.voiceFnTapSession.phase == .idle)
+    }
+
     @Test func dictationRechecksNonIntegratedForegroundBeforeSecondTap() throws {
         let (model, defaults, suite) = try makeModel()
         defer { defaults.removePersistentDomain(forName: suite) }
@@ -617,6 +678,22 @@ struct VoiceInputActivationTests {
     @Test func cancelledDeferredActivationCannotPostOrMutateNewSession() throws {
         let (model, defaults, suite) = try makeModel()
         defer { defaults.removePersistentDomain(forName: suite) }
+        model.settings.setApplicationIntegration(.antigravity, enabled: true)
+        var resyncFlags: [Bool] = []
+        let controller = ApplicationIntegrationController(
+            settings: model.settings,
+            notifications: NotificationCenter(),
+            frontmost: { (ApplicationIntegration.antigravity.bundleIdentifier, 42) },
+            focusWithResync: { _, _, resync, done in
+                resyncFlags.append(resync)
+                done(.preserved)
+                return ScheduledOperation {}
+            },
+            onStateChange: { model.recordApplicationIntegrationStatus($0) }
+        )
+        model.applicationIntegrationController = controller
+        controller.start()
+        defer { controller.stop() }
         var source = "previous"
         var confirmations: [(Bool) -> Void] = []
         var posted: [Bool] = []
@@ -633,8 +710,11 @@ struct VoiceInputActivationTests {
         #expect(model.updateVoiceKeyState(streaming: true, forceSoftware: true, owner: .bluetooth, keySetter: setter))
         confirmations[0](true)
         #expect(posted.isEmpty)
+        #expect(resyncFlags.isEmpty)
+        #expect(model.preferredInputSourceMonitor.lastExplicitVoiceSessionSwitchedInputSource == true)
         #expect(model.pendingVoiceKeyMode == .function)
         confirmations[1](true)
+        #expect(resyncFlags == [true])
         #expect(posted == [true])
         #expect(model.heldVoiceKeyMode == .function)
         #expect(model.updateVoiceKeyState(streaming: false, forceSoftware: true, owner: .bluetooth, keySetter: setter))

@@ -170,13 +170,14 @@ final class ApplicationIntegrationController {
         completion: @escaping (VoiceInputDestinationWaitResult) -> Void
     ) -> VoiceInputDestinationWait {
         cancelPending()
+        guard started else { return .immediate }
         if let expectedTarget, !isCurrentVoiceInputTarget(expectedTarget) {
             let bundle = expectedTarget.bundleIdentifier ?? "unknown"
             AppLogger.shared.write("APP INTEGRATION cancelled bundle=\(bundle) reason=\(VoiceInputDestinationCancellation.targetChanged.rawValue)")
             onStateChange(.cancelled(.targetChanged))
             return .cancelled(.targetChanged)
         }
-        guard started, let target = currentVoiceInputTarget(),
+        guard let target = currentVoiceInputTarget(),
               let integration = ApplicationIntegration.matching(target.bundleIdentifier),
               settings.isApplicationIntegrationEnabled(integration) else { return .immediate }
         onTarget(target)
@@ -208,13 +209,12 @@ final class ApplicationIntegrationController {
         frontmost().map { VoiceInputTarget(bundleIdentifier: $0.bundleIdentifier, pid: $0.pid) }
     }
 
-    func currentEnabledVoiceInputTarget() -> VoiceInputTarget? {
+    func isEnabledVoiceInputTarget(_ target: VoiceInputTarget) -> Bool {
         guard started,
-              let target = currentVoiceInputTarget(),
               let integration = ApplicationIntegration.matching(target.bundleIdentifier),
               settings.isApplicationIntegrationEnabled(integration)
-        else { return nil }
-        return target
+        else { return false }
+        return true
     }
 
     func isCurrentVoiceInputTarget(_ target: VoiceInputTarget) -> Bool {

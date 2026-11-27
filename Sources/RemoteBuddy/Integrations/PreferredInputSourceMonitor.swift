@@ -367,7 +367,6 @@ final class PreferredInputSourceMonitor {
         selectedVoiceTool: OnboardingVoiceTool
     ) -> Bool {
         guard activated, activationShouldContinue() else {
-            lastExplicitVoiceSessionSwitchedInputSource = false
             let activationResult = activationShouldContinue()
                 ? "activation_timeout"
                 : "activation_cancelled"
@@ -378,6 +377,7 @@ final class PreferredInputSourceMonitor {
             // Cancellation already released this owner. Do not alter a newer
             // session that may have begun while activation was pending.
             guard activationShouldContinue() else { return false }
+            lastExplicitVoiceSessionSwitchedInputSource = false
             if var session = managedInputSourceSession {
                 session.activationPending = false
                 managedInputSourceSession = session

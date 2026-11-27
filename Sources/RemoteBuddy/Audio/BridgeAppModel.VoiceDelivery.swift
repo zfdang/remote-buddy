@@ -220,8 +220,9 @@ extension BridgeAppModel {
                     settings.enabledApplicationIntegrations.isEmpty ? nil : VoicePlaybackQueueCapacity.maximumPreRollSamples)
             }
             var immediateResult: Bool?
-            let initialIntegrationTarget = applicationIntegrationController.currentEnabledVoiceInputTarget()
-            if initialIntegrationTarget != nil {
+            let initialIntegrationTarget = applicationIntegrationController.currentVoiceInputTarget()
+            if let initialIntegrationTarget,
+               applicationIntegrationController.isEnabledVoiceInputTarget(initialIntegrationTarget) {
                 recordApplicationIntegrationStatus(.waiting)
             }
             var integrationTarget = initialIntegrationTarget

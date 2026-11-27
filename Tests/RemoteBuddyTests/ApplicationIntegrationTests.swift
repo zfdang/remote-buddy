@@ -599,6 +599,59 @@ struct ApplicationIntegrationTests {
         ))
     }
 
+    @Test func resyncFocusedIntegratedComposerPreservesMidTextCaretAndSelection() {
+        for saved in [CFRange(location: 5, length: 0), CFRange(location: 2, length: 6)] {
+            var currentRange = saved
+            var writes: [CFRange] = []
+            let resynced = KeyboardInjector.resyncFocusedIntegratedComposer(
+                candidate("Message input"),
+                integration: .antigravity,
+                windowFrame: window,
+                canContinue: { true },
+                hitTest: { _ in true },
+                postClick: { _ in
+                    currentRange = CFRange(location: 0, length: 0)
+                    return true
+                },
+                isFocused: { true },
+                readSelectedRange: { currentRange },
+                isSelectedRangeSettable: { true },
+                writeSelectedRange: { range in
+                    writes.append(range)
+                    currentRange = range
+                    return true
+                },
+                pause: {}
+            )
+            #expect(resynced)
+            #expect(writes.count == 1)
+            #expect(currentRange.location == saved.location && currentRange.length == saved.length)
+        }
+
+        var movedAfterClick = false
+        let aborted = KeyboardInjector.resyncFocusedIntegratedComposer(
+            candidate("Message input"),
+            integration: .antigravity,
+            windowFrame: window,
+            canContinue: { true },
+            preserveOtherFocus: { movedAfterClick },
+            hitTest: { _ in true },
+            postClick: { _ in
+                movedAfterClick = true
+                return true
+            },
+            isFocused: { true },
+            readSelectedRange: { CFRange(location: 4, length: 2) },
+            isSelectedRangeSettable: { true },
+            writeSelectedRange: { _ in
+                Issue.record("Must not write selection after focus moved")
+                return true
+            },
+            pause: {}
+        )
+        #expect(!aborted)
+    }
+
     @Test func automaticIntegrationSourceCannotEnableUndocumentedAccessibilityAttributes() throws {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         let accessibilitySource = try String(contentsOf: root.appendingPathComponent("Sources/RemoteBuddy/Input/KeyboardInjector.Accessibility.swift"))

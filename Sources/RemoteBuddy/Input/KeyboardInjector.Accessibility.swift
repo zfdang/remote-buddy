@@ -319,20 +319,15 @@ extension KeyboardInjector {
                     },
                     isFocused: {
                         accessibilityElementIsFocused(input, applicationElement: app, requiresApplicationFocusedElement: true)
-                    }
+                    },
+                    readSelectedRange: { axSelectedTextRange(input) },
+                    isSelectedRangeSettable: { axSelectedTextRangeIsSettable(input) },
+                    writeSelectedRange: { axWriteSelectedTextRange($0, to: input) }
                 )
                 if postedClick {
                     clickAttempted = true
                 }
                 if didResync {
-                    _ = moveAccessibilityCaretToEnd(
-                        of: input,
-                        canContinue: {
-                            canContinue() &&
-                                !preserveInput(excluding: input) &&
-                                accessibilityElementIsFocused(input, applicationElement: app, requiresApplicationFocusedElement: true)
-                        }
-                    )
                     resynced = true
                 }
             }
@@ -589,15 +584,28 @@ extension KeyboardInjector {
         hitTest: (CGPoint) -> Bool,
         postClick: (CGPoint) -> Bool = postAccessibilityFocusClick,
         isFocused: () -> Bool,
+        readSelectedRange: () -> CFRange? = { nil },
+        isSelectedRangeSettable: () -> Bool = { false },
+        writeSelectedRange: (CFRange) -> Bool = { _ in false },
         pause: () -> Void = { usleep(40_000) }
     ) -> Bool {
         guard canContinue(), !preserveOtherFocus() else { return false }
         guard let point = integratedComposerClickPoint(candidate, integration: integration, windowFrame: windowFrame),
               hitTest(point), canContinue(), !preserveOtherFocus()
         else { return false }
+        let savedRange = readSelectedRange()
+        guard canContinue(), !preserveOtherFocus() else { return false }
         guard postClick(point) else { return false }
         pause()
-        return canContinue() && !preserveOtherFocus() && isFocused()
+        guard canContinue(), !preserveOtherFocus(), isFocused() else { return false }
+        if let savedRange {
+            let currentRange = readSelectedRange()
+            let changed = currentRange.map { $0.location != savedRange.location || $0.length != savedRange.length } ?? true
+            if changed, canContinue(), !preserveOtherFocus(), isFocused(), isSelectedRangeSettable() {
+                _ = writeSelectedRange(savedRange)
+            }
+        }
+        return true
     }
 
     private static func postAccessibilityFocusClick(_ point: CGPoint) -> Bool {

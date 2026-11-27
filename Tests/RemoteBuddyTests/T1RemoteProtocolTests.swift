@@ -61,7 +61,6 @@ struct T1RemoteProtocolTests {
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
 
         let profileID = UUID()
         let monitor = HIDRemoteMonitor(
@@ -297,7 +296,7 @@ struct T1RemoteProtocolTests {
         let granted = HIDPermissionSnapshot(inputMonitoringGranted: true, accessibilityGranted: true)
         for servicesPresent in [false, true] {
             #expect(BridgeAppModel.shouldReapplyHIDSettingsBeforeVoiceStart(
-                customMappingEnabled: false, mode: .function, fnTapModeEnabled: false,
+                mode: .function, fnTapModeEnabled: false,
                 requiresOrderedFn: false, hasHardwareVoiceKey: false,
                 hasMatchingHIDServices: servicesPresent, isVoiceKeyNeutralized: false,
                 currentServicesMatchDesiredMapping: false, fnTapSessionEnabled: false,
@@ -374,7 +373,6 @@ struct T1RemoteProtocolTests {
         defer { defaults.removePersistentDomain(forName: suite) }
 
         let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
         var logs: [String] = []
         let monitor = HIDRemoteMonitor(
             settings: settings,
@@ -469,7 +467,6 @@ struct T1RemoteProtocolTests {
         defer { defaults.removePersistentDomain(forName: suite) }
 
         let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
         let monitor = HIDRemoteMonitor(
             settings: settings,
             allowsT1Remote: true,
@@ -517,7 +514,6 @@ struct T1RemoteProtocolTests {
         defer { defaults.removePersistentDomain(forName: suite) }
 
         let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
 
         let bridgeID = UUID()
         let mappings = RemoteDeviceMappings(
@@ -602,7 +598,6 @@ struct T1RemoteProtocolTests {
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
 
         let monitor = HIDRemoteMonitor(
             settings: settings,
@@ -635,7 +630,6 @@ struct T1RemoteProtocolTests {
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
 
         let clock = ControlledTestScheduler()
         let profileID = UUID()
@@ -896,7 +890,6 @@ struct T1RemoteProtocolTests {
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
         let profileID = UUID()
         settings.setBaseBinding(
             .init(action: .commandCopy, shortcut: nil),
@@ -953,7 +946,6 @@ struct T1RemoteProtocolTests {
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
 
         let emptyMappings = RemoteDeviceMappings(
             buttonBindings: [:],
@@ -1013,7 +1005,6 @@ struct T1RemoteProtocolTests {
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
 
         let profileID = UUID()
         let suppressor = KeyboardEventSuppressor(uptime: { 0 }, permissionsGranted: { true })
@@ -1098,7 +1089,6 @@ struct T1RemoteProtocolTests {
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
 
         let profile = RemoteDeviceProfile(
             model: .t1Remote,
@@ -1212,7 +1202,6 @@ struct T1RemoteProtocolTests {
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
 
         let clock = ControlledTestScheduler()
         let profileID = UUID()

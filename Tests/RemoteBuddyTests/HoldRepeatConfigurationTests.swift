@@ -19,7 +19,6 @@ struct HoldRepeatConfigurationTests {
 
     private func monitor(_ settings: AppSettings, clock: ControlledTestScheduler, events: Events,
                          seized: Bool = true) -> HIDRemoteMonitor {
-        settings.customMappingEnabled = true
         let profile = UUID()
         let monitor = HIDRemoteMonitor(settings: settings, profileID: profile,
             scheduler: clock, runtimePermissions: { true }, nativeSuppressionAvailable: { true },
@@ -275,7 +274,6 @@ struct HoldRepeatConfigurationTests {
 
     @Test func btleServerLogReportsNeverArmNativeEventSuppressorOnPressReleaseOrRecovery() throws {
         try withSettings { settings in
-            settings.customMappingEnabled = true
             let clock = ControlledTestScheduler(), events = Events()
             let suppressor = KeyboardEventSuppressor()
             let profile = UUID()

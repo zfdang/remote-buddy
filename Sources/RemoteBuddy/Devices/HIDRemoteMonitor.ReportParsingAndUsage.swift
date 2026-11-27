@@ -57,23 +57,12 @@ extension HIDRemoteMonitor {
             currentReportOrigin = .iohid
         }
         defer { currentReportOrigin = previousOrigin }
-        guard settings.customMappingEnabled || backOnlyMode else {
-            diagnosticLogger("HID REPORT rejected reason=mapping_disabled source=\(source)")
-            return
-        }
         guard runtimePermissionsAreValid() else {
             diagnosticLogger("HID REPORT rejected reason=runtime_permission_revoked source=\(source)")
             releaseForRevokedPermissions()
             return
         }
         parseAndProcess(reportID: reportID, data: data, source: source)
-    }
-
-    func handleSimulatedBackOnlyReport(reportID: UInt32, data: Data) {
-        let previousBackOnlyMode = backOnlyMode
-        backOnlyMode = true
-        defer { backOnlyMode = previousBackOnlyMode }
-        handleSimulatedReport(reportID: reportID, data: data)
     }
 
     func disconnectSimulatedDevice() {
@@ -277,11 +266,7 @@ extension HIDRemoteMonitor {
         for usage in activeT1PassthroughUsages {
             refreshT1PassthroughExpiry(usage)
         }
-        if backOnlyMode {
-            processBackOnly(usages: usages.intersection([RemoteButton.back.hidUsage]))
-        } else {
-            process(usages: usages)
-        }
+        process(usages: usages)
     }
 
     static func handlesAppSwitcherControl(_ button: RemoteButton) -> Bool {
@@ -323,7 +308,6 @@ extension HIDRemoteMonitor {
                 }
                 resolvedProfileID = routedProfileID
             }
-            guard !backOnlyMode else { continue }
             let targetProfileID = resolvedProfileID ?? profileID
             let reportingModel = targetProfileID.flatMap { id in
                 settings.remoteDeviceProfiles.first(where: { $0.id == id })?.model
@@ -830,43 +814,5 @@ extension HIDRemoteMonitor {
         suppressedUntilReleasedT1PassthroughUsages.removeAll()
         suppressedT1PassthroughExpiryTimers.values.forEach { $0.cancel() }
         suppressedT1PassthroughExpiryTimers.removeAll()
-    }
-
-    func processBackOnly(usages rawUsages: Set<UInt16>) {
-        suppressedUntilReleasedUsages = suppressedUntilReleasedUsages.intersection(rawUsages)
-        for usage in suppressedUntilReleasedUsages {
-            refreshSuppressedUsageExpiry(usage)
-        }
-        let usages = rawUsages.subtracting(suppressedUntilReleasedUsages)
-        let pressed = usages.subtracting(activeUsages)
-        let released = activeUsages.subtracting(usages)
-        for usage in released {
-            usageExpiryTokens.removeValue(forKey: usage)
-            usageExpiryTimers.removeValue(forKey: usage)?.cancel()
-            usageHardCeilingTimers.removeValue(forKey: usage)?.cancel()
-            suppressedUsageExpiryTimers.removeValue(forKey: usage)?.cancel()
-            suppressedUntilReleasedUsages.remove(usage)
-            if let button = RemoteButton.usageMap[usage] {
-                _ = onRuntimeButton?(profileID, button, .release)
-            }
-        }
-        for usage in pressed {
-            scheduleHardCeiling(for: usage)
-            if let button = RemoteButton.usageMap[usage] {
-                _ = onRuntimeButton?(profileID, button, .press)
-            }
-        }
-        activeUsages = usages
-        for usage in usages { refreshUsageExpiry(usage) }
-        emitActiveButtons()
-        guard pressed.contains(RemoteButton.back.hidUsage) else { return }
-        let configured = ConfiguredButtonAction(action: .deleteBackward, shortcut: nil)
-        guard actionPerformer(.back, .singleClick, configured) else {
-            if !runtimePermissionsAreValid() { releaseForRevokedPermissions() }
-            return
-        }
-        AppLogger.shared.write(
-            "HID BUTTON button=back trigger=singleClick action=deleteBackward path=back_only"
-        )
     }
 }

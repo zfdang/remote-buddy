@@ -22,25 +22,18 @@ enum RemoteHIDReportParser {
 
 enum HIDPermissionGate {
     static func canMonitor(
-        mappingEnabled: Bool,
         inputMonitoringGranted: Bool,
         accessibilityGranted: Bool,
         powerKeySuppressed: Bool
     ) -> Bool {
-        mappingEnabled && inputMonitoringGranted && accessibilityGranted && powerKeySuppressed
+        inputMonitoringGranted && accessibilityGranted && powerKeySuppressed
     }
 
     static func nextPermissionRequest(
-        mappingEnabled: Bool,
-        voiceFnTapModeEnabled: Bool = false,
-        voiceKeyMode: VoiceKeyMode = .function,
         inputMonitoringGranted: Bool,
         accessibilityGranted: Bool
     ) -> HIDPermissionRequest {
-        guard mappingEnabled || voiceFnTapModeEnabled || voiceKeyMode.requiresAccessibility else {
-            return .none
-        }
-        if mappingEnabled, !inputMonitoringGranted { return .inputMonitoring }
+        if !inputMonitoringGranted { return .inputMonitoring }
         if !accessibilityGranted { return .accessibility }
         return .none
     }

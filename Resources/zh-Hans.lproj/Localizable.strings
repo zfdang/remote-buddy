@@ -33,7 +33,6 @@
 "voice_button.status.input_unavailable" = "目标输入位置未准备完成，已取消本次语音输入";
 "audio.compatibility.device_detected" = "已检测到 %1$@";
 "audio.compatibility.device_not_detected" = "未检测到 %1$@";
-"button_mapping.status.system_managed" = "按键由 macOS 原生处理";
 "button_mapping.status.interrupted" = "按键映射已暂停，回到应用后将重试";
 "button_mapping.permission.input_monitoring_required" = "需要输入监控权限；未读取遥控器按键";
 "button_mapping.permission.accessibility_required" = "需要辅助功能（新名称：设备控制和数据访问）权限；未发送映射动作";
@@ -364,13 +363,9 @@
 "audio.compatibility.help_plain" = "如果常用的语音工具收不到声音，可选择随安装包提供的兼容麦克风；已有音频设备不会被替换。";
 "button_mapping.page.title" = "按键映射";
 "button_mapping.page.subtitle" = "点击按键进行设置";
-"button_mapping.google.subtitle" = "G9N9N 支持自定义单击、双击和长按动作";
+"button_mapping.faq_link" = "语音触发与按键模式 (FAQ) ↗";
 "button_mapping.t1.subtitle" = "点击返回、主页、菜单、静音、音量或电源键自定义；语音键按一下松开开始说话，再按一下结束（确认、方向键、飞鼠与背面全键盘保持系统默认输入）";
 "t1.remote.keyboard_airmouse_note" = "返回、主页、菜单、静音、音量与电源键支持单击、双击与长按映射；确认、方向键、空中飞鼠与背面 QWERTY 全键盘保持系统默认输入（直接打字和移动鼠标）。";
-"button_mapping.toggle.enabled" = "自定义按键";
-"button_mapping.permission_prompt.title" = "需要开启按键权限";
-"button_mapping.permission_prompt.message" = "自定义按键需要“输入监控”和“辅助功能”权限，请前往权限页面完成设置。";
-"button_mapping.permission_prompt.open" = "前往权限页面";
 "common.status.enabled" = "已启用";
 "common.status.disabled" = "未启用";
 "button_mapping.actions.title" = "按键动作";
@@ -378,9 +373,9 @@
 "button_mapping.all_buttons.title" = "全部按键";
 "button_mapping.all_buttons.help" = "每一行都显示单击、双击和长按设置。";
 "button_mapping.inspector.help" = "分别设置这个按键的三种触发方式。";
-"button_mapping.selection_lock" = "锁定当前按键";
-"button_mapping.selection_lock_help" = "开启后，操作实体遥控器不会切换正在编辑的按键。";
-"button_mapping.selection_lock_hint_short" = "按遥控器时保持当前编辑项。";
+"button_mapping.selection_lock" = "锁定当前选中按键";
+"button_mapping.selection_lock_help" = "控制按下实体遥控器时，按键映射图是否自动跟随高亮对应按键。开启时仅通过鼠标点击切换选中项；关闭时按遥控器任意键会自动选中该键，方便快速定位。";
+"button_mapping.selection_lock_hint_short" = "开启后，按实体遥控器不会自动切换画布中选中的按键；关闭后，按遥控器哪颗键就会自动高亮定位到哪颗键。";
 "button_mapping.voice_button.title" = "语音键";
 "button_mapping.voice_button.fixed" = "语音触发键";
 "button_mapping.action.not_set" = "未设置";
@@ -778,7 +773,6 @@
 "onboarding.side.samples" = "语音声音已收到";
 "onboarding.side.transcript" = "文字已经出现";
 "onboarding.side.three_buttons" = "已检测到三个不同按键";
-"onboarding.side.mapping_enabled" = "自定义按键已启用";
 "onboarding.diagnostics.copy" = "复制设置诊断";
 "onboarding.recovery.permission.bluetooth_denied.title" = "还需要蓝牙权限";
 "onboarding.recovery.permission.bluetooth_denied.detail" = "允许蓝牙访问后，遥控搭子才能找到已经配对的遥控器。";
@@ -1291,9 +1285,6 @@
 
 "onboarding.voice_test.trial_missing" = "本次语音测试配置已失效，请返回输入工具重新配置后再测试。";
 "onboarding.voice_test.reconfigure" = "返回配置输入工具";
-
-"button_mapping.google.version_notice" = "G9N9N 现已支持标准系统 HID 与蓝牙日志（.mobileconfig）两种接入方式，详见";
-"button_mapping.google.device_guide" = "设备指南 ↗";
 
 "connection.empty.title" = "尚未添加遥控器";
 "connection.empty.detail" = "点击右上角“添加新设备”，连接你的遥控器。";

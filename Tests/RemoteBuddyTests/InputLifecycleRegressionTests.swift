@@ -30,7 +30,7 @@ struct InputLifecycleRegressionTests {
         for granted in [false, true] {
             let snapshot = HIDPermissionSnapshot(inputMonitoringGranted: granted, accessibilityGranted: granted)
             let shouldRecover = HIDPermissionRecoveryPolicy.shouldReapplySettings(
-                started: true, customMappingEnabled: true, monitoringInterrupted: true,
+                started: true, monitoringInterrupted: true,
                 previous: snapshot, current: snapshot)
             #expect(shouldRecover == granted)
         }
@@ -40,7 +40,6 @@ struct InputLifecycleRegressionTests {
         let (values, name) = defaults()
         defer { values.removePersistentDomain(forName: name) }
         let settings = AppSettings(defaults: values)
-        settings.customMappingEnabled = true
         let model = BridgeAppModel(settings: settings)
         let monitor = HIDRemoteMonitor(settings: settings, profileID: nil,
             eventSuppressor: model.hidEventSuppressor, ownsEventSuppressor: false,
@@ -56,10 +55,10 @@ struct InputLifecycleRegressionTests {
         #expect(model.activeRemoteButtons.isEmpty)
         #expect(model.hidMonitoringInterrupted)
         // UI messages can change independently; recovery uses the explicit interruption flag.
-        model.hidStatus = LocalizedMessage("button_mapping.status.system_managed")
+        model.hidStatus = LocalizedMessage("button_mapping.status.disabled")
         let granted = HIDPermissionSnapshot(inputMonitoringGranted: true, accessibilityGranted: true)
         #expect(HIDPermissionRecoveryPolicy.shouldReapplySettings(
-            started: true, customMappingEnabled: true,
+            started: true,
             monitoringInterrupted: model.hidMonitoringInterrupted, previous: granted, current: granted))
         monitor.onInputReset = nil
     }
@@ -145,7 +144,6 @@ struct InputLifecycleRegressionTests {
         let (values, name) = defaults()
         defer { values.removePersistentDomain(forName: name) }
         let settings = AppSettings(defaults: values)
-        settings.customMappingEnabled = true
         var granted = true
         let filter = KeyboardEventSuppressor(uptime: { 0 })
         let monitor = HIDRemoteMonitor(settings: settings, profileID: nil,
@@ -201,7 +199,6 @@ struct InputLifecycleRegressionTests {
         let (values, name) = defaults()
         defer { values.removePersistentDomain(forName: name) }
         let settings = AppSettings(defaults: values)
-        settings.customMappingEnabled = true
         for button in RemoteButton.allCases {
             settings.setAction(.escape, for: button, trigger: .singleClick)
         }
@@ -228,7 +225,6 @@ struct InputLifecycleRegressionTests {
         let (values, name) = defaults()
         defer { values.removePersistentDomain(forName: name) }
         let settings = AppSettings(defaults: values)
-        settings.customMappingEnabled = true
         for button in RemoteButton.allCases {
             settings.setAction(.escape, for: button, trigger: .singleClick)
         }
@@ -254,7 +250,6 @@ struct InputLifecycleRegressionTests {
         let (values, name) = defaults()
         defer { values.removePersistentDomain(forName: name) }
         let settings = AppSettings(defaults: values)
-        settings.customMappingEnabled = true
         settings.setAction(.appSwitcher, for: .tv)
         settings.setAction(.arrowRight, for: .right)
         settings.setAction(.arrowLeft, for: .left)
@@ -300,7 +295,6 @@ struct InputLifecycleRegressionTests {
         let (values, name) = defaults()
         defer { values.removePersistentDomain(forName: name) }
         let settings = AppSettings(defaults: values)
-        settings.customMappingEnabled = true
         let profile = UUID()
         var actions: [RemoteButton] = []
         let monitor = HIDRemoteMonitor(settings: settings, profileID: profile,
@@ -478,7 +472,6 @@ struct InputLifecycleRegressionTests {
         let (values, name) = defaults()
         defer { values.removePersistentDomain(forName: name) }
         let settings = AppSettings(defaults: values)
-        settings.customMappingEnabled = true
         let remoteAProfile = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         let remoteBProfile = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         settings.setBaseBinding(
@@ -617,7 +610,6 @@ struct InputLifecycleRegressionTests {
         let (values, name) = defaults()
         defer { values.removePersistentDomain(forName: name) }
         let settings = AppSettings(defaults: values)
-        settings.customMappingEnabled = true
         let remoteAProfile = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         let remoteBProfile = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         settings.setBaseBinding(
@@ -691,7 +683,6 @@ struct InputLifecycleRegressionTests {
         let (values, name) = defaults()
         defer { values.removePersistentDomain(forName: name) }
         let settings = AppSettings(defaults: values)
-        settings.customMappingEnabled = true
         let profile = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         var activeButtonsHistory: [Set<RemoteButton>] = []
         let monitor = HIDRemoteMonitor(
@@ -738,7 +729,6 @@ struct InputLifecycleRegressionTests {
         let (values, name) = defaults()
         defer { values.removePersistentDomain(forName: name) }
         let settings = AppSettings(defaults: values)
-        settings.customMappingEnabled = true
         let profile = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         settings.setBaseBinding(.init(action: .appSwitcher, shortcut: nil), for: .home, trigger: .singleClick, profileID: profile)
         settings.selectRemoteProfile(profile)

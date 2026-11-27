@@ -11,7 +11,6 @@ struct G9N9NButtonMappingTests {
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
         settings.onboardingStep = .complete
         settings.setAction(.escape, for: .ok, trigger: .doubleClick)
         settings.setAction(.deleteBackward, for: .ok, trigger: .longPress)
@@ -45,7 +44,6 @@ struct G9N9NButtonMappingTests {
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
         settings.onboardingStep = .complete
         let profile = UUID()
         var active = Set<RemoteButton>()
@@ -80,7 +78,6 @@ struct G9N9NButtonMappingTests {
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
         settings.onboardingStep = .complete
         settings.setAction(.escape, for: .ok)
         settings.setAction(.deleteBackward, for: .up)

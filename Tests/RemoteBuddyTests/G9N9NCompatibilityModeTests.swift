@@ -100,7 +100,6 @@ struct G9N9NCompatibilityModeTests {
         defer { defaults.removePersistentDomain(forName: suite) }
 
         let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
         let googleID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         settings.selectRemoteProfile(googleID)
         settings.setG9N9NInputMode(.bluetoothLogRecovery, for: googleID)
@@ -142,7 +141,6 @@ struct G9N9NCompatibilityModeTests {
         // Arrival Order A: completed `.full` device receives `btle_log` BEFORE `iohid` -> no double fire!
         do {
             let settings = AppSettings(defaults: defaults)
-            settings.customMappingEnabled = true
             let googleID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
             settings.selectRemoteProfile(googleID)
             settings.setG9N9NInputMode(.full, for: googleID)
@@ -202,7 +200,6 @@ struct G9N9NCompatibilityModeTests {
         // Arrival Order B: during onboarding, `iohid` arrives -> marks nativeGoogleIOHIDObserved so later `btle_log` is rejected.
         do {
             let settings = AppSettings(defaults: defaults)
-            settings.customMappingEnabled = true
             settings.onboardingPurpose = .initialSetup
             let googleID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
             settings.selectRemoteProfile(googleID)
@@ -415,7 +412,6 @@ struct G9N9NCompatibilityModeTests {
         defer { defaults.removePersistentDomain(forName: suite) }
 
         let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
         settings.onboardingPurpose = .initialSetup
         let googleID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         settings.selectRemoteProfile(googleID)
@@ -563,7 +559,6 @@ struct G9N9NCompatibilityModeTests {
         let settings = AppSettings(defaults: defaults)
         #expect(!settings.g9n9nBluetoothLogRecoveryEnabled)
 
-        settings.customMappingEnabled = true
         settings.onboardingPurpose = .initialSetup
         let googleBLE = UUID()
         let googleID = settings.registerBluetoothRemote(identifier: googleBLE, model: .chromecastVoiceRemote)
@@ -692,7 +687,6 @@ struct G9N9NCompatibilityModeTests {
         defer { defaults.removePersistentDomain(forName: suite) }
 
         let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
         settings.onboardingPurpose = .initialSetup
         let googleBLE = UUID()
         let googleID = settings.registerBluetoothRemote(identifier: googleBLE, model: .chromecastVoiceRemote)
@@ -773,7 +767,6 @@ struct G9N9NCompatibilityModeTests {
         defer { defaults.removePersistentDomain(forName: suite) }
 
         let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
         let googleID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         let nativeID = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         settings.setG9N9NInputMode(.bluetoothLogRecovery, for: googleID)
@@ -932,7 +925,6 @@ struct G9N9NCompatibilityModeTests {
         defer { defaults.removePersistentDomain(forName: suite) }
 
         let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
         let googleID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         settings.setG9N9NInputMode(.bluetoothLogRecovery, for: googleID)
         settings.completeOnboarding()
@@ -1001,7 +993,6 @@ struct G9N9NCompatibilityModeTests {
         defer { defaults.removePersistentDomain(forName: suite) }
 
         let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
         let googleBLE = UUID()
         let googleID = settings.registerBluetoothRemote(identifier: googleBLE, model: .chromecastVoiceRemote)
         settings.setG9N9NInputMode(.bluetoothLogRecovery, for: googleID)
@@ -1058,7 +1049,6 @@ struct G9N9NCompatibilityModeTests {
         defer { defaults.removePersistentDomain(forName: suite) }
 
         let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
         let googleBLE = UUID()
         let googleID = settings.registerBluetoothRemote(identifier: googleBLE, model: .chromecastVoiceRemote)
         settings.setG9N9NInputMode(.bluetoothLogRecovery, for: googleID)
@@ -1162,7 +1152,6 @@ struct G9N9NCompatibilityModeTests {
         defer { defaults.removePersistentDomain(forName: suite) }
 
         let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
         let googleID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         let nativeID = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         settings.setG9N9NInputMode(.bluetoothLogRecovery, for: googleID)
@@ -1294,7 +1283,6 @@ struct G9N9NCompatibilityModeTests {
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
 
         let profile = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         settings.selectRemoteProfile(profile)

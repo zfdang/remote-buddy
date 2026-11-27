@@ -51,17 +51,6 @@ struct RuntimePermissionDiagnosticsTests {
             ) == nil
         )
 
-        #expect(
-            RuntimePermissionDiagnosisPolicy.diagnose(
-                bluetoothGranted: false,
-                inputMonitoringGranted: false,
-                accessibilityGranted: true,
-                connectionStatusKey: "connection.status.searching",
-                hidStatusKey: "button_mapping.status.system_managed",
-                hidFilterFailure: .none
-            ) == nil
-        )
-
         // Transient Bluetooth resetting should not flash a banner.
         #expect(
             RuntimePermissionDiagnosisPolicy.diagnose(
@@ -713,7 +702,6 @@ struct RuntimePermissionDiagnosticsTests {
         #expect(
             !HIDPermissionRecoveryPolicy.shouldReapplySettings(
                 started: true,
-                customMappingEnabled: true,
                 previous: granted,
                 current: restricted
             )
@@ -721,7 +709,6 @@ struct RuntimePermissionDiagnosticsTests {
         #expect(
             !HIDPermissionRecoveryPolicy.shouldReapplySettings(
                 started: true,
-                customMappingEnabled: true,
                 previous: restricted,
                 current: granted
             )
@@ -729,7 +716,6 @@ struct RuntimePermissionDiagnosticsTests {
         #expect(
             HIDPermissionRecoveryPolicy.shouldReapplySettings(
                 started: true,
-                customMappingEnabled: true,
                 previous: restricted,
                 current: denied
             )
@@ -737,7 +723,6 @@ struct RuntimePermissionDiagnosticsTests {
 
         #expect(
             !BridgeAppModel.shouldReapplyHIDSettingsBeforeVoiceStart(
-                customMappingEnabled: true,
                 mode: .rightOption,
                 fnTapModeEnabled: false,
                 requiresOrderedFn: false,
@@ -769,8 +754,6 @@ struct RuntimePermissionDiagnosticsTests {
             }
         )
         let initialConfig = BridgeAppModel.HIDMonitoringConfiguration(
-            customMappingEnabled: true,
-            backOnlyMode: false,
             powerKeySuppressed: true,
             waitForMatchingServices: false,
             allowedLocationIDs: nil,

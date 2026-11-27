@@ -32,11 +32,7 @@ extension HIDRemoteMonitor {
             excludedFingerprints: excludedFingerprints()
         ) {
         case let .activate(fingerprint):
-            if backOnlyMode {
-                probeDevice(device)
-            } else {
-                _ = activateDevice(device, fingerprint: fingerprint)
-            }
+            _ = activateDevice(device, fingerprint: fingerprint)
         case .probe:
             probeDevice(device)
         case let .rejected(reason):
@@ -317,10 +313,6 @@ extension HIDRemoteMonitor {
             return
         }
         guard !isWaitingForMatchingServices else { return }
-        guard settings.customMappingEnabled || backOnlyMode else {
-            diagnosticLogger("HID REPORT rejected reason=mapping_disabled path=\(path.logName)")
-            return
-        }
         let deviceMetadata = metadata(for: device)
         currentReportIsGoogle = allowsG9N9N && isGoogleDevice(device, metadata: deviceMetadata)
         currentReportIsT1 = !currentReportIsGoogle && allowsT1Remote && isT1Device(device, metadata: deviceMetadata)

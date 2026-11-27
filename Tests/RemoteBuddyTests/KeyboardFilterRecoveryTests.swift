@@ -71,7 +71,6 @@ struct KeyboardFilterRecoveryTests {
         let defaults = try #require(UserDefaults(suiteName: name))
         defer { defaults.removePersistentDomain(forName: name) }
         let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
         let clock = ControlledTestScheduler()
         var available = true
         var actions = 0

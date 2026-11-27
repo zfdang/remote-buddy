@@ -188,15 +188,6 @@ extension OnboardingView {
         if settings.onboardingStep != .voiceTest {
             settings.recordFirstUseEvent(.passed, step: settings.onboardingStep)
         }
-        if settings.onboardingStep == .remoteAvailability,
-           settings.onboardingControlMethod == .physicalRemote {
-            settings.customMappingEnabled = true
-        }
-        if settings.onboardingStep == .permissions {
-            if settings.onboardingControlMethod == .physicalRemote {
-                settings.customMappingEnabled = true
-            }
-        }
         if settings.onboardingStep == .complete {
             model.completeOnboardingSetup()
             return

@@ -146,7 +146,6 @@ struct SessionRecoveryRegressionTests {
         let (prefs, suite) = makeDefaults()
         defer { prefs.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: prefs)
-        settings.customMappingEnabled = true
         settings.setAction(action, for: .right)
         settings.setBaseBinding(.init(action: .commandCopy, shortcut: nil), for: .right, trigger: .longPress, profileID: nil)
         let profile = UUID()
@@ -174,7 +173,6 @@ struct SessionRecoveryRegressionTests {
         let (prefs, suite) = makeDefaults()
         defer { prefs.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: prefs)
-        settings.customMappingEnabled = true
         settings.setAction(action, for: .power)
         settings.setAction(.repeatSingleClick, for: .power, trigger: .longPress)
         let profile = UUID()
@@ -214,7 +212,6 @@ struct SessionRecoveryRegressionTests {
         let (prefs, suite) = makeDefaults()
         defer { prefs.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: prefs)
-        settings.customMappingEnabled = true
         let profile = UUID()
         var releases = 0, keyUps = 0
         let monitor = HIDRemoteMonitor(settings: settings, profileID: profile, scheduler: clock,
@@ -243,7 +240,6 @@ struct SessionRecoveryRegressionTests {
         let (prefs, suite) = makeDefaults()
         defer { prefs.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: prefs)
-        settings.customMappingEnabled = true
         settings.setAction(.arrowUp, for: .power)
         settings.setAction(.repeatSingleClick, for: .power, trigger: .longPress)
         let profile = UUID()
@@ -277,7 +273,6 @@ struct SessionRecoveryRegressionTests {
         let (prefs, suite) = makeDefaults()
         defer { prefs.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: prefs)
-        settings.customMappingEnabled = true
         let profile = UUID()
         var presses = 0, releases = 0
         let monitor = HIDRemoteMonitor(settings: settings, profileID: profile, scheduler: clock,
@@ -313,7 +308,6 @@ struct SessionRecoveryRegressionTests {
         let (prefs, suite) = makeDefaults()
         defer { prefs.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: prefs)
-        settings.customMappingEnabled = true
         let profile = UUID()
         var presses = 0, releases = 0
         let monitor = HIDRemoteMonitor(settings: settings, profileID: profile, scheduler: clock,
@@ -460,7 +454,6 @@ struct SessionRecoveryRegressionTests {
         let (prefs, suite) = makeDefaults()
         defer { prefs.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: prefs)
-        settings.customMappingEnabled = true
         var releaseCount = 0
         let profile = UUID()
         let monitor = HIDRemoteMonitor(settings: settings, profileID: profile, scheduler: clock,
@@ -499,7 +492,6 @@ struct SessionRecoveryRegressionTests {
         let (prefs, suite) = makeDefaults()
         defer { prefs.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: prefs)
-        settings.customMappingEnabled = true
         var releaseCount = 0
         let profile = UUID()
         let monitor = HIDRemoteMonitor(settings: settings, profileID: profile, scheduler: clock,
@@ -539,7 +531,6 @@ struct SessionRecoveryRegressionTests {
         let (prefs, suite) = makeDefaults()
         defer { prefs.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: prefs)
-        settings.customMappingEnabled = true
         var pressCount = 0
         var releaseCount = 0
         let profile = UUID()
@@ -585,7 +576,6 @@ struct SessionRecoveryRegressionTests {
         let (prefs, suite) = makeDefaults()
         defer { prefs.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: prefs)
-        settings.customMappingEnabled = true
         var pressCount = 0
         var releaseCount = 0
         let profile = UUID()
@@ -644,7 +634,6 @@ struct SessionRecoveryRegressionTests {
         let (prefs, suite) = makeDefaults()
         defer { prefs.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: prefs)
-        settings.customMappingEnabled = true
         var pressCount = 0
         var releaseCount = 0
         let profile = UUID()
@@ -683,69 +672,6 @@ struct SessionRecoveryRegressionTests {
         clock.advance(to: 70000)
         monitor.handleSimulatedReport(reportID: 1, data: reportData)
         #expect(pressCount == 2, "Press after silence must be accepted even after hard ceiling without release report")
-
-        monitor.stop()
-    }
-
-    @Test func backOnlyModeSustainsContinuousHoldAndRecoversAfterSilence() {
-        let clock = ControlledTestScheduler()
-        let (prefs, suite) = makeDefaults()
-        defer { prefs.removePersistentDomain(forName: suite) }
-        let settings = AppSettings(defaults: prefs)
-        settings.customMappingEnabled = false
-        var performedActions: [ConfiguredButtonAction] = []
-        var releaseCount = 0
-        let profile = UUID()
-        let monitor = HIDRemoteMonitor(
-            settings: settings,
-            profileID: profile,
-            scheduler: clock,
-            runtimePermissions: { true },
-            actionPerformer: { button, trigger, action in
-                if button == .back && trigger == .singleClick {
-                    performedActions.append(action)
-                }
-                return true
-            },
-            diagnosticLogger: { _ in }
-        )
-        monitor.onRuntimeButton = { _, _, phase in
-            if phase == .release { releaseCount += 1 }
-            return true
-        }
-        monitor.connectSimulatedDevice(fingerprint: "test-device", profileID: profile, isSeized: true)
-        let usage = RemoteButton.back.hidUsage
-        let reportData = Data([UInt8(usage & 255), UInt8(usage >> 8)])
-
-        // First press in back-only mode
-        monitor.handleSimulatedBackOnlyReport(reportID: 1, data: reportData)
-        #expect(performedActions.count == 1)
-        #expect(performedActions.first?.action == .deleteBackward)
-        #expect(releaseCount == 0)
-
-        // Continuous reports past 8 seconds up to 10 seconds
-        for time: UInt64 in [1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000] {
-            clock.advance(to: time)
-            monitor.handleSimulatedBackOnlyReport(reportID: 1, data: reportData)
-            #expect(performedActions.count == 1, "Repeated held back-only report must not duplicate delete action")
-            #expect(releaseCount == 0, "Back-only hold must survive beyond 8 seconds with continuous reports")
-        }
-
-        // Silent for 8000ms after last report at 10000ms
-        clock.advance(to: 18000)
-        #expect(releaseCount == 1, "Missing release recovery must fire 8000ms after silence")
-
-        // User presses Back again after lost release - must be accepted promptly without needing an intermediate release report!
-        clock.advance(to: 19000)
-        monitor.handleSimulatedBackOnlyReport(reportID: 1, data: reportData)
-        #expect(performedActions.count == 2, "Back button press after missing release must NOT be swallowed")
-        #expect(releaseCount == 1)
-
-        // Physical release arrives
-        clock.advance(to: 20000)
-        monitor.handleSimulatedBackOnlyReport(reportID: 1, data: Data([0, 0]))
-        #expect(performedActions.count == 2)
-        #expect(releaseCount == 2)
 
         monitor.stop()
     }
@@ -844,7 +770,6 @@ struct SessionRecoveryRegressionTests {
         let (prefs, suite) = makeDefaults()
         defer { prefs.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: prefs)
-        settings.customMappingEnabled = true
         let profile = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         settings.selectRemoteProfile(profile)
         settings.setBaseBinding(.init(action: .arrowLeft, shortcut: nil), for: .ok, trigger: .singleClick, profileID: profile)
@@ -904,7 +829,6 @@ struct SessionRecoveryRegressionTests {
         let (prefs, suite) = makeDefaults()
         defer { prefs.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: prefs)
-        settings.customMappingEnabled = true
         let profile = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         settings.selectRemoteProfile(profile)
         settings.setBaseBinding(.init(action: .returnKey, shortcut: nil), for: .ok, trigger: .singleClick, profileID: profile)

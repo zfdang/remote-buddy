@@ -155,7 +155,6 @@ struct ApplicationButtonProfileTests {
         let (settings, defaults, suite) = try makeSettings()
         defer { defaults.removePersistentDomain(forName: suite) }
 
-        settings.customMappingEnabled = true
         settings.onboardingStep = .complete
         let profileID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         settings.selectRemoteProfile(profileID)
@@ -349,7 +348,6 @@ struct ApplicationButtonProfileTests {
         let (settings, defaults, suite) = try makeSettings()
         defer { defaults.removePersistentDomain(forName: suite) }
 
-        settings.customMappingEnabled = true
         settings.onboardingStep = .complete
         let profileID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         settings.selectRemoteProfile(profileID)
@@ -556,7 +554,6 @@ struct ApplicationButtonProfileTests {
         let (settings, defaults, suite) = try makeSettings()
         defer { defaults.removePersistentDomain(forName: suite) }
 
-        settings.customMappingEnabled = true
         settings.onboardingStep = .complete
         let profileID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         settings.selectRemoteProfile(profileID)
@@ -711,7 +708,6 @@ struct ApplicationButtonProfileTests {
         let (settings, defaults, suite) = try makeSettings()
         defer { defaults.removePersistentDomain(forName: suite) }
 
-        settings.customMappingEnabled = true
         settings.onboardingStep = .complete
         let profileID = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         settings.selectRemoteProfile(profileID)

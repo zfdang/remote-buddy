@@ -33,7 +33,6 @@
 "voice_button.status.input_unavailable" = "The text field was not ready. Voice input was canceled.";
 "audio.compatibility.device_detected" = "%1$@ detected";
 "audio.compatibility.device_not_detected" = "%1$@ was not found";
-"button_mapping.status.system_managed" = "Buttons are handled natively by macOS";
 "button_mapping.status.interrupted" = "Button mapping paused; return to the app to retry";
 "button_mapping.permission.input_monitoring_required" = "Allow Input Monitoring to use remote buttons.";
 "button_mapping.permission.accessibility_required" = "Allow Accessibility (new name: Device Control and Data Access) to run button actions.";
@@ -364,13 +363,9 @@
 "audio.compatibility.help_plain" = "If your voice typing app receives no audio, select the compatible microphone included with the installer. Existing audio devices are not replaced.";
 "button_mapping.page.title" = "Button Mapping";
 "button_mapping.page.subtitle" = "Click a button to change its settings";
-"button_mapping.google.subtitle" = "G9N9N supports custom single-click, double-click, and long-press actions";
+"button_mapping.faq_link" = "Voice & Buttons FAQ ↗";
 "button_mapping.t1.subtitle" = "Click Back, Home, Menu, Mute, Volume, or Power to customize; press and release Voice to start talking, then press again to stop (OK, arrows, air mouse, and back keyboard keep default system input)";
 "t1.remote.keyboard_airmouse_note" = "Back, Home, Menu, Mute, Volume, and Power support single, double, and long-press mapping. OK, direction keys, air mouse movement, and the back QWERTY keyboard keep default system input (typing and cursor control).";
-"button_mapping.toggle.enabled" = "Custom Buttons";
-"button_mapping.permission_prompt.title" = "Button Permissions Required";
-"button_mapping.permission_prompt.message" = "Custom button controls require Input Monitoring and Accessibility. Open the Permissions page to finish setup.";
-"button_mapping.permission_prompt.open" = "Open Permissions";
 "common.status.enabled" = "Enabled";
 "common.status.disabled" = "Disabled";
 "button_mapping.actions.title" = "Button Actions";
@@ -378,9 +373,9 @@
 "button_mapping.all_buttons.title" = "All Buttons";
 "button_mapping.all_buttons.help" = "Each row shows the actions for a single press, double press, and long press.";
 "button_mapping.inspector.help" = "Choose an action for each type of button press.";
-"button_mapping.selection_lock" = "Lock Current Button";
-"button_mapping.selection_lock_help" = "When enabled, pressing the physical remote will not switch the button being edited.";
-"button_mapping.selection_lock_hint_short" = "Keep the current item selected while using the remote.";
+"button_mapping.selection_lock" = "Lock Selected Button";
+"button_mapping.selection_lock_help" = "Controls whether pressing a button on the physical remote automatically highlights that button on the map. Keep on to switch selection only by clicking; turn off to locate buttons by pressing them on the remote.";
+"button_mapping.selection_lock_hint_short" = "When on, pressing the physical remote will not switch the highlighted button; turn off to auto-highlight whichever remote button you press.";
 "button_mapping.voice_button.title" = "Voice Button";
 "button_mapping.voice_button.fixed" = "Voice Trigger Key";
 "button_mapping.action.not_set" = "Not Set";
@@ -781,7 +776,6 @@
 "onboarding.side.samples" = "Voice audio received";
 "onboarding.side.transcript" = "Text appeared";
 "onboarding.side.three_buttons" = "Three different buttons detected";
-"onboarding.side.mapping_enabled" = "Custom buttons enabled";
 "onboarding.diagnostics.copy" = "Copy Setup Diagnostics";
 "onboarding.recovery.permission.bluetooth_denied.title" = "Bluetooth access is still needed";
 "onboarding.recovery.permission.bluetooth_denied.detail" = "Allow Bluetooth access so Remote Buddy can find your paired remote.";
@@ -1289,9 +1283,6 @@
 
 "onboarding.voice_test.trial_missing" = "The voice test configuration is no longer active. Return to input tool setup before testing again.";
 "onboarding.voice_test.reconfigure" = "Return to Input Tool Setup";
-
-"button_mapping.google.version_notice" = "G9N9N units connect via Standard System HID or Bluetooth Logging Profile (.mobileconfig); see the";
-"button_mapping.google.device_guide" = "device guide ↗";
 
 "connection.empty.title" = "No remotes added";
 "connection.empty.detail" = "Click Add Device in the top-right corner to connect your remote.";

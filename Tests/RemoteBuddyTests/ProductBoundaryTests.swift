@@ -269,13 +269,11 @@ struct ProductBoundaryTests {
         let remote = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         settings.selectRemoteProfile(remote)
         settings.gainDB = 6
-        settings.customMappingEnabled = true
         settings.setOnboardingControlSource(.chromecastRemote)
         settings.completeOnboarding()
         SettingsPageBehavior.beginIntegrationSetup(tool: .voiceBuddy, settings: settings)
         #expect(settings.selectedAudioDeviceUID == "BuddyMic2ch_UID")
         #expect(settings.gainDB == 6)
-        #expect(settings.customMappingEnabled)
         #expect(settings.onboardingVoiceTool == .voiceBuddy)
         #expect(settings.onboardingControlSource == .chromecastRemote)
         #expect(settings.onboardingPurpose == .integration)
@@ -532,6 +530,10 @@ struct ProductBoundaryTests {
             == "https://remote.zfdang.com/faq.html#input-methods")
         #expect(AppLinks.inputMethodsFAQ(for: Locale(identifier: "en_US")).absoluteString
             == "https://remote.zfdang.com/faq_en.html#input-methods")
+        #expect(AppLinks.voiceButtonsFAQ(for: Locale(identifier: "zh_CN")).absoluteString
+            == "https://remote.zfdang.com/faq.html#voice-buttons")
+        #expect(AppLinks.voiceButtonsFAQ(for: Locale(identifier: "en_US")).absoluteString
+            == "https://remote.zfdang.com/faq_en.html#voice-buttons")
         #expect(AppLinks.applicationIntegrationFAQ(for: Locale(identifier: "zh_CN")).absoluteString
             == "https://remote.zfdang.com/faq.html#integrations")
         #expect(AppLinks.applicationIntegrationFAQ(for: Locale(identifier: "en_US")).absoluteString

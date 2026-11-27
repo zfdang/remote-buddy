@@ -229,7 +229,6 @@ final class HIDRemoteMonitor {
     let targetFingerprint: String?
     let excludedFingerprints: () -> Set<String>
     var allowedLocationIDs: Set<UInt32>?
-    var backOnlyMode = false
     var manager: IOHIDManager?
     var callbackContext: HIDMonitorContext?
     var callbackOpaqueContext: Unmanaged<HIDMonitorContext>?
@@ -418,26 +417,20 @@ final class HIDRemoteMonitor {
     func start(
         powerKeySuppressed: Bool,
         allowedLocationIDs: Set<UInt32>? = nil,
-        allowBackOnly: Bool = false,
         waitForMatchingServices: Bool = false
     ) {
         stop()
         self.allowedLocationIDs = allowedLocationIDs
-        backOnlyMode = allowBackOnly && !settings.customMappingEnabled
-        guard settings.customMappingEnabled || backOnlyMode else {
-            updateStatus(LocalizedMessage("button_mapping.status.system_managed"))
-            return
-        }
         let targetModel = settings.remoteDeviceProfiles.first { $0.id == profileID }?.model
         // An absent service is a normal reconnect state. Observe matching devices so
         // their arrival can reapply mappings, but never open or route unsafe input.
         let waitingForServices = waitForMatchingServices && !powerKeySuppressed &&
-            !backOnlyMode && targetFingerprint != nil && targetModel?.isChromecastRemote != true
+            targetFingerprint != nil && targetModel?.isChromecastRemote != true
         isWaitingForMatchingServices = waitingForServices
         let families = Self.monitorFamilies(targetModel: targetModel,
-            powerKeySuppressed: powerKeySuppressed || backOnlyMode || waitingForServices, allowsGoogle: allowsG9N9N)
+            powerKeySuppressed: powerKeySuppressed || waitingForServices, allowsGoogle: allowsG9N9N)
         let allowT1 = Self.monitorsT1Family(targetModel: targetModel,
-            powerKeySuppressed: powerKeySuppressed || backOnlyMode || waitingForServices, allowsT1Remote: allowsT1Remote)
+            powerKeySuppressed: powerKeySuppressed || waitingForServices, allowsT1Remote: allowsT1Remote)
         let permissions = permissionSnapshot()
         let inputGranted = permissions.inputMonitoringGranted
         let accessibilityGranted = permissions.accessibilityGranted
@@ -445,7 +438,6 @@ final class HIDRemoteMonitor {
             "HID PERMISSIONS input=\(inputGranted) accessibility=\(accessibilityGranted) post_event=\(permissions.postEventAccessGranted)"
         )
         guard HIDPermissionGate.canMonitor(
-            mappingEnabled: settings.customMappingEnabled || backOnlyMode,
             inputMonitoringGranted: inputGranted,
             accessibilityGranted: accessibilityGranted,
             powerKeySuppressed: families.xiaomi || families.google || allowT1
@@ -476,10 +468,8 @@ final class HIDRemoteMonitor {
             return
         }
 
-        if settings.customMappingEnabled {
-            let suppressionReady = eventSuppressor.start()
-            AppLogger.shared.write("HID FILTER ready=\(suppressionReady)")
-        }
+        let suppressionReady = eventSuppressor.start()
+        AppLogger.shared.write("HID FILTER ready=\(suppressionReady)")
 
         let manager = IOHIDManagerCreate(kCFAllocatorDefault, IOOptionBits(kIOHIDOptionsTypeNone))
         let holder = HIDMonitorContext(self)

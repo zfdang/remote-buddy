@@ -202,7 +202,7 @@ extension BridgeAppModel {
             if discoveryHIDMonitor?.deviceFingerprint == fingerprint {
                 discoveryHIDMonitor?.stop()
                 discoveryHIDMonitor = nil
-                startHIDDiscoveryIfNeeded(allowBackOnly: !settings.customMappingEnabled)
+                startHIDDiscoveryIfNeeded()
             }
         }
         remoteBatteryLevels.removeValue(forKey: profileID)

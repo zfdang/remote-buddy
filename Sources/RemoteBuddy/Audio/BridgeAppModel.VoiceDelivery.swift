@@ -139,7 +139,7 @@ extension BridgeAppModel {
         voiceFunctionMapper.t1Identities = Set(settings.compatibleHIDIdentities(
             includeXiaomi: false, includeGoogle: false, includeT1: true))
         let applied = voiceFunctionMapper.apply(
-            suppressPowerKey: settings.customMappingEnabled,
+            suppressPowerKey: true,
             neutralizeVoiceKey: neutralizeVoiceKey
         )
         if !isStreaming {
@@ -150,7 +150,7 @@ extension BridgeAppModel {
                     : "voice_button.status.waiting"
             )
         }
-        return !settings.customMappingEnabled || voiceFunctionMapper.isPowerKeySuppressed
+        return voiceFunctionMapper.isPowerKeySuppressed
     }
 
     @discardableResult

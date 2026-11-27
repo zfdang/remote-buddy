@@ -12,7 +12,6 @@ struct G9N9NProtocolTests {
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
         let profileID = UUID()
         var actions: [RemoteButton] = []
         var active = Set<RemoteButton>()
@@ -51,7 +50,6 @@ struct G9N9NProtocolTests {
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
         let profileID = UUID()
         var performed: [RemoteButton] = []
         let monitor = HIDRemoteMonitor(
@@ -115,7 +113,6 @@ struct G9N9NProtocolTests {
         let defaults = try #require(UserDefaults(suiteName: name))
         defer { defaults.removePersistentDomain(forName: name) }
         let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
         let monitor = HIDRemoteMonitor(settings: settings, profileID: UUID(),
             runtimePermissions: { true }, actionPerformer: { _, _, _ in true }, diagnosticLogger: { _ in })
         monitor.connectSimulatedDevice(fingerprint: "google", profileID: UUID())
@@ -263,7 +260,6 @@ struct G9N9NProtocolTests {
         let defaults = try #require(UserDefaults(suiteName: name))
         defer { defaults.removePersistentDomain(forName: name) }
         let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
         let monitor = HIDRemoteMonitor(settings: settings, profileID: UUID(),
             runtimePermissions: { true }, actionPerformer: { _, _, _ in true }, diagnosticLogger: { _ in })
         monitor.connectSimulatedDevice(fingerprint: "indexed-google", profileID: UUID())
@@ -329,7 +325,6 @@ struct G9N9NProtocolTests {
         let defaults = try #require(UserDefaults(suiteName: name))
         defer { defaults.removePersistentDomain(forName: name) }
         let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
         settings.setAction(.commandQuit, for: .youtube)
         var invoked: [RemoteButton] = []
         var active = Set<RemoteButton>()

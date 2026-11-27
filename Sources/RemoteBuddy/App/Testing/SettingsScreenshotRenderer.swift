@@ -138,7 +138,6 @@ enum SettingsScreenshotRenderer {
             break
         }
         if showsRemoteCards {
-            settings.customMappingEnabled = true
             let xiaomiID = settings.registerBluetoothRemote(
                 identifier: UUID(uuidString: "00000000-0000-0000-0000-000000000101")!
             )
@@ -175,7 +174,6 @@ enum SettingsScreenshotRenderer {
             let identifier = chromecastScreenshotProfileID
                 ?? settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
             settings.selectRemoteProfile(identifier)
-            settings.customMappingEnabled = true
             if !showsRemoteCards {
                 remoteCardSystemNames[identifier] = "Chromecast Remote"
                 remoteCardBatteryLevels[identifier] = 64
@@ -183,7 +181,6 @@ enum SettingsScreenshotRenderer {
             }
         }
         if opensShortcutEditor {
-            settings.customMappingEnabled = true
             settings.setAction(.customShortcut, for: .ok, trigger: .singleClick)
             settings.setShortcut(
                 CustomKeyboardShortcut(keyCode: 49, modifierFlags: .command, keyLabel: "Space"),

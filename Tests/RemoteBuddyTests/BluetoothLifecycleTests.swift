@@ -1013,7 +1013,6 @@ struct BluetoothLifecycleTests {
         defer { defaults.removePersistentDomain(forName: suite) }
 
         let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
         let t1ID = settings.registerBluetoothRemote(identifier: UUID(), model: .t1Remote)
         settings.selectRemoteProfile(t1ID)
 

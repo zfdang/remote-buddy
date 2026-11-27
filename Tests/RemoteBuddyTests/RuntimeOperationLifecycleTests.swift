@@ -118,7 +118,6 @@ struct RuntimeOperationLifecycleTests {
         let values = try #require(UserDefaults(suiteName: name))
         defer { values.removePersistentDomain(forName: name) }
         let settings = AppSettings(defaults: values)
-        settings.customMappingEnabled = true
         settings.setAction(.commandQuit, for: .up)
         var actions = 0
         let profile = UUID()
@@ -139,7 +138,6 @@ struct RuntimeOperationLifecycleTests {
         let values = try #require(UserDefaults(suiteName: name))
         defer { values.removePersistentDomain(forName: name) }
         let settings = AppSettings(defaults: values)
-        settings.customMappingEnabled = true
         if longPress { settings.setAction(.commandQuit, for: .up, trigger: .longPress) }
         let scheduler = ControlledTestScheduler()
         var filtering = true

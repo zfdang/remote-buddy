@@ -17,7 +17,6 @@ struct RuntimeBoundaryTests {
         let (defaults, name) = values()
         defer { defaults.removePersistentDomain(forName: name) }
         let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
         settings.setAction(.commandQuit, for: .right)
         let profile = UUID()
         var observed = 0
@@ -43,7 +42,6 @@ struct RuntimeBoundaryTests {
         let (defaults, name) = values()
         defer { defaults.removePersistentDomain(forName: name) }
         let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
         let filter = KeyboardEventSuppressor(uptime: { 0 })
         let profile = UUID()
         let monitor = HIDRemoteMonitor(settings: settings, profileID: profile,

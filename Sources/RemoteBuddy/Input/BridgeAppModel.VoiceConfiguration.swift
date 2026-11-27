@@ -216,14 +216,8 @@ extension BridgeAppModel {
         applyHIDSettings()
     }
 
-    func requestNextHIDPermissionIfNeeded(
-        voiceFnTapModeRequested: Bool? = nil,
-        voiceKeyModeRequested: VoiceKeyMode? = nil
-    ) {
+    func requestNextHIDPermissionIfNeeded() {
         let request = HIDPermissionGate.nextPermissionRequest(
-            mappingEnabled: settings.customMappingEnabled,
-            voiceFnTapModeEnabled: (voiceFnTapModeRequested ?? settings.effectiveVoiceFnTapModeEnabled) || requiresOrderedVoiceFn,
-            voiceKeyMode: voiceKeyModeRequested ?? settings.effectiveVoiceKeyMode,
             inputMonitoringGranted: HIDRemoteMonitor.isInputMonitoringGranted,
             accessibilityGranted: KeyboardInjector.isAccessibilityTrusted
         )

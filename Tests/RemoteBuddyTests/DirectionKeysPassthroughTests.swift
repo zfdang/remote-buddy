@@ -108,7 +108,6 @@ struct DirectionKeysPassthroughTests {
     @Test(arguments: [false, true])
     func directPassthroughDispatchesKeyDownAndKeyUpWithoutRepeatPulses(isSeized: Bool) throws {
         try withSettings { settings in
-            settings.customMappingEnabled = true
             let profile = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
             settings.selectRemoteProfile(profile)
             settings.setAction(.directPassthrough, for: .right, trigger: .singleClick)
@@ -164,7 +163,6 @@ struct DirectionKeysPassthroughTests {
     @Test(arguments: ["disconnect", "cancelPending", "reset"])
     func watchdogReleasesHeldDirectPassthroughOnInterrupt(reason: String) throws {
         try withSettings { settings in
-            settings.customMappingEnabled = true
             let profile = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
             settings.selectRemoteProfile(profile)
             settings.setAction(.directPassthrough, for: .left, trigger: .singleClick)
@@ -214,7 +212,6 @@ struct DirectionKeysPassthroughTests {
 
     @Test func commonPhrasesCapturesDirectionKeysInsteadOfDirectPassthrough() throws {
         try withSettings { settings in
-            settings.customMappingEnabled = true
             let profile = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
             settings.selectRemoteProfile(profile)
             settings.setAction(.directPassthrough, for: .up, trigger: .singleClick)

@@ -10,7 +10,6 @@ struct NativePassthroughResetTests {
         let values = try #require(UserDefaults(suiteName: name))
         defer { values.removePersistentDomain(forName: name) }
         let settings = AppSettings(defaults: values)
-        settings.customMappingEnabled = true
         let profile = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         settings.selectRemoteProfile(profile)
         let clock = ControlledTestScheduler()

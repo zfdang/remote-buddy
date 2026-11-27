@@ -172,7 +172,7 @@ struct ActionFeedbackTests {
         let visibleFrame = CGRect(x: 0, y: 0, width: 1440, height: 900)
         let origin = ActionFeedbackLayout.origin(visibleFrame: visibleFrame, panelSize: CGSize(width: 300, height: 80))
         #expect(origin.x == 570)
-        let expectedBottomY = ActionFeedbackLayout.bubbleBottomInset + (visibleFrame.height * ActionFeedbackLayout.bottomHeightRatio).rounded()
+        let expectedBottomY: CGFloat = 34
         #expect(origin.y == expectedBottomY - ActionFeedbackLayout.contentPadding)
         let zeroPaddingOrigin = ActionFeedbackLayout.origin(
             visibleFrame: visibleFrame,

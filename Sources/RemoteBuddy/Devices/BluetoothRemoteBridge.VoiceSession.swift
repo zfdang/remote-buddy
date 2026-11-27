@@ -20,11 +20,12 @@ extension BluetoothRemoteBridge {
             AppLogger.shared.write("ATVV MIC_OPEN host_request_rejected")
             return false
         }
-        guard write(ATVVProtocol.microphoneOpen(
+        let submission = submitControlWrite(ATVVProtocol.microphoneOpen(
             version: capabilities.version,
             codec: capabilities.selectedCodec
-        )) else {
-            AppLogger.shared.write("ATVV MIC_OPEN host_request_write_failed")
+        ))
+        guard submission.isAccepted else {
+            AppLogger.shared.write("ATVV MIC_OPEN host_request_write_failed submission=\(submission.logDescription)")
             return false
         }
         cancelledMicrophoneOpenAt = nil
@@ -41,10 +42,16 @@ extension BluetoothRemoteBridge {
               let command = ATVVProtocol.microphoneExtend(
                   version: capabilities.version,
                   sessionID: sessionID
-              ),
-              write(command)
+              )
         else {
             AppLogger.shared.write("ATVV MIC_EXTEND rejected session=\(sessionID)")
+            return false
+        }
+        let submission = submitControlWrite(command)
+        guard submission.isAccepted else {
+            AppLogger.shared.write(
+                "ATVV MIC_EXTEND rejected session=\(sessionID) submission=\(submission.logDescription)"
+            )
             return false
         }
         AppLogger.shared.write("ATVV MIC_EXTEND request session=\(sessionID)")
@@ -62,10 +69,11 @@ extension BluetoothRemoteBridge {
             microphoneOpened: microphoneOpened,
             streaming: streaming
         )
-        let didWrite = write(ATVVProtocol.microphoneClose(
+        let submission = submitControlWrite(ATVVProtocol.microphoneClose(
             version: capabilities.version,
             sessionID: currentSession
         ))
+        let didWrite = submission.isAccepted
         if didWrite {
             microphoneOpened = false
             microphoneClosePending = false
@@ -83,11 +91,11 @@ extension BluetoothRemoteBridge {
             }
             scheduleMicrophoneCloseWatchdog(for: currentSession)
             AppLogger.shared.write(
-                "ATVV MIC_CLOSE write_failed session=\(currentSession) pending=true"
+                "ATVV MIC_CLOSE write_failed session=\(currentSession) pending=true submission=\(submission.logDescription)"
             )
         }
         AppLogger.shared.write(
-            "ATVV MIC_CLOSE request session=\(currentSession) written=\(didWrite)"
+            "ATVV MIC_CLOSE request session=\(currentSession) written=\(didWrite) submission=\(submission.logDescription)"
         )
         return didWrite
     }
@@ -204,17 +212,26 @@ extension BluetoothRemoteBridge {
         return nil
     }
 
-    @discardableResult
-    func write(_ data: Data) -> Bool {
+    func submitControlWrite(_ data: Data) -> ATVVCommandSubmission {
 #if DEBUG
         if let testingControlWriteHandler {
-            return testingControlWriteHandler(data)
+            return testingControlWriteHandler(data) ? .accepted : .rejected(.queueRejected)
         }
 #endif
-        guard peripheral != nil, let transmitCharacteristic else { return false }
-        guard let type = Self.controlWriteType(for: transmitCharacteristic.properties) else { return false }
-        if type == .withResponse { return acknowledgedWrites.enqueue(data) }
-        return unacknowledgedWrites.enqueue(data)
+        guard peripheral != nil else { return .rejected(.missingPeripheral) }
+        guard let transmitCharacteristic else { return .rejected(.missingCharacteristic) }
+        guard let type = Self.controlWriteType(for: transmitCharacteristic.properties) else {
+            return .rejected(.unsupportedProperties)
+        }
+        let accepted = type == .withResponse
+            ? acknowledgedWrites.enqueue(data)
+            : unacknowledgedWrites.enqueue(data)
+        return accepted ? .accepted : .rejected(.queueRejected)
+    }
+
+    @discardableResult
+    func write(_ data: Data) -> Bool {
+        submitControlWrite(data).isAccepted
     }
 
     func handleWriteReady(peripheral: CBPeripheral, generation: UInt64) {
@@ -251,8 +268,9 @@ extension BluetoothRemoteBridge {
               let peripheral
         else { return }
         guard !capabilitiesRequested else { return }
-        if !write(ATVVProtocol.getCapabilitiesV10) {
-            AppLogger.shared.write("ATVV CAPABILITIES write_failed")
+        let capsSubmission = submitControlWrite(ATVVProtocol.getCapabilitiesV10)
+        if !capsSubmission.isAccepted {
+            AppLogger.shared.write("ATVV CAPABILITIES write_failed submission=\(capsSubmission.logDescription)")
             if googleCandidate {
                 failInitialization(LocalizedMessage("google.remote.unconfirmed_identity"))
             } else {

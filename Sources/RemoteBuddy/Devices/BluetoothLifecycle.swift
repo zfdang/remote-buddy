@@ -500,6 +500,32 @@ enum BluetoothCentralRecoveryPolicy {
     }
 }
 
+enum ATVVCommandRejectionReason: String, Equatable {
+    case missingPeripheral = "missing_peripheral"
+    case missingCharacteristic = "missing_characteristic"
+    case unsupportedProperties = "unsupported_properties"
+    case queueRejected = "queue_rejected"
+}
+
+enum ATVVCommandSubmission: Equatable {
+    case accepted
+    case rejected(ATVVCommandRejectionReason)
+
+    var isAccepted: Bool {
+        if case .accepted = self { return true }
+        return false
+    }
+
+    var logDescription: String {
+        switch self {
+        case .accepted:
+            return "accepted"
+        case let .rejected(reason):
+            return "rejected_\(reason.rawValue)"
+        }
+    }
+}
+
 enum ATVVSessionGate {
     static let cancelledOpenSuppressionInterval: TimeInterval = 2
 

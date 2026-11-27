@@ -28,7 +28,7 @@ struct HIDHotPathIdempotencyTests {
             var hasMatchingHIDServices = true
             var allowWrites = true
             var primaryRegistryID: UInt64? = 123
-            var primaryLocationID: UInt32 = 9
+            var primaryLocationID: UInt32? = 9
             var hidMappings: [HIDUsageMapping] = []
             var recordedWrites: [(registryID: UInt64?, mappings: [HIDUsageMapping])] = []
             var secondaryService: (
@@ -1456,7 +1456,10 @@ struct HIDHotPathIdempotencyTests {
         #expect(counters.hidMappings.contains(originalPower))
     }
 
-    @Test func revokingAccessibilityWithPendingFnTapReleaseRestoresPowerWhilePreservingVoiceMapping() throws {
+    @Test(arguments: [UInt32(9), nil] as [UInt32?])
+    func revokingAccessibilityWithPendingFnTapReleaseRestoresPowerWhilePreservingVoiceMapping(
+        locationID: UInt32?
+    ) throws {
         let originalPower = HIDUsageMapping(
             source: RemoteHIDKeyMappingPolicy.suppressedRemotePowerKey.source,
             destination: 0x0007_0000_0045
@@ -1473,6 +1476,7 @@ struct HIDHotPathIdempotencyTests {
         let model = harness.model
         let settings = harness.settings
         let counters = harness.counters
+        counters.primaryLocationID = locationID
 
         let clock = ControlledTestScheduler()
         var canRelease = false
@@ -1488,7 +1492,7 @@ struct HIDHotPathIdempotencyTests {
         )
 
         model.applyHIDSettings()
-        #expect(model.voiceFunctionMapper.isPowerKeySuppressed)
+        #expect(model.voiceFunctionMapper.isPowerKeySuppressed == (locationID != nil))
         #expect(model.voiceFunctionMapper.isVoiceKeyNeutralized)
         #expect(counters.hidMappings.contains(RemoteHIDKeyMappingPolicy.suppressedRemotePowerKey))
         #expect(counters.hidMappings.contains(RemoteHIDKeyMappingPolicy.neutralRemoteVoiceKey))
@@ -1526,7 +1530,7 @@ struct HIDHotPathIdempotencyTests {
         clock.advance(to: 1200)
 
         #expect(!model.voiceFnTapSession.requiresCleanupBeforeMapping)
-        #expect(model.voiceFunctionMapper.isPowerKeySuppressed)
+        #expect(model.voiceFunctionMapper.isPowerKeySuppressed == (locationID != nil))
         #expect(counters.hidMappings.contains(RemoteHIDKeyMappingPolicy.suppressedRemotePowerKey))
         #expect(!model.voiceFunctionMapper.isVoiceKeyNeutralized)
         #expect(!counters.hidMappings.contains(RemoteHIDKeyMappingPolicy.neutralRemoteVoiceKey))

@@ -45,7 +45,7 @@ extension BridgeAppModel {
             settings.voiceFnTapModeEnabled = requestedFnTapMode
         }
         if !requestedFnTapMode, voiceFnTapSession.requiresCleanupBeforeMapping {
-            if !shouldSuppressPowerKey, voiceFunctionMapper.isPowerKeySuppressed {
+            if !shouldSuppressPowerKey {
                 _ = applyVoiceFunctionMapping(
                     neutralizeVoiceKey: voiceFunctionMapper.isVoiceKeyNeutralized || shouldNeutralizeNativeVoiceKey,
                     suppressPowerKey: false

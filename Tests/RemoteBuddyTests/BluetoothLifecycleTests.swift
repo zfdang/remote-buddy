@@ -1082,4 +1082,120 @@ struct BluetoothLifecycleTests {
         #expect(model.hidVerificationRecoveryAttempt == 0)
         #expect(model.hidMappingRecoveryWorkItem == nil)
     }
+
+    @Test func failedRollbackPreservesRecoveryJournalAndRestoresAfterRestart() throws {
+        let suite = UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let originalUserMapping = HIDUsageMapping(
+            source: RemoteHIDKeyMappingPolicy.remoteVoiceKey.source,
+            destination: 0x0000_0007_0000_0040
+        )
+        var backingMappings: [HIDUsageMapping] = [originalUserMapping]
+        var writeAttempt = 0
+        let mapper = RemoteHIDKeyMapper(
+            serviceProvider: {
+                [
+                    RemoteHIDMappingService(
+                        registryID: 55,
+                        locationID: 77,
+                        hasVirtualNamePrefix: false,
+                        family: .xiaomi,
+                        readMappings: { backingMappings },
+                        setMappings: { desired in
+                            writeAttempt += 1
+                            if writeAttempt == 1 {
+                                // Partial write accepted, but readback omits power suppression.
+                                backingMappings = [RemoteHIDKeyMappingPolicy.neutralRemoteVoiceKey]
+                                return true
+                            }
+                            // Snapshot rollback write fails: backingMappings stays overwritten.
+                            return false
+                        }
+                    ),
+                ]
+            },
+            recoveryDefaults: defaults,
+            bootID: "rollback-failure-journal"
+        )
+
+        #expect(!mapper.apply(suppressPowerKey: true, neutralizeVoiceKey: true))
+        #expect(mapper.lastApplyFailedVerification)
+        #expect(writeAttempt == 2)
+        #expect(backingMappings == [RemoteHIDKeyMappingPolicy.neutralRemoteVoiceKey])
+
+        // Simulate app restart with a fresh mapper reading the same journal: restore() must recover original mapping.
+        let restartedMapper = RemoteHIDKeyMapper(
+            serviceProvider: {
+                [
+                    RemoteHIDMappingService(
+                        registryID: 55,
+                        locationID: 77,
+                        hasVirtualNamePrefix: false,
+                        family: .xiaomi,
+                        readMappings: { backingMappings },
+                        setMappings: { restored in
+                            backingMappings = restored
+                            return true
+                        }
+                    ),
+                ]
+            },
+            recoveryDefaults: defaults,
+            bootID: "rollback-failure-journal"
+        )
+
+        restartedMapper.restore()
+        #expect(backingMappings == [originalUserMapping])
+    }
+
+    @Test func readbackRejectsLingeringRemovedManagedMappingsWhenExpectedVoiceMappingExists() throws {
+        let suite = UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let staleMappings = [
+            RemoteHIDKeyMappingPolicy.remoteVoiceKey,
+            RemoteHIDKeyMappingPolicy.suppressedRemotePowerKey,
+        ]
+        var appliedResult = staleMappings
+        let mapper = RemoteHIDKeyMapper(
+            serviceProvider: {
+                [
+                    RemoteHIDMappingService(
+                        registryID: 88,
+                        locationID: 99,
+                        hasVirtualNamePrefix: false,
+                        family: .xiaomi,
+                        readMappings: { appliedResult },
+                        setMappings: { _ in
+                            // System acknowledges write while leaving stale Power -> F20 intact.
+                            appliedResult = staleMappings
+                            return true
+                        }
+                    ),
+                ]
+            },
+            recoveryDefaults: defaults,
+            bootID: "lingering-power-mapping"
+        )
+
+        #expect(!mapper.apply(suppressPowerKey: false, neutralizeVoiceKey: false))
+        #expect(mapper.lastApplyFailedVerification)
+        #expect(!mapper.isPowerKeySuppressed)
+
+        // T1 managed-source readback check also rejects lingering suppressedT1PowerKey when suppression is off.
+        let t1Desired = RemoteHIDKeyMappingPolicy.applyingT1(
+            to: [],
+            neutralizeVoiceKeys: true,
+            powerMapping: nil
+        )
+        let t1StaleReadback = t1Desired + [RemoteHIDKeyMappingPolicy.suppressedT1PowerKey]
+        #expect(!RemoteHIDKeyMappingPolicy.readbackMatchesManagedSources(
+            desired: t1Desired,
+            readback: t1StaleReadback,
+            family: .t1Remote
+        ))
+    }
 }

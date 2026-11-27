@@ -155,8 +155,9 @@ final class HIDAppSwitcherCoordinator {
     }
 
     func cancelAll() {
-        if session.isActive {
-            _ = session.cancel()
+        let hadSession = session.isActive || session.hasPendingModifierRelease
+        _ = session.cancel()
+        if hadSession {
             diagnosticLogger("HID APP SWITCHER cancelled reason=monitors_stopped")
         }
         resetState()

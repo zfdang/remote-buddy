@@ -1,3 +1,4 @@
+import ApplicationServices
 import CoreGraphics
 import Foundation
 import Testing
@@ -303,5 +304,140 @@ struct AppSwitcherCancellationTests {
             ])
             #expect(session.trigger())
         }
+    }
+
+    @Test func coordinatorCancelAllImmediatelyAfterConfirmReleasesCommandAndOptionOnce() {
+        let clock = ControlledTestScheduler()
+        let owner = UUID()
+        var posted: [(code: CGKeyCode, down: Bool)] = []
+        let session = KeyboardInjector.AppSwitcherSession(
+            hardwareFlags: { [] },
+            keyStatePoster: { code, down, _, _ in
+                posted.append((code: code, down: down))
+                return true
+            },
+            scheduleRelease: clock.voiceSchedule
+        )
+        let coordinator = HIDAppSwitcherCoordinator(
+            session: session,
+            scheduler: clock,
+            frontmostBundleIdentifier: { "com.apple.Safari" },
+            switcherHUDVisible: { true },
+            diagnosticLogger: { _ in }
+        )
+
+        #expect(coordinator.trigger(for: .menu, trigger: .singleClick, owner: owner))
+        #expect(coordinator.handleControlPress(.ok, owner: owner))
+        #expect(!coordinator.isActive)
+        #expect(session.hasPendingModifierRelease)
+        posted.removeAll()
+
+        // Quit right after confirm before the 60ms release timer fires.
+        coordinator.cancelAll()
+        #expect(!session.hasPendingModifierRelease)
+        #expect(posted.filter { $0.code == KeyboardInjector.leftCommandKeyCode && !$0.down }.count == 1)
+        #expect(posted.filter { $0.code == KeyboardInjector.AppSwitcherSession.leftOptionKeyCode && !$0.down }.count == 1)
+        #expect(!posted.contains { $0.code == 53 })
+
+        clock.advance(to: 500)
+        #expect(posted.filter { $0.code == KeyboardInjector.leftCommandKeyCode && !$0.down }.count == 1)
+        #expect(posted.filter { $0.code == KeyboardInjector.AppSwitcherSession.leftOptionKeyCode && !$0.down }.count == 1)
+    }
+
+    @Test func coordinatorCancelAllWhileOnlyOptionPendingReleasesRemainingOptionOnce() {
+        let clock = ControlledTestScheduler()
+        let owner = UUID()
+        var posted: [(code: CGKeyCode, down: Bool)] = []
+        let session = KeyboardInjector.AppSwitcherSession(
+            hardwareFlags: { [] },
+            keyStatePoster: { code, down, _, _ in
+                posted.append((code: code, down: down))
+                return true
+            },
+            scheduleRelease: clock.voiceSchedule
+        )
+        let coordinator = HIDAppSwitcherCoordinator(
+            session: session,
+            scheduler: clock,
+            frontmostBundleIdentifier: { "com.apple.Safari" },
+            switcherHUDVisible: { true },
+            diagnosticLogger: { _ in }
+        )
+
+        #expect(coordinator.trigger(for: .menu, trigger: .singleClick, owner: owner))
+        #expect(coordinator.handleControlPress(.ok, owner: owner))
+        posted.removeAll()
+
+        // Advance 60ms so Command releases cleanly, leaving only Option pending.
+        clock.advance(to: 60)
+        #expect(posted.filter { $0.code == KeyboardInjector.leftCommandKeyCode && !$0.down }.count == 1)
+        #expect(posted.filter { $0.code == KeyboardInjector.AppSwitcherSession.leftOptionKeyCode && !$0.down }.isEmpty)
+        #expect(session.hasPendingModifierRelease)
+
+        // Quit before Option's 100ms release timer completes.
+        coordinator.cancelAll()
+        #expect(!session.hasPendingModifierRelease)
+        #expect(posted.filter { $0.code == KeyboardInjector.leftCommandKeyCode && !$0.down }.count == 1)
+        #expect(posted.filter { $0.code == KeyboardInjector.AppSwitcherSession.leftOptionKeyCode && !$0.down }.count == 1)
+        #expect(!posted.contains { $0.code == 53 })
+
+        clock.advance(to: 500)
+        #expect(posted.filter { $0.code == KeyboardInjector.leftCommandKeyCode && !$0.down }.count == 1)
+        #expect(posted.filter { $0.code == KeyboardInjector.AppSwitcherSession.leftOptionKeyCode && !$0.down }.count == 1)
+    }
+
+    @Test func dockSubroleTimeoutsKeepAppSwitcherActiveUntilVisibleAndAbsentPollsDismiss() {
+        let clock = ControlledTestScheduler()
+        let owner = UUID()
+        var posted: [(code: CGKeyCode, down: Bool)] = []
+        let session = KeyboardInjector.AppSwitcherSession(
+            hardwareFlags: { [] },
+            keyStatePoster: { code, down, _, _ in
+                posted.append((code: code, down: down))
+                return true
+            },
+            scheduleRelease: clock.voiceSchedule
+        )
+
+        var pollIndex = 0
+        let scriptedResponses: [[(error: AXError, value: String?)]] = [
+            [(error: .attributeUnsupported, value: nil), (error: .cannotComplete, value: nil)],
+            [(error: .cannotComplete, value: nil)],
+            [(error: .cannotComplete, value: nil)],
+            [(error: .attributeUnsupported, value: nil), (error: .success, value: "AXProcessSwitcherList")],
+            [(error: .attributeUnsupported, value: nil), (error: .noValue, value: nil)],
+            [(error: .noValue, value: nil)],
+        ]
+
+        let coordinator = HIDAppSwitcherCoordinator(
+            session: session,
+            scheduler: clock,
+            frontmostBundleIdentifier: { "com.apple.Safari" },
+            switcherHUDVisible: {
+                let index = min(pollIndex, scriptedResponses.count - 1)
+                pollIndex += 1
+                let children = scriptedResponses[index]
+                return KeyboardInjector.evaluateAppSwitcherHUDVisibility(children: children) { $0 }
+            },
+            diagnosticLogger: { _ in }
+        )
+
+        #expect(coordinator.trigger(for: .menu, trigger: .singleClick, owner: owner))
+
+        // Polls 1-3 experience transient `.cannotComplete` subrole timeouts: switcher stays active.
+        let pollInterval = HIDRemoteTiming.appSwitcherFrontmostPollMilliseconds
+        clock.advance(to: pollInterval * 3)
+        #expect(coordinator.isActive)
+
+        // Poll 4 recovers HUD visibility (`AXProcessSwitcherList`); navigation still works.
+        clock.advance(to: pollInterval * 4)
+        #expect(coordinator.isActive)
+        #expect(coordinator.handleControlPress(.right, owner: owner))
+
+        // Polls 5-6 return definitive absence (`.attributeUnsupported` / `.noValue`) twice -> dismiss without Escape.
+        clock.advance(to: pollInterval * 6)
+        #expect(!coordinator.isActive)
+        #expect(!posted.contains { $0.code == 53 })
+        #expect(posted.contains { $0.code == KeyboardInjector.leftCommandKeyCode && !$0.down })
     }
 }

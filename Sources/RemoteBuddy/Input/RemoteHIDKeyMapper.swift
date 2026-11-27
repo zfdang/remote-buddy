@@ -108,6 +108,34 @@ enum RemoteHIDKeyMappingPolicy {
         return desired
     }
 
+    static func managedSourceUsages(for family: RemoteHIDMappingFamily) -> Set<UInt64> {
+        switch family {
+        case .xiaomi:
+            return [remoteVoiceKey.source, suppressedRemotePowerKey.source]
+        case .t1Remote:
+            return [
+                neutralT1VoiceSearchKey.source,
+                neutralT1VoiceHoldKey.source,
+                suppressedT1PowerKey.source,
+            ]
+        }
+    }
+
+    static func readbackMatchesManagedSources(
+        desired: [HIDUsageMapping],
+        readback: [HIDUsageMapping],
+        family: RemoteHIDMappingFamily
+    ) -> Bool {
+        for source in managedSourceUsages(for: family) {
+            let expected = desired.filter { $0.source == source }
+            let actual = readback.filter { $0.source == source }
+            if actual != expected {
+                return false
+            }
+        }
+        return true
+    }
+
     static func restoring(
         originalVoiceMapping: HIDUsageMapping?,
         originalPowerMapping: HIDUsageMapping?,
@@ -595,7 +623,11 @@ final class RemoteHIDKeyMapper {
             }
             let writeSucceeded = service.setMappings(desired)
             let readback = writeSucceeded ? service.readMappings() : []
-            let readbackVerified = writeSucceeded && desired.allSatisfy { readback.contains($0) }
+            let readbackVerified = writeSucceeded && RemoteHIDKeyMappingPolicy.readbackMatchesManagedSources(
+                desired: desired,
+                readback: readback,
+                family: service.family
+            )
             AppLogger.shared.write(
                 "HID NATIVE MAPPING phase=write registry=\(String(format: "0x%llx", registryID)) " +
                     "result=\(readbackVerified ? "accepted" : "rejected") " +
@@ -603,20 +635,21 @@ final class RemoteHIDKeyMapper {
                     "virtual=\(service.hasVirtualNamePrefix.map(String.init) ?? "unknown")"
             )
             guard readbackVerified else {
-                if writeSucceeded, let snapshot = snapshots[index] {
-                    _ = service.setMappings(snapshot)
-                }
                 hadServiceVerificationFailure = true
                 if requiresCompleteMapping {
+                    let rollbackIndices = writeSucceeded ? appliedIndices + [index] : appliedIndices
                     rollback(
                         services: services,
                         snapshots: snapshots,
-                        appliedIndices: appliedIndices,
+                        appliedIndices: rollbackIndices,
                         newlyStoredRegistryIDs: newlyStoredRegistryIDs,
                         matchedCount: matchedCount
                     )
                     lastApplyFailedVerification = true
                     return false
+                }
+                if writeSucceeded, let snapshot = snapshots[index] {
+                    _ = service.setMappings(snapshot)
                 }
                 continue
             }
@@ -712,7 +745,12 @@ final class RemoteHIDKeyMapper {
         var rollbackCount = 0
         var registryIDsNeedingRestore = Set<UInt64>()
         for index in appliedIndices {
-            guard let snapshot = snapshots[index] else { continue }
+            guard let snapshot = snapshots[index] else {
+                if let registryID = services[index].registryID {
+                    registryIDsNeedingRestore.insert(registryID)
+                }
+                continue
+            }
             if services[index].setMappings(snapshot) {
                 rollbackCount += 1
             } else if let registryID = services[index].registryID {

@@ -776,6 +776,27 @@ extension KeyboardInjector {
         return nil
     }
 
+    static func evaluateAppSwitcherHUDVisibility<Child>(
+        children: [Child],
+        subroleResult: (Child) -> (error: AXError, value: String?)
+    ) -> Bool? {
+        var sawReadError = false
+        for child in children {
+            let result = subroleResult(child)
+            switch result.error {
+            case .success:
+                if result.value == "AXProcessSwitcherList" {
+                    return true
+                }
+            case .attributeUnsupported, .noValue:
+                continue
+            default:
+                sawReadError = true
+            }
+        }
+        return sawReadError ? nil : false
+    }
+
     /// Returns whether the macOS App Switcher HUD (`AXProcessSwitcherList` inside Dock)
     /// is currently visible (`true`), definitively absent (`false`), or unreadable (`nil`,
     /// e.g. missing Accessibility permission or AX lookup failure).
@@ -791,8 +812,15 @@ extension KeyboardInjector {
             dockElement,
             attribute: kAXChildrenAttribute
         ) as? [AXUIElement] else { return nil }
-        return children.contains {
-            axString($0, attribute: kAXSubroleAttribute) == "AXProcessSwitcherList"
+        AccessibilityMessaging.prepareQueries()
+        return evaluateAppSwitcherHUDVisibility(children: children) { child in
+            var value: CFTypeRef?
+            let error = AXUIElementCopyAttributeValue(
+                child,
+                kAXSubroleAttribute as CFString,
+                &value
+            )
+            return (error, value as? String)
         }
     }
 }

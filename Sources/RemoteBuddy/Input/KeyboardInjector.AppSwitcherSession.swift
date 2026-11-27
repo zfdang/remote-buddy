@@ -33,6 +33,10 @@ extension KeyboardInjector {
             lock.withLock { active }
         }
 
+        var hasPendingModifierRelease: Bool {
+            lock.withLock { ownedCommandPendingRelease || hasPendingOptionRelease }
+        }
+
         init(
             hardwareFlags: @escaping () -> CGEventFlags = KeyboardHardwareModifierPolicy.currentForAppSwitcher,
             keyStatePoster: @escaping OwnedKeyStatePoster = KeyboardInjector.postOwnedKeyState,

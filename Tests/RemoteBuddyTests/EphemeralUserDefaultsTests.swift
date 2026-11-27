@@ -78,18 +78,74 @@ struct EphemeralUserDefaultsTests {
         #expect(ephemeral.string(forKey: "anyFalse") == foundation.string(forKey: falseKey))
     }
 
-    @Test func doesNotCreatePreferenceFilesOnDisk() throws {
+    @Test func doesNotLeakWritesIntoStandardDomainOrCreatePreferenceFilesOnDisk() throws {
         let preferencesDirectory = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Preferences", isDirectory: true)
+        let probePrefix = "ephemeral-isolation-\(UUID().uuidString)"
         let probeSuite = "ephemeral-disk-guard-\(UUID().uuidString)"
         let probePlist = preferencesDirectory.appendingPathComponent("\(probeSuite).plist")
 
-        let defaults = try #require(EphemeralUserDefaults(suiteName: probeSuite))
-        defaults.set("value", forKey: "key")
-        defaults.set(123, forKey: "number")
-        _ = defaults.synchronize()
-        defaults.removePersistentDomain(forName: probeSuite)
+        let keyAnyString = "\(probePrefix)-any-string"
+        let keyAnyData = "\(probePrefix)-any-data"
+        let keyAnyArray = "\(probePrefix)-any-array"
+        let keyAnyDict = "\(probePrefix)-any-dict"
+        let keyAnyNumber = "\(probePrefix)-any-number"
+        let keyInt = "\(probePrefix)-int"
+        let keyFloat = "\(probePrefix)-float"
+        let keyDouble = "\(probePrefix)-double"
+        let keyBoolTrue = "\(probePrefix)-bool-true"
+        let keyBoolFalse = "\(probePrefix)-bool-false"
+        let keyURL = "\(probePrefix)-url"
+        let keyRegistered = "\(probePrefix)-registered"
+        let keyDomain = "\(probePrefix)-domain"
+        let allKeys = [
+            keyAnyString, keyAnyData, keyAnyArray, keyAnyDict, keyAnyNumber,
+            keyInt, keyFloat, keyDouble, keyBoolTrue, keyBoolFalse, keyURL,
+            keyRegistered, keyDomain,
+        ]
 
+        let defaultInstance = EphemeralUserDefaults()
+        let suitedInstance = try #require(EphemeralUserDefaults(suiteName: probeSuite))
+        let domainInstance = try #require(EphemeralUserDefaults(suiteName: probeSuite))
+
+        for defaults in [defaultInstance, suitedInstance] {
+            defaults.set("value" as Any, forKey: keyAnyString)
+            defaults.set(Data([0xAA, 0xBB]) as Any, forKey: keyAnyData)
+            defaults.set(["one", "two"] as Any, forKey: keyAnyArray)
+            defaults.set(["nested": "item"] as Any, forKey: keyAnyDict)
+            defaults.set(NSNumber(value: 99) as Any, forKey: keyAnyNumber)
+            defaults.set(123, forKey: keyInt)
+            defaults.set(Float(2.5), forKey: keyFloat)
+            defaults.set(3.75, forKey: keyDouble)
+            defaults.set(true, forKey: keyBoolTrue)
+            defaults.set(false, forKey: keyBoolFalse)
+            defaults.set(URL(fileURLWithPath: "/Applications/Remote Buddy.app"), forKey: keyURL)
+            defaults.register(defaults: [keyRegistered: "registered"])
+            _ = defaults.synchronize()
+        }
+        domainInstance.setPersistentDomain([keyDomain: "from-domain"], forName: probeSuite)
+        _ = domainInstance.synchronize()
+
+        // Verify isolation BEFORE any cleanup calls so leaked writes cannot be masked.
+        let standardRepresentation = UserDefaults.standard.dictionaryRepresentation()
+        for key in allKeys {
+            #expect(UserDefaults.standard.object(forKey: key) == nil)
+            #expect(standardRepresentation[key] == nil)
+        }
+        #expect(UserDefaults.standard.persistentDomain(forName: probeSuite) == nil)
+        #expect(!FileManager.default.fileExists(atPath: probePlist.path))
+
+        #expect(suitedInstance.integer(forKey: keyInt) == 123)
+        #expect(suitedInstance.bool(forKey: keyBoolTrue) == true)
+        #expect(suitedInstance.bool(forKey: keyBoolFalse) == false)
+        #expect(suitedInstance.url(forKey: keyURL) == URL(fileURLWithPath: "/Applications/Remote Buddy.app"))
+        #expect(domainInstance.string(forKey: keyDomain) == "from-domain")
+
+        defaultInstance.removePersistentDomain(forName: probeSuite)
+        suitedInstance.removePersistentDomain(forName: probeSuite)
+        domainInstance.removePersistentDomain(forName: probeSuite)
+        #expect(suitedInstance.persistentDomain(forName: probeSuite) == nil)
+        #expect(domainInstance.persistentDomain(forName: probeSuite) == nil)
         #expect(!FileManager.default.fileExists(atPath: probePlist.path))
     }
 

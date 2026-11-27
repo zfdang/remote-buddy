@@ -87,16 +87,71 @@ enum EventTapPort {
         CGEvent.tapEnable(tap: port, enable: true)
     }
 
-    /// 释放 tap 端口：先摘除 RunLoop source，再 disable，最后 invalidate。
+    /// 释放 tap 端口：先禁用再摘除 RunLoop source，最后 invalidate。
     ///
     /// `port` 为 nil 时只摘除 source；`source` 为 nil 时只处理端口，用于 tap 创建
     /// 中途失败、端口已登记但尚未接入 RunLoop 的情形。
-    static func release(port: CFMachPort?, source: CFRunLoopSource?) {
-        if let source {
-            CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes)
+    /// - Returns: `true` 表示端口已安全排空（RunLoop 移除确认或无需等待）；
+    ///   `false` 表示 RunLoop 线程在超时预算内未响应，调用方必须保留 `userInfo`
+    ///   回调上下文对象，避免仍在执行的回调访问已释放对象（UAF）。
+    @discardableResult
+    static func release(port: CFMachPort?, source: CFRunLoopSource?) -> Bool {
+        if let port {
+            CGEvent.tapEnable(tap: port, enable: false)
         }
-        guard let port else { return }
-        CGEvent.tapEnable(tap: port, enable: false)
-        CFMachPortInvalidate(port)
+        guard let source else {
+            if let port {
+                CFMachPortInvalidate(port)
+            }
+            return true
+        }
+
+        let mainRunLoop = CFRunLoopGetMain()
+        if Thread.isMainThread {
+            CFRunLoopRemoveSource(mainRunLoop, source, .commonModes)
+            if let port {
+                CFMachPortInvalidate(port)
+            }
+            return true
+        }
+
+        let semaphore = DispatchSemaphore(value: 0)
+        CFRunLoopPerformBlock(mainRunLoop, CFRunLoopMode.commonModes.rawValue) {
+            CFRunLoopRemoveSource(mainRunLoop, source, .commonModes)
+            if let port {
+                CFMachPortInvalidate(port)
+            }
+            semaphore.signal()
+        }
+        CFRunLoopWakeUp(mainRunLoop)
+
+        if semaphore.wait(timeout: .now() + .milliseconds(500)) == .success {
+            return true
+        }
+
+        // Fallback: invalidate even when the RunLoop did not respond in time so
+        // disabled taps cannot accumulate in WindowServer. Return false so the
+        // caller keeps the retained callback owner alive instead of causing UAF.
+        AppLogger.shared.write(
+            "EVENT TAP phase=timed_out action=release result=fallback reason=run_loop_timeout"
+        )
+        if let port {
+            CFMachPortInvalidate(port)
+        }
+        return false
+    }
+
+    /// 仅在端口已确认排空后释放回调持有的强引用；排空超时时有意保留对象避免 UAF。
+    static func finalizeOwnerRelease<Owner: AnyObject>(
+        _ owner: Unmanaged<Owner>?,
+        drained: Bool,
+        onRetainedFallback: () -> Void
+    ) {
+        guard let owner else { return }
+        if drained {
+            owner.release()
+        } else {
+            onRetainedFallback()
+        }
     }
 }

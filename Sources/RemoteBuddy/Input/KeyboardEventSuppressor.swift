@@ -41,17 +41,20 @@ final class KeyboardEventSuppressor {
     private let permissionsGranted: () -> Bool
     private let uptime: () -> TimeInterval
     private let tapOperations: TapOperations?
+    private let releasePort: (CFMachPort?, CFRunLoopSource?) -> Bool
 
     init(
         uptime: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime },
         permissionsGranted: @escaping () -> Bool = {
             HIDRemoteMonitor.isInputMonitoringGranted && KeyboardInjector.isAccessibilityTrusted
         },
-        tapOperations: TapOperations? = nil
+        tapOperations: TapOperations? = nil,
+        releasePort: @escaping (CFMachPort?, CFRunLoopSource?) -> Bool = EventTapPort.release
     ) {
         self.permissionsGranted = permissionsGranted
         self.uptime = uptime
         self.tapOperations = tapOperations
+        self.releasePort = releasePort
     }
 
     private func expireHeldEvents(at now: TimeInterval) {
@@ -66,6 +69,8 @@ final class KeyboardEventSuppressor {
     private var tapRecoveryGeneration = 0
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
+    /// Keeps the callback's `userInfo` object alive until the tap RunLoop drains.
+    private var tapOwner: Unmanaged<KeyboardEventSuppressor>?
     /// 最近 arm 过的事件（带过期时刻），仅用于诊断日志：只有与这些事件相关的
     /// 未命中才值得记录，避免被无关键盘输入淹没。
     private var recentArmed: [(event: RemoteNativeEvent, until: TimeInterval)] = []
@@ -105,7 +110,8 @@ final class KeyboardEventSuppressor {
         let eventMask = CGEventMask(1 << CGEventType.keyDown.rawValue) |
             CGEventMask(1 << CGEventType.keyUp.rawValue) |
             CGEventMask(1 << Self.systemDefinedEventTypeRawValue)
-        let context = Unmanaged.passUnretained(self).toOpaque()
+        let owner = Unmanaged.passRetained(self)
+        let context = owner.toOpaque()
         guard let eventTap = CGEvent.tapCreate(
             tap: .cgSessionEventTap,
             place: .headInsertEventTap,
@@ -114,6 +120,7 @@ final class KeyboardEventSuppressor {
             callback: keyboardEventSuppressorCallback,
             userInfo: context
         ) else {
+            owner.release()
             didTapCreationFailDespitePermissions = true
             return false
         }
@@ -124,13 +131,19 @@ final class KeyboardEventSuppressor {
         ) else {
             // tapCreate 成功即已在 WindowServer 侧登记端口；此处失败若不释放端口，
             // 该 tap 会残留到进程退出，必须与 stop() 走同一条清理路径。
-            EventTapPort.release(port: eventTap, source: nil)
+            let drained = releasePort(eventTap, nil)
+            EventTapPort.finalizeOwnerRelease(owner, drained: drained) {
+                AppLogger.shared.write(
+                    "HID FILTER phase=owner_retained action=start_cleanup result=fallback reason=tap_thread_unresponsive"
+                )
+            }
             didTapCreationFailDespitePermissions = false
             return false
         }
 
         self.eventTap = eventTap
         self.runLoopSource = runLoopSource
+        self.tapOwner = owner
         EventTapPort.activate(port: eventTap, source: runLoopSource)
         tapReady = true
         didTapCreationFailDespitePermissions = false
@@ -150,11 +163,27 @@ final class KeyboardEventSuppressor {
         recentArmed.removeAll()
         lock.unlock()
         tapOperations?.stop()
-        EventTapPort.release(port: eventTap, source: runLoopSource)
+        let port = eventTap
+        let source = runLoopSource
+        let owner = tapOwner
         runLoopSource = nil
         eventTap = nil
+        tapOwner = nil
         tapReady = false
+        let drained = releasePort(port, source)
+        EventTapPort.finalizeOwnerRelease(owner, drained: drained) {
+            AppLogger.shared.write(
+                "HID FILTER phase=stop_deferred result=owner_retained reason=tap_thread_unresponsive"
+            )
+        }
     }
+
+#if DEBUG
+    func installSimulatedRetainedOwnerForTesting() {
+        guard tapOwner == nil else { return }
+        tapOwner = Unmanaged.passRetained(self)
+    }
+#endif
 
     func arm(button: RemoteButton, edge: RemoteEventEdge) {
         arm(nativeEvents: button.nativeEvents, edge: edge)

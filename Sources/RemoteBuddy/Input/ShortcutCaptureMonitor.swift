@@ -33,10 +33,13 @@ final class ShortcutCaptureMonitor: @unchecked Sendable {
     private let accessibilityTrusted: () -> Bool
     private let dispatchCallback: CallbackDispatcher
     private let modifierIsPressed: (UInt16) -> Bool
+    private let releasePort: (CFMachPort?, CFRunLoopSource?) -> Bool
     private let lock = NSLock()
     private var captureGeneration: UInt64 = 0
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
+    /// Keeps the callback's `userInfo` object alive until the tap RunLoop drains.
+    private var tapOwner: Unmanaged<ShortcutCaptureMonitor>?
     private var didCapture = false
     private var pressedModifierKeyCodes: Set<UInt16> = []
     private var standaloneModifierCandidate: StandaloneKeyboardModifier?
@@ -52,13 +55,15 @@ final class ShortcutCaptureMonitor: @unchecked Sendable {
         dispatchCallback: @escaping CallbackDispatcher = { callback in
             nonisolated(unsafe) let callback = callback
             DispatchQueue.main.async { callback() }
-        }
+        },
+        releasePort: @escaping (CFMachPort?, CFRunLoopSource?) -> Bool = EventTapPort.release
     ) {
         self.onCapture = onCapture
         self.onUnavailable = onUnavailable
         self.accessibilityTrusted = accessibilityTrusted
         self.dispatchCallback = dispatchCallback
         self.modifierIsPressed = modifierIsPressed
+        self.releasePort = releasePort
     }
 
     func start() -> Result<Void, ShortcutCaptureStartFailure> {
@@ -76,7 +81,8 @@ final class ShortcutCaptureMonitor: @unchecked Sendable {
 
         resetCaptureState()
 
-        let context = Unmanaged.passUnretained(self).toOpaque()
+        let owner = Unmanaged.passRetained(self)
+        let context = owner.toOpaque()
         guard let eventTap = CGEvent.tapCreate(
             tap: .cgSessionEventTap,
             place: .headInsertEventTap,
@@ -85,6 +91,7 @@ final class ShortcutCaptureMonitor: @unchecked Sendable {
             callback: shortcutCaptureEventTapCallback,
             userInfo: context
         ) else {
+            owner.release()
             return .failure(.eventTapUnavailable)
         }
         guard let runLoopSource = CFMachPortCreateRunLoopSource(
@@ -94,18 +101,29 @@ final class ShortcutCaptureMonitor: @unchecked Sendable {
         ) else {
             // tapCreate 成功即已在 WindowServer 侧登记端口；此处失败若不释放端口，
             // 该 tap 会残留到进程退出，必须与 stop() 走同一条清理路径。
-            EventTapPort.release(port: eventTap, source: nil)
+            let drained = releasePort(eventTap, nil)
+            EventTapPort.finalizeOwnerRelease(owner, drained: drained) {
+                AppLogger.shared.write(
+                    "SHORTCUT CAPTURE phase=owner_retained action=start_cleanup result=fallback reason=tap_thread_unresponsive"
+                )
+            }
             return .failure(.eventTapUnavailable)
         }
 
         lock.lock()
         guard self.eventTap == nil else {
             lock.unlock()
-            EventTapPort.release(port: eventTap, source: runLoopSource)
+            let drained = releasePort(eventTap, runLoopSource)
+            EventTapPort.finalizeOwnerRelease(owner, drained: drained) {
+                AppLogger.shared.write(
+                    "SHORTCUT CAPTURE phase=owner_retained action=start_cleanup result=fallback reason=tap_thread_unresponsive"
+                )
+            }
             return .success(())
         }
         self.eventTap = eventTap
         self.runLoopSource = runLoopSource
+        self.tapOwner = owner
         lock.unlock()
         EventTapPort.activate(port: eventTap, source: runLoopSource)
         return .success(())
@@ -126,11 +144,28 @@ final class ShortcutCaptureMonitor: @unchecked Sendable {
         captureGeneration &+= 1
         let tap = eventTap
         let source = runLoopSource
+        let owner = tapOwner
         runLoopSource = nil
         eventTap = nil
+        tapOwner = nil
         lock.unlock()
-        EventTapPort.release(port: tap, source: source)
+        let drained = releasePort(tap, source)
+        EventTapPort.finalizeOwnerRelease(owner, drained: drained) {
+            AppLogger.shared.write(
+                "SHORTCUT CAPTURE phase=stop_deferred result=owner_retained reason=tap_thread_unresponsive"
+            )
+        }
     }
+
+#if DEBUG
+    func installSimulatedRetainedOwnerForTesting() {
+        lock.lock()
+        if tapOwner == nil {
+            tapOwner = Unmanaged.passRetained(self)
+        }
+        lock.unlock()
+    }
+#endif
 
     func handle(type: CGEventType, event: CGEvent) -> Bool {
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {

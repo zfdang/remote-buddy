@@ -25,7 +25,7 @@ struct ActionFeedbackTests {
         let center = ActionFeedbackCenter(
             now: { now },
             successDuration: 1.3,
-            failureDuration: 12,
+            failureDuration: 8,
             mergeWindow: 2,
             log: { logs.append($0) },
             pasteboardWriter: { _ in }
@@ -87,7 +87,7 @@ struct ActionFeedbackTests {
         let center = ActionFeedbackCenter(
             now: { now },
             successDuration: 1.3,
-            failureDuration: 12,
+            failureDuration: 8,
             mergeWindow: 2,
             log: { _ in },
             pasteboardWriter: { copied.append($0) }
@@ -109,6 +109,7 @@ struct ActionFeedbackTests {
             ),
             strings: strings
         )
+        #expect(ActionFeedbackCenter.defaultFailureDuration == 8)
         #expect(center.presentation?.kind == .failure)
         #expect(center.presentation?.action == .openSystemSettings)
 

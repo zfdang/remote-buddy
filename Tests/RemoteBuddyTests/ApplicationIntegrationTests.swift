@@ -314,7 +314,8 @@ struct ApplicationIntegrationTests {
         try withSettings { settings, _ in
             let model = BridgeAppModel(settings: settings)
             model.recordApplicationIntegrationStatus(.unavailable)
-            #expect(model.updateVoiceKeyState(streaming: true, forceSoftware: false, owner: .bluetooth))
+            #expect(model.updateVoiceKeyState(streaming: true, forceSoftware: false, owner: .bluetooth,
+                keySetter: { _, _ in true }))
             #expect(model.applicationIntegrationStatus == nil)
         }
     }

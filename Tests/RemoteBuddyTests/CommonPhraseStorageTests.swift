@@ -476,6 +476,7 @@ struct CommonPhraseVoiceKeyTests {
             entries: [CommonPhrase(id: "builtin-one", text: "好的", label: "好的")], bindings: [:]))
         let store = CommonPhraseStore(defaults: defaults, builtInData: data)
         let appModel = BridgeAppModel(settings: settings, commonPhraseStore: store)
+        appModel.voiceKeyStateSetter = { _, _ in true }
         let ownerBridge = BluetoothRemoteBridge(settings: settings, delegate: appModel, targetIdentifier: ownerBluetoothID)
         let foreignBridge = BluetoothRemoteBridge(settings: settings, delegate: appModel, targetIdentifier: foreignBluetoothID)
         appModel.connections.bridges[ownerBluetoothID] = ownerBridge

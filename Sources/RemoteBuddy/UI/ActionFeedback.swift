@@ -274,10 +274,12 @@ final class ActionFeedbackCenter: ObservableObject {
     private var eventHandlers: [ActionFeedbackAction: @MainActor () -> Void] = [:]
     private var standardHandlers: [ActionFeedbackAction: @MainActor () -> Void] = [:]
 
+    static let defaultFailureDuration: TimeInterval = 8
+
     init(
         now: @escaping () -> Date = Date.init,
         successDuration: TimeInterval = 1.3,
-        failureDuration: TimeInterval = 12,
+        failureDuration: TimeInterval = defaultFailureDuration,
         mergeWindow: TimeInterval = 2,
         copiedDuration: TimeInterval = 2,
         log: @escaping (String) -> Void = { AppLogger.shared.write($0) },

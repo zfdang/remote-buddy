@@ -114,7 +114,12 @@ struct HIDHotPathIdempotencyTests {
         voiceTool: OnboardingVoiceTool = .unselected,
         voiceFnTapModeEnabled: Bool = false,
         hasMatchingHIDServices: Bool = true,
-        secondaryServiceEnabled: Bool = false
+        secondaryServiceEnabled: Bool = false,
+        initialPermissionSnapshot: HIDPermissionSnapshot = HIDPermissionSnapshot(
+            inputMonitoringGranted: true,
+            accessibilityGranted: true
+        ),
+        initialHIDMappings: [HIDUsageMapping] = []
     ) throws -> Harness {
         let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
@@ -149,6 +154,8 @@ struct HIDHotPathIdempotencyTests {
         }
 
         let counters = Harness.Counters()
+        counters.permissionSnapshot = initialPermissionSnapshot
+        counters.hidMappings = initialHIDMappings
         counters.hasMatchingHIDServices = hasMatchingHIDServices
         counters.secondaryService.enabled = secondaryServiceEnabled
 
@@ -1372,5 +1379,80 @@ struct HIDHotPathIdempotencyTests {
         harness.startAndVerifyVoice()
         #expect(model.hidMappingRecoveryWorkItem != nil)
         #expect(model.hidMappingRecoveryAttempt == 1)
+    }
+
+    @Test func powerKeySuppressionFollowsMonitoringPermissionsAndRestoresOnRevocation() throws {
+        let originalPower = HIDUsageMapping(
+            source: RemoteHIDKeyMappingPolicy.suppressedRemotePowerKey.source,
+            destination: 0x0007_0000_0045
+        )
+        let harness = try makeHarness(
+            configureProfile: false,
+            hasMatchingHIDServices: true,
+            initialPermissionSnapshot: HIDPermissionSnapshot(
+                inputMonitoringGranted: false,
+                accessibilityGranted: true
+            ),
+            initialHIDMappings: [originalPower]
+        )
+        defer { harness.cleanup() }
+        let model = harness.model
+        let counters = harness.counters
+
+        // 1. With Input Monitoring missing, applyHIDSettings must not suppress Power or start monitors.
+        model.applyHIDSettings()
+        #expect(model.hidMonitors.isEmpty)
+        #expect(model.discoveryHIDMonitor?.isMonitoring == false)
+        #expect(!model.hidEventSuppressor.isRunning)
+        #expect(!model.voiceFunctionMapper.isPowerKeySuppressed)
+        #expect(!counters.hidMappings.contains(RemoteHIDKeyMappingPolicy.suppressedRemotePowerKey))
+        #expect(counters.hidMappings.contains(originalPower))
+
+        // 2. Granting Input Monitoring starts monitoring and applies Power -> F20.
+        counters.permissionSnapshot = HIDPermissionSnapshot(
+            inputMonitoringGranted: true,
+            accessibilityGranted: true
+        )
+        model.refreshHIDAfterPermissionChange()
+        #expect(model.discoveryHIDMonitor?.isMonitoring == true)
+        #expect(model.hidEventSuppressor.isRunning)
+        #expect(model.voiceFunctionMapper.isPowerKeySuppressed)
+        #expect(counters.hidMappings.contains(RemoteHIDKeyMappingPolicy.suppressedRemotePowerKey))
+        #expect(!counters.hidMappings.contains(originalPower))
+
+        // 3. Revoking Input Monitoring stops monitoring and restores the original Power mapping.
+        counters.permissionSnapshot = HIDPermissionSnapshot(
+            inputMonitoringGranted: false,
+            accessibilityGranted: true
+        )
+        model.refreshHIDAfterPermissionChange()
+        #expect(model.discoveryHIDMonitor?.isMonitoring == false)
+        #expect(!model.hidEventSuppressor.isRunning)
+        #expect(!model.voiceFunctionMapper.isPowerKeySuppressed)
+        #expect(!counters.hidMappings.contains(RemoteHIDKeyMappingPolicy.suppressedRemotePowerKey))
+        #expect(counters.hidMappings.contains(originalPower))
+
+        // 4. Re-granting Input Monitoring re-enables monitoring and Power suppression.
+        counters.permissionSnapshot = HIDPermissionSnapshot(
+            inputMonitoringGranted: true,
+            accessibilityGranted: true
+        )
+        model.refreshHIDAfterPermissionChange()
+        #expect(model.discoveryHIDMonitor?.isMonitoring == true)
+        #expect(model.hidEventSuppressor.isRunning)
+        #expect(model.voiceFunctionMapper.isPowerKeySuppressed)
+        #expect(counters.hidMappings.contains(RemoteHIDKeyMappingPolicy.suppressedRemotePowerKey))
+
+        // 5. Revoking Accessibility also tears down monitoring and restores the original Power mapping.
+        counters.permissionSnapshot = HIDPermissionSnapshot(
+            inputMonitoringGranted: true,
+            accessibilityGranted: false
+        )
+        model.refreshHIDAfterPermissionChange()
+        #expect(model.discoveryHIDMonitor?.isMonitoring == false)
+        #expect(!model.hidEventSuppressor.isRunning)
+        #expect(!model.voiceFunctionMapper.isPowerKeySuppressed)
+        #expect(!counters.hidMappings.contains(RemoteHIDKeyMappingPolicy.suppressedRemotePowerKey))
+        #expect(counters.hidMappings.contains(originalPower))
     }
 }

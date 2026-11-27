@@ -80,11 +80,12 @@ extension BridgeAppModel {
         }
         let profileID = activateRemoteProfile(for: bridge)
         let currentPermissionSnapshot = permissionSnapshotProvider()
+        let expectedPowerKeySuppression = currentPermissionSnapshot.canMonitor
         let neutralizeVoiceKey = shouldNeutralizeNativeVoiceKey
         let requiresT1VoiceKeySuppression = bridge.identifiedModel?.isT1Remote == true
         let currentServicesMatchDesiredMapping = voiceFunctionMapper
             .refreshAppliedMappingsValidity(
-                expectedPowerKeySuppression: true,
+                expectedPowerKeySuppression: expectedPowerKeySuppression,
                 expectedVoiceKeyNeutralization: neutralizeVoiceKey,
                 requiresT1VoiceKeySuppression: requiresT1VoiceKeySuppression
             )
@@ -119,7 +120,7 @@ extension BridgeAppModel {
             accessibilityGranted: currentPermissionSnapshot.accessibilityGranted,
             requiresOrderedFn: requiresOrderedVoiceFn,
             nativeVoiceMappingIsValid: !requiresT1VoiceKeySuppression || voiceFunctionMapper.refreshAppliedMappingsValidity(
-                expectedPowerKeySuppression: true,
+                expectedPowerKeySuppression: expectedPowerKeySuppression,
                 expectedVoiceKeyNeutralization: neutralizeVoiceKey,
                 requiresT1VoiceKeySuppression: true
             )

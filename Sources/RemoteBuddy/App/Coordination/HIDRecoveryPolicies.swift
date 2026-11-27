@@ -8,6 +8,10 @@ import Foundation
 struct HIDMonitoringPermissions: Equatable {
     let inputMonitoringGranted: Bool
     let accessibilityGranted: Bool
+
+    var canMonitor: Bool {
+        inputMonitoringGranted && accessibilityGranted
+    }
 }
 
 struct HIDPermissionSnapshot: Equatable {
@@ -20,6 +24,10 @@ struct HIDPermissionSnapshot: Equatable {
             inputMonitoringGranted: inputMonitoringGranted,
             accessibilityGranted: accessibilityGranted
         )
+    }
+
+    var canMonitor: Bool {
+        monitoringPermissions.canMonitor
     }
 
     init(

@@ -133,13 +133,16 @@ extension BridgeAppModel {
     private var currentVoiceSource: RemoteInputSource { voiceSession.isActive ? .bluetoothRemote : .unknown }
 
     @discardableResult
-    func applyVoiceFunctionMapping(neutralizeVoiceKey: Bool) -> Bool {
+    func applyVoiceFunctionMapping(
+        neutralizeVoiceKey: Bool,
+        suppressPowerKey: Bool
+    ) -> Bool {
         voiceFunctionMapper.additionalIdentities = Set(settings.compatibleHIDIdentities(
             includeXiaomi: true, includeGoogle: false))
         voiceFunctionMapper.t1Identities = Set(settings.compatibleHIDIdentities(
             includeXiaomi: false, includeGoogle: false, includeT1: true))
         let applied = voiceFunctionMapper.apply(
-            suppressPowerKey: true,
+            suppressPowerKey: suppressPowerKey,
             neutralizeVoiceKey: neutralizeVoiceKey
         )
         if !isStreaming {

@@ -15,6 +15,7 @@ extension BridgeAppModel {
             return
         }
         let permissionSnapshot = permissionSnapshotProvider()
+        let shouldSuppressPowerKey = permissionSnapshot.canMonitor
         appliedHIDPermissionSnapshot = permissionSnapshot
         if !permissionSnapshot.inputMonitoringGranted || !permissionSnapshot.accessibilityGranted {
             // Detach input filtering before system calls and the Fn-cleanup early return below.
@@ -59,11 +60,14 @@ extension BridgeAppModel {
             // ATVV remotes have no native Fn, while Xiaomi/T1 HID services still need
             // their global UserKeyMapping policy while this card is selected.
             let atvvPowerKeySuppressed = applyVoiceFunctionMapping(
-                neutralizeVoiceKey: shouldNeutralizeNativeVoiceKey)
+                neutralizeVoiceKey: shouldNeutralizeNativeVoiceKey,
+                suppressPowerKey: shouldSuppressPowerKey
+            )
             voiceFnTapSession.setEnabled(requestedFnTapMode && accessibilityGranted)
             startHIDMonitors(
                 powerKeySuppressed: atvvPowerKeySuppressed,
-                forceRestart: forceRestartMonitors
+                forceRestart: forceRestartMonitors,
+                permissionSnapshot: permissionSnapshot
             )
             if settings.selectedRemoteProfile?.model.isT1Remote == true {
                 completeHIDMappingRecoveryIfNeeded()
@@ -84,13 +88,19 @@ extension BridgeAppModel {
         var powerKeySuppressed: Bool
         if requiresOrderedVoiceFn {
             voiceFnTapSession.setEnabled(false)
-            powerKeySuppressed = applyVoiceFunctionMapping(neutralizeVoiceKey: true)
+            powerKeySuppressed = applyVoiceFunctionMapping(
+                neutralizeVoiceKey: true,
+                suppressPowerKey: shouldSuppressPowerKey
+            )
             if !voiceFunctionMapper.isVoiceKeyNeutralized {
                 voiceShortcutStatus = LocalizedMessage("voice_button.status.waiting")
                 AppLogger.shared.write("VOICE KEY ordered_fn waiting reason=native_key_not_neutralized")
             }
         } else if requestedFnTapMode, accessibilityGranted {
-            powerKeySuppressed = applyVoiceFunctionMapping(neutralizeVoiceKey: true)
+            powerKeySuppressed = applyVoiceFunctionMapping(
+                neutralizeVoiceKey: true,
+                suppressPowerKey: shouldSuppressPowerKey
+            )
             if voiceFunctionMapper.isVoiceKeyNeutralized {
                 voiceFnTapSession.setEnabled(true)
             } else if !canFallbackVoiceKeyMode, isStreaming {
@@ -112,10 +122,16 @@ extension BridgeAppModel {
             } else {
                 if !settings.isTestingVoiceTrigger { settings.voiceFnTapModeEnabled = false }
                 voiceFnTapSession.setEnabled(false)
-                powerKeySuppressed = applyVoiceFunctionMapping(neutralizeVoiceKey: false)
+                powerKeySuppressed = applyVoiceFunctionMapping(
+                    neutralizeVoiceKey: false,
+                    suppressPowerKey: shouldSuppressPowerKey
+                )
             }
         } else if requestedVoiceKeyMode != .function {
-            powerKeySuppressed = applyVoiceFunctionMapping(neutralizeVoiceKey: true)
+            powerKeySuppressed = applyVoiceFunctionMapping(
+                neutralizeVoiceKey: true,
+                suppressPowerKey: shouldSuppressPowerKey
+            )
             if !voiceFunctionMapper.isVoiceKeyNeutralized {
                 if voiceFunctionMapper.hasMatchingServices {
                     if isStreaming {
@@ -126,7 +142,10 @@ extension BridgeAppModel {
                         )
                     } else if canFallbackVoiceKeyMode && !settings.isTestingVoiceTrigger {
                         settings.voiceKeyMode = .function
-                        powerKeySuppressed = applyVoiceFunctionMapping(neutralizeVoiceKey: false)
+                        powerKeySuppressed = applyVoiceFunctionMapping(
+                            neutralizeVoiceKey: false,
+                            suppressPowerKey: shouldSuppressPowerKey
+                        )
                         AppLogger.shared.write(
                             "VOICE KEY mode_fallback reason=voice_mapping_failed " +
                                 "mode=\(requestedVoiceKeyMode.rawValue)"
@@ -166,11 +185,15 @@ extension BridgeAppModel {
                 if !settings.isTestingVoiceTrigger { settings.voiceFnTapModeEnabled = false }
             }
             voiceFnTapSession.setEnabled(false)
-            powerKeySuppressed = applyVoiceFunctionMapping(neutralizeVoiceKey: false)
+            powerKeySuppressed = applyVoiceFunctionMapping(
+                neutralizeVoiceKey: false,
+                suppressPowerKey: shouldSuppressPowerKey
+            )
         }
         startHIDMonitors(
             powerKeySuppressed: powerKeySuppressed,
-            forceRestart: forceRestartMonitors
+            forceRestart: forceRestartMonitors,
+            permissionSnapshot: permissionSnapshot
         )
         completeHIDMappingRecoveryIfNeeded()
         if voiceFunctionMapper.lastApplyFailedVerification {
@@ -330,12 +353,17 @@ extension BridgeAppModel {
         )
     }
 
-    func startHIDMonitors(powerKeySuppressed: Bool, forceRestart: Bool = false) {
+    func startHIDMonitors(
+        powerKeySuppressed: Bool,
+        forceRestart: Bool = false,
+        permissionSnapshot: HIDPermissionSnapshot? = nil
+    ) {
         guard !audio.suspensionState.suspendsHIDMonitoring else {
             stopHIDMonitors()
             hidMonitoringInterrupted = true
             return
         }
+        let permissions = permissionSnapshot ?? permissionSnapshotProvider()
         let allowedLocationIDs: Set<UInt32>? = voiceFunctionMapper.powerSuppressedLocationIDs
         let targets = settings.remoteDeviceProfiles.compactMap { profile -> HIDMonitorTargetConfiguration? in
             // Siri keeps a separate adapter. Xiaomi and G9N9N share the public HID engine.
@@ -359,7 +387,7 @@ extension BridgeAppModel {
                 includeT1: true
             ),
             excludedDiscoveryFingerprints: settings.excludedForgottenHIDFingerprints(),
-            monitoringPermissions: permissionSnapshotProvider().monitoringPermissions
+            monitoringPermissions: permissions.monitoringPermissions
         )
         if canReuseRunningHIDMonitors(for: desiredConfiguration, forceRestart: forceRestart) {
             hidPowerKeySuppressed = powerKeySuppressed
@@ -371,12 +399,11 @@ extension BridgeAppModel {
         stopHIDMonitors()
         hidPowerKeySuppressed = powerKeySuppressed
         hidAllowedLocationIDs = allowedLocationIDs
-        let filterStarted = hidEventSuppressor.start()
-        hidFilterFailureState = (!filterStarted && hidEventSuppressor.didTapCreationFailDespitePermissions)
+        let filterStarted = permissions.canMonitor ? hidEventSuppressor.start() : false
+        hidFilterFailureState = (permissions.canMonitor && !filterStarted && hidEventSuppressor.didTapCreationFailDespitePermissions)
             ? .tapCreateFailed
             : .none
-        if !filterStarted {
-            let permissions = permissionSnapshotProvider()
+        if permissions.canMonitor, !filterStarted {
             AppLogger.shared.write(
                 "HID FILTER start_failed tap_create_denied=\(hidEventSuppressor.didTapCreationFailDespitePermissions) " +
                     "input_monitoring=\(permissions.inputMonitoringGranted) " +
@@ -845,7 +872,7 @@ extension BridgeAppModel {
         guard pendingHIDServiceMappingRefresh, canRefreshHIDMappingsNow else { return }
         pendingHIDServiceMappingRefresh = false
         let requiresReapply = voiceFunctionMapper.needsReapply(
-            suppressPowerKey: true,
+            suppressPowerKey: permissionSnapshotProvider().canMonitor,
             neutralizeVoiceKey: shouldNeutralizeNativeVoiceKey
         )
         if requiresReapply {

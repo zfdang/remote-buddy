@@ -255,6 +255,7 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
     var voiceSilenceNoticeTimer: DispatchSourceTimer?
     lazy var voiceSilenceNoticeController = VoiceSilenceNoticeController()
     var onVoiceSilenceNoticePresented: ((_ title: String, _ text: String) -> Void)?
+    var actionFeedbackCenter: ActionFeedbackCenter = .shared
     let hidEventSuppressor: KeyboardEventSuppressor
     var appSwitcherCoordinator = HIDAppSwitcherCoordinator()
     let permissionSnapshotProvider: () -> HIDPermissionSnapshot

@@ -63,6 +63,8 @@ final class AppSettings: ObservableObject {
         static let voiceFnTapModeEnabled = "voiceFnTapModeEnabled"
         static let voiceKeyMode = "voiceKeyMode"
         static let voiceAutoStopMinutes = "voiceAutoStopMinutes"
+        static let hideAllActionFeedback = "hideAllActionFeedback"
+        static let hideSuccessActionFeedback = "hideSuccessActionFeedback"
         static let lastLaunchedBuild = "launch.lastLaunchedBuild"
         static let onboardingPurpose = "onboarding.purpose"
         static let onboardingCompletedVersion = "onboarding.completedVersion"
@@ -296,6 +298,18 @@ final class AppSettings: ObservableObject {
     @Published var voiceAutoStopDuration: VoiceAutoStopDuration {
         didSet {
             defaults.set(voiceAutoStopDuration.rawValue, forKey: Keys.voiceAutoStopMinutes)
+        }
+    }
+
+    @Published var hideAllActionFeedback: Bool {
+        didSet {
+            defaults.set(hideAllActionFeedback, forKey: Keys.hideAllActionFeedback)
+        }
+    }
+
+    @Published var hideSuccessActionFeedback: Bool {
+        didSet {
+            defaults.set(hideSuccessActionFeedback, forKey: Keys.hideSuccessActionFeedback)
         }
     }
 
@@ -595,6 +609,8 @@ final class AppSettings: ObservableObject {
         let storedVoiceAutoStopMinutes = (defaults.object(forKey: Keys.voiceAutoStopMinutes) as? NSNumber)?.intValue
         voiceAutoStopDuration = storedVoiceAutoStopMinutes
             .flatMap(VoiceAutoStopDuration.init(rawValue:)) ?? .fiveMinutes
+        hideAllActionFeedback = defaults.bool(forKey: Keys.hideAllActionFeedback)
+        hideSuccessActionFeedback = defaults.bool(forKey: Keys.hideSuccessActionFeedback)
         onboardingPurpose = defaults.string(forKey: Keys.onboardingPurpose)
             .flatMap(OnboardingPurpose.init(rawValue:)) ?? .initialSetup
         onboardingCompletedVersion = defaults.integer(forKey: Keys.onboardingCompletedVersion)

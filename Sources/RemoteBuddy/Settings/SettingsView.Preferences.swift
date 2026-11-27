@@ -62,6 +62,47 @@ extension SettingsView {
                     }
                 }
 
+                aboutSection(titleKey: "settings.general.action_feedback.title") {
+                    VStack(alignment: .leading, spacing: 0) {
+                        HStack(spacing: 14) {
+                            Image(systemName: "bell.badge")
+                                .font(.title3)
+                                .foregroundStyle(Color.accentColor)
+                                .frame(width: 34)
+                            Text(localization.text("settings.general.hide_all_action_feedback"))
+                                .font(.subheadline.weight(.semibold))
+                            Spacer(minLength: 20)
+                            Toggle("", isOn: $settings.hideAllActionFeedback)
+                                .labelsHidden()
+                                .accessibilityLabel(localization.text("settings.general.hide_all_action_feedback"))
+                                .toggleStyle(.switch)
+                        }
+                        .padding(.vertical, 8)
+                        Divider()
+                        HStack(spacing: 14) {
+                            Image(systemName: "checkmark.circle")
+                                .font(.title3)
+                                .foregroundStyle(Color.accentColor)
+                                .frame(width: 34)
+                            Text(localization.text("settings.general.hide_success_action_feedback"))
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(settings.hideAllActionFeedback ? .secondary : .primary)
+                            Spacer(minLength: 20)
+                            Toggle("", isOn: $settings.hideSuccessActionFeedback)
+                                .labelsHidden()
+                                .accessibilityLabel(localization.text("settings.general.hide_success_action_feedback"))
+                                .toggleStyle(.switch)
+                                .disabled(settings.hideAllActionFeedback)
+                        }
+                        .padding(.vertical, 8)
+                        Text(localization.text("settings.general.action_feedback.help"))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.top, 4)
+                    }
+                }
+
                 aboutSection(titleKey: "settings.general.display_group") {
                     VStack(spacing: 0) {
                         preferenceRow(symbol: "dock.rectangle", titleKey: "about.preferences.show_dock_icon", detailKey: "about.preferences.show_dock_icon_help") {

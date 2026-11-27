@@ -136,7 +136,7 @@
     <details class="troubleshooting-card">
       <summary><span class="troubleshooting-question">What actions can I assign in Button Mapping, and what are some practical examples?</span></summary>
       <div class="troubleshooting-body">
-        <p>On the <strong>Button Mapping</strong> tab, you can independently customize <strong>Single Press</strong>, <strong>Double Press</strong>, and <strong>Long Press</strong> gestures for every physical key (except the dedicated Voice button). Each remote saves its own configuration independently.</p>
+        <p>On the <strong>Button Mapping</strong> tab, you can independently customize <strong>Single Press</strong>, <strong>Double Press</strong>, and <strong>Long Press</strong> gestures for every physical key supported by your remote model (for example, the T1 Remote's directional pad and OK button stay native system inputs and do not appear in the mapping list). Each remote saves its own configuration independently.</p>
         <p><strong>Available action categories:</strong></p>
         <ul>
           <li><strong>Basic Keys:</strong> Frequent editing and navigation shortcuts such as Return, Send (<code>⌘↩</code>), Shift+Return, Copy/Paste, Undo, cursor arrows, and scrolling.</li>
@@ -149,13 +149,13 @@
               <li><strong>Open URL / URL Scheme:</strong> Enter any web link (<code>https://...</code>) or app URL scheme such as Apple Shortcuts (<code>shortcuts://run-shortcut?name=MyShortcut</code>) to launch websites or trigger multi-step workflows safely.</li>
             </ul>
           </li>
-          <li><strong>Direct Passthrough (directional keys):</strong> Acts like a physical arrow key with zero gesture delay, ideal for holding Right Arrow to fast-forward video playback or continuous cursor movement.</li>
+          <li><strong>Direct Passthrough (for models with mappable directional keys):</strong> Acts like a physical arrow key with zero gesture delay, ideal for holding Right Arrow to fast-forward video playback or continuous cursor movement (on the T1 Remote, directional keys remain native system inputs).</li>
         </ul>
         <p><strong>Common setup examples:</strong></p>
         <ol>
           <li><strong>Launch a favorite app with one button:</strong> Map the <code>YouTube</code> or <code>NETFLIX</code> key's single press to <strong>Open an App</strong> (or <strong>Open Custom App</strong> for <code>Cursor</code> or <code>WeChat</code>) so one tap brings it forward ready for voice input.</li>
           <li><strong>Open a web app or run an Apple Shortcut combo:</strong> Assign a spare key or double press to <strong>Open URL / URL Scheme</strong>—use <code>https://chatgpt.com</code> to jump straight to a site, or <code>shortcuts://run-shortcut?name=WorkMode</code> to execute a multi-step Apple Shortcut workflow.</li>
-          <li><strong>Layer custom shortcuts onto Long Press:</strong> Keep single press intuitive (like OK = Return, Long Press = Send), and map another key's long press to a <strong>Custom Shortcut</strong> such as <code>⇧⌘P</code> or <code>⌘Space</code> to double your shortcuts without cluttering single taps.</li>
+          <li><strong>Layer custom shortcuts onto Long Press:</strong> Keep single press intuitive (like OK = Return, Long Press = Send; on the T1 Remote, OK stays native, so use another mappable key), and map another key's long press to a <strong>Custom Shortcut</strong> such as <code>⇧⌘P</code> or <code>⌘Space</code> to double your shortcuts without cluttering single taps.</li>
         </ol>
       </div>
     </details>
@@ -174,9 +174,9 @@
         <p><strong>Automatic switching:</strong> Whenever a configured app is your frontmost window, Remote Buddy automatically applies its overrides; as soon as you switch to another app, buttons immediately fall back to your remote's defaults (or the newly focused app's overrides).</p>
         <p><strong>Common examples:</strong></p>
         <ul>
-          <li><strong>Browsers &amp; video players (Chrome, Safari, IINA):</strong> Override Right Arrow to Direct Passthrough for hold-to-2x playback speed and OK to Play/Pause, while keeping normal arrows and Return/Send everywhere else.</li>
+          <li><strong>Browsers &amp; video players (Chrome, Safari, IINA):</strong> Override Right Arrow to Direct Passthrough for hold-to-2x playback speed and OK to Play/Pause, while keeping normal arrows and Return/Send everywhere else (applies to models with mappable directional and OK buttons, such as Xiaomi and G9N9N; on the T1 Remote, directional and OK buttons stay native, so choose another mappable key).</li>
           <li><strong>Code editors &amp; terminals (Cursor, VS Code, Antigravity):</strong> Map a convenient button to the command palette (<code>⇧⌘P</code>) or submit shortcut only while coding.</li>
-          <li><strong>Presentation apps (Keynote / PowerPoint):</strong> Dedicate arrow buttons to slide navigation without altering your global defaults.</li>
+          <li><strong>Presentation apps (Keynote / PowerPoint):</strong> Dedicate arrow buttons to slide navigation without altering your global defaults (applies to models with mappable directional keys; T1 Remote arrow keys remain native system inputs).</li>
         </ul>
       </div>
     </details>

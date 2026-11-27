@@ -136,7 +136,7 @@
     <details class="troubleshooting-card">
       <summary><span class="troubleshooting-question">“按键映射”里每个按键都可以设置哪些动作？有什么常见的设置例子？</span></summary>
       <div class="troubleshooting-body">
-        <p>在「按键映射」页面中，除语音键外，每颗实体按键的<strong>单击、双击、长按</strong>都可以分别设置不同动作，并且每台遥控器的配置互不干扰、独立保存。</p>
+        <p>在「按键映射」页面中，除语音键外，该型号支持映射的实体按键均可分别设置<strong>单击、双击、长按</strong>动作（例如 T1 遥控器的方向键与 OK 键保留系统原生输入，不在映射列表中），并且每台遥控器的配置互不干扰、独立保存。</p>
         <p><strong>目前可为每个键位设置的动作分为以下几类：</strong></p>
         <ul>
           <li><strong>基础按键：</strong>如回车、发送（<code>⌘↩</code>）、换行、复制/粘贴、撤销、上下左右光标与页面滚动等高频编辑操作。</li>
@@ -149,13 +149,13 @@
               <li><strong>打开网址 / URL Scheme：</strong>填写网页链接（如 <code>https://...</code>）或应用协议（如苹果原生<strong>「快捷指令」</strong>的 <code>shortcuts://run-shortcut?name=名称</code>），一键打开页面或执行多步快捷指令组合动作。</li>
             </ul>
           </li>
-          <li><strong>原样透传（方向键可选）：</strong>作为纯方向键直接按下/抬起，0 延迟响应，适合视频播放器长按倍速或光标持续移动。</li>
+          <li><strong>原样透传（支持方向键映射的型号可选）：</strong>作为纯方向键直接按下/抬起，0 延迟响应，适合视频播放器长按倍速或光标持续移动（T1 遥控器方向键已固定为系统原生输入）。</li>
         </ul>
         <p><strong>常见设置示例：</strong></p>
         <ol>
           <li><strong>单键秒开常用程序并直接开聊：</strong>把遥控器上的 <code>YouTube</code> 或 <code>Netflix</code> 键单击设为<strong>「打开具体 APP」</strong>（或「打开自定义 APP」选择 <code>Cursor</code> / <code>微信</code>），点一下切过去就能直接按语音键说话。</li>
           <li><strong>单键打开网页或联动「快捷指令」做组合动作：</strong>把空闲键（例如 <code>信源键</code> 或 <code>返回键</code> 双击）设为<strong>「打开网址 / URL Scheme」</strong>——填入 <code>https://chatgpt.com</code> 即可一键打开网页版；或填入 <code>shortcuts://run-shortcut?name=工作模式</code>，按一下就能运行你编排好的多步「快捷指令」组合动作。</li>
-          <li><strong>用“长按”扩展自定义快捷键：</strong>例如保留 <code>确定键</code> 单击为回车、长按为发送；再把 <code>静音键</code> 长按设为<strong>「自定义快捷键」</strong>（如 <code>⌘Space</code> 或编辑器命令面板 <code>⇧⌘P</code>），让一颗按键同时承担多种高频操作。</li>
+          <li><strong>用“长按”扩展自定义快捷键：</strong>例如保留 <code>确定键</code> 单击为回车、长按为发送（T1 的 OK 键保留原生输入，可改用其他可映射按键）；再把 <code>静音键</code> 长按设为<strong>「自定义快捷键」</strong>（如 <code>⌘Space</code> 或编辑器命令面板 <code>⇧⌘P</code>），让一颗按键同时承担多种高频操作。</li>
         </ol>
       </div>
     </details>
@@ -174,9 +174,9 @@
         <p><strong>自动生效机制：</strong>当已配置的应用处于前台窗口时，按下遥控器按键会自动使用该应用的专属映射；切换到其他应用时，立即恢复默认映射（或切换为目标应用的专属映射）。</p>
         <p><strong>常见使用示例：</strong></p>
         <ul>
-          <li><strong>视频播放器 / 浏览器（如 Chrome、Safari、IINA）：</strong>将方向右键覆盖为「原样透传」实现长按倍速播放、确定键设为播放/暂停，切回聊天或编辑器后自动恢复常规方向键与回车/发送。</li>
+          <li><strong>视频播放器 / 浏览器（如 Chrome、Safari、IINA）：</strong>将方向右键覆盖为「原样透传」实现长按倍速播放、确定键设为播放/暂停，切回聊天或编辑器后自动恢复常规方向键与回车/发送（适用于支持方向键与 OK 键映射的型号，如小米与 G9N9N；T1 遥控器方向键与 OK 键保留系统原生输入，可改用其他可映射按键）。</li>
           <li><strong>代码编辑器 / 终端（如 Cursor、VS Code、Antigravity）：</strong>把常用键覆盖为命令面板（<code>⇧⌘P</code>）或确认快捷键，不影响全局默认按键。</li>
-          <li><strong>演示文稿（Keynote / PowerPoint）：</strong>将方向键设为翻页控制，退出或切回日常软件时无缝还原。</li>
+          <li><strong>演示文稿（Keynote / PowerPoint）：</strong>将方向键设为翻页控制，退出或切回日常软件时无缝还原（适用于支持方向键映射的型号，T1 遥控器方向键默认保持系统原生方向键）。</li>
         </ul>
       </div>
     </details>

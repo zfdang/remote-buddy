@@ -148,6 +148,7 @@ struct RemoteMappingCanvas: View {
     let onEdit: (RemoteButton, ButtonTrigger) -> Void
     var onVoiceSettings: () -> Void = {}
     var remoteModel: RemoteModel = .rc003
+    var isOverridden: ((RemoteButton, ButtonTrigger) -> Bool)? = nil
     private var isGoogle: Bool { remoteModel.isChromecastRemote }
     private var isT1: Bool { remoteModel.isT1Remote }
     private var placements: [RemoteMappingPlacement] {
@@ -296,6 +297,7 @@ struct RemoteMappingCanvas: View {
 
             HStack(spacing: 4) {
                 ForEach(ButtonTrigger.allCases) { trigger in
+                    let overridden = isOverridden?(button, trigger) ?? false
                     Button {
                         selectedButton = button
                         onEdit(button, trigger)
@@ -303,7 +305,7 @@ struct RemoteMappingCanvas: View {
                         VStack(spacing: 1) {
                             Text(trigger.displayName(using: localization))
                                 .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(overridden ? Color.accentColor : .secondary)
                             Text(actionSummary(button, trigger))
                                 .font(.system(size: 12, weight: trigger == .singleClick ? .semibold : .regular))
                                 .lineLimit(1)
@@ -311,7 +313,14 @@ struct RemoteMappingCanvas: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 5)
-                        .background(.quaternary, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                        .background(
+                            overridden ? AnyShapeStyle(Color.accentColor.opacity(0.14)) : AnyShapeStyle(.quaternary),
+                            in: RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        )
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                .stroke(overridden ? Color.accentColor.opacity(0.45) : Color.clear, lineWidth: 1)
+                        }
                     }
                     .buttonStyle(.plain)
                     .help(

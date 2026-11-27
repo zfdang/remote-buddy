@@ -65,7 +65,8 @@ extension AppSettings {
             buttonShortcuts: buttonShortcuts,
             buttonApplicationProfileIDs: buttonApplicationProfileIDs,
             buttonURLs: buttonURLs,
-            secondaryButtonBindings: secondaryButtonBindings
+            secondaryButtonBindings: secondaryButtonBindings,
+            applicationButtonProfiles: applicationButtonProfiles
         )
     }
 
@@ -75,5 +76,22 @@ extension AppSettings {
 
     func saveRemoteDeviceProfiles() {
         encodeAndSave(remoteDeviceProfiles, forKey: Keys.remoteDeviceProfiles)
+    }
+
+    func saveApplicationButtonProfiles() {
+        if applicationButtonProfiles.isEmpty {
+            defaults.removeObject(forKey: Keys.applicationButtonProfiles)
+            return
+        }
+        do {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.sortedKeys]
+            let data = try encoder.encode(applicationButtonProfiles)
+            defaults.set(data, forKey: Keys.applicationButtonProfiles)
+        } catch {
+            AppLogger.shared.write(
+                "SETTINGS ERROR save failed for \(Keys.applicationButtonProfiles): \(Self.describeEncodingError(error))"
+            )
+        }
     }
 }

@@ -169,6 +169,7 @@ extension AppSettings {
                     buttonApplicationProfileIDs = [:]
                     buttonURLs = [:]
                     secondaryButtonBindings = [:]
+                    applicationButtonProfiles = [:]
                 }
             }
         }
@@ -278,18 +279,33 @@ extension AppSettings {
         customApplicationProfiles[index] = profile
     }
 
+    /// The remote's own base mapping, as edited on the mapping page without application overrides.
     func configuredBaseAction(
         for button: RemoteButton,
         trigger: ButtonTrigger
     ) -> ConfiguredButtonAction {
-        configuredBaseAction(for: button, trigger: trigger, profileID: selectedRemoteProfileID)
+        configuredBaseAction(
+            for: button,
+            trigger: trigger,
+            profileID: selectedRemoteProfileID,
+            applyingApplicationProfile: false
+        )
     }
 
+    /// Resolves a button action, preferring the frontmost application's override when enabled.
     func configuredBaseAction(
         for button: RemoteButton,
         trigger: ButtonTrigger,
-        profileID: UUID?
+        profileID: UUID?,
+        applyingApplicationProfile: Bool = true
     ) -> ConfiguredButtonAction {
+        if applyingApplicationProfile,
+           let override = applicationButtonOverride(for: button, trigger: trigger, profileID: profileID) {
+            return override
+        }
+        let singleClickOverride = applyingApplicationProfile
+            ? applicationButtonOverride(for: button, trigger: .singleClick, profileID: profileID)?.action
+            : nil
         if let profileID,
            profileID != selectedRemoteProfileID,
            let profile = remoteDeviceProfiles.first(where: { $0.id == profileID }) {
@@ -306,7 +322,11 @@ extension AppSettings {
                 )
             }
             return profile.mappings.parsedSecondaryButtonBindings[button]?[trigger] ??
-                defaultSecondaryAction(for: button, trigger: trigger, singleClick: bindings[button])
+                defaultSecondaryAction(
+                    for: button,
+                    trigger: trigger,
+                    singleClick: singleClickOverride ?? bindings[button]
+                )
         }
 
         if trigger == .singleClick {
@@ -318,20 +338,43 @@ extension AppSettings {
             )
         }
         return secondaryButtonBindings[button]?[trigger] ??
-            defaultSecondaryAction(for: button, trigger: trigger, singleClick: buttonBindings[button])
+            defaultSecondaryAction(
+                for: button,
+                trigger: trigger,
+                singleClick: singleClickOverride ?? buttonBindings[button]
+            )
     }
 
     func configuredAction(for button: RemoteButton, trigger: ButtonTrigger) -> ConfiguredButtonAction {
-        configuredAction(for: button, trigger: trigger, profileID: selectedRemoteProfileID)
+        configuredAction(
+            for: button,
+            trigger: trigger,
+            profileID: selectedRemoteProfileID,
+            applyingApplicationProfile: false
+        )
     }
 
-    func configuredAction(for button: RemoteButton, trigger: ButtonTrigger,
-                          profileID: UUID?) -> ConfiguredButtonAction {
+    func configuredAction(
+        for button: RemoteButton,
+        trigger: ButtonTrigger,
+        profileID: UUID?,
+        applyingApplicationProfile: Bool = true
+    ) -> ConfiguredButtonAction {
         if trigger != .singleClick,
-           configuredBaseAction(for: button, trigger: .singleClick, profileID: profileID).action == .directPassthrough {
+           configuredBaseAction(
+               for: button,
+               trigger: .singleClick,
+               profileID: profileID,
+               applyingApplicationProfile: applyingApplicationProfile
+           ).action == .directPassthrough {
             return .disabled
         }
-        let configured = configuredBaseAction(for: button, trigger: trigger, profileID: profileID)
+        let configured = configuredBaseAction(
+            for: button,
+            trigger: trigger,
+            profileID: profileID,
+            applyingApplicationProfile: applyingApplicationProfile
+        )
         if configured.action == .directPassthrough, !button.isDirectional || trigger != .singleClick {
             return .disabled
         }
@@ -360,6 +403,7 @@ extension AppSettings {
             buttonApplicationProfileIDs = profile.mappings.parsedButtonApplicationProfileIDs
             buttonURLs = profile.mappings.parsedButtonURLs
             secondaryButtonBindings = profile.mappings.parsedSecondaryButtonBindings
+            applicationButtonProfiles = profile.mappings.parsedApplicationButtonProfiles
         }
     }
 

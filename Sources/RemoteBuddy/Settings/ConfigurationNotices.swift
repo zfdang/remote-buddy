@@ -28,6 +28,7 @@ enum CorruptedSettingsNotice {
         "buttonApplicationProfileIDs": buttonMappingItemKey,
         "buttonURLs": buttonMappingItemKey,
         "secondaryButtonBindings": buttonMappingItemKey,
+        "applicationButtonProfiles": buttonMappingItemKey,
         "customApplicationProfiles": customApplicationItemKey,
         "remoteGainDB": otherItemKey,
         "remoteDeviceProfiles": remoteDeviceItemKey,

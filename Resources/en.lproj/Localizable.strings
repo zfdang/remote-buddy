@@ -1407,3 +1407,13 @@
 "settings.general.action_feedback.help" = "“Turn off all feedback” hides success and failure notifications. “Turn off success feedback” hides success notifications only. Actions still run and diagnostics are still recorded.";
 "settings.general.hide_all_action_feedback" = "Turn off all feedback";
 "settings.general.hide_success_action_feedback" = "Turn off success feedback";
+
+// Per-application button mapping scope
+"button_mapping.app_scope.title" = "Application";
+"button_mapping.app_scope.all_apps" = "All Applications (Default)";
+"button_mapping.app_scope.all_apps_hint" = "These are this remote’s default buttons, used in every application. Choose an application to override buttons only while it is frontmost; other keys keep the defaults.";
+"button_mapping.app_scope.add" = "Add Application";
+"button_mapping.app_scope.choose_other" = "Choose Application…";
+"button_mapping.app_scope.running_apps" = "Running Applications";
+"button_mapping.app_scope.remove" = "Remove Application";
+"button_mapping.app_scope.editing_hint" = "Editing buttons for %@ on this remote: used only while it is frontmost. Unchanged triggers keep the defaults; Restore Default on a trigger returns it to this remote’s default.";

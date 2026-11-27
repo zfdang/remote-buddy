@@ -1,6 +1,8 @@
 import Foundation
 
-/// In-memory `UserDefaults` subclass that avoids touching disk preferences or `cfprefsd`.
+/// In-memory `UserDefaults` subclass for tests and preview harnesses.
+/// Overrides standard read/write, registration, and persistent-domain APIs so calls
+/// stay in memory instead of mutating `UserDefaults.standard` or creating suite plists.
 final class EphemeralUserDefaults: UserDefaults {
     private let lock = NSLock()
     private var storage: [String: Any] = [:]

@@ -78,12 +78,9 @@ struct EphemeralUserDefaultsTests {
         #expect(ephemeral.string(forKey: "anyFalse") == foundation.string(forKey: falseKey))
     }
 
-    @Test func doesNotLeakWritesIntoStandardDomainOrCreatePreferenceFilesOnDisk() throws {
-        let preferencesDirectory = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Preferences", isDirectory: true)
+    @Test func doesNotLeakWritesIntoStandardDomainOrAppPreferences() throws {
         let probePrefix = "ephemeral-isolation-\(UUID().uuidString)"
-        let probeSuite = "ephemeral-disk-guard-\(UUID().uuidString)"
-        let probePlist = preferencesDirectory.appendingPathComponent("\(probeSuite).plist")
+        let probeSuite = "ephemeral-suite-\(UUID().uuidString)"
 
         let keyAnyString = "\(probePrefix)-any-string"
         let keyAnyData = "\(probePrefix)-any-data"
@@ -98,10 +95,12 @@ struct EphemeralUserDefaultsTests {
         let keyURL = "\(probePrefix)-url"
         let keyRegistered = "\(probePrefix)-registered"
         let keyDomain = "\(probePrefix)-domain"
+        let keyKVC = "\(probePrefix)-kvc"
+        let keyKVCBatch = "\(probePrefix)-kvc-batch"
         let allKeys = [
             keyAnyString, keyAnyData, keyAnyArray, keyAnyDict, keyAnyNumber,
             keyInt, keyFloat, keyDouble, keyBoolTrue, keyBoolFalse, keyURL,
-            keyRegistered, keyDomain,
+            keyRegistered, keyDomain, keyKVC, keyKVCBatch,
         ]
 
         let defaultInstance = EphemeralUserDefaults()
@@ -121,24 +120,32 @@ struct EphemeralUserDefaultsTests {
             defaults.set(false, forKey: keyBoolFalse)
             defaults.set(URL(fileURLWithPath: "/Applications/Remote Buddy.app"), forKey: keyURL)
             defaults.register(defaults: [keyRegistered: "registered"])
+            defaults.setValue("kvc-value", forKey: keyKVC)
+            defaults.setValuesForKeys([keyKVCBatch: 321])
             _ = defaults.synchronize()
         }
         domainInstance.setPersistentDomain([keyDomain: "from-domain"], forName: probeSuite)
         _ = domainInstance.synchronize()
 
-        // Verify isolation BEFORE any cleanup calls so leaked writes cannot be masked.
+        // Verify isolation against real standard/application preferences BEFORE cleanup.
+        _ = UserDefaults.standard.synchronize()
         let standardRepresentation = UserDefaults.standard.dictionaryRepresentation()
+        let appDomain = Bundle.main.bundleIdentifier.flatMap {
+            UserDefaults.standard.persistentDomain(forName: $0)
+        }
         for key in allKeys {
             #expect(UserDefaults.standard.object(forKey: key) == nil)
             #expect(standardRepresentation[key] == nil)
+            #expect(CFPreferencesCopyAppValue(key as CFString, kCFPreferencesCurrentApplication) == nil)
+            #expect(appDomain?[key] == nil)
         }
-        #expect(UserDefaults.standard.persistentDomain(forName: probeSuite) == nil)
-        #expect(!FileManager.default.fileExists(atPath: probePlist.path))
 
         #expect(suitedInstance.integer(forKey: keyInt) == 123)
         #expect(suitedInstance.bool(forKey: keyBoolTrue) == true)
         #expect(suitedInstance.bool(forKey: keyBoolFalse) == false)
         #expect(suitedInstance.url(forKey: keyURL) == URL(fileURLWithPath: "/Applications/Remote Buddy.app"))
+        #expect(suitedInstance.string(forKey: keyKVC) == "kvc-value")
+        #expect(suitedInstance.integer(forKey: keyKVCBatch) == 321)
         #expect(domainInstance.string(forKey: keyDomain) == "from-domain")
 
         defaultInstance.removePersistentDomain(forName: probeSuite)
@@ -146,7 +153,6 @@ struct EphemeralUserDefaultsTests {
         domainInstance.removePersistentDomain(forName: probeSuite)
         #expect(suitedInstance.persistentDomain(forName: probeSuite) == nil)
         #expect(domainInstance.persistentDomain(forName: probeSuite) == nil)
-        #expect(!FileManager.default.fileExists(atPath: probePlist.path))
     }
 
     @Test func repositoryAvoidsDiskBackedUserDefaultsSuites() throws {

@@ -317,6 +317,14 @@ extension AppSettings {
         return override.normalizedForAction() != inherited.normalizedForAction()
     }
 
+    /// Returns `true` when any per-application profile on `profileID` overrides `button`
+    /// on any trigger (single-click, double-click, or long-press).
+    func hasAnyApplicationOverride(for button: RemoteButton, profileID: UUID?) -> Bool {
+        applicationButtonProfiles(for: profileID).values.contains { profile in
+            profile.buttons[button.rawValue]?.isEmpty == false
+        }
+    }
+
     func addApplicationButtonProfile(bundleID: String, name: String) {
         if var existing = applicationButtonProfiles[bundleID] {
             if existing.name?.isEmpty ?? true {

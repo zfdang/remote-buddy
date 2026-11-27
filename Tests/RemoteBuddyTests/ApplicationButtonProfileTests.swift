@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import Testing
 @testable import RemoteBuddy
@@ -704,5 +705,96 @@ struct ApplicationButtonProfileTests {
             for: .ok, trigger: .singleClick, profileID: xiaomiID
         )
         #expect(settings.configuredAction(for: .ok, trigger: .singleClick, profileID: xiaomiID).action == .commandUndo)
+    }
+
+    @Test func heldArrowWithPerAppOverrideBypassesNativePassthroughAndCancelsRepeatOnFocusChange() throws {
+        let (settings, defaults, suite) = try makeSettings()
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        settings.customMappingEnabled = true
+        settings.onboardingStep = .complete
+        let profileID = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
+        settings.selectRemoteProfile(profileID)
+
+        var front: String? = notes
+        settings.frontmostApplicationBundleIdentifier = { front }
+
+        // Codex disables Right; Left has no per-app override anywhere on this remote.
+        settings.addApplicationButtonProfile(bundleID: codex, name: "Codex")
+        settings.setApplicationScopedAction(
+            ConfiguredButtonAction.disabled,
+            bundleID: codex, button: .right, trigger: .singleClick
+        )
+
+        var suppressorNow: TimeInterval = 1_000
+        let suppressor = KeyboardEventSuppressor(
+            uptime: { suppressorNow },
+            permissionsGranted: { true },
+            tapOperations: .init(start: { true }, stop: {}, isEnabled: { true })
+        )
+
+        let clock = ControlledTestScheduler()
+        var performed: [ConfiguredButtonAction] = []
+        let monitor = HIDRemoteMonitor(
+            settings: settings,
+            profileID: profileID,
+            eventSuppressor: suppressor,
+            scheduler: clock,
+            runtimePermissions: { true },
+            nativeSuppressionAvailable: { true },
+            actionPerformer: { _, _, configured in
+                performed.append(configured)
+                return true
+            },
+            diagnosticLogger: { _ in }
+        )
+        monitor.connectSimulatedDevice(fingerprint: "rc003", profileID: profileID, isSeized: false)
+        defer { monitor.disconnectSimulatedDevice() }
+
+        func sendRC003(usage: UInt16?) {
+            let value = usage ?? 0
+            monitor.handleSimulatedReport(
+                reportID: 1,
+                data: Data([UInt8(value & 0xFF), UInt8(value >> 8)])
+            )
+        }
+
+        func makeNativeArrowEvent(keyCode: CGKeyCode, down: Bool, autorepeat: Bool = false) throws -> CGEvent {
+            let event = try #require(CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: down))
+            if autorepeat {
+                event.setIntegerValueField(.keyboardEventAutorepeat, value: 1)
+            }
+            return event
+        }
+
+        // 1) Hold Right in Notes: Right has a per-app override on Codex, so it bypasses native passthrough,
+        // runs via the software path, and suppresses both the native keyDown and macOS autorepeats.
+        front = notes
+        sendRC003(usage: RemoteButton.right.hidUsage)
+        #expect(performed.count == 1)
+        #expect(performed[0].action == .arrowRight)
+        #expect(!monitor.nativePassthroughUsages.contains(RemoteButton.right.hidUsage))
+        #expect(suppressor.handle(type: .keyDown, event: try makeNativeArrowEvent(keyCode: 124, down: true)))
+        #expect(suppressor.handle(type: .keyDown, event: try makeNativeArrowEvent(keyCode: 124, down: true, autorepeat: true)))
+
+        // 2) Switch focus to Codex (where Right is disabled) while still holding Right:
+        // software repeat timer cancels, and macOS native autorepeat remains suppressed.
+        front = codex
+        suppressorNow += 0.25
+        clock.advance(to: clock.now + HIDRemoteTiming.repeatStartMilliseconds + 500)
+        #expect(performed.count == 1)
+        #expect(suppressor.handle(type: .keyDown, event: try makeNativeArrowEvent(keyCode: 124, down: true, autorepeat: true)))
+
+        // Release Right and clean up the paired native up event.
+        sendRC003(usage: nil)
+        #expect(suppressor.handle(type: .keyUp, event: try makeNativeArrowEvent(keyCode: 124, down: false)))
+
+        // 3) Left has no per-app override on this remote, so it still keeps native passthrough in Notes.
+        front = notes
+        sendRC003(usage: RemoteButton.left.hidUsage)
+        #expect(performed.count == 1)
+        #expect(monitor.nativePassthroughUsages.contains(RemoteButton.left.hidUsage))
+        #expect(!suppressor.handle(type: .keyDown, event: try makeNativeArrowEvent(keyCode: 123, down: true)))
+        sendRC003(usage: nil)
     }
 }

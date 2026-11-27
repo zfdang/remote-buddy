@@ -87,6 +87,7 @@ extension HIDRemoteMonitor {
               !appSwitcherCoordinator.isActive,
               !recognizesDoubleClick,
               !recognizesLongPress,
+              !settings.hasAnyApplicationOverride(for: button, profileID: profileID),
               settings.allowsHoldRepeat(
                   for: button,
                   profileID: profileID,

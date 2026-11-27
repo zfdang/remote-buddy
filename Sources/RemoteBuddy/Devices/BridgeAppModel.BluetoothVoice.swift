@@ -476,13 +476,24 @@ extension BridgeAppModel {
 
     func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didDecode samples: [Int16]) {
         guard let identifier = bridge.deviceIdentifier else { return }
-        if identifier == voiceSession.pendingStart.identifier,
-           voiceSession.pendingStart.audio.appendIfWaiting(samples) {
-            AppLogger.shared.write(
-                "ATVV AUDIO buffered_during_configuration samples=\(samples.count) " +
-                    "total=\(voiceSession.pendingStart.audio.bufferedSampleCount)"
-            )
-            return
+        if identifier == voiceSession.pendingStart.identifier {
+            let appendResult = voiceSession.pendingStart.appendPreservingOrder(samples)
+            if appendResult.accepted {
+                if appendResult.overflowSamples > 0 {
+                    failBluetoothVoiceConfiguration(
+                        bridge,
+                        identifier: identifier,
+                        reason: "configuration_buffer_overflow",
+                        overflowSamples: appendResult.overflowSamples
+                    )
+                } else {
+                    AppLogger.shared.write(
+                        "ATVV AUDIO buffered_during_configuration samples=\(samples.count) " +
+                            "total=\(voiceSession.pendingStart.audio.bufferedSampleCount)"
+                    )
+                }
+                return
+            }
         }
         guard identifier == voiceSession.activeDeviceIdentifier else { return }
         if voiceSession.commandAudio.appendIfWaiting(samples) {
@@ -493,6 +504,27 @@ extension BridgeAppModel {
             return
         }
         routeBluetoothVoiceSamples(samples, from: bridge, identifier: identifier)
+    }
+
+    private func failBluetoothVoiceConfiguration(
+        _ bridge: BluetoothRemoteBridge,
+        identifier: UUID,
+        reason: String,
+        overflowSamples: Int = 0
+    ) {
+        let operationID = voiceSession.pendingStart.operationID?.uuidString ?? "none"
+        let interruptedSamples = voiceSession.pendingStart.audio.bufferedSampleCount + overflowSamples
+        voiceSession.pendingStart.cancel(ifOwnedBy: identifier)
+        voiceSession.stopRequested = false
+        if g9n9nSmartToggle.ownerBridgeID == identifier {
+            clearG9N9NSmartToggleState(reason: reason)
+        }
+        _ = bridge.requestMicrophoneClose()
+        AppLogger.shared.write(
+            "ATVV STREAM phase=failed result=failed reason=\(reason) completion=forced " +
+                "operation_id=\(operationID) interrupted_samples=\(interruptedSamples)"
+        )
+        bluetoothBridgeDidStopVoice(bridge)
     }
 
     private func flushPendingCommandVoiceAudio(for bridge: BluetoothRemoteBridge) {

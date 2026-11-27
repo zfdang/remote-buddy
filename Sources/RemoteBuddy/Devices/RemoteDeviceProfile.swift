@@ -45,13 +45,15 @@ struct RemoteDeviceMappings: Codable, Equatable {
     var buttonApplicationProfileIDs: [String: UUID]?
     var buttonURLs: [String: String]?
     var secondaryButtonBindings: [String: [String: ConfiguredButtonAction]]
+    var applicationButtonProfiles: [String: ApplicationButtonProfile]?
 
     init(
         buttonBindings: [RemoteButton: ButtonAction],
         buttonShortcuts: [RemoteButton: CustomKeyboardShortcut],
         buttonApplicationProfileIDs: [RemoteButton: UUID] = [:],
         buttonURLs: [RemoteButton: String] = [:],
-        secondaryButtonBindings: [RemoteButton: [ButtonTrigger: ConfiguredButtonAction]]
+        secondaryButtonBindings: [RemoteButton: [ButtonTrigger: ConfiguredButtonAction]],
+        applicationButtonProfiles: [String: ApplicationButtonProfile] = [:]
     ) {
         self.buttonBindings = Dictionary(
             uniqueKeysWithValues: buttonBindings.map { ($0.key.rawValue, $0.value) }
@@ -75,6 +77,7 @@ struct RemoteDeviceMappings: Codable, Equatable {
                 )
             }
         )
+        self.applicationButtonProfiles = applicationButtonProfiles.isEmpty ? nil : applicationButtonProfiles
     }
 
     var parsedButtonBindings: [RemoteButton: ButtonAction] {
@@ -109,6 +112,10 @@ struct RemoteDeviceMappings: Codable, Equatable {
             })
             return parsed.isEmpty ? nil : (button, parsed)
         })
+    }
+
+    var parsedApplicationButtonProfiles: [String: ApplicationButtonProfile] {
+        applicationButtonProfiles ?? [:]
     }
 }
 

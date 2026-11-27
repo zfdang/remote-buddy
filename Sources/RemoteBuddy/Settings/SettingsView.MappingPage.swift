@@ -5,11 +5,27 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 extension SettingsView {
+    /// Bundle identifier of the application whose per-app overrides are being edited on the
+    /// selected remote, or `nil` when editing the selected remote's default mapping.
+    var editingApplicationBundleID: String? {
+        guard let bundleID = mappingApplicationBundleID,
+              settings.applicationButtonProfiles[bundleID] != nil
+        else { return nil }
+        return bundleID
+    }
+
     func mappingConfiguration(for button: RemoteButton, trigger: ButtonTrigger) -> ConfiguredButtonAction {
-        settings.configuredBaseAction(for: button, trigger: trigger)
+        if let bundleID = editingApplicationBundleID {
+            return settings.applicationScopedAction(bundleID: bundleID, button: button, trigger: trigger)
+        }
+        return settings.configuredBaseAction(for: button, trigger: trigger)
     }
 
     private func saveMappingBinding(_ configured: ConfiguredButtonAction, button: RemoteButton, trigger: ButtonTrigger) {
+        if let bundleID = editingApplicationBundleID {
+            settings.setApplicationScopedAction(configured, bundleID: bundleID, button: button, trigger: trigger)
+            return
+        }
         settings.setBaseBinding(configured, for: button, trigger: trigger, profileID: settings.selectedRemoteProfileID)
     }
 
@@ -89,7 +105,7 @@ extension SettingsView {
                 actionHelpSummary: { button, trigger in mappingActionSummary(for: button, trigger: trigger, detailed: true) },
                 onEdit: { button, trigger in
                     selectedRemoteButton = button
-                    let current = settings.configuredAction(for: button, trigger: trigger).action
+                    let current = mappingConfiguration(for: button, trigger: trigger).action
                     let validFilters = MappingActionFilter.visibleCases(for: button, trigger: trigger)
                     let targetFilter = MappingActionFilter(category: current.category)
                     mappingActionFilter = (current == .disabled || current == .repeatSingleClick)
@@ -101,7 +117,11 @@ extension SettingsView {
                     )
                 },
                 onVoiceSettings: { selectSection(.integration) },
-                remoteModel: settings.selectedRemoteProfile?.model ?? .unknown
+                remoteModel: settings.selectedRemoteProfile?.model ?? .unknown,
+                isOverridden: { button, trigger in
+                    guard let bundleID = editingApplicationBundleID else { return false }
+                    return settings.isApplicationOverride(bundleID: bundleID, button: button, trigger: trigger)
+                }
             )
             .onReceive(model.$activeRemoteButtons) { buttons in
                 selectedRemoteButton = MappingSelectionPolicy.selection(
@@ -140,6 +160,8 @@ extension SettingsView {
                                 .id("mapping-page-top")
                             corruptedSettingsBanner
 
+                            mappingApplicationScopeBar
+
                             hardwareCanvas()
 
                             if let target = mappingEditingTarget {
@@ -148,7 +170,9 @@ extension SettingsView {
                             }
 
                             mappingFooter()
-                            mappingResetAllDefaultsSection
+                            if editingApplicationBundleID == nil {
+                                mappingResetAllDefaultsSection
+                            }
                             Color.clear.frame(height: 1).id("mapping-page-bottom")
                         }
                         .padding(22)
@@ -158,7 +182,8 @@ extension SettingsView {
                     .compatibilityScrollEdgeEffect()
                 }
                 .onChange(of: settings.selectedRemoteProfileID) { _, _ in
-                    // 编辑器属于上一只遥控器；切换设备后不得把旧编辑区带到新页面。
+                    // 编辑器与适用应用作用域都属于上一只遥控器；切换设备后重回默认作用域。
+                    mappingApplicationBundleID = nil
                     mappingEditingTarget = nil
                     shortcutCaptureTarget = nil
                     applicationShortcutCaptureProfileID = nil
@@ -243,7 +268,7 @@ extension SettingsView {
                         .padding(.vertical, 4)
                         .background(Color.accentColor.opacity(0.12), in: Capsule())
                     Spacer()
-                    if target.trigger != .doubleClick {
+                    if target.trigger != .doubleClick || editingApplicationBundleID != nil {
                         Button {
                             restoreDefaultAction(for: target.button, trigger: target.trigger)
                         } label: {
@@ -284,8 +309,18 @@ extension SettingsView {
     }
 
     private func restoreDefaultAction(for button: RemoteButton, trigger: ButtonTrigger) {
-        let defaultAction = settings.defaultAction(for: button, trigger: trigger)
-        saveMappingBinding(defaultAction, button: button, trigger: trigger)
+        let defaultAction: ConfiguredButtonAction
+        if let bundleID = editingApplicationBundleID {
+            settings.clearApplicationOverride(bundleID: bundleID, button: button, trigger: trigger)
+            defaultAction = settings.applicationInheritedAction(
+                bundleID: bundleID,
+                button: button,
+                trigger: trigger
+            )
+        } else {
+            defaultAction = settings.defaultAction(for: button, trigger: trigger)
+            saveMappingBinding(defaultAction, button: button, trigger: trigger)
+        }
         shortcutCaptureTarget = nil
         applicationShortcutCaptureProfileID = nil
         mappingActionFilter = (defaultAction.action == .disabled || defaultAction.action == .repeatSingleClick)

@@ -49,6 +49,7 @@ final class AppSettings: ObservableObject {
         static let buttonApplicationProfileIDs = "buttonApplicationProfileIDs"
         static let buttonURLs = "buttonURLs"
         static let secondaryButtonBindings = "secondaryButtonBindings"
+        static let applicationButtonProfiles = ApplicationButtonProfiles.defaultsKey
         static let customApplicationProfiles = "customApplicationProfiles"
         static let remoteDeviceProfiles = "remoteDeviceProfiles"
         static let selectedRemoteProfileID = "selectedRemoteProfileID"
@@ -94,6 +95,10 @@ final class AppSettings: ObservableObject {
     }
 
     let defaults: UserDefaults
+    /// Bundle identifier of the frontmost application; injectable for tests.
+    var frontmostApplicationBundleIdentifier: () -> String? = {
+        ApplicationButtonProfiles.currentFrontmostBundleIdentifier()
+    }
 
     @Published private var storedGainDB: Double
     var gainDB: Double {
@@ -155,7 +160,8 @@ final class AppSettings: ObservableObject {
                     buttonShortcuts: parsedShortcuts,
                     buttonApplicationProfileIDs: parsedAppIDs,
                     buttonURLs: parsedURLs,
-                    secondaryButtonBindings: parsedSecondary
+                    secondaryButtonBindings: parsedSecondary,
+                    applicationButtonProfiles: mappings.parsedApplicationButtonProfiles
                 )
                 saveRemoteDeviceProfiles()
             }
@@ -183,6 +189,7 @@ final class AppSettings: ObservableObject {
                 secondaryButtonBindings[button] = secondary
             }
         }
+        pruneMatchingApplicationOverrides(for: button, trigger: trigger, profileID: profileID)
     }
 
     @Published var buttonBindings: [RemoteButton: ButtonAction] {
@@ -216,6 +223,13 @@ final class AppSettings: ObservableObject {
     @Published var secondaryButtonBindings: [RemoteButton: [ButtonTrigger: ConfiguredButtonAction]] {
         didSet {
             saveSecondaryBindings()
+            saveSelectedRemoteProfileMappings()
+        }
+    }
+
+    @Published var applicationButtonProfiles: [String: ApplicationButtonProfile] {
+        didSet {
+            saveApplicationButtonProfiles()
             saveSelectedRemoteProfileMappings()
         }
     }
@@ -457,7 +471,7 @@ final class AppSettings: ObservableObject {
         switch key {
         case "remoteDeviceProfiles": "remote_profiles"
         case "buttonBindings", "buttonShortcuts", "buttonApplicationProfileIDs",
-             "buttonURLs", "secondaryButtonBindings":
+             "buttonURLs", "secondaryButtonBindings", "applicationButtonProfiles":
             "button_mapping"
         case "customApplicationProfiles": "custom_apps"
         case "onboarding.stagedVoiceBinding": "onboarding"
@@ -580,6 +594,13 @@ final class AppSettings: ObservableObject {
             corrupted: &corruptedKeys
         ) ?? []
 
+        applicationButtonProfiles = Self.decodeSetting(
+            [String: ApplicationButtonProfile].self,
+            forKey: Keys.applicationButtonProfiles,
+            from: defaults,
+            corrupted: &corruptedKeys
+        ) ?? [:]
+
         applicationLanguage = AppLanguage(
             rawValue: defaults.string(forKey: Keys.applicationLanguage) ?? ""
         ) ?? .system
@@ -675,6 +696,7 @@ final class AppSettings: ObservableObject {
                 buttonApplicationProfileIDs = selected.mappings.parsedButtonApplicationProfileIDs
                 buttonURLs = selected.mappings.parsedButtonURLs
                 secondaryButtonBindings = selected.mappings.parsedSecondaryButtonBindings
+                applicationButtonProfiles = selected.mappings.parsedApplicationButtonProfiles
             }
         }
         corruptedSettingKeys = corruptedKeys

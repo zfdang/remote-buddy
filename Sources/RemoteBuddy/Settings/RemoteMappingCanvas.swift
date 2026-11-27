@@ -148,6 +148,7 @@ struct RemoteMappingCanvas: View {
     let onEdit: (RemoteButton, ButtonTrigger) -> Void
     var onVoiceSettings: () -> Void = {}
     var remoteModel: RemoteModel = .rc003
+    var isOverridden: ((RemoteButton, ButtonTrigger) -> Bool)? = nil
     private var isGoogle: Bool { remoteModel.isChromecastRemote }
     private var isT1: Bool { remoteModel.isT1Remote }
     private var placements: [RemoteMappingPlacement] {
@@ -213,6 +214,11 @@ struct RemoteMappingCanvas: View {
         .frame(height: canvasHeight)
     }
 
+    private func hasAnyOverride(for button: RemoteButton) -> Bool {
+        guard let isOverridden else { return false }
+        return ButtonTrigger.allCases.contains { isOverridden(button, $0) }
+    }
+
     private func connectionLines(metrics: Metrics) -> some View {
         Canvas { context, _ in
             for placement in placements {
@@ -222,6 +228,7 @@ struct RemoteMappingCanvas: View {
                     end: metrics.cardEdgePoint(side: placement.side, targetY: placement.targetY),
                     side: placement.side,
                     selected: selectedButton == placement.button,
+                    highlighted: hasAnyOverride(for: placement.button),
                     showsAnchor: activeButtons.contains(placement.button)
                 )
             }
@@ -243,6 +250,7 @@ struct RemoteMappingCanvas: View {
         end: CGPoint,
         side: RemoteMappingSide,
         selected: Bool,
+        highlighted: Bool = false,
         showsAnchor: Bool
     ) {
         let arrowTip = RemoteMappingLayout.arrowTip(cardEdge: end, side: side)
@@ -255,12 +263,14 @@ struct RemoteMappingCanvas: View {
         path.move(to: start)
         path.addCurve(to: arrowTip, control1: controls.start, control2: controls.end)
 
-        let color = selected ? Color.accentColor : Color.secondary.opacity(0.42)
+        let color = highlighted
+            ? Color.orange.opacity(selected ? 1.0 : 0.85)
+            : (selected ? Color.accentColor : Color.secondary.opacity(0.42))
         context.stroke(
             path,
             with: .color(color),
             style: StrokeStyle(
-                lineWidth: selected ? 1.6 : 1.0,
+                lineWidth: selected ? 1.6 : (highlighted ? 1.5 : 1.0),
                 lineCap: .round,
                 lineJoin: .round
             )
@@ -284,34 +294,57 @@ struct RemoteMappingCanvas: View {
     private func mappingCard(_ button: RemoteButton) -> some View {
         let selected = selectedButton == button
         let active = activeButtons.contains(button)
+        let hasOverride = hasAnyOverride(for: button)
         return VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 6) {
                 icon(for: button)
                     .frame(width: 14)
+                    .foregroundStyle(hasOverride ? Color.orange : .primary)
                 Text(button.displayName(using: localization))
                     .font(.system(size: 13, weight: .semibold))
                     .lineLimit(1)
                 Spacer(minLength: 0)
+                if hasOverride {
+                    Circle()
+                        .fill(Color.orange)
+                        .frame(width: 7, height: 7)
+                }
             }
 
             HStack(spacing: 4) {
                 ForEach(ButtonTrigger.allCases) { trigger in
+                    let overridden = isOverridden?(button, trigger) ?? false
                     Button {
                         selectedButton = button
                         onEdit(button, trigger)
                     } label: {
                         VStack(spacing: 1) {
                             Text(trigger.displayName(using: localization))
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(.secondary)
+                                .font(.system(size: 12, weight: overridden ? .semibold : .medium))
+                                .foregroundStyle(
+                                    overridden
+                                        ? Color.white.opacity(0.92)
+                                        : .secondary
+                                )
                             Text(actionSummary(button, trigger))
-                                .font(.system(size: 12, weight: trigger == .singleClick ? .semibold : .regular))
+                                .font(.system(
+                                    size: 12,
+                                    weight: overridden ? .bold : (trigger == .singleClick ? .semibold : .regular)
+                                ))
+                                .foregroundStyle(
+                                    overridden
+                                        ? Color.white
+                                        : .primary
+                                )
                                 .lineLimit(1)
                                 .truncationMode(.tail)
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 5)
-                        .background(.quaternary, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                        .background(
+                            overridden ? AnyShapeStyle(Color.orange) : AnyShapeStyle(.quaternary),
+                            in: RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        )
                     }
                     .buttonStyle(.plain)
                     .help(
@@ -326,20 +359,25 @@ struct RemoteMappingCanvas: View {
         .onTapGesture { selectedButton = button }
         .background(
             active
-                ? Color.orange.opacity(0.12)
-                : selected
-                    ? Color.accentColor.opacity(0.10)
-                    : Color.primary.opacity(0.035),
+                ? Color.orange.opacity(0.24)
+                : hasOverride
+                    ? Color.orange.opacity(selected ? 0.18 : 0.11)
+                    : selected
+                        ? Color.accentColor.opacity(0.10)
+                        : Color.primary.opacity(0.035),
             in: RoundedRectangle(cornerRadius: 10, style: .continuous)
         )
         .overlay {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .stroke(
                     active
-                        ? Color.orange.opacity(0.65)
-                        : selected
-                            ? Color.accentColor.opacity(0.45)
-                            : Color.secondary.opacity(0.15)
+                        ? Color.orange.opacity(0.95)
+                        : hasOverride
+                            ? Color.orange.opacity(selected ? 0.90 : 0.70)
+                            : selected
+                                ? Color.accentColor.opacity(0.45)
+                                : Color.secondary.opacity(0.15),
+                    lineWidth: active ? 2.0 : (hasOverride ? 1.5 : 1.0)
                 )
         }
         .accessibilityElement(children: .contain)

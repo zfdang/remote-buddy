@@ -1409,3 +1409,13 @@
 "settings.general.action_feedback.help" = "“关闭所有提示”隐藏成功和失败；“关闭成功提示”只隐藏成功。动作仍会执行，诊断仍会记录。";
 "settings.general.hide_all_action_feedback" = "关闭所有提示";
 "settings.general.hide_success_action_feedback" = "关闭成功提示";
+
+// 按应用独立按键配置作用域
+"button_mapping.app_scope.title" = "适用应用";
+"button_mapping.app_scope.all_apps" = "所有应用（默认）";
+"button_mapping.app_scope.all_apps_hint" = "这里配置的是当前遥控器的默认按键，在所有应用里生效。添加一个应用后，修改的按键仅在该应用处于前台时生效，其余按键仍沿用默认。";
+"button_mapping.app_scope.add" = "添加应用";
+"button_mapping.app_scope.choose_other" = "选择其他应用…";
+"button_mapping.app_scope.running_apps" = "当前正在运行的应用";
+"button_mapping.app_scope.remove" = "移除此应用";
+"button_mapping.app_scope.editing_hint" = "正在配置当前遥控器在「%@」中的按键：仅该应用在前台时生效；未覆盖的触发方式继续沿用默认，点“恢复默认”可取消覆盖。";

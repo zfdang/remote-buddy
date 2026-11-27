@@ -30,6 +30,7 @@ extension KeyboardInjector {
     }
 
     static func focusWeChatComposer(processIdentifier: pid_t) -> Bool {
+        guard !AXSelfTargetPolicy.isOwnProcess(processIdentifier) else { return false }
         let applicationElement = AXUIElementCreateApplication(processIdentifier)
         return focusWeChatComposerFlow(
             isAlreadyFocused: {
@@ -256,6 +257,7 @@ extension KeyboardInjector {
         processIdentifier: pid_t,
         keyPoster: KeyPoster
     ) -> Bool {
+        guard !AXSelfTargetPolicy.isOwnProcess(processIdentifier) else { return false }
         let applicationElement = AXUIElementCreateApplication(processIdentifier)
         var terminalFrame: CGRect?
         for window in applicationWindows(applicationElement) {

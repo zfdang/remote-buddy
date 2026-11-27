@@ -77,6 +77,49 @@ enum ForeignVoiceRemoteProduct {
     }
 }
 
+/// First-stage pre-filter for CoreBluetooth discovery callbacks on the main thread.
+/// Skips unrelated surrounding BLE peripherals before full admission or log formatting,
+/// while summarizing ignored advertisement counts at scan end.
+enum BluetoothDiscoveryScanPolicy {
+    static func shouldInspect(
+        identifier: UUID,
+        targetIdentifier: UUID?,
+        knownIdentifiers: Set<UUID>,
+        advertisesVoiceService: Bool,
+        advertisedName: String?,
+        peripheralName: String?,
+        allowsG9N9N: Bool = true,
+        allowsT1Remote: Bool = true
+    ) -> Bool {
+        if let targetIdentifier {
+            return identifier == targetIdentifier
+        }
+        if knownIdentifiers.contains(identifier) {
+            return true
+        }
+        if advertisesVoiceService {
+            return true
+        }
+        if XiaomiVoiceRemoteNameMatcher.matches(advertisedName) ||
+            XiaomiVoiceRemoteNameMatcher.matches(peripheralName) {
+            return true
+        }
+        if allowsG9N9N,
+           G9N9NProtocol.isCandidateName(advertisedName) || G9N9NProtocol.isCandidateName(peripheralName) {
+            return true
+        }
+        if allowsT1Remote,
+           T1RemoteProtocol.isCandidateName(advertisedName) || T1RemoteProtocol.isCandidateName(peripheralName) {
+            return true
+        }
+        if ForeignVoiceRemoteProduct.isRejected(name: advertisedName) ||
+            ForeignVoiceRemoteProduct.isRejected(name: peripheralName) {
+            return true
+        }
+        return false
+    }
+}
+
 /// 遥控器发现准入结论。
 ///
 /// 为什么必须是「白名单 + 明确结论」而不是布尔值：App 里每款遥控器都有**真机图片**和按键页，
@@ -361,6 +404,39 @@ enum BluetoothCentralRecoveryEvent {
 }
 
 enum BluetoothWakeRecoveryPolicy {
+    /// Tracks single-shot system-wake recovery attempts and latches failures so
+    /// repeated sleep/wake cycles do not keep initiating BLE handshakes while a
+    /// peripheral remains unreachable.
+    struct WakeRecoveryLatch: Equatable {
+        private(set) var wakeRecoveryInFlight = false
+        private(set) var wakeRecoveryFailed = false
+
+        func shouldAllowRecovery(reason: String) -> Bool {
+            guard reason == "system_wake" else { return true }
+            return !wakeRecoveryFailed
+        }
+
+        mutating func noteRecoveryStarted(reason: String) {
+            if reason == "system_wake" {
+                wakeRecoveryInFlight = true
+            } else {
+                clearFailureLatch()
+            }
+        }
+
+        mutating func noteAttemptFailedIfWakeInFlight() -> Bool {
+            guard wakeRecoveryInFlight else { return false }
+            wakeRecoveryInFlight = false
+            wakeRecoveryFailed = true
+            return true
+        }
+
+        mutating func clearFailureLatch() {
+            wakeRecoveryInFlight = false
+            wakeRecoveryFailed = false
+        }
+    }
+
     /// Returns whether wake handling should force a fresh Bluetooth voice-link recovery cycle.
     static func shouldForceReconnect(
         event: SystemAudioLifecycleEvent,
@@ -463,6 +539,32 @@ enum BluetoothCentralRecoveryPolicy {
                 shouldReleaseCentral: true,
                 shouldResetReconnectPolicy: false
             )
+        }
+    }
+}
+
+enum ATVVCommandRejectionReason: String, Equatable {
+    case missingPeripheral = "missing_peripheral"
+    case missingCharacteristic = "missing_characteristic"
+    case unsupportedProperties = "unsupported_properties"
+    case queueRejected = "queue_rejected"
+}
+
+enum ATVVCommandSubmission: Equatable {
+    case accepted
+    case rejected(ATVVCommandRejectionReason)
+
+    var isAccepted: Bool {
+        if case .accepted = self { return true }
+        return false
+    }
+
+    var logDescription: String {
+        switch self {
+        case .accepted:
+            return "accepted"
+        case let .rejected(reason):
+            return "rejected_\(reason.rawValue)"
         }
     }
 }

@@ -27,6 +27,7 @@ extension KeyboardInjector {
 
         var processIdentifier: pid_t = 0
         guard AXUIElementGetPid(focusedElement, &processIdentifier) == .success,
+              !AXSelfTargetPolicy.isOwnProcess(processIdentifier),
               NSRunningApplication(processIdentifier: processIdentifier)?.bundleIdentifier == bundleIdentifier
         else { return nil }
 
@@ -85,6 +86,7 @@ extension KeyboardInjector {
         _ target: AccessibilityFocusTarget,
         processIdentifier: pid_t
     ) -> Bool {
+        guard !AXSelfTargetPolicy.isOwnProcess(processIdentifier) else { return false }
         let applicationElement = AXUIElementCreateApplication(processIdentifier)
         var ranked: [(element: AXUIElement, score: Int)] = []
         for window in applicationWindows(applicationElement) {

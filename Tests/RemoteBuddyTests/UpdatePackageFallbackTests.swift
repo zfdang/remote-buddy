@@ -7,7 +7,7 @@ import Testing
 struct UpdatePackageFallbackTests {
     @Test func derivesGitHubFallbackOnlyForValidatedPagesPackageURLs() {
         let primaryArm = URL(string: "https://remote.zfdang.com/downloads/Remote_Buddy_v26-11-15.867_macOS_arm64.pkg")!
-        let primaryIntel = URL(string: "https://remote.zfdang.com/downloads/Remote_Buddy_v26-11-15.867_macOS_intel.pkg")!
+        let primaryIntel = URL(string: "https://remote.zfdang.com/downloads/Remote_Buddy_v26-11-15.1000_macOS_intel.pkg")!
 
         #expect(UpdatePackageURLResolver.isPrimaryPackageURL(primaryArm))
         #expect(
@@ -16,7 +16,7 @@ struct UpdatePackageFallbackTests {
         )
         #expect(
             UpdatePackageURLResolver.githubReleaseFallbackURL(for: primaryIntel)
-                == URL(string: "https://github.com/zfdang/remote-buddy/releases/download/v26-11-15.867/Remote_Buddy_v26-11-15.867_macOS_intel.pkg")!
+                == URL(string: "https://github.com/zfdang/remote-buddy/releases/download/v26-11-15.1000/Remote_Buddy_v26-11-15.1000_macOS_intel.pkg")!
         )
 
         for invalid in [
@@ -154,5 +154,16 @@ struct UpdatePackageFallbackTests {
         coordinator.cancelFallback()
         #expect(!coordinator.hasPendingFallback)
         #expect(coordinator.downloadURLOverride(forVersion: "868", fileURL: primary) == nil)
+    }
+
+    @Test func updateVersionNormalizesAndOrdersAcrossThreeAndFourDigitSuffixes() {
+        #expect(UpdateVersion.normalized("v26-11-15.867") == "26.11.15.867")
+        #expect(UpdateVersion.normalized("v26-11-15.0999") == "26.11.15.0999")
+        #expect(UpdateVersion.normalized("v26-11-15.1000") == "26.11.15.1000")
+
+        #expect(UpdateVersion.isNewer("v26-11-15.1000", than: "v26-11-15.999"))
+        #expect(UpdateVersion.isNewer("v26-11-15.1000", than: "v26-11-15.0999"))
+        #expect(!UpdateVersion.isNewer("v26-11-15.999", than: "v26-11-15.1000"))
+        #expect(!UpdateVersion.isNewer("v26-11-15.0999", than: "v26-11-15.999"))
     }
 }

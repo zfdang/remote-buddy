@@ -111,7 +111,8 @@ def verify(directory, release, *, require_packages=False):
             not version.isdigit()
             or int(version) <= 0
             or not tag_suffix.isdigit()
-            or int(version) % 1000 != int(tag_suffix)
+            or len(tag_suffix) not in (3, 4)
+            or not version.zfill(len(tag_suffix)).endswith(tag_suffix)
         ):
             raise ValueError('Mismatched build version')
         if architecture == 'arm64' and item.findtext(f'{{{SPARKLE}}}hardwareRequirements') != 'arm64':

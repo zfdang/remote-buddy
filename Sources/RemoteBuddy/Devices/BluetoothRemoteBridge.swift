@@ -116,6 +116,7 @@ final class BluetoothRemoteBridge: NSObject {
     let excludedIdentifiers: () -> Set<UUID>
     /// 已被判定为「别的产品」的标识；本桥此后一律不再连接，也不再走扫描回退。
     var rejectedIdentifiers = Set<UUID>()
+    var ignoredUnrelatedDiscoveryCount = 0
     var central: CBCentralManager?
     var centralGeneration: UInt64?
     var peripheral: CBPeripheral?
@@ -148,6 +149,7 @@ final class BluetoothRemoteBridge: NSObject {
     var modelFormatResolved = false
     var requestedReconnectDelay: TimeInterval?
     var reconnectPolicy = BluetoothReconnectPolicy()
+    var wakeRecoveryLatch = BluetoothWakeRecoveryPolicy.WakeRecoveryLatch()
     var currentAttemptUsesCachedTarget = false
     var generationCounter: UInt64 = 0
     var lifecycle: BluetoothLifecyclePhase = .stopped
@@ -441,6 +443,7 @@ final class BluetoothRemoteBridge: NSObject {
 
     func start() {
         shouldRun = true
+        wakeRecoveryLatch.clearFailureLatch()
         reconnectWorkItem?.cancel()
         reconnectPolicy.reset()
         guard !systemSuspension.isSuspended else {
@@ -455,6 +458,7 @@ final class BluetoothRemoteBridge: NSObject {
 
     func stop() {
         shouldRun = false
+        wakeRecoveryLatch.clearFailureLatch()
         reconnectWorkItem?.cancel()
         stopBatteryPolling(reason: "bridge_stopped")
         reconnectPolicy.reset()
@@ -469,7 +473,10 @@ final class BluetoothRemoteBridge: NSObject {
         state = .stopped
     }
 
-    func reconnectNow() {
+    func reconnectNow(clearWakeFailureLatch: Bool = true) {
+        if clearWakeFailureLatch {
+            wakeRecoveryLatch.clearFailureLatch()
+        }
         guard shouldRun else { return }
         guard !systemSuspension.isSuspended else {
             systemSuspension.markConnectionCycleNeeded()
@@ -509,6 +516,12 @@ final class BluetoothRemoteBridge: NSObject {
             )
             return
         }
+        guard wakeRecoveryLatch.shouldAllowRecovery(reason: reason) else {
+            AppLogger.shared.write(
+                "BLE RECOVERY phase=skipped cause=wake_recovery_failed trigger=\(reason)"
+            )
+            return
+        }
         let centralState = central.map { String($0.state.rawValue) } ?? "none"
         AppLogger.shared.write(
             "BLE RECOVERY phase=requested trigger=\(reason) state=\(state.logDescription) " +
@@ -516,12 +529,16 @@ final class BluetoothRemoteBridge: NSObject {
                 "central_state=\(centralState) " +
                 "generation=\(generationCounter)"
         )
-        reconnectNow()
+        wakeRecoveryLatch.noteRecoveryStarted(reason: reason)
+        reconnectNow(clearWakeFailureLatch: reason != "system_wake")
     }
 
     func setSystemSuspended(_ suspended: Bool, reason: String) {
         if suspended {
             guard systemSuspension.suspend(phase: lifecycle) else { return }
+            if !lifecycle.isReady, wakeRecoveryLatch.noteAttemptFailedIfWakeInFlight() {
+                AppLogger.shared.write("BLE WAKE RECOVERY latched reason=suspended_before_ready")
+            }
             stopBatteryPolling(reason: "system_suspended")
             stopScan()
             if !lifecycle.isReady {

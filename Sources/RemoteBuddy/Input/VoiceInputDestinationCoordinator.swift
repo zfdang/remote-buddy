@@ -110,7 +110,7 @@ struct VoiceInputDestinationSnapshot: Equatable {
     static func system() -> VoiceInputDestinationSnapshot {
         let secureInputEnabled = SecureInputMonitor.isEnabled()
         let frontmostBundleIdentifier = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
-        guard AXIsProcessTrusted() else {
+        guard AXIsProcessTrusted(), !AXSelfTargetPolicy.isOwnFrontmostApplication() else {
             return empty(bundleIdentifier: frontmostBundleIdentifier, secureInputEnabled: secureInputEnabled)
         }
         let systemWideElement = AXUIElementCreateSystemWide()
@@ -124,6 +124,9 @@ struct VoiceInputDestinationSnapshot: Equatable {
         var processIdentifier: pid_t = 0
         let focusedBundleIdentifier: String?
         if AXUIElementGetPid(focusedElement, &processIdentifier) == .success {
+            if AXSelfTargetPolicy.isOwnProcess(processIdentifier) {
+                return empty(bundleIdentifier: frontmostBundleIdentifier, secureInputEnabled: secureInputEnabled)
+            }
             focusedBundleIdentifier = NSRunningApplication(
                 processIdentifier: processIdentifier
             )?.bundleIdentifier

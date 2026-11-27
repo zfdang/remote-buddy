@@ -164,15 +164,17 @@ def extract_version_from_pkg(pkg_path):
 
 
 def resolve_version(tag, explicit_version=None, target_commitish=None, existing_feed_path=None, pkg_path=None):
-    """Resolve build version integer matching commit count, avoiding 1000-modulo rollback."""
+    """Resolve build version integer matching commit count, using the suffix width of the published tag."""
     if explicit_version:
         return str(explicit_version)
 
-    tag_mod = int(tag.rsplit(".", 1)[1])
+    suffix = tag.rsplit(".", 1)[1]
+    modulus = 10 ** len(suffix)
+    tag_mod = int(suffix)
 
     # 1. Inspect package if available
     pkg_ver = extract_version_from_pkg(pkg_path)
-    if pkg_ver and int(pkg_ver) % 1000 == tag_mod:
+    if pkg_ver and int(pkg_ver) % modulus == tag_mod:
         return str(pkg_ver)
 
     # 2. Inspect git history if available
@@ -187,12 +189,12 @@ def resolve_version(tag, explicit_version=None, target_commitish=None, existing_
             )
             if res.returncode == 0 and res.stdout.strip().isdigit():
                 count = int(res.stdout.strip())
-                if count % 1000 == tag_mod:
+                if count % modulus == tag_mod:
                     return str(count)
         except Exception:
             pass
 
-    # 3. Check existing feed for base thousands
+    # 3. Check existing feed for the most recent full count
     if existing_feed_path and Path(existing_feed_path).exists():
         try:
             tree = ET.parse(existing_feed_path)
@@ -202,9 +204,9 @@ def resolve_version(tag, explicit_version=None, target_commitish=None, existing_
                 prev_tag = tree.findtext('.//channel/item/title')
                 if prev_tag == tag:
                     return str(prev_count)
-                base = (prev_count // 1000) * 1000
-                if prev_count % 1000 >= tag_mod:
-                    base += 1000
+                base = (prev_count // modulus) * modulus
+                if prev_count % modulus >= tag_mod:
+                    base += modulus
                 return str(base + tag_mod)
         except Exception:
             pass
@@ -244,7 +246,7 @@ def rebuild(
         release_metadata = fetch_release_metadata(tag)
 
     tag = release_metadata["tagName"]
-    if not re.fullmatch(r"v\d{2}-\d{2}-\d{2}\.\d{3}", tag):
+    if not re.fullmatch(r"v\d{2}-\d{2}-\d{2}\.\d{3,4}", tag):
         raise ValueError(f"Invalid release tag: {tag}")
 
     embedded_public_key = get_embedded_public_key()

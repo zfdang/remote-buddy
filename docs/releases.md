@@ -4,9 +4,9 @@
 
 ## 版本
 
-版本格式为 `vYY-MM-DD.NNN`，例如 `v26-10-11.001`，示例不是当前最新版。日期来自发布提交的 committer 时间，使用 Asia/Singapore 时区；序号为 `git rev-list --count HEAD`，包括可达的合并提交，只取末三位，不足三位补零。例如 1、11、113 分别得到 001、011、113。不是每日重置计数。同一提交重跑得到同一版本；已存在 Release 不覆盖。历史必须完整，因此 checkout 使用 fetch-depth: 0。例如 999、1000、1001、12345 的显示尾号分别为 999、000、001、345。显示尾号只用于区分版本，不用于更新排序。实际最新版以 [Releases](https://github.com/zfdang/remote-buddy/releases/latest) 为准。
+版本格式为 `vYY-MM-DD.NNNN`，例如 `v26-10-11.0001`，示例不是当前最新版。日期来自发布提交的 committer 时间，使用 Asia/Singapore 时区；序号为 `git rev-list --count HEAD`，包括可达的合并提交，只取末四位，不足四位补零。例如 1、11、113 分别得到 0001、0011、0113。不是每日重置计数。同一提交重跑得到同一版本；已存在 Release 不覆盖。历史必须完整，因此 checkout 使用 fetch-depth: 0。例如 999、1000、1001、12345 的显示尾号分别为 0999、1000、1001、2345。显示尾号只用于区分版本，不用于更新排序。实际最新版以 [Releases](https://github.com/zfdang/remote-buddy/releases/latest) 为准。
 
-App 的 CFBundleShortVersionString 为数字日期（例如 26.10.11），CFBundleVersion 为提交总数；安装包内部使用数字日期加提交总数。Git tag、Release 标题与下载文件采用完整 `vYY-MM-DD.NNN` 格式。
+App 的 CFBundleShortVersionString 为数字日期（例如 26.10.11），CFBundleVersion 为提交总数；安装包内部使用数字日期加提交总数。Git tag、Release 标题与下载文件采用完整 `vYY-MM-DD.NNNN` 格式。
 
 ## 更新摘要
 
@@ -16,9 +16,9 @@ App 的 CFBundleShortVersionString 为数字日期（例如 26.10.11），CFBund
 
 ## 安装包与源码
 
-- `Remote_Buddy_vYY-MM-DD.NNN_macOS_arm64.pkg` / `*_macOS_intel.pkg`：App 与驱动的一体安装包。
-- `Remote_Buddy_Uninstaller_vYY-MM-DD.NNN_macOS_universal.pkg`：Apple Silicon / Intel 共用的脚本卸载包。
-- `Remote_Buddy_vYY-MM-DD.NNN_sources.tar.gz`：包含本项目源码、打补丁后 BlackHole 驱动源码（`vendor/BlackHole`）与固定版本 Sparkle 源码（`vendor/Sparkle`）的完整源码归档（遵循 GPL-3.0 对应源码要求）。
+- `Remote_Buddy_vYY-MM-DD.NNNN_macOS_arm64.pkg` / `*_macOS_intel.pkg`：App 与驱动的一体安装包。
+- `Remote_Buddy_Uninstaller_vYY-MM-DD.NNNN_macOS_universal.pkg`：Apple Silicon / Intel 共用的脚本卸载包。
+- `Remote_Buddy_vYY-MM-DD.NNNN_sources.tar.gz`：包含本项目源码、打补丁后 BlackHole 驱动源码（`vendor/BlackHole`）与固定版本 Sparkle 源码（`vendor/Sparkle`）的完整源码归档（遵循 GPL-3.0 对应源码要求）。
 - `appcast-arm64.xml` / `appcast-intel.xml`：对应架构的更新源，作为可恢复发布产物保留在 Release 中。
 
 Release 提供上述安装包、源码归档与两份更新源，不额外上传 SHA 文件或 TXT 更新摘要。第三方固定版本源码及构建说明见 [source-code.md](source-code.md)。
@@ -98,7 +98,7 @@ GitHub Releases；安装同时更新 App 和驱动，需要管理员授权，并
 不要随意更换密钥。PKG 更新无法通过普通更新自动轮换遗失的签名密钥，
 必须安全备份，并在确需更换时安排用户重新安装。
 
-通用卸载包以 `Remote_Buddy_Uninstaller_vYY-MM-DD.NNN_macOS_universal.pkg` 发布，只有脚本而没有安装载荷。Release matrix 只在 arm64 任务中生成它，避免两份同名产物。
+通用卸载包以 `Remote_Buddy_Uninstaller_vYY-MM-DD.NNNN_macOS_universal.pkg` 发布，只有脚本而没有安装载荷。Release matrix 只在 arm64 任务中生成它，避免两份同名产物。
 
 新 App 使用各自的更新源，开发阶段不维护旧 universal feed。arm64 feed 标注 Sparkle 的 [arm64 硬件要求](https://sparkle-project.org/documentation/api-reference/Classes/SUAppcastItem.html)，Intel feed 指向 Intel 包。
 

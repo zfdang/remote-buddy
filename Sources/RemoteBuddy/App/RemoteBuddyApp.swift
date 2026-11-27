@@ -113,6 +113,7 @@ final class RemoteBuddyAppDelegate: NSObject, NSApplicationDelegate, NSMenuDeleg
     let updateInformation = UpdateInformationStore()
     lazy var localization = LocalizationStore(settings: model.settings)
     let termination = ApplicationTerminationCoordinator()
+    let actionFeedbackWindowCoordinator = ActionFeedbackWindowCoordinator()
     var statusItem: NSStatusItem?
     var statusItemPresentation: StatusItemPresentation = .disconnected
     var appliedStatusItemPresentation: StatusItemPresentation?
@@ -187,6 +188,17 @@ final class RemoteBuddyAppDelegate: NSObject, NSApplicationDelegate, NSMenuDeleg
         )
         observeModel()
         observeLocalization()
+        ActionFeedbackCenter.shared.configureStandardActions(
+            openSystemSettings: { [weak self] in
+                self?.model.openPrivacyPane("Privacy_Accessibility")
+            },
+            reselectAction: { [weak self] in
+                guard let self else { return }
+                self.model.requestedSettingsSection = .mapping
+                self.showSettings()
+            }
+        )
+        actionFeedbackWindowCoordinator.start()
         installWorkspaceAudioLifecycleObservers()
 
         if OnboardingLaunchPolicy.shouldStartRuntime(
@@ -241,7 +253,7 @@ final class RemoteBuddyAppDelegate: NSObject, NSApplicationDelegate, NSMenuDeleg
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-
+        actionFeedbackWindowCoordinator.stop()
         model.stop()
         model.settings.discardOnboardingVoiceTrial()
         updateCheckTask?.cancel()

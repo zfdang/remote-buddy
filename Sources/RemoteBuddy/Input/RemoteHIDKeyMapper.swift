@@ -108,6 +108,47 @@ enum RemoteHIDKeyMappingPolicy {
         return desired
     }
 
+    static func managedSourceUsages(for family: RemoteHIDMappingFamily) -> Set<UInt64> {
+        switch family {
+        case .xiaomi:
+            return [remoteVoiceKey.source, suppressedRemotePowerKey.source]
+        case .t1Remote:
+            return [
+                neutralT1VoiceSearchKey.source,
+                neutralT1VoiceHoldKey.source,
+                suppressedT1PowerKey.source,
+            ]
+        }
+    }
+
+    static func readbackMatchesManagedSources(
+        desired: [HIDUsageMapping],
+        readback: [HIDUsageMapping],
+        family: RemoteHIDMappingFamily
+    ) -> Bool {
+        for source in managedSourceUsages(for: family) {
+            let expected = desired.filter { $0.source == source }
+            let actual = readback.filter { $0.source == source }
+            if actual != expected {
+                return false
+            }
+        }
+        return true
+    }
+
+    static func readbackMatchesExpected(
+        desired: [HIDUsageMapping],
+        readback: [HIDUsageMapping],
+        family: RemoteHIDMappingFamily
+    ) -> Bool {
+        desired.allSatisfy { readback.contains($0) } &&
+            readbackMatchesManagedSources(
+                desired: desired,
+                readback: readback,
+                family: family
+            )
+    }
+
     static func restoring(
         originalVoiceMapping: HIDUsageMapping?,
         originalPowerMapping: HIDUsageMapping?,
@@ -154,6 +195,9 @@ enum RemoteHIDMappingFamily: String, Codable, Equatable {
 struct RemoteHIDMappingService {
     let registryID: UInt64?
     let locationID: UInt32?
+    /// True when the system reports a virtual-prefixed duplicate product name (`V-...`);
+    /// logged as a single boolean without recording raw device names.
+    let hasVirtualNamePrefix: Bool?
     let family: RemoteHIDMappingFamily
     private let retainedOwner: AnyObject?
     let readMappings: () -> [HIDUsageMapping]
@@ -162,6 +206,7 @@ struct RemoteHIDMappingService {
     init(
         registryID: UInt64?,
         locationID: UInt32? = nil,
+        hasVirtualNamePrefix: Bool? = nil,
         family: RemoteHIDMappingFamily = .xiaomi,
         retainedOwner: AnyObject? = nil,
         readMappings: @escaping () -> [HIDUsageMapping],
@@ -169,6 +214,7 @@ struct RemoteHIDMappingService {
     ) {
         self.registryID = registryID
         self.locationID = locationID
+        self.hasVirtualNamePrefix = hasVirtualNamePrefix
         self.family = family
         self.retainedOwner = retainedOwner
         self.readMappings = readMappings
@@ -181,6 +227,8 @@ final class RemoteHIDKeyMapper {
 
     private nonisolated(unsafe) static let mappingProperty = "UserKeyMapping" as CFString
 
+    static let maximumRestoreFailureAttempts = 5
+
     private struct OriginalMappings: Codable {
         let voice: HIDUsageMapping?
         let power: HIDUsageMapping?
@@ -188,6 +236,7 @@ final class RemoteHIDKeyMapper {
         let t1Search: HIDUsageMapping?
         let t1Hold: HIDUsageMapping?
         let t1Power: HIDUsageMapping?
+        let failedRestoreAttempts: Int?
 
         init(
             voice: HIDUsageMapping? = nil,
@@ -195,7 +244,8 @@ final class RemoteHIDKeyMapper {
             family: RemoteHIDMappingFamily? = nil,
             t1Search: HIDUsageMapping? = nil,
             t1Hold: HIDUsageMapping? = nil,
-            t1Power: HIDUsageMapping? = nil
+            t1Power: HIDUsageMapping? = nil,
+            failedRestoreAttempts: Int? = nil
         ) {
             self.voice = voice
             self.power = power
@@ -203,6 +253,19 @@ final class RemoteHIDKeyMapper {
             self.t1Search = t1Search
             self.t1Hold = t1Hold
             self.t1Power = t1Power
+            self.failedRestoreAttempts = failedRestoreAttempts
+        }
+
+        func withFailedRestoreAttempts(_ count: Int) -> OriginalMappings {
+            OriginalMappings(
+                voice: voice,
+                power: power,
+                family: family,
+                t1Search: t1Search,
+                t1Hold: t1Hold,
+                t1Power: t1Power,
+                failedRestoreAttempts: count
+            )
         }
     }
 
@@ -245,6 +308,7 @@ final class RemoteHIDKeyMapper {
     private(set) var powerSuppressedLocationIDs: Set<UInt32>?
     private(set) var isVoiceKeyNeutralized = false
     private(set) var matchedServiceCount = 0
+    private(set) var lastApplyFailedVerification = false
 
     var hasMatchingServices: Bool {
         matchedServiceCount > 0
@@ -451,6 +515,7 @@ final class RemoteHIDKeyMapper {
         suppressPowerKey: Bool = false,
         neutralizeVoiceKey: Bool = false
     ) -> Bool {
+        lastApplyFailedVerification = false
         guard bootID != nil else { resetAppliedState(); return false }
         let services = matchingServices()
         let matchedCount = services.count
@@ -461,6 +526,24 @@ final class RemoteHIDKeyMapper {
                 "VOICE FN MAPPING applied=false neutralized=false power_suppressed=false matched=0"
             )
             return false
+        }
+
+        let missingLocationCount = services.filter { $0.locationID == nil }.count
+        if matchedCount != 1 {
+            let serviceSummaries = services.map { service in
+                let registryText = service.registryID.map { String(format: "0x%llx", $0) } ?? "nil"
+                let locationText = service.locationID.map { String(format: "0x%x", $0) } ?? "nil"
+                let virtualText = service.hasVirtualNamePrefix.map(String.init) ?? "unknown"
+                return "{reg=\(registryText),loc=\(locationText),virtual=\(virtualText),family=\(service.family.rawValue)}"
+            }.joined(separator: ",")
+            AppLogger.shared.write(
+                "HID NATIVE MAPPING phase=enumerate services=\(matchedCount) " +
+                    "missing_location=\(missingLocationCount) list=[\(serviceSummaries)]"
+            )
+        } else {
+            AppLogger.shared.write(
+                "HID NATIVE MAPPING phase=enumerate services=1 missing_location=\(missingLocationCount)"
+            )
         }
 
         let requiresCompleteMapping = neutralizeVoiceKey || services.contains { $0.family == .t1Remote }
@@ -526,8 +609,10 @@ final class RemoteHIDKeyMapper {
             return false
         }
 
+        var hadServiceVerificationFailure = false
         for (index, service) in services.enumerated() {
             guard let registryID = service.registryID else {
+                hadServiceVerificationFailure = true
                 if requiresCompleteMapping {
                     rollback(
                         services: services,
@@ -536,6 +621,7 @@ final class RemoteHIDKeyMapper {
                         newlyStoredRegistryIDs: newlyStoredRegistryIDs,
                         matchedCount: matchedCount
                     )
+                    lastApplyFailedVerification = true
                     return false
                 }
                 continue
@@ -565,16 +651,52 @@ final class RemoteHIDKeyMapper {
                         : original?.t1Power
                 )
             }
-            guard service.setMappings(desired) else {
+            let writeSucceeded = service.setMappings(desired)
+            let readback = writeSucceeded ? service.readMappings() : []
+            let readbackVerified = writeSucceeded && RemoteHIDKeyMappingPolicy.readbackMatchesExpected(
+                desired: desired,
+                readback: readback,
+                family: service.family
+            )
+            AppLogger.shared.write(
+                "HID NATIVE MAPPING phase=write registry=\(String(format: "0x%llx", registryID)) " +
+                    "result=\(readbackVerified ? "accepted" : "rejected") " +
+                    "written=\(desired.count) readback=\(readback.count) " +
+                    "virtual=\(service.hasVirtualNamePrefix.map(String.init) ?? "unknown")"
+            )
+            guard readbackVerified else {
+                hadServiceVerificationFailure = true
                 if requiresCompleteMapping {
+                    let rollbackIndices = writeSucceeded ? appliedIndices + [index] : appliedIndices
                     rollback(
                         services: services,
                         snapshots: snapshots,
-                        appliedIndices: appliedIndices,
+                        appliedIndices: rollbackIndices,
                         newlyStoredRegistryIDs: newlyStoredRegistryIDs,
                         matchedCount: matchedCount
                     )
+                    lastApplyFailedVerification = true
                     return false
+                }
+                if writeSucceeded, let snapshot = snapshots[index] {
+                    let snapshotWritten = service.setMappings(snapshot)
+                    let rollbackVerified = snapshotWritten && RemoteHIDKeyMappingPolicy.readbackMatchesExpected(
+                        desired: snapshot,
+                        readback: service.readMappings(),
+                        family: service.family
+                    )
+                    if rollbackVerified, newlyStoredRegistryIDs.contains(registryID) {
+                        originalMappings.removeValue(forKey: registryID)
+                        _ = persistRecoveryJournal()
+                    } else if !rollbackVerified {
+                        AppLogger.shared.write(
+                            "HID NATIVE MAPPING phase=rollback registry=\(String(format: "0x%llx", registryID)) " +
+                                "result=unverified"
+                        )
+                    }
+                } else if !writeSucceeded, newlyStoredRegistryIDs.contains(registryID) {
+                    originalMappings.removeValue(forKey: registryID)
+                    _ = persistRecoveryJournal()
                 }
                 continue
             }
@@ -586,6 +708,7 @@ final class RemoteHIDKeyMapper {
 
         let appliedCount = appliedIndices.count
         let allTargetsApplied = appliedCount == matchedCount
+        lastApplyFailedVerification = hadServiceVerificationFailure || !allTargetsApplied
         let fullySuppressedLocations = Set(matchedCountsByLocation.compactMap { locationID, count in
             appliedCountsByLocation[locationID] == count ? locationID : nil
         })
@@ -631,8 +754,9 @@ final class RemoteHIDKeyMapper {
             guard let registryID = service.registryID,
                   let original = originalMappings[registryID]
             else { continue }
+            let family = original.family ?? service.family
             let restored: [HIDUsageMapping]
-            switch original.family ?? service.family {
+            switch family {
             case .xiaomi:
                 restored = RemoteHIDKeyMappingPolicy.restoring(
                     originalVoiceMapping: original.voice,
@@ -647,9 +771,30 @@ final class RemoteHIDKeyMapper {
                     in: service.readMappings()
                 )
             }
-            if service.setMappings(restored) {
+            let writeSucceeded = service.setMappings(restored)
+            let restoreVerified = writeSucceeded && RemoteHIDKeyMappingPolicy.readbackMatchesExpected(
+                desired: restored,
+                readback: service.readMappings(),
+                family: family
+            )
+            if restoreVerified {
                 restoredCount += 1
                 originalMappings.removeValue(forKey: registryID)
+            } else {
+                let attempts = (original.failedRestoreAttempts ?? 0) + 1
+                AppLogger.shared.write(
+                    "HID NATIVE MAPPING phase=restore registry=\(String(format: "0x%llx", registryID)) " +
+                        "result=unverified attempt=\(attempts) max_attempts=\(Self.maximumRestoreFailureAttempts)"
+                )
+                if attempts >= Self.maximumRestoreFailureAttempts {
+                    AppLogger.shared.write(
+                        "HID NATIVE MAPPING phase=restore registry=\(String(format: "0x%llx", registryID)) " +
+                            "result=exhausted attempts=\(attempts)"
+                    )
+                    originalMappings.removeValue(forKey: registryID)
+                } else {
+                    originalMappings[registryID] = original.withFailedRestoreAttempts(attempts)
+                }
             }
         }
 
@@ -669,8 +814,19 @@ final class RemoteHIDKeyMapper {
         var rollbackCount = 0
         var registryIDsNeedingRestore = Set<UInt64>()
         for index in appliedIndices {
-            guard let snapshot = snapshots[index] else { continue }
-            if services[index].setMappings(snapshot) {
+            guard let snapshot = snapshots[index] else {
+                if let registryID = services[index].registryID {
+                    registryIDsNeedingRestore.insert(registryID)
+                }
+                continue
+            }
+            let writeSucceeded = services[index].setMappings(snapshot)
+            let rollbackVerified = writeSucceeded && RemoteHIDKeyMappingPolicy.readbackMatchesExpected(
+                desired: snapshot,
+                readback: services[index].readMappings(),
+                family: services[index].family
+            )
+            if rollbackVerified {
                 rollbackCount += 1
             } else if let registryID = services[index].registryID {
                 registryIDsNeedingRestore.insert(registryID)
@@ -710,6 +866,7 @@ final class RemoteHIDKeyMapper {
             return RemoteHIDMappingService(
                 registryID: registryID(service),
                 locationID: locationID(service),
+                hasVirtualNamePrefix: hasVirtualNamePrefix(service),
                 family: family,
                 retainedOwner: client,
                 readMappings: { readMappings(service) },
@@ -722,6 +879,14 @@ final class RemoteHIDKeyMapper {
                 }
             )
         }
+    }
+
+    private static func hasVirtualNamePrefix(_ service: IOHIDServiceClient) -> Bool {
+        guard let name = IOHIDServiceClientCopyProperty(
+            service,
+            kIOHIDProductKey as CFString
+        ) as? String else { return false }
+        return name.hasPrefix("V-")
     }
 
     private static func targetFamily(

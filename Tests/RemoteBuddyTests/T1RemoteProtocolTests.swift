@@ -1114,6 +1114,7 @@ struct T1RemoteProtocolTests {
         let profileID = profile.id
         settings.selectRemoteProfile(profileID)
 
+        let clock = ControlledTestScheduler()
         let suppressor = KeyboardEventSuppressor(uptime: { 0 }, permissionsGranted: { true })
         var postedEvents: [(CGKeyCode, Bool, CGEventFlags)] = []
         let monitor = HIDRemoteMonitor(
@@ -1122,6 +1123,7 @@ struct T1RemoteProtocolTests {
             profileID: profileID,
             eventSuppressor: suppressor,
             ownsEventSuppressor: false,
+            scheduler: clock,
             runtimePermissions: { true },
             nativeSuppressionAvailable: { true },
             actionPerformer: { _, _, _ in true },
@@ -1172,14 +1174,24 @@ struct T1RemoteProtocolTests {
         #expect(postedEvents.map(\.0) == [123, 123, 124, 124])
         #expect(postedEvents.allSatisfy { $0.2.contains(.maskCommand) })
 
-        // T1 OK confirms App Switcher (Cmd up) and still suppresses its own release edge.
+        // T1 OK confirms App Switcher (Option down -> Cmd up -> Option up) and still suppresses its own release edge.
         postedEvents.removeAll()
         monitor.handleSimulatedT1Report(reportID: T1RemoteProtocol.keyboardReportID, data: okPress)
         let okDown = try #require(CGEvent(keyboardEventSource: nil, virtualKey: 36, keyDown: true))
         #expect(suppressor.handle(type: .keyDown, event: okDown))
         #expect(postedEvents.count == 1)
-        #expect(postedEvents[0].0 == 55)
-        #expect(!postedEvents[0].1)
+        #expect(postedEvents[0].0 == KeyboardInjector.AppSwitcherSession.leftOptionKeyCode)
+        #expect(postedEvents[0].1)
+
+        clock.advance(to: 60)
+        #expect(postedEvents.count == 2)
+        #expect(postedEvents[1].0 == 55)
+        #expect(!postedEvents[1].1)
+
+        clock.advance(to: 160)
+        #expect(postedEvents.count == 3)
+        #expect(postedEvents[2].0 == KeyboardInjector.AppSwitcherSession.leftOptionKeyCode)
+        #expect(!postedEvents[2].1)
 
         monitor.handleSimulatedT1Report(reportID: T1RemoteProtocol.keyboardReportID, data: kbRelease)
         let okUp = try #require(CGEvent(keyboardEventSource: nil, virtualKey: 36, keyDown: false))

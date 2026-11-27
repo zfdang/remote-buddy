@@ -293,9 +293,43 @@ extension BridgeAppModel {
         AppLogger.shared.write("G9N9N SMART_TOGGLE aborted reason=\(reason)")
     }
 
+    func startVoiceSilenceNoticeMonitoring(generation: UInt64) {
+        voiceSilenceNoticeTimer?.cancel()
+        voiceSilenceNoticeTracker.beginSession()
+        let timer = DispatchSource.makeTimerSource(queue: .main)
+        timer.schedule(deadline: .now() + 1, repeating: 1)
+        timer.setEventHandler { [weak self] in
+            guard let self,
+                  case let .handsFreeActive(bridgeID) = self.g9n9nSmartToggle.phase,
+                  self.g9n9nSmartToggle.generation == generation,
+                  let bridge = self.g9n9nSmartToggleBridge,
+                  bridge.deviceIdentifier == bridgeID
+            else { return }
+            _ = self.evaluateVoiceSilenceNotice(now: bridge.nowUptime())
+        }
+        voiceSilenceNoticeTimer = timer
+        timer.resume()
+    }
+
+    @discardableResult
+    func evaluateVoiceSilenceNotice(now: TimeInterval) -> Bool {
+        guard voiceSilenceNoticeTracker.consumePresentationIfDue(now: now) else { return false }
+        let localization = LocalizationStore(settings: settings)
+        let title = localization.text("voice.silence_notice.title")
+        let text = localization.text("voice.silence_notice.body")
+        if let onVoiceSilenceNoticePresented {
+            onVoiceSilenceNoticePresented(title, text)
+        } else {
+            voiceSilenceNoticeController.present(title: title, text: text)
+        }
+        return true
+    }
+
     func clearG9N9NSmartToggleState(reason: String) {
         guard g9n9nSmartToggle.isActive else { return }
         cancelG9N9NSmartToggleTimers()
+        voiceSilenceNoticeTracker.endSession()
+        voiceSilenceNoticeController.dismiss(reason: reason)
         g9n9nSmartToggleBridge = nil
         g9n9nSmartToggle.reset()
         AppLogger.shared.write("G9N9N SMART_TOGGLE cleared reason=\(reason)")
@@ -306,5 +340,7 @@ extension BridgeAppModel {
         g9n9nSmartToggleReopenTimer = nil
         g9n9nSmartToggleDeadlineTimer?.cancel()
         g9n9nSmartToggleDeadlineTimer = nil
+        voiceSilenceNoticeTimer?.cancel()
+        voiceSilenceNoticeTimer = nil
     }
 }

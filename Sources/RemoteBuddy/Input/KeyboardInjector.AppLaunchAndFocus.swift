@@ -3,23 +3,40 @@ import CoreGraphics
 import Foundation
 
 extension KeyboardInjector {
+    static func defaultPresetApplicationURL(_ bundleIdentifier: String) -> URL? {
+        if bundleIdentifier == PresetApplication.remoteMic.bundleIdentifier {
+            return Bundle.main.bundleURL
+        }
+        return NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier)
+    }
+
+    static func resolvePresetApplicationURL(
+        _ application: PresetApplication,
+        applicationURL: (String) -> URL? = defaultPresetApplicationURL
+    ) -> (bundleID: String, url: URL)? {
+        for bundleID in application.bundleIdentifiers {
+            if let url = applicationURL(bundleID) {
+                return (bundleID, url)
+            }
+        }
+        return nil
+    }
+
+    @discardableResult
     static func open(
         _ application: PresetApplication,
         focusRequestID: UInt64,
         applicationURL: (String) -> URL?,
         applicationOpener: ApplicationOpener,
-        applicationFocuser: @escaping ApplicationFocuser
-    ) {
-        var resolved: (bundleID: String, url: URL)?
-        for bundleID in application.bundleIdentifiers {
-            if let url = applicationURL(bundleID) {
-                resolved = (bundleID, url)
-                break
-            }
-        }
-        guard let resolved else {
+        applicationFocuser: @escaping ApplicationFocuser,
+        completion: (@Sendable (Bool) -> Void)? = nil
+    ) -> Bool {
+        guard let resolved = resolvePresetApplicationURL(
+            application,
+            applicationURL: applicationURL
+        ) else {
             AppLogger.shared.write("APP ACTION unavailable bundle=\(application.bundleIdentifier)")
-            return
+            return false
         }
 
         applicationOpener(resolved.url, application) { processIdentifier, error in
@@ -28,13 +45,16 @@ extension KeyboardInjector {
                     "APP ACTION failed bundle=\(resolved.bundleID) " +
                         AppLogger.errorFields(error)
                 )
+                completion?(false)
             } else {
                 AppLogger.shared.write("APP ACTION opened bundle=\(resolved.bundleID)")
                 if application.focusStrategy != nil, let processIdentifier {
                     applicationFocuser(resolved.url, application, processIdentifier, focusRequestID)
                 }
+                completion?(true)
             }
         }
+        return true
     }
 
     static func openApplication(
@@ -50,18 +70,20 @@ extension KeyboardInjector {
         }
     }
 
+    @discardableResult
     static func open(
         _ application: CustomApplicationProfile,
         focusRequestID: UInt64,
         applicationURL: (CustomApplicationProfile) -> URL?,
         applicationOpener: CustomApplicationOpener,
-        applicationFocuser: @escaping CustomApplicationFocuser
-    ) {
+        applicationFocuser: @escaping CustomApplicationFocuser,
+        completion: (@Sendable (Bool) -> Void)? = nil
+    ) -> Bool {
         guard let url = applicationURL(application) else {
             AppLogger.shared.write(
                 "APP ACTION unavailable bundle=\(application.bundleIdentifier) custom=true"
             )
-            return
+            return false
         }
 
         applicationOpener(url, application) { processIdentifier, error in
@@ -70,14 +92,18 @@ extension KeyboardInjector {
                     "APP ACTION failed bundle=\(application.bundleIdentifier) custom=true " +
                         AppLogger.errorFields(error)
                 )
+                completion?(false)
                 return
             }
             AppLogger.shared.write(
                 "APP ACTION opened bundle=\(application.bundleIdentifier) custom=true"
             )
-            guard application.focusStrategy != .none, let processIdentifier else { return }
-            applicationFocuser(application, processIdentifier, focusRequestID)
+            if application.focusStrategy != .none, let processIdentifier {
+                applicationFocuser(application, processIdentifier, focusRequestID)
+            }
+            completion?(true)
         }
+        return true
     }
 
     static func resolveCustomApplicationURL(

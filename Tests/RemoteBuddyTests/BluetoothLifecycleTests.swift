@@ -168,6 +168,203 @@ struct BluetoothLifecycleTests {
         ))
     }
 
+    @Test func wakeRecoveryFailureLatchesAcrossRepeatedSleepCyclesUntilManualOrActivityRecovery() {
+        var latch = BluetoothWakeRecoveryPolicy.WakeRecoveryLatch()
+        #expect(latch.shouldAllowRecovery(reason: "system_wake"))
+
+        latch.noteRecoveryStarted(reason: "system_wake")
+        let didLatch = latch.noteAttemptFailedIfWakeInFlight()
+        #expect(didLatch)
+        #expect(latch.wakeRecoveryFailed)
+        #expect(!latch.shouldAllowRecovery(reason: "system_wake"))
+        #expect(latch.shouldAllowRecovery(reason: "manual"))
+
+        latch.clearFailureLatch()
+        #expect(!latch.wakeRecoveryFailed)
+        #expect(latch.shouldAllowRecovery(reason: "system_wake"))
+    }
+
+    @Test @MainActor func bridgeSkipsRepeatedSystemWakeHandshakesAfterFailedWakeRecovery() throws {
+        let suite = UUID().uuidString
+        let values = try #require(UserDefaults(suiteName: suite))
+        defer { values.removePersistentDomain(forName: suite) }
+
+        final class DummyDelegate: BluetoothRemoteBridgeDelegate {
+            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didChange state: BluetoothBridgeState) {}
+            func bluetoothBridgeDidStartVoice(_ bridge: BluetoothRemoteBridge) {}
+            func bluetoothBridgeDidStopVoice(_ bridge: BluetoothRemoteBridge) {}
+            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didDecode samples: [Int16]) {}
+            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didUpdateBatteryLevel level: Int?) {}
+            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didIdentifyRemoteModel model: RemoteModel) {}
+            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didUpdatePowerState state: RemotePowerState?) {}
+            func bluetoothBridgeDeviceNameDidChange(_ bridge: BluetoothRemoteBridge) {}
+        }
+
+        let delegate = DummyDelegate()
+        var reconnectSchedules = 0
+        let bridge = BluetoothRemoteBridge(
+            settings: AppSettings(defaults: values),
+            delegate: delegate,
+            targetIdentifier: UUID(),
+            scheduleReconnect: { _, _ in reconnectSchedules += 1 }
+        )
+        bridge.shouldRun = true
+
+        bridge.recoverVoiceLink(reason: "system_wake")
+        #expect(reconnectSchedules == 1)
+        #expect(bridge.wakeRecoveryLatch.wakeRecoveryInFlight)
+
+        _ = bridge.nextAutomaticReconnectDelay(bypassCachedTarget: true, failedCachedTargetAttempt: false)
+        #expect(bridge.wakeRecoveryLatch.wakeRecoveryFailed)
+
+        bridge.recoverVoiceLink(reason: "system_wake")
+        #expect(reconnectSchedules == 1)
+
+        bridge.reconnectNow()
+        #expect(!bridge.wakeRecoveryLatch.wakeRecoveryFailed)
+        #expect(reconnectSchedules == 2)
+    }
+
+    @Test @MainActor func cachedTargetHitPreservesWakeRecoveryUntilReadySoHandshakeFailureLatches() throws {
+        let suite = UUID().uuidString
+        let values = try #require(UserDefaults(suiteName: suite))
+        defer { values.removePersistentDomain(forName: suite) }
+
+        final class DummyDelegate: BluetoothRemoteBridgeDelegate {
+            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didChange state: BluetoothBridgeState) {}
+            func bluetoothBridgeDidStartVoice(_ bridge: BluetoothRemoteBridge) {}
+            func bluetoothBridgeDidStopVoice(_ bridge: BluetoothRemoteBridge) {}
+            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didDecode samples: [Int16]) {}
+            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didUpdateBatteryLevel level: Int?) {}
+            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didIdentifyRemoteModel model: RemoteModel) {}
+            func bluetoothBridge(_ bridge: BluetoothRemoteBridge, didUpdatePowerState state: RemotePowerState?) {}
+            func bluetoothBridgeDeviceNameDidChange(_ bridge: BluetoothRemoteBridge) {}
+        }
+
+        let targetID = UUID()
+        let delegate = DummyDelegate()
+        var reconnectSchedules = 0
+        let bridge = BluetoothRemoteBridge(
+            settings: AppSettings(defaults: values),
+            delegate: delegate,
+            targetIdentifier: targetID,
+            scheduleReconnect: { _, _ in reconnectSchedules += 1 }
+        )
+        bridge.shouldRun = true
+
+        // 1. Wake triggers recovery and marks wakeRecoveryInFlight.
+        bridge.recoverVoiceLink(reason: "system_wake")
+        #expect(reconnectSchedules == 1)
+        #expect(bridge.wakeRecoveryLatch.wakeRecoveryInFlight)
+
+        // 2. Adopting a cached CoreBluetooth peripheral must NOT clear wakeRecoveryInFlight.
+        let decision = bridge.admitCandidate(
+            identifier: targetID,
+            advertisesVoiceService: true,
+            name: "MI RC",
+            advertisedName: nil
+        )
+        #expect(decision.isAdopted)
+        #expect(bridge.wakeRecoveryLatch.wakeRecoveryInFlight)
+        #expect(!bridge.wakeRecoveryLatch.wakeRecoveryFailed)
+
+        // 3. Subsequent initialization/handshake failure schedules a reconnect and latches the wake failure.
+        bridge.failInitialization(LocalizedMessage("connection.error.voice_service_timeout"))
+        #expect(reconnectSchedules == 2)
+        #expect(!bridge.wakeRecoveryLatch.wakeRecoveryInFlight)
+        #expect(bridge.wakeRecoveryLatch.wakeRecoveryFailed)
+
+        // 4. Next wake must NOT initiate another handshake while latched.
+        bridge.recoverVoiceLink(reason: "system_wake")
+        #expect(reconnectSchedules == 2)
+    }
+
+    @Test func discoveryScanPreFilterRejectsUnrelatedPeripheralsAndAdmitsSupportedRemotes() {
+        let target = UUID()
+        let other = UUID()
+
+        #expect(BluetoothDiscoveryScanPolicy.shouldInspect(
+            identifier: target,
+            targetIdentifier: target,
+            knownIdentifiers: [],
+            advertisesVoiceService: false,
+            advertisedName: nil,
+            peripheralName: nil
+        ))
+        #expect(!BluetoothDiscoveryScanPolicy.shouldInspect(
+            identifier: other,
+            targetIdentifier: target,
+            knownIdentifiers: [],
+            advertisesVoiceService: true,
+            advertisedName: "Xiaomi Bluetooth Remote 2",
+            peripheralName: "Xiaomi Bluetooth Remote 2"
+        ))
+        #expect(BluetoothDiscoveryScanPolicy.shouldInspect(
+            identifier: other,
+            targetIdentifier: nil,
+            knownIdentifiers: [other],
+            advertisesVoiceService: false,
+            advertisedName: nil,
+            peripheralName: nil
+        ))
+        #expect(BluetoothDiscoveryScanPolicy.shouldInspect(
+            identifier: other,
+            targetIdentifier: nil,
+            knownIdentifiers: [],
+            advertisesVoiceService: true,
+            advertisedName: nil,
+            peripheralName: nil
+        ))
+        #expect(BluetoothDiscoveryScanPolicy.shouldInspect(
+            identifier: other,
+            targetIdentifier: nil,
+            knownIdentifiers: [],
+            advertisesVoiceService: false,
+            advertisedName: "G9N9N",
+            peripheralName: nil
+        ))
+        #expect(BluetoothDiscoveryScanPolicy.shouldInspect(
+            identifier: other,
+            targetIdentifier: nil,
+            knownIdentifiers: [],
+            advertisesVoiceService: false,
+            advertisedName: "T1-Remote",
+            peripheralName: nil
+        ))
+        #expect(BluetoothDiscoveryScanPolicy.shouldInspect(
+            identifier: other,
+            targetIdentifier: nil,
+            knownIdentifiers: [],
+            advertisesVoiceService: false,
+            advertisedName: nil,
+            peripheralName: "小米蓝牙语音遥控器"
+        ))
+        #expect(BluetoothDiscoveryScanPolicy.shouldInspect(
+            identifier: other,
+            targetIdentifier: nil,
+            knownIdentifiers: [],
+            advertisesVoiceService: false,
+            advertisedName: "Chromecast Remote",
+            peripheralName: nil
+        ))
+        #expect(!BluetoothDiscoveryScanPolicy.shouldInspect(
+            identifier: other,
+            targetIdentifier: nil,
+            knownIdentifiers: [],
+            advertisesVoiceService: false,
+            advertisedName: "AirPods Pro",
+            peripheralName: "AirPods Pro"
+        ))
+        #expect(!BluetoothDiscoveryScanPolicy.shouldInspect(
+            identifier: other,
+            targetIdentifier: nil,
+            knownIdentifiers: [],
+            advertisesVoiceService: false,
+            advertisedName: "Apple Watch",
+            peripheralName: nil
+        ))
+    }
+
     @Test func everyBridgeFirstReadyReappliesHIDMappingsButDuplicateReadyDoesNot() {
         #expect(BridgeAppModel.shouldReapplyHIDSettings(
             previousState: nil,
@@ -226,6 +423,61 @@ struct BluetoothLifecycleTests {
             readyBridgeCount: 1,
             hasMatchingServices: true
         ) == nil)
+    }
+
+    @Test func verificationFailureRetriesWithBoundedBackoffEvenWhenServicesExist() {
+        let delays = (0 ... 5).map {
+            HIDMappingRecoveryPolicy.verificationFailedRetryDelay(
+                forAttempt: $0,
+                started: true
+            )
+        }
+        #expect(delays == [0.5, 1, 2, 4, 8, nil])
+        #expect(HIDMappingRecoveryPolicy.verificationFailedRetryDelay(
+            forAttempt: 0,
+            started: false
+        ) == nil)
+        #expect(HIDMappingRecoveryPolicy.verificationFailedRetryDelay(
+            forAttempt: -1,
+            started: true
+        ) == nil)
+    }
+
+    @Test func readbackMismatchTriggersRollbackAndVerificationFailureFlag() {
+        let suite = UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        var realMappings: [HIDUsageMapping] = []
+        let mapper = RemoteHIDKeyMapper(
+            serviceProvider: {
+                [
+                    RemoteHIDMappingService(
+                        registryID: 1,
+                        locationID: 10,
+                        hasVirtualNamePrefix: false,
+                        family: .xiaomi,
+                        readMappings: { realMappings },
+                        setMappings: { realMappings = $0; return true }
+                    ),
+                    RemoteHIDMappingService(
+                        registryID: 2,
+                        locationID: nil,
+                        hasVirtualNamePrefix: true,
+                        family: .xiaomi,
+                        readMappings: { [] },
+                        setMappings: { _ in true }
+                    ),
+                ]
+            },
+            recoveryDefaults: defaults,
+            bootID: "readback-mismatch"
+        )
+
+        #expect(!mapper.apply(suppressPowerKey: true, neutralizeVoiceKey: true))
+        #expect(mapper.lastApplyFailedVerification)
+        #expect(mapper.hasMatchingServices)
+        #expect(realMappings.isEmpty)
     }
 
     @Test func generationAndPhaseRejectStaleCallbacks() {
@@ -753,5 +1005,542 @@ struct BluetoothLifecycleTests {
         #expect(bridge.reconnectFailureCountForTesting == 0)
         #expect(bridge.cachedTargetFailureCountForTesting == 0)
         #expect(bridge.allowsCachedTargetRetrievalForTesting)
+    }
+
+    @Test @MainActor func t1VerificationFailureSchedulesRetryAndSuccessfulApplyResetsCounter() throws {
+        let suite = UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let settings = AppSettings(defaults: defaults)
+        settings.customMappingEnabled = true
+        let t1ID = settings.registerBluetoothRemote(identifier: UUID(), model: .t1Remote)
+        settings.selectRemoteProfile(t1ID)
+
+        var shouldFailVerification = true
+        var appliedMappings: [HIDUsageMapping] = []
+        let mapper = RemoteHIDKeyMapper(
+            serviceProvider: {
+                [
+                    RemoteHIDMappingService(
+                        registryID: 101,
+                        locationID: 202,
+                        hasVirtualNamePrefix: false,
+                        family: .t1Remote,
+                        readMappings: { shouldFailVerification ? [] : appliedMappings },
+                        setMappings: {
+                            appliedMappings = $0
+                            return true
+                        }
+                    ),
+                ]
+            },
+            recoveryDefaults: defaults,
+            bootID: "t1-verification-recovery"
+        )
+        var tapEnabled = false
+        let suppressor = KeyboardEventSuppressor(
+            tapOperations: .init(
+                start: { tapEnabled = true; return true },
+                stop: { tapEnabled = false },
+                isEnabled: { tapEnabled }
+            )
+        )
+        let model = BridgeAppModel(
+            settings: settings,
+            initialAudioDevices: [],
+            voiceFunctionMapper: mapper,
+            hidEventSuppressor: suppressor,
+            permissionSnapshotProvider: {
+                HIDPermissionSnapshot(inputMonitoringGranted: true, accessibilityGranted: true)
+            }
+        )
+        model.preferredInputSourceMonitor = PreferredInputSourceMonitor(
+            voiceTool: { .unselected },
+            installMonitor: { _ in NSObject() },
+            removeMonitor: { _ in }
+        )
+        model.started = true
+        defer {
+            model.stopHIDMonitors()
+            model.preferredInputSourceMonitor.stop()
+            model.cancelHIDMappingRecovery(reason: "test_cleanup")
+            model.started = false
+        }
+
+        // First apply fails readback verification on the T1 service -> must schedule verification retry.
+        model.applyHIDSettings()
+        #expect(mapper.lastApplyFailedVerification)
+        #expect(mapper.hasMatchingServices)
+        #expect(model.hidVerificationRecoveryAttempt == 1)
+        #expect(model.hidMappingRecoveryWorkItem != nil)
+
+        // Next apply succeeds -> must cancel recovery work item and reset verification attempt counter.
+        shouldFailVerification = false
+        model.applyHIDSettings()
+        #expect(!mapper.lastApplyFailedVerification)
+        #expect(model.hidVerificationRecoveryAttempt == 0)
+        #expect(model.hidMappingRecoveryWorkItem == nil)
+    }
+
+    @Test func failedRollbackPreservesRecoveryJournalAndRestoresAfterRestart() throws {
+        let suite = UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let originalUserMapping = HIDUsageMapping(
+            source: RemoteHIDKeyMappingPolicy.remoteVoiceKey.source,
+            destination: 0x0000_0007_0000_0040
+        )
+        var backingMappings: [HIDUsageMapping] = [originalUserMapping]
+        var writeAttempt = 0
+        let mapper = RemoteHIDKeyMapper(
+            serviceProvider: {
+                [
+                    RemoteHIDMappingService(
+                        registryID: 55,
+                        locationID: 77,
+                        hasVirtualNamePrefix: false,
+                        family: .xiaomi,
+                        readMappings: { backingMappings },
+                        setMappings: { desired in
+                            writeAttempt += 1
+                            if writeAttempt == 1 {
+                                // Partial write accepted, but readback omits power suppression.
+                                backingMappings = [RemoteHIDKeyMappingPolicy.neutralRemoteVoiceKey]
+                                return true
+                            }
+                            // Snapshot rollback write fails: backingMappings stays overwritten.
+                            return false
+                        }
+                    ),
+                ]
+            },
+            recoveryDefaults: defaults,
+            bootID: "rollback-failure-journal"
+        )
+
+        #expect(!mapper.apply(suppressPowerKey: true, neutralizeVoiceKey: true))
+        #expect(mapper.lastApplyFailedVerification)
+        #expect(writeAttempt == 2)
+        #expect(backingMappings == [RemoteHIDKeyMappingPolicy.neutralRemoteVoiceKey])
+
+        // Simulate app restart with a fresh mapper reading the same journal: restore() must recover original mapping.
+        let restartedMapper = RemoteHIDKeyMapper(
+            serviceProvider: {
+                [
+                    RemoteHIDMappingService(
+                        registryID: 55,
+                        locationID: 77,
+                        hasVirtualNamePrefix: false,
+                        family: .xiaomi,
+                        readMappings: { backingMappings },
+                        setMappings: { restored in
+                            backingMappings = restored
+                            return true
+                        }
+                    ),
+                ]
+            },
+            recoveryDefaults: defaults,
+            bootID: "rollback-failure-journal"
+        )
+
+        restartedMapper.restore()
+        #expect(backingMappings == [originalUserMapping])
+    }
+
+    @Test func readbackRejectsLingeringRemovedManagedMappingsWhenExpectedVoiceMappingExists() throws {
+        let suite = UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let staleMappings = [
+            RemoteHIDKeyMappingPolicy.remoteVoiceKey,
+            RemoteHIDKeyMappingPolicy.suppressedRemotePowerKey,
+        ]
+        var appliedResult = staleMappings
+        let mapper = RemoteHIDKeyMapper(
+            serviceProvider: {
+                [
+                    RemoteHIDMappingService(
+                        registryID: 88,
+                        locationID: 99,
+                        hasVirtualNamePrefix: false,
+                        family: .xiaomi,
+                        readMappings: { appliedResult },
+                        setMappings: { _ in
+                            // System acknowledges write while leaving stale Power -> F20 intact.
+                            appliedResult = staleMappings
+                            return true
+                        }
+                    ),
+                ]
+            },
+            recoveryDefaults: defaults,
+            bootID: "lingering-power-mapping"
+        )
+
+        #expect(!mapper.apply(suppressPowerKey: false, neutralizeVoiceKey: false))
+        #expect(mapper.lastApplyFailedVerification)
+        #expect(!mapper.isPowerKeySuppressed)
+
+        // T1 managed-source readback check also rejects lingering suppressedT1PowerKey when suppression is off.
+        let t1Desired = RemoteHIDKeyMappingPolicy.applyingT1(
+            to: [],
+            neutralizeVoiceKeys: true,
+            powerMapping: nil
+        )
+        let t1StaleReadback = t1Desired + [RemoteHIDKeyMappingPolicy.suppressedT1PowerKey]
+        #expect(!RemoteHIDKeyMappingPolicy.readbackMatchesManagedSources(
+            desired: t1Desired,
+            readback: t1StaleReadback,
+            family: .t1Remote
+        ))
+
+        // Preserved user mappings missing from readback must also fail verification.
+        let existingUserMapping = HIDUsageMapping(
+            source: 0x0000_0007_0000_0039,
+            destination: 0x0000_0007_0000_00E0
+        )
+        var droppedUserResult: [HIDUsageMapping] = [existingUserMapping]
+        let userMappingMapper = RemoteHIDKeyMapper(
+            serviceProvider: {
+                [
+                    RemoteHIDMappingService(
+                        registryID: 89,
+                        locationID: 100,
+                        hasVirtualNamePrefix: false,
+                        family: .xiaomi,
+                        readMappings: { droppedUserResult },
+                        setMappings: { _ in
+                            // System returns success while silently dropping existing user custom mapping.
+                            droppedUserResult = [RemoteHIDKeyMappingPolicy.remoteVoiceKey]
+                            return true
+                        }
+                    ),
+                ]
+            },
+            recoveryDefaults: defaults,
+            bootID: "dropped-user-mapping"
+        )
+        #expect(!userMappingMapper.apply(suppressPowerKey: false, neutralizeVoiceKey: false))
+        #expect(userMappingMapper.lastApplyFailedVerification)
+    }
+
+    @Test func rollbackReturningTrueWithoutRestoringPreservesJournalForRestart() throws {
+        let suite = UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let originalUserMapping = HIDUsageMapping(
+            source: RemoteHIDKeyMappingPolicy.remoteVoiceKey.source,
+            destination: 0x0000_0007_0000_0040
+        )
+        var backingMappings: [HIDUsageMapping] = [originalUserMapping]
+        var writeAttempt = 0
+        let mapper = RemoteHIDKeyMapper(
+            serviceProvider: {
+                [
+                    RemoteHIDMappingService(
+                        registryID: 56,
+                        locationID: 78,
+                        hasVirtualNamePrefix: false,
+                        family: .xiaomi,
+                        readMappings: { backingMappings },
+                        setMappings: { _ in
+                            writeAttempt += 1
+                            if writeAttempt == 1 {
+                                // Partial write leaves neutral voice key without power suppression.
+                                backingMappings = [RemoteHIDKeyMappingPolicy.neutralRemoteVoiceKey]
+                                return true
+                            }
+                            // Rollback lies and returns true without actually restoring backingMappings.
+                            return true
+                        }
+                    ),
+                ]
+            },
+            recoveryDefaults: defaults,
+            bootID: "rollback-true-unrestored"
+        )
+
+        #expect(!mapper.apply(suppressPowerKey: true, neutralizeVoiceKey: true))
+        #expect(mapper.lastApplyFailedVerification)
+        #expect(writeAttempt == 2)
+        #expect(backingMappings == [RemoteHIDKeyMappingPolicy.neutralRemoteVoiceKey])
+
+        // Restarting with a fresh mapper must still find the journal and restore the user's original mapping.
+        let restartedMapper = RemoteHIDKeyMapper(
+            serviceProvider: {
+                [
+                    RemoteHIDMappingService(
+                        registryID: 56,
+                        locationID: 78,
+                        hasVirtualNamePrefix: false,
+                        family: .xiaomi,
+                        readMappings: { backingMappings },
+                        setMappings: { restored in
+                            backingMappings = restored
+                            return true
+                        }
+                    ),
+                ]
+            },
+            recoveryDefaults: defaults,
+            bootID: "rollback-true-unrestored"
+        )
+
+        restartedMapper.restore()
+        #expect(backingMappings == [originalUserMapping])
+    }
+
+    @Test func restoreReturningTrueWithoutRestoringRetainsJournalUntilReadbackMatches() throws {
+        let suite = UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let originalUserMapping = HIDUsageMapping(
+            source: RemoteHIDKeyMappingPolicy.remoteVoiceKey.source,
+            destination: 0x0000_0007_0000_0040
+        )
+        var backingMappings: [HIDUsageMapping] = [originalUserMapping]
+        let mapper = RemoteHIDKeyMapper(
+            serviceProvider: {
+                [
+                    RemoteHIDMappingService(
+                        registryID: 57,
+                        locationID: 79,
+                        hasVirtualNamePrefix: false,
+                        family: .xiaomi,
+                        readMappings: { backingMappings },
+                        setMappings: { updated in
+                            backingMappings = updated
+                            return true
+                        }
+                    ),
+                ]
+            },
+            recoveryDefaults: defaults,
+            bootID: "restore-true-unrestored"
+        )
+        #expect(mapper.apply(suppressPowerKey: false, neutralizeVoiceKey: true))
+        #expect(backingMappings == [RemoteHIDKeyMappingPolicy.neutralRemoteVoiceKey])
+
+        // First restart: restore write returns true without actually restoring hardware state -> journal kept.
+        let lyingRestoreMapper = RemoteHIDKeyMapper(
+            serviceProvider: {
+                [
+                    RemoteHIDMappingService(
+                        registryID: 57,
+                        locationID: 79,
+                        hasVirtualNamePrefix: false,
+                        family: .xiaomi,
+                        readMappings: { backingMappings },
+                        setMappings: { _ in true }
+                    ),
+                ]
+            },
+            recoveryDefaults: defaults,
+            bootID: "restore-true-unrestored"
+        )
+        lyingRestoreMapper.restore()
+        #expect(backingMappings == [RemoteHIDKeyMappingPolicy.neutralRemoteVoiceKey])
+
+        // Second restart: journal is still intact, and a functioning write restores original mapping.
+        let workingRestoreMapper = RemoteHIDKeyMapper(
+            serviceProvider: {
+                [
+                    RemoteHIDMappingService(
+                        registryID: 57,
+                        locationID: 79,
+                        hasVirtualNamePrefix: false,
+                        family: .xiaomi,
+                        readMappings: { backingMappings },
+                        setMappings: { restored in
+                            backingMappings = restored
+                            return true
+                        }
+                    ),
+                ]
+            },
+            recoveryDefaults: defaults,
+            bootID: "restore-true-unrestored"
+        )
+        workingRestoreMapper.restore()
+        #expect(backingMappings == [originalUserMapping])
+    }
+
+    @Test func nonCompleteMappingRollbackVerifiesReadbackAndRetainsJournalWhenUnrestored() throws {
+        let suite = UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let originalUserMapping = HIDUsageMapping(
+            source: RemoteHIDKeyMappingPolicy.remoteVoiceKey.source,
+            destination: 0x0000_0007_0000_0040
+        )
+        var backingMappings: [HIDUsageMapping] = [originalUserMapping]
+        var writeAttempt = 0
+        let mapper = RemoteHIDKeyMapper(
+            serviceProvider: {
+                [
+                    RemoteHIDMappingService(
+                        registryID: 58,
+                        locationID: 80,
+                        hasVirtualNamePrefix: false,
+                        family: .xiaomi,
+                        readMappings: { backingMappings },
+                        setMappings: { _ in
+                            writeAttempt += 1
+                            if writeAttempt == 1 {
+                                // Write leaves stale power suppression -> readback fails even with neutralizeVoiceKey=false.
+                                backingMappings = [
+                                    RemoteHIDKeyMappingPolicy.remoteVoiceKey,
+                                    RemoteHIDKeyMappingPolicy.suppressedRemotePowerKey,
+                                ]
+                                return true
+                            }
+                            // Single-service rollback lies and returns true without restoring originalUserMapping.
+                            return true
+                        }
+                    ),
+                ]
+            },
+            recoveryDefaults: defaults,
+            bootID: "non-complete-rollback"
+        )
+
+        #expect(!mapper.apply(suppressPowerKey: false, neutralizeVoiceKey: false))
+        #expect(mapper.lastApplyFailedVerification)
+        #expect(writeAttempt == 2)
+
+        // Fresh mapper must still find the preserved journal entry and restore originalUserMapping.
+        let restartedMapper = RemoteHIDKeyMapper(
+            serviceProvider: {
+                [
+                    RemoteHIDMappingService(
+                        registryID: 58,
+                        locationID: 80,
+                        hasVirtualNamePrefix: false,
+                        family: .xiaomi,
+                        readMappings: { backingMappings },
+                        setMappings: { restored in
+                            backingMappings = restored
+                            return true
+                        }
+                    ),
+                ]
+            },
+            recoveryDefaults: defaults,
+            bootID: "non-complete-rollback"
+        )
+        restartedMapper.restore()
+        #expect(backingMappings == [originalUserMapping])
+    }
+
+    @Test func restoreExpiresJournalAfterMaximumOnlineFailuresWhilePreservingOfflineEntries() throws {
+        let suite = UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let originalOnlineMapping = HIDUsageMapping(
+            source: RemoteHIDKeyMappingPolicy.remoteVoiceKey.source,
+            destination: 0x0000_0007_0000_0041
+        )
+        let originalOfflineMapping = HIDUsageMapping(
+            source: RemoteHIDKeyMappingPolicy.remoteVoiceKey.source,
+            destination: 0x0000_0007_0000_0042
+        )
+        var onlineMappings: [HIDUsageMapping] = [originalOnlineMapping]
+        var offlineMappings: [HIDUsageMapping] = [originalOfflineMapping]
+        var offlineServicePresent = true
+
+        let mapper = RemoteHIDKeyMapper(
+            serviceProvider: {
+                var list = [
+                    RemoteHIDMappingService(
+                        registryID: 61,
+                        locationID: 91,
+                        hasVirtualNamePrefix: false,
+                        family: .xiaomi,
+                        readMappings: { onlineMappings },
+                        setMappings: { onlineMappings = $0; return true }
+                    ),
+                ]
+                if offlineServicePresent {
+                    list.append(
+                        RemoteHIDMappingService(
+                            registryID: 62,
+                            locationID: 92,
+                            hasVirtualNamePrefix: false,
+                            family: .xiaomi,
+                            readMappings: { offlineMappings },
+                            setMappings: { offlineMappings = $0; return true }
+                        )
+                    )
+                }
+                return list
+            },
+            recoveryDefaults: defaults,
+            bootID: "restore-max-attempts"
+        )
+        #expect(mapper.apply(suppressPowerKey: false, neutralizeVoiceKey: true))
+        #expect(onlineMappings == [RemoteHIDKeyMappingPolicy.neutralRemoteVoiceKey])
+        #expect(offlineMappings == [RemoteHIDKeyMappingPolicy.neutralRemoteVoiceKey])
+
+        // Device 62 goes offline while Device 61 fails readback on `maximumRestoreFailureAttempts` online restores.
+        offlineServicePresent = false
+        for _ in 0 ..< RemoteHIDKeyMapper.maximumRestoreFailureAttempts {
+            let failingMapper = RemoteHIDKeyMapper(
+                serviceProvider: {
+                    [
+                        RemoteHIDMappingService(
+                            registryID: 61,
+                            locationID: 91,
+                            hasVirtualNamePrefix: false,
+                            family: .xiaomi,
+                            readMappings: { onlineMappings },
+                            setMappings: { _ in true }
+                        ),
+                    ]
+                },
+                recoveryDefaults: defaults,
+                bootID: "restore-max-attempts"
+            )
+            failingMapper.restore()
+        }
+
+        // Device 61's journal entry is now exhausted & cleared, whereas Device 62 (offline) still restores once reconnected.
+        var onlineSetCalls = 0
+        var offlineSetCalls = 0
+        let finalMapper = RemoteHIDKeyMapper(
+            serviceProvider: {
+                [
+                    RemoteHIDMappingService(
+                        registryID: 61,
+                        locationID: 91,
+                        hasVirtualNamePrefix: false,
+                        family: .xiaomi,
+                        readMappings: { onlineMappings },
+                        setMappings: { onlineSetCalls += 1; onlineMappings = $0; return true }
+                    ),
+                    RemoteHIDMappingService(
+                        registryID: 62,
+                        locationID: 92,
+                        hasVirtualNamePrefix: false,
+                        family: .xiaomi,
+                        readMappings: { offlineMappings },
+                        setMappings: { offlineSetCalls += 1; offlineMappings = $0; return true }
+                    ),
+                ]
+            },
+            recoveryDefaults: defaults,
+            bootID: "restore-max-attempts"
+        )
+        finalMapper.restore()
+        #expect(onlineSetCalls == 0)
+        #expect(offlineSetCalls == 1)
+        #expect(offlineMappings == [originalOfflineMapping])
     }
 }

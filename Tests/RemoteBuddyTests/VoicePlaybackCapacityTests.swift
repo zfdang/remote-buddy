@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import RemoteBuddy
 
@@ -88,5 +89,27 @@ struct VoicePlaybackCapacityTests {
         #expect(rejected == 0)
         #expect(scheduledLive == receivedLive)
         #expect(pending == completions.reduce(0) { $0 + $1.samples })
+    }
+
+    @Test func pendingAudioStartBufferPreservesInitialPCMAcrossRetryWindowAndReportsOverflow() {
+        let pending = BluetoothPendingAudioStart()
+        let deviceID = UUID()
+        _ = pending.begin(for: deviceID)
+
+        // Simulate 2.6 seconds of 16 kHz audio across two start attempts (41,728 samples).
+        let firstAttempt = (0..<21_000).map { Int16($0 % 30_000) }
+        let retryAttempt = (21_000..<41_728).map { Int16($0 % 30_000) }
+
+        let r1 = pending.appendPreservingOrder(firstAttempt)
+        let r2 = pending.appendPreservingOrder(retryAttempt)
+        #expect(r1 == (accepted: true, overflowSamples: 0))
+        #expect(r2 == (accepted: true, overflowSamples: 0))
+        #expect(pending.drain() == firstAttempt + retryAttempt)
+
+        // Verify overflow reports exact excess without silently dropping leading audio.
+        _ = pending.begin(for: deviceID)
+        let exact = Array(repeating: Int16(7), count: BluetoothPendingAudioStart.startupBufferSampleCount)
+        #expect(pending.appendPreservingOrder(exact) == (accepted: true, overflowSamples: 0))
+        #expect(pending.appendPreservingOrder([1, 2, 3]) == (accepted: true, overflowSamples: 3))
     }
 }

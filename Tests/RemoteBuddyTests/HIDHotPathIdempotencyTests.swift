@@ -66,6 +66,7 @@ struct HIDHotPathIdempotencyTests {
             if expectNoFnTapLogs {
                 #expect(counters.logs.isEmpty)
             }
+            model.releaseVoiceKeyIfNeeded()
             model.stopHIDMonitors()
             model.preferredInputSourceMonitor.stop()
             model.cancelHIDMappingRecovery(reason: "test_cleanup")
@@ -225,11 +226,12 @@ struct HIDHotPathIdempotencyTests {
             hidEventSuppressor: suppressor,
             permissionSnapshotProvider: { counters.permissionSnapshot }
         )
-        // Cancel any ordered-Fn voice key wait synchronously so tests never post OS key events.
+        // Stub ordered-Fn wait and voice key state updates so tests never post OS key events.
         model.preferredInputSourceMonitor = Self.makeStubPreferredInputSourceMonitor(
             settings: settings,
             counters: counters
         )
+        model.voiceKeyStateSetter = { _, _ in true }
         model.voiceFnTapSession = VoiceFnTapSessionController(
             setTriggerPressed: { _ in true },
             enqueueAudio: { _ in },

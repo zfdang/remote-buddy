@@ -509,12 +509,14 @@ struct InputLifecycleRegressionTests {
             keyStatePoster: { code, down, flags, _ in
                 postedEvents.append(PostedKeyEvent(code: code, down: down, command: flags.contains(.maskCommand)))
                 return true
-            }
+            },
+            scheduleRelease: clock.voiceSchedule
         )
         let coordinator = HIDAppSwitcherCoordinator(
             session: session,
             scheduler: clock,
             frontmostBundleIdentifier: { "test.editor" },
+            switcherHUDVisible: { true },
             diagnosticLogger: { logs.append($0) }
         )
         let monitorA = HIDRemoteMonitor(
@@ -591,12 +593,20 @@ struct InputLifecycleRegressionTests {
         ])
         #expect(!logs.contains { $0.contains("HID NATIVE PASSTHROUGH") })
 
-        // Remote B confirms the switcher; Command is released and subsequent arrows return to passthrough.
+        // Remote B confirms the switcher; Option is held to unminimize before Command releases.
         postedEvents.removeAll()
         send(monitorB, .ok)
         send(monitorB, nil)
         #expect(!coordinator.isActive)
-        #expect(postedEvents.last == PostedKeyEvent(code: 55, down: false, command: false))
+        #expect(postedEvents == [
+            PostedKeyEvent(code: KeyboardInjector.AppSwitcherSession.leftOptionKeyCode, down: true, command: true),
+        ])
+        clock.advance(to: clock.now + 200)
+        #expect(postedEvents == [
+            PostedKeyEvent(code: KeyboardInjector.AppSwitcherSession.leftOptionKeyCode, down: true, command: true),
+            PostedKeyEvent(code: 55, down: false, command: false),
+            PostedKeyEvent(code: KeyboardInjector.AppSwitcherSession.leftOptionKeyCode, down: false, command: false),
+        ])
 
         send(monitorB, .right)
         send(monitorB, nil)
@@ -625,6 +635,7 @@ struct InputLifecycleRegressionTests {
             ),
             scheduler: clock,
             frontmostBundleIdentifier: { "test.editor" },
+            switcherHUDVisible: { true },
             diagnosticLogger: { _ in }
         )
         let monitorA = HIDRemoteMonitor(
@@ -716,5 +727,83 @@ struct InputLifecycleRegressionTests {
         model.cancelAllScheduledWork(reason: "test")
         #expect(model.completedUpdateHIDRecoveryWorkItem == nil)
         #expect(model.hidFilterRetryWorkItem == nil)
+    }
+
+    @Test @MainActor func reselectingActiveProfileDoesNotReloadMappingsOrCancelAppSwitcher() {
+        struct KeyEvent: Equatable {
+            let code: CGKeyCode
+            let down: Bool
+            let command: Bool
+        }
+        let (values, name) = defaults()
+        defer { values.removePersistentDomain(forName: name) }
+        let settings = AppSettings(defaults: values)
+        settings.customMappingEnabled = true
+        let profile = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+        settings.setBaseBinding(.init(action: .appSwitcher, shortcut: nil), for: .home, trigger: .singleClick, profileID: profile)
+        settings.selectRemoteProfile(profile)
+
+        var settingsChanges = 0
+        let cancellable = settings.objectWillChange.sink { _ in settingsChanges += 1 }
+        defer { cancellable.cancel() }
+
+        let clock = ControlledTestScheduler()
+        var postedEvents: [KeyEvent] = []
+        let coordinator = HIDAppSwitcherCoordinator(
+            session: KeyboardInjector.AppSwitcherSession(
+                hardwareFlags: { [] },
+                keyStatePoster: { code, down, flags, _ in
+                    postedEvents.append(KeyEvent(code: code, down: down, command: flags.contains(.maskCommand)))
+                    return true
+                },
+                scheduleRelease: clock.voiceSchedule
+            ),
+            scheduler: clock,
+            frontmostBundleIdentifier: { "test.editor" },
+            switcherHUDVisible: { true },
+            diagnosticLogger: { _ in }
+        )
+
+        let model = BridgeAppModel(settings: settings, initialAudioDevices: [])
+        model.appSwitcherCoordinator = coordinator
+        let monitor = HIDRemoteMonitor(
+            settings: settings,
+            allowsG9N9N: true,
+            profileID: profile,
+            scheduler: clock,
+            runtimePermissions: { true },
+            nativeSuppressionAvailable: { true },
+            actionPerformer: { _, _, _ in true },
+            appSwitcherCoordinator: coordinator
+        )
+        var inputResets = 0
+        monitor.onInputReset = { (_: UUID?) in inputResets += 1 }
+        monitor.onButtonPressed = { resolvedProfile, _, _ in
+            guard let resolvedProfile else { return nil }
+            model.selectRemoteProfile(resolvedProfile)
+            return (resolvedProfile, true)
+        }
+        monitor.connectSimulatedDevice(fingerprint: "fp-reselect", profileID: profile, isSeized: true)
+        defer { monitor.disconnectSimulatedDevice() }
+        // Connect resets once up front; reselecting the active profile afterwards must not reset again.
+        inputResets = 0
+
+        // G9N9N consumer control report 2 uses consumer usages: Home (0x0223), Right (0x0045).
+        monitor.handleSimulatedGoogleReport(reportID: 2, data: Data([0x02, 0x23, 0x02]), source: "device", origin: .iohid)
+        monitor.handleSimulatedGoogleReport(reportID: 2, data: Data([0x02, 0x00, 0x00]), source: "device", origin: .iohid)
+        #expect(coordinator.isActive)
+
+        model.selectRemoteProfile(profile)
+        settings.selectRemoteProfile(profile)
+        monitor.handleSimulatedGoogleReport(reportID: 2, data: Data([0x02, 0x45, 0x00]), source: "device", origin: .iohid)
+        monitor.handleSimulatedGoogleReport(reportID: 2, data: Data([0x02, 0x00, 0x00]), source: "device", origin: .iohid)
+
+        #expect(settingsChanges == 0)
+        #expect(inputResets == 0)
+        #expect(coordinator.isActive)
+        #expect(Array(postedEvents.suffix(2)) == [
+            KeyEvent(code: 124, down: true, command: true),
+            KeyEvent(code: 124, down: false, command: true),
+        ])
     }
 }

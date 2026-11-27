@@ -45,14 +45,15 @@ private func hidDeviceRemoved(
     }
 }
 
-private func hidInputReport(
+private func processHIDReportCallback(
     context: UnsafeMutableRawPointer?,
     result: IOReturn,
     sender: UnsafeMutableRawPointer?,
-    type: IOHIDReportType,
     reportID: UInt32,
     report: UnsafeMutablePointer<UInt8>,
-    reportLength: CFIndex
+    reportLength: CFIndex,
+    timeStamp: UInt64,
+    path: HIDReportCallbackPath
 ) {
     nonisolated(unsafe) let context = context
     nonisolated(unsafe) let sender = sender
@@ -63,20 +64,85 @@ private func hidInputReport(
         let holder = Unmanaged<HIDMonitorContext>.fromOpaque(context).takeUnretainedValue()
         guard let monitor = holder.monitor else { return }
         guard result == kIOReturnSuccess else {
-            monitor.reportCallbackRejected(reason: "io_error", result: result, reportLength: reportLength)
+            monitor.reportCallbackRejected(
+                reason: "io_error",
+                result: result,
+                reportLength: reportLength,
+                path: path
+            )
             return
         }
         guard let sender else {
-            monitor.reportCallbackRejected(reason: "missing_sender", result: result, reportLength: reportLength)
+            monitor.reportCallbackRejected(
+                reason: "missing_sender",
+                result: result,
+                reportLength: reportLength,
+                path: path
+            )
             return
         }
         guard reportLength > 0 else {
-            monitor.reportCallbackRejected(reason: "empty_report", result: result, reportLength: reportLength)
+            monitor.reportCallbackRejected(
+                reason: "empty_report",
+                result: result,
+                reportLength: reportLength,
+                path: path
+            )
             return
         }
         let device = Unmanaged<IOHIDDevice>.fromOpaque(sender).takeUnretainedValue()
-        monitor.handleReport(from: device, reportID: reportID, data: data)
+        monitor.handleReport(
+            from: device,
+            reportID: reportID,
+            data: data,
+            timestampNanoseconds: HIDReportClock.uptimeNanoseconds(fromMachTime: timeStamp),
+            path: path
+        )
     }
+}
+
+private func hidInputReportWithTimeStamp(
+    context: UnsafeMutableRawPointer?,
+    result: IOReturn,
+    sender: UnsafeMutableRawPointer?,
+    type: IOHIDReportType,
+    reportID: UInt32,
+    report: UnsafeMutablePointer<UInt8>,
+    reportLength: CFIndex,
+    timeStamp: UInt64
+) {
+    processHIDReportCallback(
+        context: context,
+        result: result,
+        sender: sender,
+        reportID: reportID,
+        report: report,
+        reportLength: reportLength,
+        timeStamp: timeStamp,
+        path: .manager
+    )
+}
+
+private func hidDeviceInputReportWithTimeStamp(
+    context: UnsafeMutableRawPointer?,
+    result: IOReturn,
+    sender: UnsafeMutableRawPointer?,
+    type: IOHIDReportType,
+    reportID: UInt32,
+    report: UnsafeMutablePointer<UInt8>,
+    reportLength: CFIndex,
+    timeStamp: UInt64
+) {
+    processHIDReportCallback(
+        context: context,
+        result: result,
+        sender: sender,
+        reportID: reportID,
+        report: report,
+        reportLength: reportLength,
+        timeStamp: timeStamp,
+        path: .device
+    )
 }
 
 enum HIDReportRoutingDecision: Equatable {
@@ -167,6 +233,18 @@ final class HIDRemoteMonitor {
     var manager: IOHIDManager?
     var callbackContext: HIDMonitorContext?
     var callbackOpaqueContext: Unmanaged<HIDMonitorContext>?
+    struct DeviceReportRegistration {
+        let device: IOHIDDevice
+        let buffer: UnsafeMutablePointer<UInt8>
+        let length: CFIndex
+    }
+    var deviceReportRegistrations: [DeviceReportRegistration] = []
+    var deviceReportPointers = Set<UInt>()
+    var reportDeduplicationCache = HIDReportDeduplicationCache()
+    var pathHealth = HIDReportPathHealth()
+    var usesDeviceReportCallback: Bool {
+        ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 27
+    }
 
     var activeDevice: IOHIDDevice?
     var probedDevices: [IOHIDDevice] = []
@@ -243,6 +321,7 @@ final class HIDRemoteMonitor {
         appSwitcherKeyStatePoster: KeyboardInjector.KeyStatePoster? = nil,
         appSwitcherHardwareFlags: @escaping () -> CGEventFlags = KeyboardHardwareModifierPolicy.currentForAppSwitcher,
         appSwitcherOwnedKeyStatePoster: KeyboardInjector.AppSwitcherSession.OwnedKeyStatePoster? = nil,
+        appSwitcherHUDVisible: @escaping () -> Bool? = { KeyboardInjector.isAppSwitcherHUDVisible() },
         appSwitcherCoordinator: HIDAppSwitcherCoordinator? = nil
     ) {
         self.settings = settings
@@ -262,28 +341,40 @@ final class HIDRemoteMonitor {
         if let appSwitcherCoordinator {
             self.appSwitcherCoordinator = appSwitcherCoordinator
         } else {
+            let sessionScheduler: OperationScheduler = { delay, action in
+                nonisolated(unsafe) let task = scheduler.schedule(
+                    afterMilliseconds: UInt64(max(0, (delay * 1_000).rounded())),
+                    repeatingEveryMilliseconds: nil,
+                    action
+                )
+                return ScheduledOperation { task.cancel() }
+            }
             let session: KeyboardInjector.AppSwitcherSession
             if let appSwitcherOwnedKeyStatePoster {
                 session = KeyboardInjector.AppSwitcherSession(
                     hardwareFlags: appSwitcherHardwareFlags,
-                    keyStatePoster: appSwitcherOwnedKeyStatePoster
+                    keyStatePoster: appSwitcherOwnedKeyStatePoster,
+                    scheduleRelease: sessionScheduler
                 )
             } else if let appSwitcherKeyStatePoster {
                 session = KeyboardInjector.AppSwitcherSession(
                     hardwareFlags: appSwitcherHardwareFlags,
                     keyStatePoster: { code, down, flags, _ in
                         appSwitcherKeyStatePoster(code, down, flags)
-                    }
+                    },
+                    scheduleRelease: sessionScheduler
                 )
             } else {
                 session = KeyboardInjector.AppSwitcherSession(
-                    hardwareFlags: appSwitcherHardwareFlags
+                    hardwareFlags: appSwitcherHardwareFlags,
+                    scheduleRelease: sessionScheduler
                 )
             }
             self.appSwitcherCoordinator = HIDAppSwitcherCoordinator(
                 session: session,
                 scheduler: scheduler,
                 frontmostBundleIdentifier: frontmostBundleIdentifier,
+                switcherHUDVisible: appSwitcherHUDVisible,
                 diagnosticLogger: diagnosticLogger
             )
         }
@@ -393,7 +484,10 @@ final class HIDRemoteMonitor {
         let context = unmanaged.toOpaque()
         IOHIDManagerRegisterDeviceMatchingCallback(manager, hidDeviceMatched, context)
         IOHIDManagerRegisterDeviceRemovalCallback(manager, hidDeviceRemoved, context)
-        IOHIDManagerRegisterInputReportCallback(manager, hidInputReport, context)
+        IOHIDManagerRegisterInputReportWithTimeStampCallback(manager, hidInputReportWithTimeStamp, context)
+        AppLogger.shared.write(
+            "HID REPORT path=\(usesDeviceReportCallback ? "device+manager" : "manager")"
+        )
         // Matching immediately enumerates already-connected devices. An unopened
         // manager does not forward callbacks registered after that enumeration
         // to existing devices, so install callbacks before setting the matches.
@@ -430,6 +524,7 @@ final class HIDRemoteMonitor {
                 manager, CFRunLoopGetMain(), CFRunLoopMode.commonModes.rawValue
             )
         }
+        unregisterAllDeviceReportCallbacks()
         callbackContext?.monitor = nil
         callbackContext = nil
         if let opaque = callbackOpaqueContext {
@@ -437,6 +532,8 @@ final class HIDRemoteMonitor {
             callbackOpaqueContext = nil
         }
         resetInputState()
+        reportDeduplicationCache = HIDReportDeduplicationCache()
+        pathHealth = HIDReportPathHealth()
         let closingDeviceCount = probedDevices.count + (activeDevice == nil ? 0 : 1)
         let hasIOKitResources = manager != nil || closingDeviceCount > 0
         defer {
@@ -457,11 +554,6 @@ final class HIDRemoteMonitor {
             activeDeviceIsSeized = false
         }
         guard let manager else { return }
-        IOHIDManagerUnscheduleFromRunLoop(
-            manager,
-            CFRunLoopGetMain(),
-            CFRunLoopMode.commonModes.rawValue
-        )
         IOHIDManagerClose(manager, IOOptionBits(kIOHIDOptionsTypeNone))
         self.manager = nil
     }
@@ -513,6 +605,154 @@ final class HIDRemoteMonitor {
         guard let allowedLocationIDs else { return true }
         guard let locationID else { return false }
         return allowedLocationIDs.contains(locationID)
+    }
+
+    private static func deviceReportPointer(_ device: IOHIDDevice) -> UInt {
+        UInt(bitPattern: Unmanaged.passUnretained(device).toOpaque())
+    }
+
+    func registerDeviceReportCallbackIfNeeded(_ device: IOHIDDevice) {
+        guard usesDeviceReportCallback, let context = callbackOpaqueContext?.toOpaque() else { return }
+        let pointer = Self.deviceReportPointer(device)
+        guard !deviceReportPointers.contains(pointer) else { return }
+        deviceReportPointers.insert(pointer)
+        let maxLength = (IOHIDDeviceGetProperty(
+            device,
+            kIOHIDMaxInputReportSizeKey as CFString
+        ) as? NSNumber)?.intValue ?? 4_096
+        let length = CFIndex(max(64, maxLength))
+        let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: Int(length))
+        buffer.initialize(repeating: 0, count: Int(length))
+        IOHIDDeviceRegisterInputReportWithTimeStampCallback(
+            device,
+            buffer,
+            length,
+            hidDeviceInputReportWithTimeStamp,
+            context
+        )
+        IOHIDDeviceScheduleWithRunLoop(
+            device,
+            CFRunLoopGetMain(),
+            CFRunLoopMode.commonModes.rawValue
+        )
+        deviceReportRegistrations.append(
+            DeviceReportRegistration(device: device, buffer: buffer, length: length)
+        )
+        diagnosticLogger("HID REPORT device_callback registered path=device")
+    }
+
+    @discardableResult
+    func unregisterDeviceReportCallback(_ device: IOHIDDevice) -> Bool {
+        let pointer = Self.deviceReportPointer(device)
+        guard let index = deviceReportRegistrations.firstIndex(where: {
+            Self.deviceReportPointer($0.device) == pointer
+        }) else {
+            return false
+        }
+        let registration = deviceReportRegistrations.remove(at: index)
+        deviceReportPointers.remove(pointer)
+        IOHIDDeviceRegisterInputReportWithTimeStampCallback(
+            registration.device,
+            registration.buffer,
+            registration.length,
+            nil,
+            nil
+        )
+        IOHIDDeviceUnscheduleFromRunLoop(
+            registration.device,
+            CFRunLoopGetMain(),
+            CFRunLoopMode.commonModes.rawValue
+        )
+        registration.buffer.deinitialize(count: Int(registration.length))
+        registration.buffer.deallocate()
+        return true
+    }
+
+    private func unregisterAllDeviceReportCallbacks() {
+        let registrations = deviceReportRegistrations
+        deviceReportRegistrations.removeAll()
+        deviceReportPointers.removeAll()
+        for registration in registrations {
+            IOHIDDeviceRegisterInputReportWithTimeStampCallback(
+                registration.device,
+                registration.buffer,
+                registration.length,
+                nil,
+                nil
+            )
+            IOHIDDeviceUnscheduleFromRunLoop(
+                registration.device,
+                CFRunLoopGetMain(),
+                CFRunLoopMode.commonModes.rawValue
+            )
+            registration.buffer.deinitialize(count: Int(registration.length))
+            registration.buffer.deallocate()
+        }
+    }
+
+    func recordPathReport(
+        path: HIDReportCallbackPath,
+        duplicate: Bool,
+        nowNanoseconds: UInt64
+    ) {
+        guard usesDeviceReportCallback else { return }
+        let events = pathHealth.record(
+            path: path,
+            duplicate: duplicate,
+            nowNanoseconds: nowNanoseconds,
+            recoveryEnabled: usesDeviceReportCallback
+        )
+        for event in events {
+            switch event {
+            case .deviceDeliveryConfirmed:
+                diagnosticLogger("HID REPORT PATH device_delivery=confirmed")
+            case .deviceDeliveryRecovered:
+                diagnosticLogger("HID REPORT PATH device_delivery=recovered")
+            case .managerFallback:
+                diagnosticLogger("HID REPORT PATH fallback=manager reason=device_silent")
+            case let .window(window):
+                diagnosticLogger(
+                    "HID REPORT PATH WINDOW window_ms=\(window.windowMilliseconds) " +
+                        "device_reports=\(window.deviceReports) " +
+                        "manager_reports=\(window.managerReports) " +
+                        "duplicates=\(window.duplicateReports) " +
+                        "manager_fallback=\(window.fallbackReports) " +
+                        "device_healthy=\(window.deviceHealthy)"
+                )
+            case let .recoveryCandidate(attempt, managerReports):
+                diagnosticLogger(
+                    "HID REPORT PATH watchdog result=candidate reason=device_silent " +
+                        "attempt=\(attempt) manager_reports=\(managerReports)"
+                )
+                requestDeviceCallbackRecovery()
+            case let .recoveryExhausted(attempts):
+                diagnosticLogger(
+                    "HID REPORT PATH watchdog result=exhausted reason=device_silent " +
+                        "attempts=\(attempts)"
+                )
+            }
+        }
+    }
+
+    private func requestDeviceCallbackRecovery() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.usesDeviceReportCallback, let device = self.activeDevice else {
+                self?.diagnosticLogger(
+                    "HID REPORT PATH watchdog result=unavailable reason=no_active_device"
+                )
+                return
+            }
+            if self.unregisterDeviceReportCallback(device) {
+                self.registerDeviceReportCallbackIfNeeded(device)
+                self.diagnosticLogger(
+                    "HID REPORT PATH watchdog result=callback_reregistered reason=device_silent"
+                )
+            } else {
+                self.diagnosticLogger(
+                    "HID REPORT PATH watchdog result=skipped reason=registration_missing"
+                )
+            }
+        }
     }
 
     func updateStatus(_ value: LocalizedMessage) {

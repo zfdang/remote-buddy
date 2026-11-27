@@ -54,6 +54,7 @@ extension KeyboardInjector {
         bundleIdentifier: String,
         attempt: Int
     ) -> Bool {
+        guard !AXSelfTargetPolicy.isOwnProcess(processIdentifier) else { return false }
         AccessibilityMessaging.prepareQueries()
         let applicationElement = AXUIElementCreateApplication(processIdentifier)
         let primary = AXUIElementSetAttributeValue(
@@ -105,6 +106,7 @@ extension KeyboardInjector {
         processIdentifier: pid_t,
         emitDiagnostics: Bool = false
     ) -> Bool {
+        guard !AXSelfTargetPolicy.isOwnProcess(processIdentifier) else { return false }
         let applicationElement = AXUIElementCreateApplication(processIdentifier)
         var windowCount = 0
         var candidateCount = 0
@@ -234,6 +236,7 @@ extension KeyboardInjector {
                                                 clickAttempted: inout Bool,
                                                 resynced: inout Bool,
                                                 canContinue: @escaping () -> Bool) -> ApplicationFocusResult {
+        guard !AXSelfTargetPolicy.isOwnProcess(processIdentifier) else { return .unavailable }
         let app = AXUIElementCreateApplication(processIdentifier)
         // Reading the application's standard role is the public AT handshake.
         // Electron's accessibilityRole getter enables native AX APIs on demand;
@@ -652,6 +655,7 @@ extension KeyboardInjector {
 
     private static func accessibilityHitTestMatchesTarget(_ target: AXUIElement,
                                                           processIdentifier: pid_t, point: CGPoint) -> Bool {
+        guard !AXSelfTargetPolicy.isOwnProcess(processIdentifier) else { return false }
         var hit: AXUIElement?
         guard AXUIElementCopyElementAtPosition(AXUIElementCreateSystemWide(), Float(point.x), Float(point.y), &hit) == .success,
               let hit else { return false }
@@ -770,5 +774,53 @@ extension KeyboardInjector {
             return 200 + (candidate.role == "AXTextArea" ? 20 : 0)
         }
         return nil
+    }
+
+    static func evaluateAppSwitcherHUDVisibility<Child>(
+        children: [Child],
+        subroleResult: (Child) -> (error: AXError, value: String?)
+    ) -> Bool? {
+        var sawReadError = false
+        for child in children {
+            let result = subroleResult(child)
+            switch result.error {
+            case .success:
+                if result.value == "AXProcessSwitcherList" {
+                    return true
+                }
+            case .attributeUnsupported, .noValue:
+                continue
+            default:
+                sawReadError = true
+            }
+        }
+        return sawReadError ? nil : false
+    }
+
+    /// Returns whether the macOS App Switcher HUD (`AXProcessSwitcherList` inside Dock)
+    /// is currently visible (`true`), definitively absent (`false`), or unreadable (`nil`,
+    /// e.g. missing Accessibility permission or AX lookup failure).
+    static func isAppSwitcherHUDVisible() -> Bool? {
+        guard isAccessibilityTrusted,
+              let dock = NSRunningApplication.runningApplications(
+                  withBundleIdentifier: "com.apple.dock"
+              ).first,
+              !AXSelfTargetPolicy.isOwnProcess(dock.processIdentifier)
+        else { return nil }
+        let dockElement = AXUIElementCreateApplication(dock.processIdentifier)
+        guard let children = axAttribute(
+            dockElement,
+            attribute: kAXChildrenAttribute
+        ) as? [AXUIElement] else { return nil }
+        AccessibilityMessaging.prepareQueries()
+        return evaluateAppSwitcherHUDVisibility(children: children) { child in
+            var value: CFTypeRef?
+            let error = AXUIElementCopyAttributeValue(
+                child,
+                kAXSubroleAttribute as CFString,
+                &value
+            )
+            return (error, value as? String)
+        }
     }
 }

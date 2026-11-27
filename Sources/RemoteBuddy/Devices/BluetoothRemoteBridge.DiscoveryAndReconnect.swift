@@ -9,6 +9,12 @@ extension BluetoothRemoteBridge {
             MainActor.assumeIsolated { SharedBluetoothScanner.shared.unsubscribe(scanSubscription) }
         }
         scanSubscription = nil
+        if ignoredUnrelatedDiscoveryCount > 0 {
+            AppLogger.shared.write(
+                "BLE DISCOVERY summary ignored_unrelated=\(ignoredUnrelatedDiscoveryCount)"
+            )
+            ignoredUnrelatedDiscoveryCount = 0
+        }
     }
 
     var canRecoverRemoteWake: Bool {
@@ -19,6 +25,7 @@ extension BluetoothRemoteBridge {
 
     /// Called only for activity routed to this saved remote's HID profile.
     func recoverAfterRemoteActivity(reason: String) {
+        wakeRecoveryLatch.clearFailureLatch()
         guard canRecoverRemoteWake, central?.state == .poweredOn else { return }
         AppLogger.shared.write("BLE WAKE RECOVERY trigger=\(reason) phase=\(lifecycle) result=retry_now")
         remoteWakeStartedAt = ProcessInfo.processInfo.systemUptime
@@ -43,6 +50,7 @@ extension BluetoothRemoteBridge {
             return
         }
         AppLogger.shared.write("BLE WAKE RECOVERY trigger=\(reason) phase=\(lifecycle) result=system_connected")
+        wakeRecoveryLatch.clearFailureLatch()
         remoteWakeStartedAt = ProcessInfo.processInfo.systemUptime
         reconnectPolicy.reset()
         startFreshConnectionCycle()
@@ -96,6 +104,7 @@ extension BluetoothRemoteBridge {
               central.state == .poweredOn
         else { return }
         resetPeripheral()
+        ignoredUnrelatedDiscoveryCount = 0
 
         BluetoothDiscoverySequence.run(
             cachedTarget: { () -> CBPeripheral? in
@@ -138,6 +147,23 @@ extension BluetoothRemoteBridge {
                               self.acceptsCandidateIdentifier(advertisement.identifier) else { return }
                         let serviceMatch = (advertisement.data[CBAdvertisementDataServiceUUIDsKey] as? [CBUUID])?
                             .contains(self.serviceUUID) == true
+                        let advertisedName = advertisement.data[CBAdvertisementDataLocalNameKey] as? String
+                        let knownIdentifiers = Set(
+                            self.settings.remoteDeviceProfiles.compactMap(\.bluetoothIdentifier)
+                        )
+                        guard BluetoothDiscoveryScanPolicy.shouldInspect(
+                            identifier: advertisement.identifier,
+                            targetIdentifier: self.targetIdentifier,
+                            knownIdentifiers: knownIdentifiers,
+                            advertisesVoiceService: serviceMatch,
+                            advertisedName: advertisedName,
+                            peripheralName: advertisement.name,
+                            allowsG9N9N: self.allowsG9N9N,
+                            allowsT1Remote: self.allowsT1Remote
+                        ) else {
+                            self.ignoredUnrelatedDiscoveryCount &+= 1
+                            return
+                        }
                         let decision = VoiceRemoteAdmission.decide(identifier: advertisement.identifier,
                             targetIdentifier: self.targetIdentifier, advertisesVoiceService: serviceMatch,
                             name: advertisement.name, advertisedName: advertisement.name,
@@ -170,6 +196,50 @@ extension BluetoothRemoteBridge {
         )
     }
 
+    /// Evaluates candidate admission and updates remote family flags without resetting
+    /// the wake recovery latch so cached-target hits preserve failure tracking until ready.
+    @discardableResult
+    func admitCandidate(
+        identifier: UUID,
+        advertisesVoiceService: Bool,
+        name: String?,
+        advertisedName: String?
+    ) -> VoiceRemoteAdmissionDecision {
+        let decision = VoiceRemoteAdmission.decide(
+            identifier: identifier,
+            targetIdentifier: targetIdentifier,
+            advertisesVoiceService: advertisesVoiceService,
+            name: name,
+            advertisedName: advertisedName,
+            allowsG9N9N: allowsG9N9N,
+            allowsT1Remote: allowsT1Remote,
+            adoptUnidentifiedATVVAsT1: adoptUnidentifiedATVVAsT1()
+        )
+        switch decision {
+        case .adoptSavedIdentity, .adoptRecognizedName:
+            let cachedProfile = settings.remoteDeviceProfiles.first {
+                $0.bluetoothIdentifier == identifier
+            }
+            let resolvedName = VoiceRemoteAdmission.resolvedName(
+                advertisedName: advertisedName,
+                peripheralName: name
+            )
+            googleCandidate = allowsG9N9N && (
+                G9N9NProtocol.isCandidateName(resolvedName) ||
+                cachedProfile?.model.isChromecastRemote == true
+            )
+            t1Candidate = !googleCandidate && allowsT1Remote && (
+                T1RemoteProtocol.isCandidateName(resolvedName) ||
+                cachedProfile?.model.isT1Remote == true ||
+                (adoptUnidentifiedATVVAsT1() &&
+                    XiaomiVoiceRemoteNameMatcher.recognizedName(resolvedName) == nil)
+            )
+        default:
+            break
+        }
+        return decision
+    }
+
     /// 三条发现路径——已保存标识、系统已连接设备、扫描广播——**必须共用这一份判定**。
     /// 分成三份写就会出现「某条路径漏掉/误收」这类只在特定配对状态下复现的缺陷。
     @discardableResult
@@ -182,35 +252,14 @@ extension BluetoothRemoteBridge {
         advertisedName: String?,
         usesCachedTarget: Bool = false
     ) -> Bool {
-        let decision = VoiceRemoteAdmission.decide(
+        let decision = admitCandidate(
             identifier: candidate.identifier,
-            targetIdentifier: targetIdentifier,
             advertisesVoiceService: advertisesVoiceService,
             name: candidate.name,
-            advertisedName: advertisedName,
-            allowsG9N9N: allowsG9N9N,
-            allowsT1Remote: allowsT1Remote,
-            adoptUnidentifiedATVVAsT1: adoptUnidentifiedATVVAsT1()
+            advertisedName: advertisedName
         )
         switch decision {
         case .adoptSavedIdentity, .adoptRecognizedName:
-            let cachedProfile = settings.remoteDeviceProfiles.first {
-                $0.bluetoothIdentifier == candidate.identifier
-            }
-            let resolvedName = VoiceRemoteAdmission.resolvedName(
-                advertisedName: advertisedName,
-                peripheralName: candidate.name
-            )
-            googleCandidate = allowsG9N9N && (
-                G9N9NProtocol.isCandidateName(resolvedName) ||
-                cachedProfile?.model.isChromecastRemote == true
-            )
-            t1Candidate = !googleCandidate && allowsT1Remote && (
-                T1RemoteProtocol.isCandidateName(resolvedName) ||
-                cachedProfile?.model.isT1Remote == true ||
-                (adoptUnidentifiedATVVAsT1() &&
-                    XiaomiVoiceRemoteNameMatcher.recognizedName(resolvedName) == nil)
-            )
             connect(
                 candidate,
                 using: central,
@@ -404,6 +453,9 @@ extension BluetoothRemoteBridge {
         bypassCachedTarget: Bool,
         failedCachedTargetAttempt: Bool
     ) -> TimeInterval {
+        if wakeRecoveryLatch.noteAttemptFailedIfWakeInFlight() {
+            AppLogger.shared.write("BLE WAKE RECOVERY latched reason=reconnect_failure")
+        }
         let delay = reconnectPolicy.nextAutomaticDelay(
             bypassCachedTarget: bypassCachedTarget,
             failedCachedTargetAttempt: failedCachedTargetAttempt,

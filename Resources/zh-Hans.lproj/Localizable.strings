@@ -36,7 +36,7 @@
 "button_mapping.status.system_managed" = "按键由 macOS 原生处理";
 "button_mapping.status.interrupted" = "按键映射已暂停，回到应用后将重试";
 "button_mapping.permission.input_monitoring_required" = "需要输入监控权限；未读取遥控器按键";
-"button_mapping.permission.accessibility_required" = "需要辅助功能权限；未发送映射动作";
+"button_mapping.permission.accessibility_required" = "需要辅助功能（新名称：设备控制和数据访问）权限；未发送映射动作";
 "button_mapping.error.remote_read_failed" = "无法读取遥控器（错误 %1$@）";
 "button_mapping.status.waiting_for_device" = "正在等待遥控器按键连接";
 "button_mapping.error.device_open_failed" = "无法打开遥控器按键设备";
@@ -49,7 +49,7 @@
 "button_mapping.status.connected_fallback" = "按键功能已连接";
 "button_mapping.status.connected_system_actions_may_remain" = "按键功能已连接；部分系统原操作可能仍会触发";
 "button_mapping.status.disconnected" = "遥控器按键已断开";
-"button_mapping.permission.accessibility_expired" = "辅助功能权限已失效；已释放遥控器";
+"button_mapping.permission.accessibility_expired" = "辅助功能（新名称：设备控制和数据访问）权限已失效；已释放遥控器";
 "button_mapping.permission.system_expired" = "系统权限已失效；已释放遥控器";
 "common.status.stopped" = "已停止";
 "connection.status.searching" = "正在查找遥控器";
@@ -422,7 +422,7 @@
 "shortcut.editor.not_recorded" = "尚未录入";
 "shortcut.editor.recording_prompt" = "现在请按下单个按键、组合键或单独修饰键；本次按键不会触发原本绑定的动作。";
 "shortcut.editor.success" = "快捷键录入成功";
-"shortcut.editor.permission_required" = "录入系统快捷键需要辅助功能权限。请完成系统授权后再次点击录入。";
+"shortcut.editor.permission_required" = "录入系统快捷键需要辅助功能（新名称：设备控制和数据访问）权限。请完成系统授权后再次点击录入。";
 "shortcut.editor.capture_unavailable" = "无法启动快捷键录入，请检查辅助功能和输入监控权限，或重新打开遥控搭子后再试。";
 "shortcut.modifier.control" = "Control";
 "shortcut.modifier.option" = "Option";
@@ -787,7 +787,7 @@
 "onboarding.recovery.permission.input_monitoring_denied.detail" = "允许输入监控后，才能收到遥控器的实体按键。";
 "onboarding.recovery.permission.input_monitoring_denied.action" = "允许按键访问";
 "onboarding.recovery.permission.accessibility_denied.title" = "还需要操作权限";
-"onboarding.recovery.permission.accessibility_denied.detail" = "允许辅助功能后，才能执行你设置的语音和按键操作。";
+"onboarding.recovery.permission.accessibility_denied.detail" = "允许辅助功能（新名称：设备控制和数据访问）后，才能执行你设置的语音和按键操作。";
 "onboarding.recovery.permission.accessibility_denied.action" = "允许执行操作";
 "onboarding.recovery.permission.post_event_restricted.title" = "系统限制了全局模拟按键权限";
 "onboarding.recovery.permission.post_event_restricted.detail" = "辅助功能显示已开启，但系统仍在拦截全局按键注入（例如在 macOS 27.3+ 的“System & App Protection Override”中仅授权了指定 App）。遥控器语音快捷键和按键映射需要全局发送按键事件，请打开“隐私与安全性”，在 macOS 27.3+ 中进入“System & App Protection Override”（旧版系统为“辅助功能”）为遥控搭子授予完整权限后重试。";
@@ -949,7 +949,7 @@
 "common_phrases.error.resource_unavailable" = "常用语无法加载。请重新安装；已有内容可从导出的文件恢复。";
 "common_phrases.error.edit_failed" = "无法保存。请检查内容或导入文件格式；原有数据未被修改。";
 "common_phrases.error.no_phrase" = "这个按键尚未分配常用语，请在常用语页面设置。";
-"common_phrases.error.accessibility_required" = "请在系统设置中允许遥控搭子使用辅助功能。";
+"common_phrases.error.accessibility_required" = "请在系统设置中允许遥控搭子使用“辅助功能（新名称：设备控制和数据访问）”。";
 "common_phrases.error.input_unavailable" = "无法确认当前输入位置。请先点击目标输入框再试；部分非标准界面应用可能不支持 macOS 辅助功能定位。";
 "common_phrases.error.target_changed" = "输入目标已改变，请重新打开常用语。";
 "common_phrases.error.clipboard_write_failed" = "无法安全暂存或写入剪贴板。如系统询问，请允许剪贴板访问后重试。";
@@ -1363,3 +1363,49 @@
 "connection.g9n9n.integration.btle_log_profile" = "蓝牙日志描述文件 (.mobileconfig)";
 "connection.g9n9n.btle_log_inactive_warning" = "该遥控器通过蓝牙日志描述文件接入，但当前未开启「蓝牙日志全键兼容」、尚未确认描述文件已安装，或日志仍被遮蔽为 <private>；恢复生效前普通按键可能无响应。";
 "button_mapping.google.btle_log_subtitle" = "当前通过蓝牙日志描述文件（.mobileconfig）恢复全部 14 颗普通按键与常用语触发；语音键固定用于遥控器麦克风。";
+
+// 浮层提示无障碍与免提静默提醒
+"notice.accessibility.dismiss" = "关闭提示";
+"notice.accessibility.warning_prefix" = "警告：";
+"notice.accessibility.error_prefix" = "错误：";
+"voice.silence_notice.title" = "遥控器仍在免提收音";
+"voice.silence_notice.body" = "已持续 60 秒未收到语音，说完后请再按一次语音键或其他按键结束收音。";
+
+// 动作执行反馈 HUD 与显示设置
+"notice.action.open_system_settings" = "打开系统设置";
+"notice.action.retry" = "重试";
+"action_feedback.success.title" = "已执行「%@」";
+"action_feedback.success.repeat" = "已执行「%@」×%@";
+"action_feedback.success.multiple" = "已执行 %@ 个动作";
+"action_feedback.failure.title" = "「%@」未执行";
+"action_feedback.timeout.title" = "「%@」超时";
+"action_feedback.timeout.context" = "超过 10 秒";
+"action_feedback.timeout.detail" = "目标 App 没有在限定时间内响应。可以重试，或检查 App 是否卡住。";
+"action_feedback.failure.permission_denied.context" = "缺少辅助功能权限";
+"action_feedback.failure.permission_denied.detail" = "遥控搭子不能把按键发送到其他 App。允许后再按一次这个键。";
+"action_feedback.failure.target_missing.context" = "找不到目标 App";
+"action_feedback.failure.target_missing.detail" = "App 可能已移动或卸载。重新选择后再试。";
+"action_feedback.failure.target_unavailable.context" = "目标 App 未运行";
+"action_feedback.failure.target_unavailable.detail" = "App 没有运行或已经退出。打开后再按一次这个键。";
+"action_feedback.failure.shortcut_not_delivered.context" = "快捷键未送达";
+"action_feedback.failure.shortcut_not_delivered.detail" = "系统没有接受这组快捷键。检查是否被其他 App 占用，然后重试。";
+"action_feedback.failure.configuration_unavailable.context" = "动作配置不可用";
+"action_feedback.failure.configuration_unavailable.detail" = "动作或依赖缺失。重新选择后再试。";
+"action_feedback.failure.execution_failed.context" = "执行失败";
+"action_feedback.failure.execution_failed.detail" = "动作没有完成。可以重试，或检查目标 App 是否响应。";
+"action_feedback.failure.unknown_result.context" = "结果未知";
+"action_feedback.failure.unknown_result.detail" = "动作已执行，但目标没有返回明确结果。可以重试。";
+"action_feedback.failure.not_started.context" = "动作未启动";
+"action_feedback.failure.not_started.detail" = "动作可能正在执行，或当前不可用。稍后再试。";
+"action_feedback.action.open_application" = "打开 App";
+"action_feedback.action.reselect" = "重新选择";
+"action_feedback.action.copy_diagnostics" = "复制诊断";
+"action_feedback.action.copied" = "已复制";
+"action_feedback.diagnostics.note" = "不含动作名称、快捷键内容、URL、输入内容或第三方 App 内容。";
+"action_feedback.step" = "第 %@ 步";
+"action_feedback.step_of" = "第 %@ 步 / 共 %@ 步";
+"action_feedback.steps" = "共 %@ 步";
+"settings.general.action_feedback.title" = "动作执行结果提示";
+"settings.general.action_feedback.help" = "“关闭所有提示”隐藏成功和失败；“关闭成功提示”只隐藏成功。动作仍会执行，诊断仍会记录。";
+"settings.general.hide_all_action_feedback" = "关闭所有提示";
+"settings.general.hide_success_action_feedback" = "关闭成功提示";

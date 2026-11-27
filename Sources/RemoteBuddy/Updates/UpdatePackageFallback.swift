@@ -7,7 +7,7 @@ enum UpdatePackageURLResolver {
     private static let primaryPathPrefix = "/downloads/"
     private static let githubDownloadPrefix = "https://github.com/zfdang/remote-buddy/releases/download"
     private static let packageNamePattern = try! NSRegularExpression(
-        pattern: #"^Remote_Buddy_(v\d{2}-\d{2}-\d{2}\.\d{3})_macOS_(arm64|intel)\.pkg$"#
+        pattern: #"^Remote_Buddy_(v\d{2}-\d{2}-\d{2}\.\d{3,4})_macOS_(arm64|intel)\.pkg$"#
     )
 
     static func isPrimaryPackageURL(_ url: URL?) -> Bool {

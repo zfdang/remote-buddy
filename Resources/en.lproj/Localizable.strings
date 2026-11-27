@@ -36,7 +36,7 @@
 "button_mapping.status.system_managed" = "Buttons are handled natively by macOS";
 "button_mapping.status.interrupted" = "Button mapping paused; return to the app to retry";
 "button_mapping.permission.input_monitoring_required" = "Allow Input Monitoring to use remote buttons.";
-"button_mapping.permission.accessibility_required" = "Allow Accessibility to run button actions.";
+"button_mapping.permission.accessibility_required" = "Allow Accessibility (new name: Device Control and Data Access) to run button actions.";
 "button_mapping.error.remote_read_failed" = "Unable to read the remote (error %1$@)";
 "button_mapping.status.waiting_for_device" = "Waiting for remote button controls";
 "button_mapping.error.device_open_failed" = "Unable to open the remote button device";
@@ -49,7 +49,7 @@
 "button_mapping.status.connected_fallback" = "Button controls connected";
 "button_mapping.status.connected_system_actions_may_remain" = "Button controls connected; some original system actions may still occur";
 "button_mapping.status.disconnected" = "Remote buttons disconnected";
-"button_mapping.permission.accessibility_expired" = "Accessibility access is unavailable. Button controls have stopped.";
+"button_mapping.permission.accessibility_expired" = "Accessibility (new name: Device Control and Data Access) permission is unavailable. Button controls have stopped.";
 "button_mapping.permission.system_expired" = "Required permissions are no longer available. Button controls have stopped.";
 "common.status.stopped" = "Stopped";
 "connection.status.searching" = "Looking for a remote";
@@ -422,7 +422,7 @@
 "shortcut.editor.not_recorded" = "Not Recorded";
 "shortcut.editor.recording_prompt" = "Press a single key, key combination, or standalone modifier now. This key press will not trigger its existing action.";
 "shortcut.editor.success" = "Shortcut recorded successfully";
-"shortcut.editor.permission_required" = "Recording system shortcuts requires Accessibility permission. Grant access, then click Record Shortcut again.";
+"shortcut.editor.permission_required" = "Recording system shortcuts requires Accessibility (new name: Device Control and Data Access) permission. Grant access, then click Record Shortcut again.";
 "shortcut.editor.capture_unavailable" = "Shortcut recording could not start. Check Accessibility and Input Monitoring permissions, or reopen Remote Buddy and try again.";
 "shortcut.modifier.control" = "Control";
 "shortcut.modifier.option" = "Option";
@@ -790,7 +790,7 @@
 "onboarding.recovery.permission.input_monitoring_denied.detail" = "Allow Input Monitoring so physical remote buttons can be detected.";
 "onboarding.recovery.permission.input_monitoring_denied.action" = "Allow Button Access";
 "onboarding.recovery.permission.accessibility_denied.title" = "Action access is still needed";
-"onboarding.recovery.permission.accessibility_denied.detail" = "Allow Accessibility so Remote Buddy can run your configured voice and button actions.";
+"onboarding.recovery.permission.accessibility_denied.detail" = "Allow Accessibility (new name: Device Control and Data Access) so Remote Buddy can run your configured voice and button actions.";
 "onboarding.recovery.permission.accessibility_denied.action" = "Allow Actions";
 "onboarding.recovery.permission.post_event_restricted.title" = "Global key simulation is restricted by macOS";
 "onboarding.recovery.permission.post_event_restricted.detail" = "Accessibility appears enabled, but macOS is still blocking global key-event injection (for example, when System & App Protection Override on macOS 27.3+ is limited to specific apps). Voice shortcuts and remote button mapping require global key events. Open Privacy & Security Settings, then go to System & App Protection Override on macOS 27.3+ (or Accessibility on earlier macOS) to grant Remote Buddy full access, then try again.";
@@ -952,7 +952,7 @@
 "common_phrases.error.resource_unavailable" = "Phrases could not load. Reinstall, or restore your exported phrases.";
 "common_phrases.error.edit_failed" = "Could not save. Check the content or imported format. Existing data was kept.";
 "common_phrases.error.no_phrase" = "No phrase is assigned to this button. Assign one in Common Phrases.";
-"common_phrases.error.accessibility_required" = "Allow Remote Buddy in System Settings → Accessibility.";
+"common_phrases.error.accessibility_required" = "Allow Remote Buddy in System Settings → Accessibility (new name: Device Control and Data Access).";
 "common_phrases.error.input_unavailable" = "The current input location could not be verified. Click the target input field and try again; some apps may not support macOS Accessibility field detection.";
 "common_phrases.error.target_changed" = "The input target changed. Open Common Phrases again.";
 "common_phrases.error.clipboard_write_failed" = "Could not safely save or write the clipboard. Allow clipboard access if prompted, then try again.";
@@ -1361,3 +1361,49 @@
 "connection.g9n9n.integration.btle_log_profile" = "Bluetooth Logging Profile (.mobileconfig)";
 "connection.g9n9n.btle_log_inactive_warning" = "This remote uses the Bluetooth logging profile, but recovery is currently turned off, the profile is not confirmed installed, or payloads are still redacted as <private>; ordinary buttons may not respond until restored.";
 "button_mapping.google.btle_log_subtitle" = "All 14 ordinary buttons and common phrases are recovered via your installed .mobileconfig Bluetooth logging profile; Voice stays dedicated to the microphone.";
+
+// Floating notice accessibility and hands-free silence reminder
+"notice.accessibility.dismiss" = "Dismiss notice";
+"notice.accessibility.warning_prefix" = "Warning: ";
+"notice.accessibility.error_prefix" = "Error: ";
+"voice.silence_notice.title" = "Remote microphone is still listening";
+"voice.silence_notice.body" = "No speech detected for 60 seconds. Press Voice or another button on the remote when you're done to stop hands-free listening.";
+
+// Action feedback HUD and visibility settings
+"notice.action.open_system_settings" = "Open System Settings";
+"notice.action.retry" = "Retry";
+"action_feedback.success.title" = "Ran “%@”";
+"action_feedback.success.repeat" = "Ran “%@” ×%@";
+"action_feedback.success.multiple" = "Ran %@ actions";
+"action_feedback.failure.title" = "“%@” didn’t run";
+"action_feedback.timeout.title" = "“%@” timed out";
+"action_feedback.timeout.context" = "Took longer than 10 seconds";
+"action_feedback.timeout.detail" = "The target app didn’t respond in time. Try again, or check whether the app is stuck.";
+"action_feedback.failure.permission_denied.context" = "Accessibility permission is missing";
+"action_feedback.failure.permission_denied.detail" = "Remote Buddy can’t send keys to other apps. Allow access, then press the button again.";
+"action_feedback.failure.target_missing.context" = "Target app not found";
+"action_feedback.failure.target_missing.detail" = "The app may have moved or been removed. Choose the action again.";
+"action_feedback.failure.target_unavailable.context" = "Target app isn’t running";
+"action_feedback.failure.target_unavailable.detail" = "The app isn’t running or has quit. Open it, then press the button again.";
+"action_feedback.failure.shortcut_not_delivered.context" = "Shortcut wasn’t delivered";
+"action_feedback.failure.shortcut_not_delivered.detail" = "The system didn’t accept this shortcut. Check whether another app uses it, then try again.";
+"action_feedback.failure.configuration_unavailable.context" = "Action configuration is unavailable";
+"action_feedback.failure.configuration_unavailable.detail" = "The action or a dependency is missing. Choose the action again.";
+"action_feedback.failure.execution_failed.context" = "Action failed";
+"action_feedback.failure.execution_failed.detail" = "The action didn’t finish. Try again, or check whether the target app responds.";
+"action_feedback.failure.unknown_result.context" = "Result is unknown";
+"action_feedback.failure.unknown_result.detail" = "The action ran, but the target didn’t return a clear result. Try again.";
+"action_feedback.failure.not_started.context" = "Action didn’t start";
+"action_feedback.failure.not_started.detail" = "The action may already be running or is currently unavailable. Try again later.";
+"action_feedback.action.open_application" = "Open App";
+"action_feedback.action.reselect" = "Choose Again";
+"action_feedback.action.copy_diagnostics" = "Copy Diagnostics";
+"action_feedback.action.copied" = "Copied";
+"action_feedback.diagnostics.note" = "No action name, shortcut, URL, input, or third-party app content is included.";
+"action_feedback.step" = "Step %@";
+"action_feedback.step_of" = "Step %@ of %@";
+"action_feedback.steps" = "%@ steps";
+"settings.general.action_feedback.title" = "Action result feedback";
+"settings.general.action_feedback.help" = "“Turn off all feedback” hides success and failure notifications. “Turn off success feedback” hides success notifications only. Actions still run and diagnostics are still recorded.";
+"settings.general.hide_all_action_feedback" = "Turn off all feedback";
+"settings.general.hide_success_action_feedback" = "Turn off success feedback";

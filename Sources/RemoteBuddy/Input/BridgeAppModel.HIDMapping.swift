@@ -74,7 +74,9 @@ extension BridgeAppModel {
             )
             if settings.selectedRemoteProfile?.model.isT1Remote == true {
                 completeHIDMappingRecoveryIfNeeded()
-                if !voiceFunctionMapper.hasMatchingServices {
+                if voiceFunctionMapper.lastApplyFailedVerification, settings.customMappingEnabled {
+                    scheduleHIDMappingRecoveryIfNeeded(verificationFailed: true)
+                } else if !voiceFunctionMapper.hasMatchingServices {
                     scheduleHIDMappingRecoveryIfNeeded()
                 }
             }
@@ -178,14 +180,16 @@ extension BridgeAppModel {
             forceRestart: forceRestartMonitors
         )
         completeHIDMappingRecoveryIfNeeded()
-        if !voiceFunctionMapper.hasMatchingServices,
-           settings.customMappingEnabled || shouldNeutralizeNativeVoiceKey {
+        if voiceFunctionMapper.lastApplyFailedVerification, settings.customMappingEnabled {
+            scheduleHIDMappingRecoveryIfNeeded(verificationFailed: true)
+        } else if !voiceFunctionMapper.hasMatchingServices,
+                  settings.customMappingEnabled || shouldNeutralizeNativeVoiceKey {
             scheduleHIDMappingRecoveryIfNeeded()
         }
         refreshVoiceKeyCompatibilityWarning()
     }
 
-    func scheduleHIDMappingRecoveryIfNeeded() {
+    func scheduleHIDMappingRecoveryIfNeeded(verificationFailed: Bool = false) {
         if settings.selectedRemoteProfile?.model.isChromecastRemote == true {
             cancelHIDMappingRecovery(reason: "google_atvv_voice")
             return
@@ -194,14 +198,29 @@ extension BridgeAppModel {
             cancelHIDMappingRecovery(reason: "system_suspended")
             return
         }
+        if verificationFailed {
+            guard settings.customMappingEnabled else { return }
+            let permissions = permissionSnapshotProvider().monitoringPermissions
+            guard permissions.inputMonitoringGranted, permissions.accessibilityGranted else { return }
+        }
         guard hidMappingRecoveryWorkItem == nil else { return }
-        guard let delay = HIDMappingRecoveryPolicy.retryDelay(
-            forAttempt: hidMappingRecoveryAttempt,
-            started: started,
-            readyBridgeCount: readyBluetoothBridgeCount,
-            hasMatchingServices: voiceFunctionMapper.hasMatchingServices
-        ) else {
-            if started,
+        let delay: TimeInterval?
+        if verificationFailed {
+            delay = HIDMappingRecoveryPolicy.verificationFailedRetryDelay(
+                forAttempt: hidVerificationRecoveryAttempt,
+                started: started
+            )
+        } else {
+            delay = HIDMappingRecoveryPolicy.retryDelay(
+                forAttempt: hidMappingRecoveryAttempt,
+                started: started,
+                readyBridgeCount: readyBluetoothBridgeCount,
+                hasMatchingServices: voiceFunctionMapper.hasMatchingServices
+            )
+        }
+        guard let delay else {
+            if !verificationFailed,
+               started,
                readyBluetoothBridgeCount > 0,
                !voiceFunctionMapper.hasMatchingServices,
                hidMappingRecoveryAttempt == HIDMappingRecoveryPolicy.retryDelays.count {
@@ -209,24 +228,49 @@ extension BridgeAppModel {
                     "HID MAPPING RECOVERY exhausted attempts=\(hidMappingRecoveryAttempt) " +
                         "ready_bridges=\(readyBluetoothBridgeCount)"
                 )
+            } else if verificationFailed,
+                      started,
+                      hidVerificationRecoveryAttempt == HIDMappingRecoveryPolicy.retryDelays.count {
+                AppLogger.shared.write(
+                    "HID MAPPING RECOVERY verification_exhausted attempts=\(hidVerificationRecoveryAttempt)"
+                )
             }
             return
         }
 
-        let attempt = hidMappingRecoveryAttempt + 1
-        hidMappingRecoveryAttempt = attempt
+        let attempt: Int
+        if verificationFailed {
+            attempt = hidVerificationRecoveryAttempt + 1
+            hidVerificationRecoveryAttempt = attempt
+        } else {
+            attempt = hidMappingRecoveryAttempt + 1
+            hidMappingRecoveryAttempt = attempt
+        }
         hidMappingRecoveryGeneration &+= 1
         let generation = hidMappingRecoveryGeneration
         let workItem = DispatchWorkItem { [weak self] in
             guard let self, self.hidMappingRecoveryGeneration == generation else { return }
             self.hidMappingRecoveryWorkItem = nil
             guard self.started,
-                  !self.audio.suspensionState.suspendsHIDMonitoring,
-                  self.readyBluetoothBridgeCount > 0,
-                  !self.voiceFunctionMapper.hasMatchingServices
+                  !self.audio.suspensionState.suspendsHIDMonitoring
             else {
                 self.cancelHIDMappingRecovery(reason: "conditions_changed")
                 return
+            }
+            if verificationFailed {
+                let permissions = self.permissionSnapshotProvider().monitoringPermissions
+                guard self.settings.customMappingEnabled,
+                      permissions.inputMonitoringGranted,
+                      permissions.accessibilityGranted else {
+                    self.cancelHIDMappingRecovery(reason: "conditions_changed")
+                    return
+                }
+            } else {
+                guard self.readyBluetoothBridgeCount > 0,
+                      !self.voiceFunctionMapper.hasMatchingServices else {
+                    self.cancelHIDMappingRecovery(reason: "conditions_changed")
+                    return
+                }
             }
             guard self.canRefreshHIDMappingsNow else {
                 // Voice is active or awaiting teardown; defer catch-up until voice becomes idle.
@@ -235,43 +279,62 @@ extension BridgeAppModel {
             }
             AppLogger.shared.write(
                 "HID MAPPING RECOVERY applying attempt=\(attempt) " +
+                    "verification_failed=\(verificationFailed) " +
                     "ready_bridges=\(self.readyBluetoothBridgeCount)"
             )
             self.applyHIDSettings()
-            if !self.voiceFunctionMapper.hasMatchingServices {
+            if !verificationFailed, !self.voiceFunctionMapper.hasMatchingServices {
                 self.scheduleHIDMappingRecoveryIfNeeded()
             }
         }
         hidMappingRecoveryWorkItem = workItem
         AppLogger.shared.write(
             "HID MAPPING RECOVERY scheduled attempt=\(attempt) " +
+                "verification_failed=\(verificationFailed) " +
                 "delay_ms=\(Int(delay * 1_000)) ready_bridges=\(readyBluetoothBridgeCount)"
         )
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
     }
 
     private func completeHIDMappingRecoveryIfNeeded() {
-        guard voiceFunctionMapper.hasMatchingServices,
-              hidMappingRecoveryWorkItem != nil || hidMappingRecoveryAttempt > 0
+        guard voiceFunctionMapper.hasMatchingServices else { return }
+        if voiceFunctionMapper.lastApplyFailedVerification {
+            if hidMappingRecoveryAttempt > 0 {
+                hidMappingRecoveryAttempt = 0
+                if hidVerificationRecoveryAttempt == 0, hidMappingRecoveryWorkItem != nil {
+                    hidMappingRecoveryGeneration &+= 1
+                    hidMappingRecoveryWorkItem?.cancel()
+                    hidMappingRecoveryWorkItem = nil
+                }
+            }
+            return
+        }
+        guard hidMappingRecoveryWorkItem != nil
+            || hidMappingRecoveryAttempt > 0
+            || hidVerificationRecoveryAttempt > 0
         else { return }
         let attempts = hidMappingRecoveryAttempt
+        let verificationAttempts = hidVerificationRecoveryAttempt
         hidMappingRecoveryGeneration &+= 1
         hidMappingRecoveryWorkItem?.cancel()
         hidMappingRecoveryWorkItem = nil
         hidMappingRecoveryAttempt = 0
+        hidVerificationRecoveryAttempt = 0
         AppLogger.shared.write(
             "HID MAPPING RECOVERY completed attempts=\(attempts) " +
+                "verification_attempts=\(verificationAttempts) " +
                 "matched=\(voiceFunctionMapper.matchedServiceCount)"
         )
     }
 
     func cancelHIDMappingRecovery(reason: String) {
-        guard hidMappingRecoveryWorkItem != nil || hidMappingRecoveryAttempt > 0 else { return }
+        guard hidMappingRecoveryWorkItem != nil || hidMappingRecoveryAttempt > 0 || hidVerificationRecoveryAttempt > 0 else { return }
         let attempts = hidMappingRecoveryAttempt
         hidMappingRecoveryGeneration &+= 1
         hidMappingRecoveryWorkItem?.cancel()
         hidMappingRecoveryWorkItem = nil
         hidMappingRecoveryAttempt = 0
+        hidVerificationRecoveryAttempt = 0
         AppLogger.shared.write(
             "HID MAPPING RECOVERY cancelled reason=\(reason) attempts=\(attempts)"
         )
@@ -905,6 +968,7 @@ extension BridgeAppModel {
         }
         monitor.onDeviceConnected = { [weak self] profileID, fingerprint in
             guard let self else { return }
+            self.hidVerificationRecoveryAttempt = 0
             self.scheduleHIDServiceMappingRefreshIfNeeded()
             guard let resolvedProfileID = profileID
                 ?? self.settings.profileID(forHIDFingerprint: fingerprint) else { return }

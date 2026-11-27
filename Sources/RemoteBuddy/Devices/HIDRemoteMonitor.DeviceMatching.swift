@@ -63,6 +63,7 @@ extension HIDRemoteMonitor {
             return
         }
         probedDevices.append(device)
+        registerDeviceReportCallbackIfNeeded(device)
         diagnosticLogger("HID DEVICE probing mode=monitored")
     }
 
@@ -83,6 +84,7 @@ extension HIDRemoteMonitor {
         let selectedDevice = probedDevices.remove(at: selectedIndex)
         let metadataSuffix = hidConnectionMetadataSuffix(for: selectedDevice)
         probedDevices.forEach {
+            unregisterDeviceReportCallback($0)
             IOHIDDeviceClose($0, IOOptionBits(kIOHIDOptionsTypeNone))
         }
         probedDevices.removeAll()
@@ -138,6 +140,7 @@ extension HIDRemoteMonitor {
         let isT1 = allowsT1Remote && !isGoogleDevice(device) && isT1Device(device)
         switch Self.openDevice(isT1Device: isT1, openWithOptions: { IOHIDDeviceOpen(device, $0) }) {
         case .seized:
+            registerDeviceReportCallbackIfNeeded(device)
             activeDevice = device
             deviceFingerprint = fingerprint
             activeDeviceIsSeized = true
@@ -146,6 +149,7 @@ extension HIDRemoteMonitor {
             onDeviceConnected?(profileID, fingerprint)
             return true
         case let .monitored(seizeAttemptResult):
+            registerDeviceReportCallbackIfNeeded(device)
             activeDevice = device
             deviceFingerprint = fingerprint
             activeDeviceIsSeized = false
@@ -198,6 +202,7 @@ extension HIDRemoteMonitor {
     func deviceDidRemove(device: IOHIDDevice) {
         cachedDeviceMetadata.removeValue(forKey: ObjectIdentifier(device))
         if let activeDevice, CFEqual(activeDevice, device) {
+            unregisterDeviceReportCallback(activeDevice)
             IOHIDDeviceClose(activeDevice, IOOptionBits(kIOHIDOptionsTypeNone))
             self.activeDevice = nil
             deviceFingerprint = nil
@@ -212,6 +217,7 @@ extension HIDRemoteMonitor {
             return
         }
         let probedDevice = probedDevices.remove(at: probeIndex)
+        unregisterDeviceReportCallback(probedDevice)
         IOHIDDeviceClose(probedDevice, IOOptionBits(kIOHIDOptionsTypeNone))
         diagnosticLogger("HID DEVICE probe_removed")
     }
@@ -276,18 +282,43 @@ extension HIDRemoteMonitor {
         }
     }
 
-    func handleReport(from device: IOHIDDevice, reportID: UInt32, data: Data, origin: HIDReportOrigin = .iohid) {
+    func handleReport(
+        from device: IOHIDDevice,
+        reportID: UInt32,
+        data: Data,
+        origin: HIDReportOrigin = .iohid,
+        timestampNanoseconds: UInt64 = HIDReportClock.uptimeNanoseconds(),
+        path: HIDReportCallbackPath = .manager
+    ) {
+        if origin == .iohid, path != .simulated, usesDeviceReportCallback {
+            let dedupKey = HIDReportDeduplicationKey(
+                devicePointer: UInt(bitPattern: Unmanaged.passUnretained(device).toOpaque()),
+                reportID: reportID,
+                data: data
+            )
+            let duplicate = reportDeduplicationCache.shouldDrop(
+                key: dedupKey,
+                path: path,
+                timestampNanoseconds: timestampNanoseconds
+            )
+            recordPathReport(
+                path: path,
+                duplicate: duplicate,
+                nowNanoseconds: timestampNanoseconds
+            )
+            if duplicate { return }
+        }
         let previousOrigin = currentReportOrigin
         currentReportOrigin = origin
         defer { currentReportOrigin = previousOrigin }
         let reportSource = origin == .btleServerLog ? "btle_log" : "device"
         guard manager != nil else {
-            diagnosticLogger("HID REPORT rejected reason=monitor_inactive")
+            diagnosticLogger("HID REPORT rejected reason=monitor_inactive path=\(path.logName)")
             return
         }
         guard !isWaitingForMatchingServices else { return }
         guard settings.customMappingEnabled || backOnlyMode else {
-            diagnosticLogger("HID REPORT rejected reason=mapping_disabled")
+            diagnosticLogger("HID REPORT rejected reason=mapping_disabled path=\(path.logName)")
             return
         }
         let deviceMetadata = metadata(for: device)
@@ -300,7 +331,7 @@ extension HIDRemoteMonitor {
             locationID: deviceMetadata.locationID,
             allowedLocationIDs: allowedLocationIDs
         ) else {
-            diagnosticLogger("HID REPORT rejected reason=unsafe_location")
+            diagnosticLogger("HID REPORT rejected reason=unsafe_location path=\(path.logName)")
             return
         }
         let routing = Self.reportRoutingDecision(
@@ -314,7 +345,7 @@ extension HIDRemoteMonitor {
         case let .accepted(value):
             fingerprint = value
         case let .rejected(reason):
-            diagnosticLogger("HID REPORT rejected reason=\(reason)")
+            diagnosticLogger("HID REPORT rejected reason=\(reason) path=\(path.logName)")
             return
         }
         if let rejectReason = shouldRejectBTLEServerLogGoogleReport(reportID: reportID, data: data) {
@@ -344,7 +375,7 @@ extension HIDRemoteMonitor {
             guard Self.shouldPromoteDiscoveryReport(usages: observedUsages) else {
                 diagnosticLogger(
                     "HID REPORT deferred reason=discovery_no_known_button source=\(reportSource) " +
-                        "id=\(reportID) bytes=\(data.count) usage_count=\(observedUsages.count)"
+                        "id=\(reportID) bytes=\(data.count) usage_count=\(observedUsages.count) path=\(path.logName)"
                 )
                 return
             }
@@ -360,13 +391,13 @@ extension HIDRemoteMonitor {
                 ) else {
                     t1ReportUsageState.reset()
                     clearT1PassthroughTracking()
-                    diagnosticLogger("HID REPORT rejected reason=device_activation_failed")
+                    diagnosticLogger("HID REPORT rejected reason=device_activation_failed path=\(path.logName)")
                     return
                 }
             }
         }
         guard runtimePermissionsAreValid() else {
-            diagnosticLogger("HID REPORT rejected reason=runtime_permission_revoked")
+            diagnosticLogger("HID REPORT rejected reason=runtime_permission_revoked path=\(path.logName)")
             releaseForRevokedPermissions()
             return
         }
@@ -385,11 +416,12 @@ extension HIDRemoteMonitor {
     func reportCallbackRejected(
         reason: String,
         result: IOReturn,
-        reportLength: CFIndex
+        reportLength: CFIndex,
+        path: HIDReportCallbackPath = .manager
     ) {
         diagnosticLogger(
             "HID REPORT callback_rejected reason=\(reason) result=\(result) " +
-                "bytes=\(max(0, reportLength))"
+                "bytes=\(max(0, reportLength)) path=\(path.logName)"
         )
     }
 

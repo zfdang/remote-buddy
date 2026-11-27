@@ -1286,4 +1286,133 @@ struct G9N9NCompatibilityModeTests {
         model.setG9N9NBluetoothLogRecoveryEnabled(false)
         #expect(!coordinator.isActive)
     }
+
+    @Test func chromecastSwitcherInterceptsTriggerNavigationOKAndBackBeforeCustomBindings() throws {
+        let suite = "g9n9n-switcher-controls-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = AppSettings(defaults: defaults)
+        settings.customMappingEnabled = true
+
+        let profile = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+        settings.selectRemoteProfile(profile)
+        settings.setBaseBinding(.init(action: .appSwitcher, shortcut: nil), for: .home, trigger: .singleClick, profileID: profile)
+        settings.setBaseBinding(.init(action: .playPause, shortcut: nil), for: .home, trigger: .doubleClick, profileID: profile)
+        settings.setBaseBinding(.init(action: .volumeMute, shortcut: nil), for: .left, trigger: .singleClick, profileID: profile)
+        settings.setBaseBinding(.init(action: .volumeDown, shortcut: nil), for: .left, trigger: .doubleClick, profileID: profile)
+        settings.setBaseBinding(.init(action: .volumeUp, shortcut: nil), for: .right, trigger: .singleClick, profileID: profile)
+        settings.setBaseBinding(.init(action: .playPause, shortcut: nil), for: .ok, trigger: .singleClick, profileID: profile)
+        settings.setBaseBinding(.init(action: .volumeDown, shortcut: nil), for: .ok, trigger: .doubleClick, profileID: profile)
+        settings.setBaseBinding(.init(action: .escape, shortcut: nil), for: .back, trigger: .singleClick, profileID: profile)
+
+        let clock = ControlledTestScheduler()
+        var postedEvents: [(CGKeyCode, Bool, CGEventFlags)] = []
+        var performedActions: [(RemoteButton, ButtonTrigger, ButtonAction)] = []
+        let coordinator = HIDAppSwitcherCoordinator(
+            session: KeyboardInjector.AppSwitcherSession(
+                hardwareFlags: { [] },
+                keyStatePoster: { code, down, flags, _ in
+                    postedEvents.append((code, down, flags))
+                    return true
+                },
+                scheduleRelease: clock.voiceSchedule
+            ),
+            scheduler: clock,
+            frontmostBundleIdentifier: { "test.editor" },
+            switcherHUDVisible: { true },
+            diagnosticLogger: { _ in }
+        )
+        let monitor = HIDRemoteMonitor(
+            settings: settings,
+            allowsG9N9N: true,
+            profileID: profile,
+            scheduler: clock,
+            runtimePermissions: { true },
+            nativeSuppressionAvailable: { true },
+            actionPerformer: { button, trigger, configured in
+                performedActions.append((button, trigger, configured.action))
+                return true
+            },
+            diagnosticLogger: { _ in },
+            appSwitcherCoordinator: coordinator
+        )
+        monitor.connectSimulatedDevice(fingerprint: "fp-chromecast-switcher", profileID: profile, isSeized: true)
+        defer { monitor.disconnectSimulatedDevice() }
+
+        func sendUsage(_ button: RemoteButton) {
+            let consumerUsage: UInt16
+            switch button {
+            case .home: consumerUsage = 0x0223
+            case .left: consumerUsage = 0x0044
+            case .right: consumerUsage = 0x0045
+            case .ok: consumerUsage = 0x0041
+            case .back: consumerUsage = 0x0224
+            default: fatalError("Unsupported test button \(button)")
+            }
+            monitor.handleSimulatedGoogleReport(
+                reportID: 2,
+                data: Data([0x02, UInt8(consumerUsage & 255), UInt8(consumerUsage >> 8)]),
+                source: "device",
+                origin: .iohid
+            )
+            monitor.handleSimulatedGoogleReport(
+                reportID: 2,
+                data: Data([0x02, 0x00, 0x00]),
+                source: "device",
+                origin: .iohid
+            )
+        }
+
+        // Open switcher via Home singleClick (waits past double-click window because Home also has a doubleClick binding).
+        sendUsage(.home)
+        clock.advance(to: HIDRemoteTiming.doubleClickMilliseconds)
+        #expect(coordinator.isActive)
+        #expect(postedEvents.map(\.0) == [KeyboardInjector.leftCommandKeyCode, 48, 48])
+
+        // Re-pressing Home while switcher is active advances Tab immediately without gesture delay or doubleClick action.
+        postedEvents.removeAll()
+        sendUsage(.home)
+        #expect(postedEvents.map(\.0) == [48, 48])
+        #expect(performedActions.isEmpty)
+
+        // Left, Right, and OK are consumed by the switcher immediately without triggering configured bindings.
+        postedEvents.removeAll()
+        sendUsage(.left)
+        sendUsage(.right)
+        #expect(postedEvents.map(\.0) == [123, 123, 124, 124])
+        #expect(postedEvents.allSatisfy { $0.2.contains(.maskCommand) })
+        #expect(performedActions.isEmpty)
+
+        postedEvents.removeAll()
+        sendUsage(.ok)
+        #expect(!coordinator.isActive)
+        #expect(postedEvents.map(\.0) == [KeyboardInjector.AppSwitcherSession.leftOptionKeyCode])
+        clock.advance(to: clock.now + 200)
+        #expect(postedEvents.map(\.0) == [
+            KeyboardInjector.AppSwitcherSession.leftOptionKeyCode,
+            KeyboardInjector.leftCommandKeyCode,
+            KeyboardInjector.AppSwitcherSession.leftOptionKeyCode,
+        ])
+        #expect(performedActions.isEmpty)
+
+        // Once closed, OK runs its normal double-click-deferred configured action after the gesture window.
+        sendUsage(.ok)
+        clock.advance(to: clock.now + HIDRemoteTiming.doubleClickMilliseconds)
+        #expect(performedActions.count == 1)
+        if let first = performedActions.first {
+            #expect(first.0 == .ok && first.2 == .playPause)
+        }
+
+        // Back inside an active switcher cancels with Escape and does not fire Back's custom binding.
+        performedActions.removeAll()
+        postedEvents.removeAll()
+        sendUsage(.home)
+        clock.advance(to: clock.now + HIDRemoteTiming.doubleClickMilliseconds)
+        #expect(coordinator.isActive)
+        postedEvents.removeAll()
+        sendUsage(.back)
+        #expect(!coordinator.isActive)
+        #expect(postedEvents.map(\.0) == [53, 53, KeyboardInjector.leftCommandKeyCode])
+        #expect(performedActions.isEmpty)
+    }
 }

@@ -483,8 +483,7 @@ extension HIDRemoteMonitor {
                 }
                 continue
             }
-            if appSwitcherCoordinator.isActive, action == .appSwitcher,
-               !recognizesDoubleClick, !recognizesLongPress {
+            if appSwitcherCoordinator.isActive, action == .appSwitcher {
                 diagnosticLogger(
                     "HID GESTURE button=\(button.rawValue) trigger=singleClick " +
                         "path=app_switcher"

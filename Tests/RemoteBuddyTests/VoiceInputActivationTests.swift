@@ -29,8 +29,13 @@ struct VoiceInputActivationTests {
         })
     }
 
-    @Test(arguments: [false, true])
-    func foregroundSwitchAfterFocusCancelsVoiceStart(tapMode: Bool) throws {
+    @Test(arguments: [
+        (tapMode: false, switchDuringFocus: false),
+        (tapMode: true, switchDuringFocus: false),
+        (tapMode: false, switchDuringFocus: true),
+        (tapMode: true, switchDuringFocus: true),
+    ])
+    func foregroundSwitchAfterFocusCancelsVoiceStart(tapMode: Bool, switchDuringFocus: Bool) throws {
         let (model, defaults, suite) = try makeModel()
         defer { defaults.removePersistentDomain(forName: suite) }
         model.settings.setApplicationIntegration(.chatGPT, enabled: true)
@@ -68,16 +73,139 @@ struct VoiceInputActivationTests {
             #expect(model.updateVoiceKeyState(streaming: true, forceSoftware: true, owner: .bluetooth,
                 keySetter: { _, down in edges.append(down); return true }))
         }
-        let focus = try #require(focusDone)
-        focus(.preserved)
         let activate = try #require(sourceDone)
-        foreground = ("com.apple.TextEdit", 43)
-        center.post(name: NSWorkspace.didActivateApplicationNotification, object: nil)
-        activate(true)
+        if switchDuringFocus {
+            activate(true)
+            let focus = try #require(focusDone)
+            foreground = ("com.apple.TextEdit", 43)
+            center.post(name: NSWorkspace.didActivateApplicationNotification, object: nil)
+            focus(.preserved)
+        } else {
+            foreground = ("com.apple.TextEdit", 43)
+            center.post(name: NSWorkspace.didActivateApplicationNotification, object: nil)
+            activate(true)
+            #expect(focusDone == nil)
+        }
 
         #expect(edges.isEmpty)
         #expect(model.applicationIntegrationStatus == .cancelled(.targetChanged))
         #expect(inputSource == "previous")
+        #expect(!model.voiceKeyLatch.isHeld)
+        #expect(model.voiceFnTapSession.phase == .idle)
+    }
+
+    @Test(arguments: [false, true])
+    func foregroundSwitchFromNonIntegratedToIntegratedDuringSourceWaitCancelsVoiceStart(tapMode: Bool) throws {
+        let (model, defaults, suite) = try makeModel()
+        defer { defaults.removePersistentDomain(forName: suite) }
+        model.settings.setApplicationIntegration(.antigravity, enabled: true)
+        useReadyDestination(model)
+        var foreground = ("com.apple.TextEdit", pid_t(41))
+        var focusCalls = 0
+        var sourceDone: ((Bool) -> Void)?
+        var edges: [Bool] = []
+        let controller = ApplicationIntegrationController(
+            settings: model.settings,
+            notifications: NotificationCenter(),
+            frontmost: { foreground },
+            focusWithResync: { _, _, _, done in
+                focusCalls += 1
+                done(.preserved)
+                return ScheduledOperation {}
+            },
+            onStateChange: { model.recordApplicationIntegrationStatus($0) }
+        )
+        model.applicationIntegrationController = controller
+        controller.start()
+        defer { controller.stop() }
+
+        let target = try #require(OnboardingVoiceTool.weixin.preferredInputSourceID)
+        var inputSource = "previous"
+        model.preferredInputSourceMonitor = PreferredInputSourceMonitor(
+            voiceTool: { .weixin },
+            prepareInputSource: { _ in inputSource = target; return .selected },
+            currentInputSourceID: { inputSource },
+            restoreInputSource: { inputSource = $0; return .selected },
+            waitForInputSourceActivation: { _, _, _, done in sourceDone = done },
+            installMonitor: { _ in nil },
+            logger: { _ in }
+        )
+        if tapMode {
+            model.voiceTapTrigger = VoiceTapTrigger(selectedMode: { .function }, setKey: { _, down in
+                edges.append(down)
+                return true
+            })
+            model.voiceFnTapSession = model.makeVoiceFnTapSession()
+            model.voiceFnTapSession.setEnabled(true)
+            #expect(model.voiceFnTapSession.startVoice())
+        } else {
+            #expect(model.updateVoiceKeyState(streaming: true, forceSoftware: true, owner: .bluetooth,
+                keySetter: { _, down in edges.append(down); return true }))
+        }
+
+        let activate = try #require(sourceDone)
+        foreground = (ApplicationIntegration.antigravity.bundleIdentifier, pid_t(42))
+        activate(true)
+
+        #expect(focusCalls == 0)
+        #expect(edges.isEmpty)
+        #expect(inputSource == "previous")
+        #expect(model.applicationIntegrationStatus == .cancelled(.targetChanged))
+        #expect(!model.voiceKeyLatch.isHeld)
+        #expect(model.voiceFnTapSession.phase == .idle)
+    }
+
+    @Test(arguments: [false, true])
+    func abortedComposerResyncBlocksVoiceShortcutAndRollsBackInputSource(tapMode: Bool) throws {
+        let (model, defaults, suite) = try makeModel()
+        defer { defaults.removePersistentDomain(forName: suite) }
+        model.settings.setApplicationIntegration(.antigravity, enabled: true)
+        useReadyDestination(model)
+        var edges: [Bool] = []
+        let controller = ApplicationIntegrationController(
+            settings: model.settings,
+            notifications: NotificationCenter(),
+            frontmost: { (ApplicationIntegration.antigravity.bundleIdentifier, pid_t(42)) },
+            focusWithResync: { _, _, resync, done in
+                #expect(resync)
+                done(.aborted)
+                return ScheduledOperation {}
+            },
+            onStateChange: { model.recordApplicationIntegrationStatus($0) }
+        )
+        model.applicationIntegrationController = controller
+        controller.start()
+        defer { controller.stop() }
+
+        let target = try #require(OnboardingVoiceTool.weixin.preferredInputSourceID)
+        var inputSource = "previous"
+        model.preferredInputSourceMonitor = PreferredInputSourceMonitor(
+            voiceTool: { .weixin },
+            prepareInputSource: { _ in inputSource = target; return .selected },
+            currentInputSourceID: { inputSource },
+            restoreInputSource: { inputSource = $0; return .selected },
+            waitForInputSourceActivation: { _, _, _, done in done(true) },
+            installMonitor: { _ in nil },
+            logger: { _ in }
+        )
+        if tapMode {
+            model.voiceTapTrigger = VoiceTapTrigger(selectedMode: { .function }, setKey: { _, down in
+                edges.append(down)
+                return true
+            })
+            let clock = ControlledTestScheduler()
+            model.voiceFnTapSession = model.makeVoiceFnTapSession(schedule: clock.voiceSchedule)
+            model.voiceFnTapSession.setEnabled(true)
+            #expect(model.voiceFnTapSession.startVoice())
+            clock.runAll()
+        } else {
+            #expect(!model.updateVoiceKeyState(streaming: true, forceSoftware: true, owner: .bluetooth,
+                keySetter: { _, down in edges.append(down); return true }))
+        }
+
+        #expect(edges.isEmpty)
+        #expect(inputSource == "previous")
+        #expect(model.applicationIntegrationStatus == .cancelled(.actionFailed))
         #expect(!model.voiceKeyLatch.isHeld)
         #expect(model.voiceFnTapSession.phase == .idle)
     }
@@ -605,6 +733,22 @@ struct VoiceInputActivationTests {
     @Test func cancelledDeferredActivationCannotPostOrMutateNewSession() throws {
         let (model, defaults, suite) = try makeModel()
         defer { defaults.removePersistentDomain(forName: suite) }
+        model.settings.setApplicationIntegration(.antigravity, enabled: true)
+        var resyncFlags: [Bool] = []
+        let controller = ApplicationIntegrationController(
+            settings: model.settings,
+            notifications: NotificationCenter(),
+            frontmost: { (ApplicationIntegration.antigravity.bundleIdentifier, 42) },
+            focusWithResync: { _, _, resync, done in
+                resyncFlags.append(resync)
+                done(.preserved)
+                return ScheduledOperation {}
+            },
+            onStateChange: { model.recordApplicationIntegrationStatus($0) }
+        )
+        model.applicationIntegrationController = controller
+        controller.start()
+        defer { controller.stop() }
         var source = "previous"
         var confirmations: [(Bool) -> Void] = []
         var posted: [Bool] = []
@@ -621,8 +765,11 @@ struct VoiceInputActivationTests {
         #expect(model.updateVoiceKeyState(streaming: true, forceSoftware: true, owner: .bluetooth, keySetter: setter))
         confirmations[0](true)
         #expect(posted.isEmpty)
+        #expect(resyncFlags.isEmpty)
+        #expect(model.preferredInputSourceMonitor.lastExplicitVoiceSessionSwitchedInputSource == true)
         #expect(model.pendingVoiceKeyMode == .function)
         confirmations[1](true)
+        #expect(resyncFlags == [true])
         #expect(posted == [true])
         #expect(model.heldVoiceKeyMode == .function)
         #expect(model.updateVoiceKeyState(streaming: false, forceSoftware: true, owner: .bluetooth, keySetter: setter))
@@ -881,20 +1028,62 @@ struct VoiceInputActivationTests {
         let (model, defaults, suite) = try makeModel()
         defer { defaults.removePersistentDomain(forName: suite) }
 
+        let profile = model.settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+        model.settings.selectRemoteProfile(profile)
+        model.settings.setOnboardingControlSource(.chromecastRemote)
+        model.settings.completeOnboarding()
         #expect(model.settings.bypassInputSourceSwitching == false)
 
         model.settings.bypassInputSourceSwitching = true
         #expect(model.settings.bypassInputSourceSwitching == true)
 
-        // Switching tool resets to false
+        // Preserved across completing onboarding or verifying the same input-method tool.
+        model.settings.completeOnboarding()
+        #expect(model.settings.bypassInputSourceSwitching == true)
+
+        let weixinPlan = try #require(OnboardingVoicePairingPlan.resolve(
+            tool: .weixin, controlSource: .chromecastRemote
+        ))
+        model.settings.beginOnboardingVoiceTrial(weixinPlan)
+        model.settings.verifyOnboardingVoiceBinding()
+        #expect(model.settings.bypassInputSourceSwitching == true)
+
+        // Preserved across adding a new device and re-configuring the same integration tool.
+        SettingsPageBehavior.beginDeviceSetup(settings: model.settings)
+        model.settings.completeOnboarding()
+        #expect(model.settings.bypassInputSourceSwitching == true)
+
+        SettingsPageBehavior.beginIntegrationSetup(tool: .weixin, settings: model.settings)
+        #expect(model.settings.bypassInputSourceSwitching == true)
+        model.settings.beginOnboardingVoiceTrial(weixinPlan)
+        model.settings.verifyOnboardingVoiceBinding()
+        model.settings.completeOnboarding()
+        #expect(model.settings.bypassInputSourceSwitching == true)
+
+        // Cancelling integration setup after switching to another tool restores true.
+        SettingsPageBehavior.beginIntegrationSetup(tool: .doubao, settings: model.settings)
+        #expect(model.settings.bypassInputSourceSwitching == false)
+        model.settings.dismissOnboarding()
+        #expect(model.settings.onboardingVoiceTool == .weixin)
+        #expect(model.settings.bypassInputSourceSwitching == true)
+
+        // Switching to a different tool resets to false.
         model.settings.setOnboardingVoiceTool(.doubao)
         #expect(model.settings.bypassInputSourceSwitching == false)
 
         model.settings.bypassInputSourceSwitching = true
         #expect(model.settings.bypassInputSourceSwitching == true)
-
-        // Completing onboarding resets to false
         model.settings.completeOnboarding()
+        #expect(model.settings.bypassInputSourceSwitching == true)
+
+        // Switching to a standalone tool without an input source resets to false.
+        model.settings.setOnboardingVoiceTool(.voiceBuddy)
+        #expect(model.settings.bypassInputSourceSwitching == false)
+
+        // Full onboarding restart resets to false.
+        model.settings.setOnboardingVoiceTool(.weixin)
+        model.settings.bypassInputSourceSwitching = true
+        model.settings.restartOnboarding()
         #expect(model.settings.bypassInputSourceSwitching == false)
     }
 

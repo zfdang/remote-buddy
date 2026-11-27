@@ -85,25 +85,48 @@ extension BridgeAppModel {
         onTarget: @escaping (ApplicationIntegrationController.VoiceInputTarget) -> Void = { _ in }
     ) -> VoiceInputDestinationWait {
         clearApplicationIntegrationStatus()
+        let initialIntegrationTarget = applicationIntegrationController.currentVoiceInputTarget()
+        if let initialIntegrationTarget {
+            if applicationIntegrationController.isEnabledVoiceInputTarget(initialIntegrationTarget) {
+                recordApplicationIntegrationStatus(.waiting)
+            }
+            onTarget(initialIntegrationTarget)
+        }
         let report: (VoiceInputDestinationWaitResult) -> Void = { [weak self] result in
             if case let .cancelled(reason) = result {
+                self?.preferredInputSourceMonitor.endVoiceSession()
                 self?.recordApplicationIntegrationStatus(.cancelled(reason))
             }
             completion(result)
         }
         let sequence = VoiceInputPreparationSequence(schedule: schedule)
         let wait = sequence.start(stages: [
-            { [weak self] done in
-                self?.applicationIntegrationController.prepareForVoiceInput(onTarget: onTarget, completion: done)
-                    ?? .cancelled(.superseded)
-            },
             { [weak self] done in self?.prepareTapInputSource(completion: done) ?? .cancelled(.superseded) },
+            { [weak self] done in
+                guard let self else { return .cancelled(.superseded) }
+                let switchedInputSource = self.preferredInputSourceMonitor.lastExplicitVoiceSessionSwitchedInputSource
+                return self.applicationIntegrationController.prepareForVoiceInput(
+                    expectedTarget: initialIntegrationTarget,
+                    resyncFocusedComposer: switchedInputSource,
+                    onTarget: onTarget,
+                    completion: done
+                )
+            },
             { [weak self] done in self?.voiceInputDestinationCoordinator.waitUntilReady(completion: done) ?? .cancelled(.superseded) },
         ], completion: report)
-        if case let .cancelled(reason) = wait {
+        switch wait {
+        case .immediate:
+            return .immediate
+        case let .cancelled(reason):
+            preferredInputSourceMonitor.endVoiceSession()
             recordApplicationIntegrationStatus(.cancelled(reason))
+            return .cancelled(reason)
+        case let .waiting(operation):
+            return .waiting(.mainQueueCancellation { [weak self] in
+                operation.cancel()
+                self?.preferredInputSourceMonitor.endVoiceSession()
+            })
         }
-        return wait
     }
 
     /// Adapt the source monitor's callback to a cancellable preparation stage.

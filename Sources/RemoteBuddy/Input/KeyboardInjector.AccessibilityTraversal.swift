@@ -557,6 +557,25 @@ extension KeyboardInjector {
         return range
     }
 
+    static func axSelectedTextRangeIsSettable(_ element: AXUIElement) -> Bool {
+        var settable = DarwinBoolean(false)
+        return AXUIElementIsAttributeSettable(
+            element,
+            kAXSelectedTextRangeAttribute as CFString,
+            &settable
+        ) == .success && settable.boolValue
+    }
+
+    static func axWriteSelectedTextRange(_ range: CFRange, to element: AXUIElement) -> Bool {
+        var mutableRange = range
+        guard let axRange = AXValueCreate(.cfRange, &mutableRange) else { return false }
+        return AXUIElementSetAttributeValue(
+            element,
+            kAXSelectedTextRangeAttribute as CFString,
+            axRange
+        ) == .success
+    }
+
     static func permitsCaretMoveToEndShortcut(flags: CGEventFlags) -> Bool {
         flags.intersection([.maskControl, .maskAlternate, .maskShift, .maskSecondaryFn]).isEmpty
     }
@@ -594,23 +613,8 @@ extension KeyboardInjector {
         moveIntegratedComposerCaretToEnd(
             readNumberOfCharacters: { axNumberOfCharacters(element) },
             readSelectedRange: { axSelectedTextRange(element) },
-            isSelectedRangeSettable: {
-                var settable = DarwinBoolean(false)
-                return AXUIElementIsAttributeSettable(
-                    element,
-                    kAXSelectedTextRangeAttribute as CFString,
-                    &settable
-                ) == .success && settable.boolValue
-            },
-            writeSelectedRange: { range in
-                var mutableRange = range
-                guard let axRange = AXValueCreate(.cfRange, &mutableRange) else { return false }
-                return AXUIElementSetAttributeValue(
-                    element,
-                    kAXSelectedTextRangeAttribute as CFString,
-                    axRange
-                ) == .success
-            },
+            isSelectedRangeSettable: { axSelectedTextRangeIsSettable(element) },
+            writeSelectedRange: { axWriteSelectedTextRange($0, to: element) },
             canContinue: canContinue,
             postMoveToEndKey: postMoveToEndKey,
             pause: pause

@@ -111,14 +111,13 @@ struct StatusItemPresentationTests {
         controller.start()
         #expect(model.updateVoiceKeyState(streaming: true, forceSoftware: true, owner: .bluetooth,
             keySetter: { _, down in edges.append(down); return true }))
-        let focus = try #require(focusDone)
-        focus(.preserved)
         let source = try #require(sourceDone)
         #expect(state == .preparing)
         #expect(model.updateVoiceKeyState(streaming: false, forceSoftware: true, owner: .bluetooth,
             keySetter: { _, down in edges.append(down); return true }))
         #expect(state == .connected)
         source(true)
+        #expect(focusDone == nil)
         #expect(edges.isEmpty)
         #expect(state == .connected)
     }

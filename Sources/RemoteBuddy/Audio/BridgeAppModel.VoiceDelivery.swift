@@ -220,7 +220,12 @@ extension BridgeAppModel {
                     settings.enabledApplicationIntegrations.isEmpty ? nil : VoicePlaybackQueueCapacity.maximumPreRollSamples)
             }
             var immediateResult: Bool?
-            var integrationTarget: ApplicationIntegrationController.VoiceInputTarget?
+            let initialIntegrationTarget = applicationIntegrationController.currentVoiceInputTarget()
+            if let initialIntegrationTarget,
+               applicationIntegrationController.isEnabledVoiceInputTarget(initialIntegrationTarget) {
+                recordApplicationIntegrationStatus(.waiting)
+            }
+            var integrationTarget = initialIntegrationTarget
             let activationCompleted: (Bool) -> Void = { [weak self] activated in
                 guard let self else { completion(false); return }
                 guard self.voiceKeyActivationGeneration == generation,
@@ -238,8 +243,8 @@ extension BridgeAppModel {
                     self.pendingVoiceKeyMode = nil
                     if owner == .bluetooth { self.voiceSession.commandAudio.cancel() }
                     self.voiceKeyLatch.rollback(transition, owner: owner)
+                    self.preferredInputSourceMonitor.endVoiceSession()
                     if targetChanged {
-                        self.preferredInputSourceMonitor.endVoiceSession()
                         self.recordApplicationIntegrationStatus(.cancelled(.targetChanged))
                     } else {
                         self.completeApplicationIntegrationVoiceTrigger(started: false)
@@ -253,19 +258,30 @@ extension BridgeAppModel {
                 immediateResult = submitted
                 finish?(submitted)
             }
-            let prepareSource: (VoiceInputDestinationWaitResult) -> Void = { [weak self] result in
-                guard let self, self.voiceKeyActivationGeneration == generation,
-                      self.pendingVoiceKeyActivationOwner == owner else { return }
-                guard result == .ready else { activationCompleted(false); return }
-                self.preferredInputSourceMonitor.beginVoiceSession(completion: activationCompleted)
+            let prepareDestinationFocus: (Bool) -> Void = { [weak self] sourceActivated in
+                guard let self else { completion(false); return }
+                guard self.voiceKeyActivationGeneration == generation,
+                      self.pendingVoiceKeyActivationOwner == owner else { immediateResult = false; return }
+                guard sourceActivated else { activationCompleted(false); return }
+                let switchedInputSource = self.preferredInputSourceMonitor.lastExplicitVoiceSessionSwitchedInputSource
+                let finishFocus: (VoiceInputDestinationWaitResult) -> Void = { [weak self] result in
+                    guard let self else { completion(false); return }
+                    guard self.voiceKeyActivationGeneration == generation,
+                          self.pendingVoiceKeyActivationOwner == owner else { immediateResult = false; return }
+                    activationCompleted(result == .ready)
+                }
+                switch self.applicationIntegrationController.prepareForVoiceInput(
+                    expectedTarget: initialIntegrationTarget,
+                    resyncFocusedComposer: switchedInputSource,
+                    onTarget: { integrationTarget = $0 },
+                    completion: finishFocus
+                ) {
+                case .immediate: finishFocus(.ready)
+                case let .cancelled(reason): finishFocus(.cancelled(reason))
+                case .waiting: break
+                }
             }
-            switch applicationIntegrationController.prepareForVoiceInput(
-                onTarget: { integrationTarget = $0 }, completion: prepareSource
-            ) {
-            case .immediate: prepareSource(.ready)
-            case let .cancelled(reason): prepareSource(.cancelled(reason))
-            case .waiting: break
-            }
+            preferredInputSourceMonitor.beginVoiceSession(completion: prepareDestinationFocus)
             // An asynchronous start is accepted; the caller continues only at completion.
             return immediateResult ?? true
         }

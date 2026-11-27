@@ -78,7 +78,7 @@ enum ApplicationIntegration: String, CaseIterable, Identifiable {
 }
 
 enum ApplicationFocusResult: Equatable {
-    case focused, preserved, unavailable
+    case focused, preserved, unavailable, aborted
 }
 
 enum ApplicationIntegrationPreparationState: Equatable {
@@ -96,6 +96,7 @@ enum ApplicationIntegrationPreparationState: Equatable {
 @MainActor
 final class ApplicationIntegrationController {
     typealias Focuser = (ApplicationIntegration, pid_t, @escaping (ApplicationFocusResult) -> Void) -> ScheduledOperation
+    typealias DetailedFocuser = (ApplicationIntegration, pid_t, Bool, @escaping (ApplicationFocusResult) -> Void) -> ScheduledOperation
     struct VoiceInputTarget {
         let bundleIdentifier: String?
         let pid: pid_t
@@ -103,7 +104,7 @@ final class ApplicationIntegrationController {
     private let settings: AppSettings
     private let notifications: NotificationCenter
     private let frontmost: () -> (bundleIdentifier: String?, pid: pid_t)?
-    private let focus: Focuser
+    private let focus: DetailedFocuser
     private let onStateChange: (ApplicationIntegrationPreparationState) -> Void
     private var observers: [NSObjectProtocol] = []
     private var settingsSubscription: AnyCancellable?
@@ -120,13 +121,27 @@ final class ApplicationIntegrationController {
          frontmost: @escaping () -> (bundleIdentifier: String?, pid: pid_t)? = {
              NSWorkspace.shared.frontmostApplication.map { ($0.bundleIdentifier, $0.processIdentifier) }
          },
-         focus: @escaping Focuser = KeyboardInjector.focusIntegratedApplication,
+         focus: Focuser? = nil,
+         focusWithResync: DetailedFocuser? = nil,
          schedule: @escaping OperationScheduler = ScheduledOperation.mainQueue,
          onStateChange: @escaping (ApplicationIntegrationPreparationState) -> Void = { _ in }) {
         self.settings = settings
         self.notifications = notifications
         self.frontmost = frontmost
-        self.focus = focus
+        if let focusWithResync {
+            self.focus = focusWithResync
+        } else if let focus {
+            self.focus = { integration, pid, _, done in focus(integration, pid, done) }
+        } else {
+            self.focus = { integration, pid, resync, done in
+                KeyboardInjector.focusIntegratedApplication(
+                    integration,
+                    processIdentifier: pid,
+                    resyncFocusedComposer: resync,
+                    completion: done
+                )
+            }
+        }
         self.schedule = schedule
         self.onStateChange = onStateChange
     }
@@ -149,11 +164,20 @@ final class ApplicationIntegrationController {
     /// Focus is optional. A failed/expired attempt is reported and voice continues
     /// in the same application; release, app changes, and shutdown still cancel.
     func prepareForVoiceInput(
+        expectedTarget: VoiceInputTarget? = nil,
+        resyncFocusedComposer: Bool = false,
         onTarget: (VoiceInputTarget) -> Void = { _ in },
         completion: @escaping (VoiceInputDestinationWaitResult) -> Void
     ) -> VoiceInputDestinationWait {
         cancelPending()
-        guard started, let target = currentVoiceInputTarget(),
+        guard started else { return .immediate }
+        if let expectedTarget, !isCurrentVoiceInputTarget(expectedTarget) {
+            let bundle = expectedTarget.bundleIdentifier ?? "unknown"
+            AppLogger.shared.write("APP INTEGRATION cancelled bundle=\(bundle) reason=\(VoiceInputDestinationCancellation.targetChanged.rawValue)")
+            onStateChange(.cancelled(.targetChanged))
+            return .cancelled(.targetChanged)
+        }
+        guard let target = currentVoiceInputTarget(),
               let integration = ApplicationIntegration.matching(target.bundleIdentifier),
               settings.isApplicationIntegrationEnabled(integration) else { return .immediate }
         onTarget(target)
@@ -166,13 +190,15 @@ final class ApplicationIntegrationController {
             guard let self, self.generation == requestID, self.pendingCompletion != nil else { return }
             if !self.isCurrentVoiceInputTarget(target) {
                 self.finish(requestID: requestID, result: .cancelled(.targetChanged))
+            } else if focusResult == .aborted {
+                self.finish(requestID: requestID, result: .cancelled(.actionFailed))
             } else {
                 self.finish(requestID: requestID, result: .ready,
                     focusStatus: focusResult == .focused ? .ready : (focusResult == .preserved ? .preserved : (timedOut ? .focusTimedOut : .unavailable)))
             }
         }
         deadline = schedule(VoiceInputPreparationSequence.maximumFocusWait) { finishFocus(.unavailable, true) }
-        let task = focus(integration, target.pid) { finishFocus($0, false) }
+        let task = focus(integration, target.pid, resyncFocusedComposer) { finishFocus($0, false) }
         if generation == requestID, pendingCompletion != nil { pendingFocus = task }
         else { task.cancel() }
         return .waiting(.mainQueueCancellation { [weak self] in
@@ -183,6 +209,14 @@ final class ApplicationIntegrationController {
 
     func currentVoiceInputTarget() -> VoiceInputTarget? {
         frontmost().map { VoiceInputTarget(bundleIdentifier: $0.bundleIdentifier, pid: $0.pid) }
+    }
+
+    func isEnabledVoiceInputTarget(_ target: VoiceInputTarget) -> Bool {
+        guard started,
+              let integration = ApplicationIntegration.matching(target.bundleIdentifier),
+              settings.isApplicationIntegrationEnabled(integration)
+        else { return false }
+        return true
     }
 
     func isCurrentVoiceInputTarget(_ target: VoiceInputTarget) -> Bool {

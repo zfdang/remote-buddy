@@ -181,6 +181,7 @@ extension KeyboardInjector {
     /// cancelling explicit application-launch/focus button actions.
     static func focusIntegratedApplication(_ integration: ApplicationIntegration,
                                            processIdentifier: pid_t,
+                                           resyncFocusedComposer: Bool = false,
                                            completion: @escaping (ApplicationFocusResult) -> Void) -> ScheduledOperation {
         let gate = ApplicationFocusRequestGate()
         let requestID = gate.begin()
@@ -192,6 +193,8 @@ extension KeyboardInjector {
                 guard gate.isCurrent(requestID) else { return }
                 if result == .unavailable {
                     AppLogger.shared.write("APP INTEGRATION failed bundle=\(bundleIdentifier) reason=focus_not_confirmed")
+                } else if result == .aborted {
+                    AppLogger.shared.write("APP INTEGRATION failed bundle=\(bundleIdentifier) reason=selection_restore_failed")
                 }
                 completion(result)
             }
@@ -204,10 +207,15 @@ extension KeyboardInjector {
                 }
                 guard canContinue() else { finish(.unavailable); return }
                 var nextClickAttempted = clickAttempted
+                var didResync = false
                 let result = focusIntegratedComposer(integration, processIdentifier: processIdentifier,
-                    clickAttempted: &nextClickAttempted, canContinue: canContinue)
-                if result != .unavailable {
-                    AppLogger.shared.write("APP INTEGRATION \(result == .preserved ? "preserved" : "focused") bundle=\(bundleIdentifier)")
+                    resyncFocusedComposer: resyncFocusedComposer,
+                    clickAttempted: &nextClickAttempted, resynced: &didResync, canContinue: canContinue)
+                if result == .aborted {
+                    finish(.aborted)
+                } else if result != .unavailable {
+                    let outcome = result == .preserved ? (didResync ? "resynced" : "preserved") : "focused"
+                    AppLogger.shared.write("APP INTEGRATION \(outcome) bundle=\(bundleIdentifier)")
                     finish(result)
                 } else if number < 2, canContinue() {
                     attempt(number + 1, clickAttempted: nextClickAttempted)
@@ -222,7 +230,9 @@ extension KeyboardInjector {
 
     private static func focusIntegratedComposer(_ integration: ApplicationIntegration,
                                                 processIdentifier: pid_t,
+                                                resyncFocusedComposer: Bool = false,
                                                 clickAttempted: inout Bool,
+                                                resynced: inout Bool,
                                                 canContinue: @escaping () -> Bool) -> ApplicationFocusResult {
         let app = AXUIElementCreateApplication(processIdentifier)
         // Reading the application's standard role is the public AT handshake.
@@ -232,8 +242,10 @@ extension KeyboardInjector {
         guard canContinue(), axString(app, attribute: kAXRoleAttribute) == "AXApplication",
               canContinue() else { return .unavailable }
         var preservedElement: AXUIElement?
+        var preservedCandidate: AccessibilityTextCandidate?
         func preserveInput(excluding target: AXUIElement? = nil) -> Bool {
             preservedElement = nil
+            preservedCandidate = nil
             guard canContinue(), let input = axElement(app, attribute: kAXFocusedUIElementAttribute),
                   mayPreserveFocusedElement(input, excluding: target, equal: { CFEqual($0, $1) }) else { return false }
             var owner: pid_t = 0
@@ -250,10 +262,86 @@ extension KeyboardInjector {
             guard shouldPreserveIntegratedInput(destination, integration: integration), canContinue(),
                   let current = axElement(app, attribute: kAXFocusedUIElementAttribute), CFEqual(input, current) else { return false }
             preservedElement = input
+            preservedCandidate = AccessibilityTextCandidate(
+                role: destination.role,
+                subrole: destination.subrole,
+                protectedContent: destination.protectedContent,
+                identifier: attributes[kAXIdentifierAttribute] as? String ?? "",
+                title: attributes[kAXTitleAttribute] as? String ?? "",
+                description: attributes[kAXDescriptionAttribute] as? String ?? "",
+                help: attributes[kAXHelpAttribute] as? String ?? "",
+                placeholder: attributes[kAXPlaceholderValueAttribute] as? String ?? "",
+                context: "",
+                frame: nil,
+                enabled: destination.enabled,
+                focused: true,
+                selectedContext: false,
+                hasWorkBuddyComposerControls: false
+            )
             return true
         }
         let preserveCurrentFocus = { preserveInput() }
-        if preserveCurrentFocus() { return .preserved }
+        if preserveCurrentFocus() {
+            if resyncFocusedComposer,
+               !clickAttempted,
+               let input = preservedElement,
+               let baseCandidate = preservedCandidate,
+               let window = axElement(app, attribute: kAXFocusedWindowAttribute),
+               axString(window, attribute: kAXSubroleAttribute) != "AXDialog",
+               axString(window, attribute: kAXSubroleAttribute) != "AXSystemDialog",
+               axBool(window, attribute: "AXModal") != true,
+               axElements(window, attribute: "AXSheets").isEmpty {
+                let candidate = AccessibilityTextCandidate(
+                    role: baseCandidate.role,
+                    subrole: baseCandidate.subrole,
+                    protectedContent: baseCandidate.protectedContent,
+                    identifier: baseCandidate.identifier,
+                    title: baseCandidate.title,
+                    description: baseCandidate.description,
+                    help: baseCandidate.help,
+                    placeholder: baseCandidate.placeholder,
+                    context: baseCandidate.context,
+                    frame: axFrame(input),
+                    enabled: baseCandidate.enabled,
+                    focused: baseCandidate.focused,
+                    selectedContext: baseCandidate.selectedContext,
+                    hasWorkBuddyComposerControls: integration == .workBuddy && baseCandidate.role == "AXTextArea" &&
+                        workBuddyComposerControlsSurround(input)
+                )
+                let windowFrame = axFrame(window)
+                var postedClick = false
+                let resyncOutcome = resyncFocusedIntegratedComposer(
+                    candidate,
+                    integration: integration,
+                    windowFrame: windowFrame,
+                    canContinue: canContinue,
+                    preserveOtherFocus: { preserveInput(excluding: input) },
+                    hitTest: { accessibilityHitTestMatchesTarget(input, processIdentifier: processIdentifier, point: $0) },
+                    postClick: { point in
+                        postedClick = true
+                        return postAccessibilityFocusClick(point)
+                    },
+                    isFocused: {
+                        accessibilityElementIsFocused(input, applicationElement: app, requiresApplicationFocusedElement: true)
+                    },
+                    readSelectedRange: { axSelectedTextRange(input) },
+                    isSelectedRangeSettable: { axSelectedTextRangeIsSettable(input) },
+                    writeSelectedRange: { axWriteSelectedTextRange($0, to: input) }
+                )
+                if postedClick {
+                    clickAttempted = true
+                }
+                switch resyncOutcome {
+                case .resynced:
+                    resynced = true
+                case .skipped:
+                    break
+                case .failed:
+                    return .aborted
+                }
+            }
+            return .preserved
+        }
         guard canContinue(),
               !VoiceInputDestinationSnapshot.system().isSensitiveDestination,
               let window = axElement(app, attribute: kAXFocusedWindowAttribute),
@@ -494,6 +582,50 @@ extension KeyboardInjector {
             pause()
         }
         return canContinue() && isFocused()
+    }
+
+    enum FocusedComposerResyncResult: Equatable {
+        case skipped
+        case resynced
+        case failed
+    }
+
+    static func resyncFocusedIntegratedComposer(
+        _ candidate: AccessibilityTextCandidate,
+        integration: ApplicationIntegration,
+        windowFrame: CGRect?,
+        canContinue: () -> Bool,
+        preserveOtherFocus: () -> Bool = { false },
+        hitTest: (CGPoint) -> Bool,
+        postClick: (CGPoint) -> Bool = postAccessibilityFocusClick,
+        isFocused: () -> Bool,
+        readSelectedRange: () -> CFRange? = { nil },
+        isSelectedRangeSettable: () -> Bool = { false },
+        writeSelectedRange: (CFRange) -> Bool = { _ in false },
+        pause: () -> Void = { usleep(40_000) }
+    ) -> FocusedComposerResyncResult {
+        guard canContinue(), !preserveOtherFocus() else { return .skipped }
+        guard let point = integratedComposerClickPoint(candidate, integration: integration, windowFrame: windowFrame),
+              hitTest(point), canContinue(), !preserveOtherFocus()
+        else { return .skipped }
+        guard let savedRange = readSelectedRange(), isSelectedRangeSettable(),
+              canContinue(), !preserveOtherFocus()
+        else { return .skipped }
+        guard postClick(point) else { return .skipped }
+        pause()
+        guard canContinue(), !preserveOtherFocus(), isFocused() else { return .failed }
+        let currentRange = readSelectedRange()
+        if let currentRange, currentRange.location == savedRange.location, currentRange.length == savedRange.length {
+            return .resynced
+        }
+        guard canContinue(), !preserveOtherFocus(), isFocused(), isSelectedRangeSettable(),
+              writeSelectedRange(savedRange)
+        else { return .failed }
+        guard canContinue(), !preserveOtherFocus(), isFocused(),
+              let updated = readSelectedRange(),
+              updated.location == savedRange.location, updated.length == savedRange.length
+        else { return .failed }
+        return .resynced
     }
 
     private static func postAccessibilityFocusClick(_ point: CGPoint) -> Bool {

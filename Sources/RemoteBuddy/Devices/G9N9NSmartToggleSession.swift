@@ -1,17 +1,16 @@
 import Foundation
 
 /// State machine for Chromecast G9N9N physical voice button smart-toggle mode:
-/// - Short press & release (`< holdThreshold`, or within the observed `0x011B` delayed
-///   `ATVV STREAM STOP` window `1.25s...1.35s` when no audio frames were decoded) keeps the
+/// - Short press & release (`< holdThreshold`, or within the `0x011B` delayed
+///   `ATVV STREAM STOP` window `1.0s...1.5s` when no audio frames were decoded) keeps the
 ///   voice session alive and triggers an ATVV `MIC_OPEN` (`0x0C`) reopen so the user can speak
 ///   hands-free until the next press.
 /// - Long press (`>= holdThreshold`) behaves as standard hold-to-talk and stops on release.
 struct G9N9NSmartToggleState: Equatable {
     static let holdThreshold: TimeInterval = 0.7
     // Observed 0x011B compatible firmwares withhold audio on a quick tap and emit
-    // ATVV STREAM STOP tightly around 1.281s–1.299s. Keep this window narrow around
-    // that observed band so real 0.85s–1.20s holds without audio still stop on release.
-    static let delayedZeroAudioShortTapRange: ClosedRange<TimeInterval> = 1.25...1.35
+    // ATVV STREAM STOP around 1.28s–1.30s; match 1.0s...1.5s with zero decoded audio.
+    static let delayedZeroAudioShortTapRange: ClosedRange<TimeInterval> = 1.0...1.5
     static let reopenTimeout: TimeInterval = 5
     static let maximumHandsFreeDuration: TimeInterval = VoiceAutoStopDuration.fiveMinutes.timeInterval
 

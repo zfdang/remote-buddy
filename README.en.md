@@ -45,9 +45,10 @@ Enabling any app integration makes Remote Buddy send the Fn hold trigger for all
 ```text
 Remote microphone → Bluetooth audio → Remote Buddy → Virtual microphone → Input tool
 Remote voice button → Remote Buddy → Voice shortcut → Text in the current field
+Remote ordinary buttons → Remote Buddy → Per-app shortcuts / scroll / phrases → Active app
 ```
 
-The app decodes remote audio and sends it to a virtual microphone while triggering the selected tool's voice shortcut. It connects hardware to input software; it does not run its own speech-recognition model. Live transcription, recognition speed, and corrections depend on the input tool.
+The app decodes remote audio into a virtual microphone while triggering the selected tool's voice shortcut, and maps ordinary remote buttons per frontmost app directly to shortcuts, scrolling, or common phrases. It bridges hardware and software without running its own speech-recognition model; live transcription, speed, and corrections depend on the input tool.
 
 ## How do I use it?
 

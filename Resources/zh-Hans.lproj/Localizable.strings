@@ -957,13 +957,11 @@
 "onboarding.voice_tool.guide.screenshot.doubao_settings" = "在语音输入中选择「长按模式」（不要选免按模式；点按免提转换由遥控搭子自动完成），将快捷键设为“%@”，开启全局唤起语音，并选择遥控搭子的虚拟麦克风。";
 "onboarding.voice_tool.guide.screenshot.weixin_input_menu" = "在输入法菜单中选择微信输入法，再打开设置。";
 "onboarding.voice_tool.guide.screenshot.weixin_input_settings" = "在语音输入中将快捷键设为“%@”，录音触发方式优先选择「按住说话」（遥控器点按转换由遥控搭子自动处理），并开启“快捷键全局生效”。";
-"onboarding.voice_tool.guide.screenshot.weixin_app_shortcuts" = "微信 App 的全局语音快捷键可能与其他语音工具冲突。请检查是否占用了“%@”；如有冲突，仅清除对应快捷键。";
 "onboarding.voice_tool.guide.screenshot.bageshuo_menu" = "在菜单栏点击网易叭哥说图标，选择设置。";
 "onboarding.voice_tool.guide.screenshot.bageshuo_settings" = "在设置 → 快捷键中，将“语音润色快捷键”设为“%@”，使用按一下开始、再按一下结束模式。";
 "onboarding.voice_tool.guide.screenshot.system_fn" = "在系统设置的键盘中，将按下🌐键时设为不执行任何操作。";
 "onboarding.voice_tool.guide.screenshot.example_badge" = "仅为示例\n以实际为准";
 "onboarding.voice_tool.guide.screenshot.example_notice" = "注意：上方截图中的快捷键仅为示例，请以你实际设置的快捷键“%@”为准进行设置。";
-"onboarding.voice_tool.guide.screenshot.conflict_example_notice" = "注意：上方截图中的快捷键仅为示例，请以你实际设置的快捷键“%@”为准检查是否冲突。";
 "siri_remote.activation.enable" = "启用";
 "siri_remote.activation.disable" = "停用";
 "siri_remote.activation.retry" = "重试";
@@ -1224,7 +1222,7 @@
 "connection.voice_key.custom_unsupported" = "请选择带 Control、Shift、Option 或 Command 的普通按键组合；单独修饰键请使用 Fn、左右 Command 或左右 Option。组合键暂不支持 Fn。";
 "onboarding.voice_tool.selected_trigger_help" = "选择要发送给输入工具的热键。";
 "onboarding.voice_tool.trigger_incompatible" = "macOS 听写需要 Fn/地球键，请改用 Fn 或选择其他工具。";
-"onboarding.voice_tool.guide.release_wechat_shortcut" = "检查微信 App 热键冲突";
+"onboarding.voice_trigger.faq_link" = "查看语音热键与触发模式说明 (FAQ) ↗";
 "voice_button.status.custom_enabled" = "已启用自定义语音组合键";
 "voice_button.status.custom_pressed" = "语音组合键已按下；收音结束后释放";
 "voice_button.status.custom_released" = "语音组合键已释放";

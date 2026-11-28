@@ -211,7 +211,7 @@ struct ProductBoundaryTests {
     @Test @MainActor func everySetupScreenshotAndRemoteIllustrationDecodes() throws {
         let bundle = RemoteBuddyResourceBundle.mainOrDevelopment
         for name in ["doubao-menu", "doubao-settings", "system-fn",
-                     "weixin-app-shortcuts", "weixin-input-menu",
+                     "weixin-input-menu",
                      "weixin-input-settings", "bageshuo-menu",
                      "bageshuo-settings", "bageshuo-input-microphone"] {
             for theme in ["light", "dark"] {

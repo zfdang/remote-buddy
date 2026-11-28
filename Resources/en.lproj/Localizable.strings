@@ -960,13 +960,11 @@
 "onboarding.voice_tool.guide.screenshot.doubao_settings" = "In Voice Input, choose Long-Press mode (长按模式) (avoid Hands-Free mode / 免按模式—Remote Buddy handles remote tap conversion automatically), set the shortcut to “%@”, enable global voice activation, and select the Remote Buddy virtual microphone.";
 "onboarding.voice_tool.guide.screenshot.weixin_input_menu" = "In the input menu, choose WeType (微信输入法), then Settings (设置).";
 "onboarding.voice_tool.guide.screenshot.weixin_input_settings" = "In Voice Input, set the shortcut to “%@”, prefer Hold-to-Talk (Remote Buddy handles remote tap conversion automatically), and enable global shortcut activation.";
-"onboarding.voice_tool.guide.screenshot.weixin_app_shortcuts" = "The WeChat app’s global voice shortcut can conflict with any voice tool. Check whether it uses “%@” and clear only the conflicting shortcut.";
 "onboarding.voice_tool.guide.screenshot.bageshuo_menu" = "In the menu bar, click the NetEase Bageshuo icon, then select Settings.";
 "onboarding.voice_tool.guide.screenshot.bageshuo_settings" = "In Settings → Shortcuts, set the voice shortcut to “%@” and use press-to-start/stop mode.";
 "onboarding.voice_tool.guide.screenshot.system_fn" = "In System Settings → Keyboard (键盘), set Press Globe key to (按下🌐键时) to Do Nothing (不执行任何操作).";
 "onboarding.voice_tool.guide.screenshot.example_badge" = "Example only\nUse your key";
 "onboarding.voice_tool.guide.screenshot.example_notice" = "Note: The shortcut in the screenshot above is only an example. Follow your actual selected shortcut “%@”.";
-"onboarding.voice_tool.guide.screenshot.conflict_example_notice" = "Note: The shortcut in the screenshot above is only an example. Check for conflicts using your actual selected shortcut “%@”.";
 "siri_remote.activation.enable" = "Enable";
 "siri_remote.activation.disable" = "Disable";
 "siri_remote.activation.retry" = "Retry";
@@ -1222,7 +1220,7 @@
 "connection.voice_key.custom_unsupported" = "Choose a regular key with Control, Shift, Option, or Command. For a standalone modifier, use Fn, left/right Command, or left/right Option. Chords containing Fn are not supported.";
 "onboarding.voice_tool.selected_trigger_help" = "Choose the shortcut to send to your input tool.";
 "onboarding.voice_tool.trigger_incompatible" = "macOS Dictation requires Fn/Globe. Use Fn or choose another tool.";
-"onboarding.voice_tool.guide.release_wechat_shortcut" = "Check WeChat App Shortcut Conflicts";
+"onboarding.voice_trigger.faq_link" = "Voice Shortcuts & Trigger Modes FAQ ↗";
 "voice_button.status.custom_enabled" = "Custom voice shortcut enabled";
 "voice_button.status.custom_pressed" = "Voice shortcut held; releases after audio ends";
 "voice_button.status.custom_released" = "Voice shortcut released";

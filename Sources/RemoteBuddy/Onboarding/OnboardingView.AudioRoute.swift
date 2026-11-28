@@ -53,10 +53,19 @@ extension OnboardingView {
             onboardingTitle("onboarding.voice_trigger.title")
             Text(localization.text("onboarding.voice_tool.selected_trigger_help"))
                 .foregroundStyle(.secondary)
-            VoiceTriggerPicker(
-                selection: settings.selectedVoiceTrigger.voiceKeyMode,
-                onSelect: { settings.selectOnboardingVoiceTrigger($0) }
-            )
+            VStack(alignment: .leading, spacing: 8) {
+                VoiceTriggerPicker(
+                    selection: settings.selectedVoiceTrigger.voiceKeyMode,
+                    onSelect: { settings.selectOnboardingVoiceTrigger($0) }
+                )
+                onboardingLink(
+                    id: "voice-trigger.faq",
+                    destination: AppLinks.voiceButtonsFAQ(for: localization.locale)
+                ) {
+                    Text(localization.text("onboarding.voice_trigger.faq_link"))
+                        .font(.system(size: 12))
+                }
+            }
             VStack(alignment: .leading, spacing: 8) {
                 Toggle(localization.text("connection.voice_fn_tap.enabled"), isOn: Binding(
                     get: { settings.selectedVoiceTrigger.voiceFnTapModeEnabled },

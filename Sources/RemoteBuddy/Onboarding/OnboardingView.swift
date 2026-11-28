@@ -62,7 +62,6 @@ struct OnboardingView: View {
     @State var lastLoggedSecureInputState: Bool?
     @State var diagnosticCopySucceeded: Bool?
     @State var buttonHelpExpanded = false
-    @State var wechatHelpExpanded = false
     @State var microphonePreparationInProgress = false
     @State var isPermissionRelaunchConfirmationPresented = false
 

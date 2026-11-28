@@ -1564,20 +1564,39 @@ struct ApplicationIntegrationTests {
             #expect(terminalCalls == [""])
         }
 
-        // 3. Explicit non-terminal active surface (e.g. browser pane) does not override focus.
+        // 3. Explicit non-terminal active surface (e.g. browser pane) does not override focus,
+        // even when surface_id is empty or missing.
+        for browserObject: [String: Any] in [
+            ["surface_id": surfaceUUID, "surface_type": "browser"],
+            ["surface_id": "", "surface_type": "browser"],
+            ["type": "browser"]
+        ] {
+            terminalCalls.removeAll()
+            let browserPayload = try JSONSerialization.data(withJSONObject: browserObject)
+            #expect(!KeyboardInjector.focusCmux(
+                applicationURL: appURL,
+                cliURL: cliURL,
+                runner: { _, _, _ in .init(terminationStatus: 0, standardOutput: browserPayload, timedOut: false) },
+                canContinue: { true },
+                terminalFocuser: { id in terminalCalls.append(id); return true }
+            ))
+            #expect(terminalCalls.isEmpty)
+        }
+
+        // Terminal surface with missing/invalid UUID still falls back to Accessibility terminal focus.
         terminalCalls.removeAll()
-        let browserPayload = try JSONSerialization.data(withJSONObject: [
-            "surface_id": surfaceUUID,
-            "surface_type": "browser"
+        let terminalWithoutID = try JSONSerialization.data(withJSONObject: [
+            "surface_id": "",
+            "surface_type": "terminal"
         ])
-        #expect(!KeyboardInjector.focusCmux(
+        #expect(KeyboardInjector.focusCmux(
             applicationURL: appURL,
             cliURL: cliURL,
-            runner: { _, _, _ in .init(terminationStatus: 0, standardOutput: browserPayload, timedOut: false) },
+            runner: { _, _, _ in .init(terminationStatus: 0, standardOutput: terminalWithoutID, timedOut: false) },
             canContinue: { true },
             terminalFocuser: { id in terminalCalls.append(id); return true }
         ))
-        #expect(terminalCalls.isEmpty)
+        #expect(terminalCalls == [""])
 
         // 4. Terminal surface succeeds even if surface.focus RPC fails, and passes surfaceID to terminalFocuser.
         let terminalPayload = try JSONSerialization.data(withJSONObject: [

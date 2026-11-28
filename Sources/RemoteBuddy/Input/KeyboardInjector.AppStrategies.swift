@@ -471,8 +471,6 @@ extension KeyboardInjector {
         }
         guard canContinue() else { return false }
         guard let payload = try? JSONSerialization.jsonObject(with: currentResult.standardOutput) as? [String: Any],
-              let surfaceID = payload["surface_id"] as? String,
-              UUID(uuidString: surfaceID) != nil,
               let surfaceType = (payload["surface_type"] as? String) ?? (payload["type"] as? String)
         else {
             AppLogger.shared.write("APP FOCUS failed bundle=\(PresetApplication.cmux.bundleIdentifier) method=cmux_api reason=invalid_current_payload")
@@ -481,6 +479,12 @@ extension KeyboardInjector {
         guard surfaceType.caseInsensitiveCompare("terminal") == .orderedSame else {
             AppLogger.shared.write("APP FOCUS failed bundle=\(PresetApplication.cmux.bundleIdentifier) method=cmux_api reason=no_current_terminal")
             return false
+        }
+        guard let surfaceID = payload["surface_id"] as? String,
+              UUID(uuidString: surfaceID) != nil
+        else {
+            AppLogger.shared.write("APP FOCUS failed bundle=\(PresetApplication.cmux.bundleIdentifier) method=cmux_api reason=invalid_current_payload")
+            return canContinue() && terminalFocuser("")
         }
 
         guard let focusParameters = try? JSONSerialization.data(

@@ -39,7 +39,7 @@ struct ShortcutSequenceTests {
     }
 
     @Test(arguments: [ButtonAction.commandReturn, .shiftReturn, .commandCopy, .commandPaste,
-        .commandRefresh, .commandClose, .commandQuit, .commandCut, .commandSelectAll, .commandUndo,
+        .commandRefresh, .commandMinimize, .commandClose, .commandQuit, .commandCut, .commandSelectAll, .commandUndo,
         .commandRedo, .commandFind, .commandSave, .commandDelete, .showDesktop,
         .missionControl, .notificationCenter, .spotlight, .spaceLeft, .spaceRight,
         .lockScreen, .screenshot])
@@ -60,6 +60,7 @@ struct ShortcutSequenceTests {
         let shortcuts: [(ButtonAction, UInt16, CGEventFlags)] = [
             (.commandReturn, 36, .maskCommand), (.shiftReturn, 36, .maskShift),
             (.commandCopy, 8, .maskCommand), (.commandPaste, 9, .maskCommand),
+            (.commandMinimize, 46, .maskCommand),
             (.commandClose, 13, .maskCommand), (.commandQuit, 12, .maskCommand),
             (.commandCut, 7, .maskCommand), (.commandSelectAll, 0, .maskCommand),
             (.commandUndo, 6, .maskCommand), (.commandRedo, 6, [.maskCommand, .maskShift]),

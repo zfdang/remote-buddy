@@ -163,6 +163,7 @@ enum ButtonAction: String, CaseIterable, Codable, Identifiable {
     case commandSave
     // Basic keys: window & app lifecycle
     case commandRefresh
+    case commandMinimize
     case commandClose
     case commandQuit
     // Basic keys: arrows & scrolling
@@ -254,6 +255,7 @@ enum ButtonAction: String, CaseIterable, Codable, Identifiable {
         case .commandFind: return localization.text("action.command_find")
         case .commandSave: return localization.text("action.command_save")
         case .commandRefresh: return localization.text("action.command_refresh")
+        case .commandMinimize: return localization.text("action.command_minimize")
         case .commandClose: return localization.text("action.command_close")
         case .commandQuit: return localization.text("action.command_quit")
         case .arrowUp: return localization.text("action.arrow_up")
@@ -334,6 +336,7 @@ enum ButtonAction: String, CaseIterable, Codable, Identifiable {
         case .commandFind: return "⌘F"
         case .commandSave: return "⌘S"
         case .commandRefresh: return "⌘R"
+        case .commandMinimize: return "⌘M"
         case .commandClose: return "⌘W"
         case .commandQuit: return "⌘Q"
         case .arrowUp: return "↑"
@@ -399,7 +402,7 @@ enum ButtonAction: String, CaseIterable, Codable, Identifiable {
         case .disabled, .returnKey, .shiftReturn, .commandReturn, .escape, .space, .tab,
              .deleteBackward, .commandDelete, .commandCopy, .commandPaste, .commandCut,
              .commandSelectAll, .commandUndo, .commandRedo, .commandFind, .commandSave,
-             .commandRefresh, .commandClose, .commandQuit, .arrowUp, .arrowDown, .arrowLeft, .arrowRight,
+             .commandRefresh, .commandMinimize, .commandClose, .commandQuit, .arrowUp, .arrowDown, .arrowLeft, .arrowRight,
              .scrollUp, .scrollDown:
             return .basicKeys
         case .appSwitcher, .missionControl, .showDesktop, .notificationCenter, .spotlight,

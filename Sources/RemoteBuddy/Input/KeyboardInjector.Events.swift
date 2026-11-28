@@ -134,9 +134,15 @@ extension KeyboardInjector {
         rawFlags: CGEventFlags
     ) -> [CGKeyCode] {
         guard !keys.isEmpty, let source = markedKeySource else { return [] }
+        let currentFlags = CGEventSource.flagsState(.hidSystemState)
+        let currentCandidates = KeyboardHardwareModifierPolicy.phantomStuckModifierKeys(
+            rawFlags: currentFlags,
+            heldKeys: KeyboardHardwareModifierPolicy.currentHeldModifierKeys(),
+            ownedModifiers: currentSyntheticOwnedModifiers()
+        )
         let genuineFlags = restoredFlagsForPhantomClear()
         var cleared: [CGKeyCode] = []
-        for code in keys {
+        for code in keys where currentCandidates.contains(code) {
             guard let event = CGEvent(keyboardEventSource: source, virtualKey: code, keyDown: false) else {
                 continue
             }

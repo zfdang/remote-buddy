@@ -43,6 +43,10 @@ extension BridgeAppModel {
             AppLogger.shared.write("ATVV STREAM rejected_busy reason=pending_start")
             return
         }
+        if !longRecordingRequested, !voiceSession.isActive, !g9n9nSmartToggle.isActive,
+           stopKeyboardMicrophoneFromRemote(closeRemote: { bridge.requestMicrophoneClose() }) {
+            return
+        }
         let outputReadyAtStart = audio.output.isReadyForVoicePlayback
         if !outputReadyAtStart {
             let shouldStartConfiguration = voiceSession.pendingStart.identifier == nil
@@ -158,6 +162,21 @@ extension BridgeAppModel {
             let pressStartedAt = bridge.lastVoiceStartAt ?? bridge.nowUptime()
             g9n9nSmartToggle.beginPhysicalPress(bridgeID: identifier, at: pressStartedAt)
             g9n9nSmartToggleBridge = bridge
+            if let key = configuredKeyboardMicrophoneKey {
+                remoteVoiceKeyboardStop.start(key: key) { [weak self, weak bridge] in
+                    guard let self, let bridge, self.g9n9nSmartToggleBridge === bridge,
+                          self.g9n9nSmartToggle.isActive else { return }
+                    if case .closing = self.g9n9nSmartToggle.phase { return }
+                    self.remoteVoiceKeyboardStop.stop()
+                    if bridge.streaming {
+                        self.bluetoothBridgeDidRequestStopToggleVoice(bridge)
+                        let closed = bridge.requestMicrophoneClose()
+                        AppLogger.shared.write("VOICE KEYBOARD_STOP source=remote close=\(closed)")
+                    } else {
+                        self.abortG9N9NSmartToggleSession(reason: "keyboard_stop_before_stream", requestClose: true)
+                    }
+                }
+            }
         }
         updateVoiceKeyState(
             streaming: true,

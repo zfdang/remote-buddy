@@ -11,6 +11,7 @@ extension BridgeAppModel {
             stopLongRecording(reason: "button_toggle")
             return true
         }
+        if stopKeyboardMicrophoneFromRemote() { return true }
         guard isConnected,
               !voiceSession.isActive,
               !g9n9nSmartToggle.isActive,
@@ -27,6 +28,12 @@ extension BridgeAppModel {
         let generation = longRecordingGeneration
         longRecordingBridge = bridge
         longRecordingRequested = true
+        if let key = configuredKeyboardMicrophoneKey {
+            remoteVoiceKeyboardStop.start(key: key) { [weak self] in
+                guard let self, self.longRecordingGeneration == generation else { return }
+                self.stopLongRecording(reason: "keyboard_shortcut")
+            }
+        }
         if !audio.output.isReadyForVoicePlayback {
             ensureVirtualAudioOutputReady(reason: "long_recording_start") { [weak self] ready in
                 guard let self, self.longRecordingRequested,
@@ -74,6 +81,7 @@ extension BridgeAppModel {
 
     func stopLongRecording(reason: String) {
         guard longRecordingRequested else { return }
+        remoteVoiceKeyboardStop.stop()
         longRecordingRequested = false
         longRecordingGeneration &+= 1
         cancelLongRecordingTimers()
@@ -112,6 +120,7 @@ extension BridgeAppModel {
     }
 
     func finishLongRecording(reason: String) {
+        if longRecordingRequested { remoteVoiceKeyboardStop.stop() }
         longRecordingBridge = nil
         longRecordingRequested = false
         longRecordingGeneration &+= 1
@@ -327,6 +336,7 @@ extension BridgeAppModel {
 
     func clearG9N9NSmartToggleState(reason: String) {
         guard g9n9nSmartToggle.isActive else { return }
+        remoteVoiceKeyboardStop.stop()
         cancelG9N9NSmartToggleTimers()
         voiceSilenceNoticeTracker.endSession()
         voiceSilenceNoticeController.dismiss(reason: reason)

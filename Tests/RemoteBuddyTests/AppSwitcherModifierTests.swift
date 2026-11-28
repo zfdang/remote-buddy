@@ -315,6 +315,19 @@ struct AppSwitcherModifierTests {
         #expect(!preserved.contains(.maskCommand))
     }
 
+    @Test func phantomCleanupWaitsForPhysicalRightCommandToBeReleased() {
+        // Doubao may report the left synthetic key as pressed while only the
+        // hardware side bit reveals the user's physical Right Command.
+        #expect(KeyboardHardwareModifierPolicy.phantomStuckModifierKeys(
+            rawFlags: CGEventFlags(rawValue: 0x0010_0110),
+            heldKeys: [55]
+        ).isEmpty)
+        #expect(KeyboardHardwareModifierPolicy.phantomStuckModifierKeys(
+            rawFlags: .maskCommand,
+            heldKeys: [55]
+        ) == [55])
+    }
+
     @Test func phantomModifierWithoutDeviceSideBitIsRejectedAndDetectedEvenWhenKeyStateIsStuck() {
         // Exact state left by third-party synthetic Cmd+V paste (e.g. bageshuo/enigo):
         // hidFlags = 0x2010_0000 (bare .maskCommand without 0x0008/0x0010 side bits) AND keyState(55) = true.

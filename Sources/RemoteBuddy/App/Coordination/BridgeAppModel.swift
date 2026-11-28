@@ -62,6 +62,8 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
     @Published var remoteSystemDeviceNames: [UUID: String] = [:]
     @Published var remoteDeviceInformation: [UUID: RemoteDeviceInformation] = [:]
     @Published var audioDevices: [AudioDeviceInfo] = []
+    @Published var keyboardMicrophoneDevices: [AudioDeviceInfo] = []
+    @Published var keyboardMicrophoneStatus = LocalizedMessage("keyboard_microphone.disabled")
     @Published var isAudioOutputReady = false {
         didSet { if isAudioOutputReady { isAudioOutputVerified = true } }
     }
@@ -218,6 +220,7 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
     lazy var voiceTapTrigger = VoiceTapTrigger(selectedMode: { [settings] in settings.effectiveVoiceKeyMode })
     lazy var voiceFnTapSession = makeVoiceFnTapSession()
     private var voiceToolCancellable: AnyCancellable?
+    private var keyboardMicrophoneCancellable: AnyCancellable?
     private var applicationIntegrationCancellable: AnyCancellable?
     private var remoteDiscoverySettingsCancellable: AnyCancellable?
     var voiceKeyLatch = VoiceKeyLatch()
@@ -238,6 +241,8 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
     var longRecordingGeneration: UInt64 = 0
     var longRecordingOpenTimer: DispatchSourceTimer?
     var longRecordingCloseTimer: DispatchSourceTimer?
+    let keyboardMicrophone = KeyboardMicrophoneRuntime()
+    let remoteVoiceKeyboardStop = RemoteVoiceKeyboardStop()
     let rc003VoiceExtensionTestEnabled: Bool
     weak var rc003VoiceExtensionBridge: BluetoothRemoteBridge?
     var rc003VoiceExtensionActive = false
@@ -367,6 +372,11 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
             .sink { [weak self] _ in
                 self?.voiceToolDidChange()
             }
+        keyboardMicrophoneCancellable = Publishers.CombineLatest3(
+            settings.$keyboardMicrophoneUID, settings.$keyboardMicrophoneToggleKey, settings.$onboardingVoiceTool
+        )
+        .dropFirst().receive(on: RunLoop.main)
+        .sink { [weak self] _ in self?.synchronizeKeyboardMicrophone() }
         applicationIntegrationCancellable = settings.$enabledApplicationIntegrations
             .removeDuplicates().dropFirst().receive(on: RunLoop.main)
             .sink { [weak self] _ in
@@ -392,6 +402,7 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
         started = true
         applicationIntegrationController.start()
         startAudioSubsystem()
+        synchronizeKeyboardMicrophone()
         applyHIDSettings()
         if settings.g9n9nBluetoothLogRecoveryEnabled {
             refreshBluetoothLoggingProfileStatus()
@@ -484,6 +495,7 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
         cancelAllScheduledWork(reason: "app_stop")
         audio.invalidatePendingWork()
         stopObservingAudioHardware()
+        stopKeyboardMicrophone(reason: "app_stop")
         stopLongRecording(reason: "app_stop")
         finishRC003VoiceExtensionTest(reason: "app_stop")
         clearG9N9NSmartToggleState(reason: "app_stop")

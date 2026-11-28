@@ -17,7 +17,7 @@ extension OnboardingView {
             refreshSelectedInputMethodStatus()
             refreshSystemFunctionKeyUsage()
         case .remoteAvailability:
-            routeConnectedPhysicalRemoteIfNeeded()
+            preselectDefaultRemoteIfNeeded()
         case .remote:
             observedRemoteButtons.removeAll()
             chromecastSingleKeyObserved = false

@@ -115,6 +115,7 @@
         <p><strong>1. 长按模式（按住说话 / Hold to Talk）：</strong><br>按住语音键时麦克风开始收音并触发输入工具；松开按键时立即停止录音并触发文本上屏。适合微信回复短消息、单句搜索、灵感备忘录等日常高频片段输入，操作最符合对讲机直觉。</p>
         <p><strong>2. 按键模式（点按免提 / Hands-Free Toggle）：</strong><br>按一下语音键开启收音，此时双手可以完全脱离遥控器自由打字或查阅资料；整段讲话完毕后，再按一下语音键结束并上屏。非常适合持续几分钟的会议发言、长文听写口述等场景。</p>
         <p><strong>3. G9N9N 独有的“智能切换模式”（默认推荐）：</strong><br>系统会自动根据你的按压时长做出精准裁决：如果按下时间小于 0.7 秒松手，自动判定为点按免提（持续收音，直至下次点按结束）；如果按下超过 0.7 秒，则自动转为按住说话（松手立即结束）。无需进设置切换，兼得两家之长。</p>
+        <p><strong>注意区分「遥控器按键方式」与「输入工具自身的长按 / 点按设置」：</strong>以上介绍的是<strong>遥控器端</strong>的触发方式；至于它与微信输入法、豆包等输入工具设置中的「长按模式 / 免按模式」如何配合，以及为什么向导中的「点按热键模式」默认保持关闭，请参阅 <a class="text-link" href="#input-tool-hold-vs-tap">第四节：输入工具设置中的“长按”与“点按”是什么意思？它和遥控器的长按、点按有什么区别？ →</a></p>
       </div>
     </details>
 
@@ -249,7 +250,7 @@
       </div>
     </details>
 
-    <details class="troubleshooting-card">
+    <details class="troubleshooting-card" id="input-tool-hold-vs-tap">
       <summary><span class="troubleshooting-question">输入工具设置中的“长按”与“点按”是什么意思？它和遥控器的长按、点按有什么区别？</span></summary>
       <div class="troubleshooting-body">
         <p>很多用户容易将<strong>「遥控器的按键手势」</strong>与<strong>「输入工具的触发模式」</strong>混为一谈。实际上它们是完全独立的两个层级，<strong>彼此并没有直接绑定关系，Remote Buddy 在中间负责全自动转换与状态调度</strong>：</p>
@@ -523,5 +524,19 @@
     <a href="https://github.com/zfdang/remote-buddy/blob/main/LICENSE">GPL-3.0-only</a>
   </div>
 </footer>
+<script>
+(function () {
+  function openTargetDetails() {
+    if (!location.hash) return;
+    var target = document.getElementById(location.hash.slice(1));
+    if (target && target.tagName === "DETAILS") {
+      target.open = true;
+      target.scrollIntoView();
+    }
+  }
+  window.addEventListener("hashchange", openTargetDetails);
+  openTargetDetails();
+})();
+</script>
 </body>
 </html>

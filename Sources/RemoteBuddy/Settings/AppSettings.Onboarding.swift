@@ -16,6 +16,7 @@ private struct OnboardingReturnConfiguration: Codable {
     let initialRemoteProfileIDs: [UUID]
     let initialG9N9NInputModes: [UUID: G9N9NInputMode]?
     let bypassInputSourceSwitching: Bool?
+    let returnSection: SettingsSection?
 }
 
 extension AppSettings {
@@ -31,7 +32,7 @@ extension AppSettings {
         return configuration.completedVersion >= Self.currentOnboardingVersion
     }
 
-    func preserveCompletedOnboarding() {
+    func preserveCompletedOnboarding(returnSection: SettingsSection? = nil) {
         guard isOnboardingComplete, onboardingReturnConfiguration == nil else { return }
         discardOnboardingVoiceTrial()
         let configuration = OnboardingReturnConfiguration(
@@ -52,7 +53,8 @@ extension AppSettings {
                     .filter { $0.model.isChromecastRemote }
                     .map { ($0.id, $0.effectiveG9N9NInputMode) }
             ),
-            bypassInputSourceSwitching: bypassInputSourceSwitching
+            bypassInputSourceSwitching: bypassInputSourceSwitching,
+            returnSection: returnSection
         )
         if let data = try? JSONEncoder().encode(configuration) {
             defaults.set(data, forKey: Self.onboardingReturnConfigurationKey)
@@ -114,6 +116,7 @@ extension AppSettings {
             selectRemoteProfile(profileID)
         }
         synchronizeOnboardingRemoteWithSelectedProfile()
+        completedOnboardingDestination = configuration.returnSection ?? onboardingPurpose.completionDestination
         onboardingPurpose = .initialSetup
         onboardingStep = configuration.step
         defaults.removeObject(forKey: Self.onboardingReturnConfigurationKey)
@@ -300,7 +303,8 @@ extension AppSettings {
 
     func completeOnboarding() {
         let previousTool = onboardingReturnConfiguration?.voiceTool
-        completedOnboardingDestination = onboardingPurpose.completionDestination
+        completedOnboardingDestination = onboardingReturnConfiguration?.returnSection
+            ?? onboardingPurpose.completionDestination
         let confirmedProfiles = confirmedTransientOnboardingProfile().map { [$0] } ?? []
         for profileID in unconfirmedTransientRemoteProfileIDs() {
             _ = removeRemoteProfile(profileID, rememberAsForgotten: false)

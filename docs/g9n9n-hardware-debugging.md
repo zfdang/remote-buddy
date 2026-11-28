@@ -175,6 +175,30 @@
 
 ---
 
+## 五、用户日志复现：`0x011B / HID_MOUSE / 0.0.1` 智能切换短按 1.29 秒零音频停止与长按对比（2026-11-28，build 1067）
+
+2026-11-28 在一台 macOS `26.6.2 (arm64)`、Remote Buddy `v26-11-28.1067` 实机上收到用户反馈“语音键长按有效、短按无效”（会话日志 `52416208`，搭配微信输入法 `Ctrl+Shift+R`）。该机型的 DIS 身份与第四节 `@brightac` 样机属于同一兼容批次：
+
+- **硬件身份**：VID/PID `18D1:9450`、`hid_version=0x011B`、`max_input_bytes=21`、`descriptor_bytes=214`、`indexed_consumer=false`、`modelNumber=HID_MOUSE`、`firmwareRevision=0.0.1`、`hardwareRevision="CR PVT/MP0.0.1"`。
+- **ATVV 能力**：`version=256`（`0x0100`）、`codec=2`（16 kHz ADPCM）、`frame=247`。
+- **普通按键接入**：原生 `IOHID` `seize` 返回 `seize_error_code=-536870207`（仅监控态），安装 `.mobileconfig` 并启用 `bluetooth_log_recovery` 后，向导测试中的 `right` / `left` / `ok` 均正常通过 `source=btle_log`（Report ID 2、2 字节报文）解码按下与松开。
+
+### 同机短按 vs 长按 ATVV 时序实测对照
+
+| 操作类型 | 会话序号 | `ATVV STREAM START` → `STOP` 时长 | 首包音频到达耗时 | 解码批数 / 样本数 | 日志表现与结论 |
+| --- | --- | --- | --- | --- | --- |
+| **短按（`hold_to_talk` 模式）** | `session 6` | **`1281 ms`** | 无 | **`0` / `0`** | 0 音频样本，固件延迟至 ~1.28 秒发 `0x00 (remote_notification)` |
+| **短按（`smart_toggle` 模式）** | `session 7`、`14`、`15`、`16` | **`1285–1299 ms`**（实测 `1295 / 1285 / 1299 / 1297 ms`） | 无 | **`0` / `0`** | 原 `holdThreshold = 0.7 s` 下被判定为长按松手，直接 `SMART_TOGGLE cleared reason=session_stopped`，全程未发 `MIC_OPEN` |
+| **长按（`hold_to_talk` 与 `smart_toggle`）** | `session 2–5`、`8–13` | **`1396–3894 ms`** | **`+351–364 ms`** | **`4–84` 批 / `1536–41216` 样本** | 音频正常注入虚拟麦克风，向导 `session 10`（`3026 ms`）确认 `marked_text_commit=true` 语音测试通过 |
+
+### 工程处理与验收边界
+
+- **行为差异总结**：原版 `0x0110 / FW 26.2` 短按松手后在 ~`203 ms` 即吐出 `AUDIO_STOP`（且 `+182 ms` 已出首包音频），`< 0.7 s` 可立即触发 `MIC_OPEN` 进入免提；而 `0x011B / FW 0.0.1` 快速轻点松手不发音频帧并将 `AUDIO_STOP` 延迟到 **`1281–1299 ms`** 才上送。
+- **窗口收窄策略（PR #302）**：保持全局 `holdThreshold = 0.7 s` 不变，仅在 `hidVersion == 0x011B` 且本次物理按压 **未收到任何解码或预缓冲音频样本** 时，对落在 **`1.25–1.35 秒`** 延迟窗口内的 `remote_notification` 停止按短按处理并下发 `MIC_OPEN`；一旦收到音频样本（`>= 0.7 s`），或处于 `0.85 s` / `1.20 s` / `> 1.35 s` 区间，仍按松手结束处理。
+- **待真机终验**：由于日志停在 `build 1067`，修复后尚未在同一只 `0x011B` 样机上复测；此外若真实按住恰在 `1.25–1.35 秒` 区间松手且未吐出音频帧，单靠 BLE 时长与采样数仍无法区分，合并前需在同一只 `0x011B` 上对照快速轻点与约 `0.85 s`、`1.20 s` 真实按住的松手结果。
+
+---
+
 ## 资源与复验说明
 
 设备页和应用使用操作者提供的真实照片。按键布局、双模式检测、单键映射、双键兼容 `Enter` 逻辑和向导门禁由自动测试覆盖；版本识别与操作说明见 [G9N9N 语音与按键使用指南](g9n9n-compatibility.md)。自动化报告用例仅验证协议与状态逻辑，不代替真机验收；后续真机复测应保留去除设备私有标识的原始事件片段及其校验和，不包含音频。

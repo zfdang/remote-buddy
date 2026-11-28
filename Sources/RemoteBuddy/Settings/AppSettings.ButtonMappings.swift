@@ -857,15 +857,18 @@ extension AppSettings {
             buttons = []
         }
         var bindings = Dictionary(uniqueKeysWithValues: buttons.map { ($0, defaultBindings[$0] ?? .disabled) })
+        var secondary = defaultSecondaryBindings.filter { buttons.contains($0.key) }
         if model == .chromecastVoiceRemote {
+            bindings[.mute] = .returnKey
             bindings[.youtube] = .previousCommandLeft
             bindings[.netflix] = .nextCommandRight
             bindings[.input] = .playPause
+            secondary[.mute] = [.longPress: ConfiguredButtonAction(action: .commandReturn, shortcut: nil)]
         }
         return RemoteDeviceMappings(
             buttonBindings: bindings,
             buttonShortcuts: [:],
-            secondaryButtonBindings: defaultSecondaryBindings.filter { buttons.contains($0.key) },
+            secondaryButtonBindings: secondary,
             applicationButtonProfiles: defaultApplicationButtonProfiles(for: model)
         )
     }

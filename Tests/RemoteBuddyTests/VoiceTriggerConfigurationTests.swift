@@ -200,7 +200,7 @@ struct VoiceTriggerConfigurationTests {
         }
     }
 
-    @Test func systemAndWechatConflictsAreSeparateAndDictationKeepsItsSystemBinding() throws {
+    @Test func systemFnStepIsShownOnlyForFunctionKeyOnNonDictationTools() throws {
         try withSettings { settings, _ in
             settings.setOnboardingControlSource(.xiaomiRemote)
             let view = OnboardingView(model: BridgeAppModel(settings: settings, initialAudioDevices: []))
@@ -210,12 +210,46 @@ struct VoiceTriggerConfigurationTests {
                     settings.selectOnboardingVoiceTrigger(mode)
                     let steps = view.inputMethodGuideSteps(for: tool)
                     #expect(Set(steps.map(\.id)).count == steps.count)
-                    #expect(!steps.contains { if case .screenshot("weixin-app-shortcuts") = $0.content { return true }; return false })
                     let hasSystemFn = steps.contains { if case .systemFunctionKey = $0.content { return true }; return false }
                     #expect(hasSystemFn == (mode == .function && tool != .macosDictation))
                 }
             }
         }
+    }
+
+    @Test @MainActor func voiceTriggerStepExposesFAQLink() async throws {
+        let defaults = EphemeralUserDefaults()
+        let settings = AppSettings(defaults: defaults)
+        settings.applicationLanguage = .simplifiedChinese
+        settings.setOnboardingControlSource(.xiaomiRemote)
+        settings.setOnboardingStep(.voiceTrigger)
+        var openedURLs: [URL] = []
+        let probe = OnboardingInteractionProbe(openURL: { openedURLs.append($0) })
+        let store = LocalizationStore(settings: settings, resourceBundle: RemoteBuddyResourceBundle.mainOrDevelopment)
+        let view = OnboardingView(
+            model: BridgeAppModel(settings: settings, initialAudioDevices: []),
+            allowsInputSourceSwitching: false,
+            allowsHardwareMonitoring: false,
+            interactionProbe: probe,
+            permissionOverrides: .allGranted
+        )
+        let controller = NSHostingController(rootView: view.environmentObject(store))
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1100, height: 850),
+            styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.contentViewController = controller
+        defer { window.close() }
+        window.contentView?.layoutSubtreeIfNeeded()
+        try await waitForTestCondition("voice trigger page registers FAQ link") {
+            probe.actions["voice-trigger.faq"] != nil
+        }
+        probe.invoke("voice-trigger.faq")
+        #expect(openedURLs == [AppLinks.voiceButtonsFAQ(for: store.locale)])
+
+        store.select(.english)
+        #expect(store.text("onboarding.voice_trigger.faq_link") == "Voice Shortcuts & Trigger Modes FAQ ↗")
+        store.select(.simplifiedChinese)
+        #expect(store.text("onboarding.voice_trigger.faq_link") == "查看语音热键与触发模式说明 (FAQ) ↗")
     }
 
     @Test(arguments: [OnboardingVoiceToolAvailability.notInstalled, .available])
@@ -506,12 +540,11 @@ struct VoiceTriggerConfigurationTests {
                 #expect(callout.trailingX > 0 && callout.trailingX < 1)
                 #expect(callout.centerY > 0 && callout.centerY < 1)
             }
-            #expect(OnboardingView.screenshotShortcutNotice(for: "weixin-app-shortcuts") == .conflictCheck)
-            #expect(OnboardingView.screenshotShortcutCallout(for: "weixin-app-shortcuts") == nil)
             for nonShortcutResource in [
                 "doubao-menu",
                 "weixin-input-menu",
                 "weixin-input-microphone",
+                "weixin-app-shortcuts",
                 "macos-dictation-shortcut",
                 "system-fn",
             ] {
@@ -573,16 +606,11 @@ struct VoiceTriggerConfigurationTests {
 
             for store in [zhStore, enStore] {
                 #expect(!store.text("onboarding.voice_tool.guide.screenshot.example_badge").isEmpty)
-                for notice in [
-                    OnboardingGuideScreenshotShortcutNotice.configureShortcut,
-                    .conflictCheck,
-                ] {
-                    let localizedNotice = LocalizedMessage(
-                        notice.localizationKey,
-                        arguments: ["Ctrl (^) + Shift (⇧) + R", "Hold"]
-                    ).text(using: store)
-                    #expect(localizedNotice.contains("Ctrl (^) + Shift (⇧) + R"))
-                }
+                let localizedNotice = LocalizedMessage(
+                    OnboardingGuideScreenshotShortcutNotice.configureShortcut.localizationKey,
+                    arguments: ["Ctrl (^) + Shift (⇧) + R", "Hold"]
+                ).text(using: store)
+                #expect(localizedNotice.contains("Ctrl (^) + Shift (⇧) + R"))
             }
 
             let shortcut = "Ctrl (^) + Shift (⇧) + R"

@@ -115,6 +115,7 @@
         <p><strong>1. Hold to Talk (Walkie-Talkie style):</strong><br>Press and hold the voice button while speaking; release it immediately when done. Audio streaming stops and text is inserted into the active text field. Best for quick chat replies, prompt queries, and fleeting thoughts.</p>
         <p><strong>2. Hands-Free Toggle (Tap to Start / Tap to Stop):</strong><br>Press the button once to begin recording. You can set the remote down, reference notes, or type freely while speaking. Press the button a second time to conclude recording and commit the recognized text. Ideal for long-form dictation and conference remarks.</p>
         <p><strong>3. Smart Toggle (G9N9N Default · Recommended):</strong><br>Intelligently arbitrates based on press duration: releases within 0.7 seconds are treated as Hands-Free Toggle (audio continues until the next tap); holding past 0.7 seconds automatically activates Hold-to-Talk (audio ends immediately upon release). You get both paradigms on a single physical key without configuration switches.</p>
+        <p><strong>Do not confuse remote gestures with your input tool's Hold/Tap mode:</strong> The modes above describe how you press the <strong>physical remote</strong>. To see how Remote Buddy bridges them to WeType, Doubao, and other input tools—and why "Tap Hotkey Mode" should usually stay unchecked in the wizard—see <a class="text-link" href="#input-tool-hold-vs-tap">Section 4: What do "Hold" vs "Tap" mean in Input Tool Settings, and how do they differ from remote gestures? →</a></p>
       </div>
     </details>
 
@@ -249,7 +250,7 @@
       </div>
     </details>
 
-    <details class="troubleshooting-card">
+    <details class="troubleshooting-card" id="input-tool-hold-vs-tap">
       <summary><span class="troubleshooting-question">What do "Hold" vs "Tap" mean in Input Tool Settings, and how do they differ from remote gestures?</span></summary>
       <div class="troubleshooting-body">
         <p>It is easy to conflate <strong>remote hardware gestures</strong> with <strong>input tool trigger modes</strong>. In reality, they are two completely decoupled layers, and <strong>Remote Buddy acts as an intelligent bidirectional translation bridge between them</strong>:</p>
@@ -523,5 +524,19 @@
     <a href="https://github.com/zfdang/remote-buddy/blob/main/LICENSE">GPL-3.0-only</a>
   </div>
 </footer>
+<script>
+(function () {
+  function openTargetDetails() {
+    if (!location.hash) return;
+    var target = document.getElementById(location.hash.slice(1));
+    if (target && target.tagName === "DETAILS") {
+      target.open = true;
+      target.scrollIntoView();
+    }
+  }
+  window.addEventListener("hashchange", openTargetDetails);
+  openTargetDetails();
+})();
+</script>
 </body>
 </html>

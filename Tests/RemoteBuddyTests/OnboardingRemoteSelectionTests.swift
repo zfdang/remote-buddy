@@ -80,4 +80,27 @@ struct OnboardingRemoteSelectionTests {
             #expect(settings.selectedRemoteProfileID == google)
         }
     }
+
+    @Test func enteringRemoteAvailabilityPreselectsFirstRemoteWhenUnselected() throws {
+        let defaults = EphemeralUserDefaults()
+        let settings = AppSettings(defaults: defaults)
+        settings.setOnboardingStep(.remoteAvailability)
+        let model = BridgeAppModel(settings: settings, initialAudioDevices: [])
+        let view = OnboardingView(model: model, permissionOverrides: .allGranted)
+
+        view.prepareForStep(.remoteAvailability)
+        #expect(settings.onboardingDevice == .chromecastG9N9N)
+        #expect(settings.onboardingControlSource == .chromecastRemote)
+        #expect(view.canContinue)
+
+        view.selectDevice(.t1Remote)
+        view.prepareForStep(.remoteAvailability)
+        #expect(settings.onboardingDevice == .t1Remote)
+        #expect(settings.onboardingControlSource == .t1Remote)
+
+        view.selectDevice(.siriRemote)
+        view.prepareForStep(.remoteAvailability)
+        #expect(settings.onboardingDevice == .siriRemote)
+        #expect(settings.onboardingControlSource == .unselected)
+    }
 }

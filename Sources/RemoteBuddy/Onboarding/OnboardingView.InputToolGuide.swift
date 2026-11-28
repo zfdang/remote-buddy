@@ -170,33 +170,12 @@ extension OnboardingView {
                     .frame(maxWidth: .infinity, minHeight: 120, alignment: .center)
                     .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 10))
             }
-            wechatShortcutHelp
         }
         .padding(16)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
         .overlay {
             RoundedRectangle(cornerRadius: 14)
                 .stroke(Color.primary.opacity(0.08), lineWidth: 1)
-        }
-    }
-
-    private var wechatShortcutHelp: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            onboardingActionButton(id: "wechat-conflict.toggle") {
-                wechatHelpExpanded.toggle()
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: wechatHelpExpanded ? "chevron.down" : "chevron.right")
-                    Text(localization.text("onboarding.voice_tool.guide.release_wechat_shortcut"))
-                    Spacer(minLength: 0)
-                }
-                .frame(maxWidth: .infinity, minHeight: 36, alignment: .leading)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            if wechatHelpExpanded {
-                onboardingGuideScreenshot(resourceName: "weixin-app-shortcuts")
-            }
         }
     }
 
@@ -603,8 +582,6 @@ extension OnboardingView {
              "chatterfly-settings",
              "voicebuddy-setting-fn":
             .configureShortcut
-        case "weixin-app-shortcuts":
-            .conflictCheck
         default:
             nil
         }
@@ -657,7 +634,6 @@ extension OnboardingView {
             "ONBOARDING VOICE_TOOL selected=\(tool.rawValue) binding_policy=selected_voice_key"
         )
         selectedInputMethodGuideStep = nil
-        wechatHelpExpanded = false
         viewedInputMethodGuideSteps.removeAll()
         refreshSelectedInputMethodStatus()
         refreshSystemFunctionKeyUsage()
@@ -689,14 +665,11 @@ struct OnboardingGuideScreenshotShortcutCallout: Equatable {
 
 enum OnboardingGuideScreenshotShortcutNotice: Equatable {
     case configureShortcut
-    case conflictCheck
 
     var localizationKey: String {
         switch self {
         case .configureShortcut:
             "onboarding.voice_tool.guide.screenshot.example_notice"
-        case .conflictCheck:
-            "onboarding.voice_tool.guide.screenshot.conflict_example_notice"
         }
     }
 }

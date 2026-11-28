@@ -205,6 +205,18 @@ extension OnboardingView {
         )
     }
 
+    func preselectDefaultRemoteIfNeeded() {
+        routeConnectedPhysicalRemoteIfNeeded()
+        guard settings.onboardingStep == .remoteAvailability,
+              settings.onboardingDevice == nil,
+              settings.onboardingControlSource == .unselected,
+              let defaultDevice = RemoteSetupDevice.allCases.first else { return }
+        selectDevice(defaultDevice)
+        AppLogger.shared.write(
+            "ONBOARDING CONTROL_SOURCE preselected=\(defaultDevice.rawValue) reason=default_first_remote"
+        )
+    }
+
     func selectedControlAccepts(_ source: RemoteInputSource) -> Bool {
         switch settings.onboardingControlMethod {
         case .physicalRemote, .unselected:

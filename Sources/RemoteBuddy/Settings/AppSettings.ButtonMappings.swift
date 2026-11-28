@@ -603,11 +603,13 @@ extension AppSettings {
         if let index = matchingIndex ?? emptyIndex {
             remoteDeviceProfiles[index].bluetoothIdentifier = identifier
             if model != .unknown { remoteDeviceProfiles[index].model = model }
+            seedDefaultApplicationProfilesIfNeeded(at: index)
             return remoteDeviceProfiles[index].id
         }
         let profile = RemoteDeviceProfile(
             model: model,
             bluetoothIdentifier: identifier,
+            seededDefaultApplicationProfiles: Self.defaultSeededApplicationBundleIDs(for: model),
             mappings: Self.defaultMappings(for: model)
         )
         remoteDeviceProfiles.append(profile)
@@ -625,11 +627,16 @@ extension AppSettings {
             }
             if candidates.count == 1, let index = candidates.first {
                 remoteDeviceProfiles[index].hidFingerprint = fingerprint
+                seedDefaultApplicationProfilesIfNeeded(at: index)
                 return remoteDeviceProfiles[index].id
             }
             // Multiple independent BLE identities cannot be joined by a product label alone.
-            let profile = RemoteDeviceProfile(model: model, hidFingerprint: fingerprint,
-                                              mappings: Self.defaultMappings(for: model))
+            let profile = RemoteDeviceProfile(
+                model: model,
+                hidFingerprint: fingerprint,
+                seededDefaultApplicationProfiles: Self.defaultSeededApplicationBundleIDs(for: model),
+                mappings: Self.defaultMappings(for: model)
+            )
             remoteDeviceProfiles.append(profile)
             return profile.id
         }
@@ -645,11 +652,13 @@ extension AppSettings {
         }
         if let index = candidates.first {
             remoteDeviceProfiles[index].hidFingerprint = fingerprint
+            seedDefaultApplicationProfilesIfNeeded(at: index)
             return remoteDeviceProfiles[index].id
         }
         let profile = RemoteDeviceProfile(
             model: model,
             hidFingerprint: fingerprint,
+            seededDefaultApplicationProfiles: Self.defaultSeededApplicationBundleIDs(for: model),
             mappings: Self.defaultMappings(for: model)
         )
         remoteDeviceProfiles.append(profile)
@@ -743,6 +752,7 @@ extension AppSettings {
                 secondaryButtonBindings = profile.mappings.parsedSecondaryButtonBindings
             }
         }
+        seedDefaultApplicationProfilesIfNeeded(at: index)
     }
 
     func setAction(_ action: ButtonAction, for button: RemoteButton, trigger: ButtonTrigger) {
@@ -854,8 +864,89 @@ extension AppSettings {
         return RemoteDeviceMappings(
             buttonBindings: bindings,
             buttonShortcuts: [:],
-            secondaryButtonBindings: defaultSecondaryBindings.filter { buttons.contains($0.key) }
+            secondaryButtonBindings: defaultSecondaryBindings.filter { buttons.contains($0.key) },
+            applicationButtonProfiles: defaultApplicationButtonProfiles(for: model)
         )
+    }
+
+    static let defaultChromecastSafariBundleID = PresetApplication.safari.bundleIdentifier
+
+    static var defaultChromecastSafariApplicationProfile: ApplicationButtonProfile {
+        var profile = ApplicationButtonProfile(name: "Safari")
+        profile.setAction(
+            ConfiguredButtonAction(action: .scrollUp, shortcut: nil),
+            for: .up,
+            trigger: .singleClick
+        )
+        profile.setAction(
+            ConfiguredButtonAction(action: .scrollDown, shortcut: nil),
+            for: .down,
+            trigger: .singleClick
+        )
+        profile.setAction(
+            ConfiguredButtonAction(
+                action: .customShortcut,
+                shortcut: CustomKeyboardShortcut(keyCode: 123, modifierFlags: .command, keyLabel: "←")
+            ),
+            for: .left,
+            trigger: .singleClick
+        )
+        profile.setAction(
+            ConfiguredButtonAction(
+                action: .customShortcut,
+                shortcut: CustomKeyboardShortcut(keyCode: 124, modifierFlags: .command, keyLabel: "→")
+            ),
+            for: .right,
+            trigger: .singleClick
+        )
+        return profile
+    }
+
+    static func defaultApplicationButtonProfiles(for model: RemoteModel) -> [String: ApplicationButtonProfile] {
+        guard model == .chromecastVoiceRemote else { return [:] }
+        return [defaultChromecastSafariBundleID: defaultChromecastSafariApplicationProfile]
+    }
+
+    static func defaultSeededApplicationBundleIDs(for model: RemoteModel) -> [String] {
+        Array(defaultApplicationButtonProfiles(for: model).keys).sorted()
+    }
+
+    @discardableResult
+    func seedDefaultApplicationProfilesIfNeeded(at index: Int) -> Bool {
+        guard remoteDeviceProfiles.indices.contains(index) else { return false }
+        let model = remoteDeviceProfiles[index].model
+        let defaults = Self.defaultApplicationButtonProfiles(for: model)
+        guard !defaults.isEmpty else { return false }
+
+        var seeded = Set(remoteDeviceProfiles[index].seededDefaultApplicationProfiles ?? [])
+        var profiles = remoteDeviceProfiles[index].mappings.parsedApplicationButtonProfiles
+        var changed = false
+
+        for (bundleID, defaultProfile) in defaults where !seeded.contains(bundleID) {
+            seeded.insert(bundleID)
+            if profiles[bundleID] == nil {
+                profiles[bundleID] = defaultProfile
+            }
+            changed = true
+        }
+
+        guard changed else { return false }
+        remoteDeviceProfiles[index].seededDefaultApplicationProfiles = seeded.sorted()
+        let mappings = remoteDeviceProfiles[index].mappings
+        remoteDeviceProfiles[index].mappings = RemoteDeviceMappings(
+            buttonBindings: mappings.parsedButtonBindings,
+            buttonShortcuts: mappings.parsedButtonShortcuts,
+            buttonApplicationProfileIDs: mappings.parsedButtonApplicationProfileIDs,
+            buttonURLs: mappings.parsedButtonURLs,
+            secondaryButtonBindings: mappings.parsedSecondaryButtonBindings,
+            applicationButtonProfiles: profiles
+        )
+        if remoteDeviceProfiles[index].id == selectedRemoteProfileID {
+            withLoadingRemoteProfile {
+                applicationButtonProfiles = profiles
+            }
+        }
+        return true
     }
 
     static let defaultSecondaryBindings: [RemoteButton: [ButtonTrigger: ConfiguredButtonAction]] = [

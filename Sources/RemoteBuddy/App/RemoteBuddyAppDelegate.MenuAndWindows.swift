@@ -469,7 +469,9 @@ extension RemoteBuddyAppDelegate {
             rootView: RemoteBuddyRootView(
                 model: model,
                 updateInformation: updateInformation,
-                checkForUpdates: { [weak self] in self?.checkForUpdates() },
+                installAvailableUpdate: { [weak self] update in
+                    self?.installAvailableUpdate(update)
+                },
                 refreshUpdateInformation: { [weak self] in
                     self?.refreshUpdateInformation()
                 },

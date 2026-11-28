@@ -390,7 +390,7 @@ extension SettingsView {
             if case let .available(update) = updateInformation.state {
                 HStack {
                     Spacer()
-                    Button(action: checkForUpdates) {
+                    Button(action: { installAvailableUpdate(update) }) {
                         Text(String(
                             format: localization.text("about.version.update_to"),
                             locale: localization.locale,

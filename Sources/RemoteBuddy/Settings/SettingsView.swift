@@ -12,7 +12,7 @@ struct SettingsView: View {
     @ObservedObject var updateInformation: UpdateInformationStore
     @EnvironmentObject var localization: LocalizationStore
 
-    let checkForUpdates: () -> Void
+    let installAvailableUpdate: (AvailableUpdateInformation) -> Void
     let refreshUpdateInformation: () -> Void
     let setDockIconVisible: (Bool) -> Void
     let setStatusBarIconVisible: (Bool) -> Void
@@ -47,7 +47,7 @@ struct SettingsView: View {
     init(
         model: BridgeAppModel,
         updateInformation: UpdateInformationStore,
-        checkForUpdates: @escaping () -> Void = {},
+        installAvailableUpdate: @escaping (AvailableUpdateInformation) -> Void = { _ in },
         refreshUpdateInformation: @escaping () -> Void = {},
         setDockIconVisible: @escaping (Bool) -> Void = { _ in },
         setStatusBarIconVisible: @escaping (Bool) -> Void = { _ in },
@@ -63,7 +63,7 @@ struct SettingsView: View {
 
         loginItemService = model.loginItemService
         self.updateInformation = updateInformation
-        self.checkForUpdates = checkForUpdates
+        self.installAvailableUpdate = installAvailableUpdate
         self.refreshUpdateInformation = refreshUpdateInformation
         self.setDockIconVisible = setDockIconVisible
         self.setStatusBarIconVisible = setStatusBarIconVisible

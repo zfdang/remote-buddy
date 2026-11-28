@@ -4,7 +4,7 @@ struct RemoteBuddyRootView: View {
     let model: BridgeAppModel
     @ObservedObject private var settings: AppSettings
     @ObservedObject private var updateInformation: UpdateInformationStore
-    let checkForUpdates: () -> Void
+    let installAvailableUpdate: (AvailableUpdateInformation) -> Void
     let refreshUpdateInformation: () -> Void
     let setDockIconVisible: (Bool) -> Void
     let setStatusBarIconVisible: (Bool) -> Void
@@ -13,7 +13,7 @@ struct RemoteBuddyRootView: View {
     init(
         model: BridgeAppModel,
         updateInformation: UpdateInformationStore,
-        checkForUpdates: @escaping () -> Void,
+        installAvailableUpdate: @escaping (AvailableUpdateInformation) -> Void,
         refreshUpdateInformation: @escaping () -> Void,
         setDockIconVisible: @escaping (Bool) -> Void,
         setStatusBarIconVisible: @escaping (Bool) -> Void,
@@ -22,7 +22,7 @@ struct RemoteBuddyRootView: View {
         self.model = model
         settings = model.settings
         self.updateInformation = updateInformation
-        self.checkForUpdates = checkForUpdates
+        self.installAvailableUpdate = installAvailableUpdate
         self.refreshUpdateInformation = refreshUpdateInformation
         self.setDockIconVisible = setDockIconVisible
         self.setStatusBarIconVisible = setStatusBarIconVisible
@@ -35,7 +35,7 @@ struct RemoteBuddyRootView: View {
                 SettingsView(
                     model: model,
                     updateInformation: updateInformation,
-                    checkForUpdates: checkForUpdates,
+                    installAvailableUpdate: installAvailableUpdate,
                     refreshUpdateInformation: refreshUpdateInformation,
                     setDockIconVisible: setDockIconVisible,
                     setStatusBarIconVisible: setStatusBarIconVisible,

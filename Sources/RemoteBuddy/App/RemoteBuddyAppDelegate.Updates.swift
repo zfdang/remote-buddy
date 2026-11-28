@@ -66,6 +66,17 @@ extension RemoteBuddyAppDelegate {
 
     @objc func checkForUpdates() {
         packageFallbackCoordinator.resetForManualCheck()
+        if !updater.sessionInProgress {
+            updateUserDriver.clearFallbackState()
+        }
+        performUpdateCheck(.userInitiated)
+    }
+
+    func installAvailableUpdate(_ update: AvailableUpdateInformation) {
+        packageFallbackCoordinator.resetForManualCheck()
+        if !updater.sessionInProgress {
+            updateUserDriver.prepareForConfirmedInstall(update)
+        }
         performUpdateCheck(.userInitiated)
     }
 

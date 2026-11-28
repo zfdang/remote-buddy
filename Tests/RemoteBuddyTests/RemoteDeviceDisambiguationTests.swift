@@ -309,4 +309,68 @@ struct RemoteDeviceDisambiguationTests {
             ) == "G9N9N #C0FF"
         )
     }
+
+    @Test func observedSystemNamePersistsAcrossReloadIncludingFactoryNames() throws {
+        let legacyJSON = Data("""
+        {
+          "id": "11111111-1111-1111-1111-111111111111",
+          "model": "chromecast_voice_remote",
+          "customName": "",
+          "mappings": {
+            "buttonBindings": {},
+            "buttonShortcuts": {},
+            "secondaryButtonBindings": {}
+          }
+        }
+        """.utf8)
+        let decodedLegacy = try JSONDecoder().decode(RemoteDeviceProfile.self, from: legacyJSON)
+        #expect(decodedLegacy.lastObservedSystemName == nil)
+
+        let defaults = EphemeralUserDefaults()
+        let settings = AppSettings(defaults: defaults)
+        let profileID = settings.registerBluetoothRemote(
+            identifier: UUID(),
+            model: .chromecastVoiceRemote
+        )
+
+        #expect(settings.updateRemoteProfileSystemName(profileID, name: "Chromecast Remote"))
+        let savedFactory = try #require(settings.remoteDeviceProfiles.first { $0.id == profileID })
+        #expect(savedFactory.customName == "")
+        #expect(savedFactory.lastObservedSystemName == "Chromecast Remote")
+
+        #expect(!settings.updateRemoteProfileSystemName(profileID, name: "Chromecast Remote"))
+        #expect(!settings.updateRemoteProfileSystemName(profileID, name: nil))
+        #expect(!settings.updateRemoteProfileSystemName(profileID, name: "   "))
+
+        let reloadedFactorySettings = AppSettings(defaults: defaults)
+        let offlineModel = BridgeAppModel(settings: reloadedFactorySettings, initialAudioDevices: [])
+        let reloadedFactory = try #require(
+            reloadedFactorySettings.remoteDeviceProfiles.first { $0.id == profileID }
+        )
+        #expect(offlineModel.systemDeviceName(for: reloadedFactory) == "Chromecast Remote")
+
+        #expect(settings.updateRemoteProfileSystemName(profileID, name: "Living Room Remote"))
+        let savedCustom = try #require(settings.remoteDeviceProfiles.first { $0.id == profileID })
+        #expect(savedCustom.customName == "Living Room Remote")
+        #expect(savedCustom.lastObservedSystemName == "Living Room Remote")
+
+        let reloadedCustomSettings = AppSettings(defaults: defaults)
+        let offlineCustomModel = BridgeAppModel(settings: reloadedCustomSettings, initialAudioDevices: [])
+        let reloadedCustom = try #require(
+            reloadedCustomSettings.remoteDeviceProfiles.first { $0.id == profileID }
+        )
+        #expect(offlineCustomModel.systemDeviceName(for: reloadedCustom) == "Living Room Remote")
+
+        #expect(settings.updateRemoteProfileSystemName(profileID, name: "Chromecast Remote"))
+        let restoredFactory = try #require(settings.remoteDeviceProfiles.first { $0.id == profileID })
+        #expect(restoredFactory.customName == "")
+        #expect(restoredFactory.lastObservedSystemName == "Chromecast Remote")
+
+        let reloadedRestoredSettings = AppSettings(defaults: defaults)
+        let offlineRestoredModel = BridgeAppModel(settings: reloadedRestoredSettings, initialAudioDevices: [])
+        let reloadedRestored = try #require(
+            reloadedRestoredSettings.remoteDeviceProfiles.first { $0.id == profileID }
+        )
+        #expect(offlineRestoredModel.systemDeviceName(for: reloadedRestored) == "Chromecast Remote")
+    }
 }

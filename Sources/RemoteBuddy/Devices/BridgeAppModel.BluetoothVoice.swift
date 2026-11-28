@@ -669,6 +669,7 @@ extension BridgeAppModel {
 
     func systemDeviceName(for profile: RemoteDeviceProfile) -> String? {
         remoteSystemDeviceNames[profile.id]
+            ?? RemoteDeviceNamePolicy.observedSystemName(from: profile.lastObservedSystemName)
             ?? RemoteDeviceNamePolicy.observedSystemName(from: profile.customName)
     }
 

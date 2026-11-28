@@ -437,6 +437,7 @@ extension BridgeAppModel {
             "VOICE KEY mode=\(heldVoiceKeyMode.rawValue) edge=up " +
                 "result=event_submitted target_response=unknown"
         )
+        KeyboardInjector.startPostVoicePhantomModifierSweep()
         return true
     }
 

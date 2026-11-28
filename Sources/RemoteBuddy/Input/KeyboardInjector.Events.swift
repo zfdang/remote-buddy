@@ -3,9 +3,157 @@ import ApplicationServices
 @preconcurrency import CoreGraphics
 import Darwin
 import Foundation
+import os
 
 extension KeyboardInjector {
+    struct PostVoicePhantomSweepState {
+        private(set) var previousCandidates: [CGKeyCode] = []
+
+        mutating func advance(currentCandidates: [CGKeyCode]) -> [CGKeyCode] {
+            guard !currentCandidates.isEmpty else {
+                previousCandidates = []
+                return []
+            }
+            let confirmed = currentCandidates.filter { previousCandidates.contains($0) }
+            if !confirmed.isEmpty {
+                previousCandidates = []
+                return confirmed
+            }
+            previousCandidates = currentCandidates
+            return []
+        }
+    }
+
+    private struct PostVoiceSweepBox {
+        var generation: UInt64 = 0
+        var ticks: Int = 0
+        var timer: DispatchSourceTimer?
+        var state = PostVoicePhantomSweepState()
+    }
+
+    private static let postVoiceSweep = OSAllocatedUnfairLock(initialState: PostVoiceSweepBox())
+
+    static func cancelPostVoicePhantomModifierSweep() {
+        let timer = postVoiceSweep.withLock { box -> DispatchSourceTimer? in
+            box.generation &+= 1
+            box.ticks = 0
+            box.state = PostVoicePhantomSweepState()
+            let existing = box.timer
+            box.timer = nil
+            return existing
+        }
+        timer?.cancel()
+    }
+
+    /// Watches `.hidSystemState` briefly after a voice session ends so if an external voice tool
+    /// (such as bageshuo) pastes recognized speech via synthetic `Cmd+V` and leaves virtual key 55
+    /// or bare `.maskCommand` stuck without device-side bits, WindowServer is cleaned automatically
+    /// after two consecutive observations (avoiding any race mid-`Cmd+V`).
+    static func startPostVoicePhantomModifierSweep() {
+        guard !AppLogger.isTestProcess(), isAccessibilityTrusted else { return }
+        let (generation, previousTimer) = postVoiceSweep.withLock { box -> (UInt64, DispatchSourceTimer?) in
+            box.generation &+= 1
+            box.ticks = 0
+            box.state = PostVoicePhantomSweepState()
+            let old = box.timer
+            box.timer = nil
+            return (box.generation, old)
+        }
+        previousTimer?.cancel()
+
+        let timer = DispatchSource.makeTimerSource(queue: .main)
+        let maxTicks = 50 // 50 * 120ms = 6.0s window for cloud ASR paste completion
+        timer.schedule(deadline: .now() + .milliseconds(120), repeating: .milliseconds(120))
+        timer.setEventHandler {
+            let owned = currentSyntheticOwnedModifiers()
+            let rawFlags = CGEventSource.flagsState(.hidSystemState)
+            let heldKeys = KeyboardHardwareModifierPolicy.currentHeldModifierKeys()
+            let candidates = KeyboardHardwareModifierPolicy.phantomStuckModifierKeys(
+                rawFlags: rawFlags,
+                heldKeys: heldKeys,
+                ownedModifiers: owned
+            )
+            let (confirmed, shouldStop) = postVoiceSweep.withLock { box -> ([CGKeyCode], Bool) in
+                guard box.generation == generation else { return ([], true) }
+                box.ticks += 1
+                let confirmed = box.state.advance(currentCandidates: candidates)
+                let done = box.ticks >= maxTicks
+                if done {
+                    box.timer = nil
+                }
+                return (confirmed, done)
+            }
+            if !confirmed.isEmpty {
+                _ = clearPhantomHIDModifierKeys(confirmed, rawFlags: rawFlags)
+            }
+            if shouldStop {
+                timer.cancel()
+            }
+        }
+        let cancelledBeforeStore = postVoiceSweep.withLock { box -> Bool in
+            guard box.generation == generation else { return true }
+            box.timer = timer
+            return false
+        }
+        if cancelledBeforeStore {
+            timer.cancel()
+        } else {
+            timer.resume()
+        }
+    }
+
+    private static func currentSyntheticOwnedModifiers() -> CGEventFlags {
+        HeldVoiceShortcut.shared.activeOwnedModifiers.union(AppSwitcherSession.activeSyntheticModifiers)
+    }
+
+    @discardableResult
+    static func clearPhantomHIDModifiersIfNeeded(
+        additionalOwnedModifiers: CGEventFlags = []
+    ) -> [CGKeyCode] {
+        guard !AppLogger.isTestProcess(), isAccessibilityTrusted else { return [] }
+        let owned = currentSyntheticOwnedModifiers().union(additionalOwnedModifiers)
+        let rawFlags = CGEventSource.flagsState(.hidSystemState)
+        let heldKeys = KeyboardHardwareModifierPolicy.currentHeldModifierKeys()
+        let stuckKeys = KeyboardHardwareModifierPolicy.phantomStuckModifierKeys(
+            rawFlags: rawFlags,
+            heldKeys: heldKeys,
+            ownedModifiers: owned
+        )
+        guard !stuckKeys.isEmpty else { return [] }
+        return clearPhantomHIDModifierKeys(stuckKeys, rawFlags: rawFlags)
+    }
+
+    @discardableResult
+    private static func clearPhantomHIDModifierKeys(
+        _ keys: [CGKeyCode],
+        rawFlags: CGEventFlags
+    ) -> [CGKeyCode] {
+        guard !keys.isEmpty, let source = markedKeySource else { return [] }
+        let genuineFlags = KeyboardHardwareModifierPolicy.sanitizedEventFlags(
+            KeyboardHardwareModifierPolicy.currentForMappedAction()
+        )
+        var cleared: [CGKeyCode] = []
+        for code in keys {
+            guard let event = CGEvent(keyboardEventSource: source, virtualKey: code, keyDown: false) else {
+                continue
+            }
+            event.type = .flagsChanged
+            event.flags = genuineFlags
+            event.setIntegerValueField(.eventSourceUserData, value: syntheticEventMarker)
+            event.post(tap: .cghidEventTap)
+            cleared.append(code)
+        }
+        if !cleared.isEmpty {
+            AppLogger.shared.write(
+                "PHANTOM MODIFIER CLEARED keys=\(cleared.map(String.init).joined(separator: ",")) " +
+                    "raw_flags=\(rawFlags.rawValue) restored_flags=\(genuineFlags.rawValue)"
+            )
+        }
+        return cleared
+    }
+
     static func postKey(code: CGKeyCode, flags: CGEventFlags = []) {
+        _ = clearPhantomHIDModifiersIfNeeded()
         if !flags.isEmpty {
             _ = ShortcutEventSequence.send(keyCode: code, modifiers: flags,
                 hardwareFlags: KeyboardHardwareModifierPolicy.currentForMappedAction, eventPoster: ShortcutEventSequence.post)
@@ -14,8 +162,18 @@ extension KeyboardInjector {
         guard let down = makeMappedKeyEvent(code: code, isDown: true, flags: flags),
               let up = makeMappedKeyEvent(code: code, isDown: false, flags: flags)
         else { return }
+        AppLogger.shared.write(
+            "MAPPED KEY EVENT key_code=\(code) edge=down " +
+                "modifier_flags=\(down.flags.rawValue) result=submitted target_response=unknown"
+        )
         down.post(tap: .cghidEventTap)
-        up.flags = flags.union(KeyboardHardwareModifierPolicy.currentForMappedAction())
+        up.flags = KeyboardHardwareModifierPolicy.sanitizedEventFlags(
+            flags.union(KeyboardHardwareModifierPolicy.currentForMappedAction())
+        )
+        AppLogger.shared.write(
+            "MAPPED KEY EVENT key_code=\(code) edge=up " +
+                "modifier_flags=\(up.flags.rawValue) result=submitted target_response=unknown"
+        )
         up.post(tap: .cghidEventTap)
     }
 

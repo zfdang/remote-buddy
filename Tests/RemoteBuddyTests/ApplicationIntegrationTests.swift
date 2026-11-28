@@ -1526,4 +1526,138 @@ struct ApplicationIntegrationTests {
         }
     }
 
+    @Test func cmuxFocusFallsBackToTerminalAccessibilityWhenSocketAPIIsUnavailableOrDenied() throws {
+        let appURL = URL(fileURLWithPath: "/Applications/cmux.app")
+        let cliURL = URL(fileURLWithPath: "/Applications/cmux.app/Contents/Resources/bin/cmux")
+        let surfaceUUID = UUID().uuidString
+
+        // 1. Missing CLI binary still invokes Accessibility terminal focus.
+        var terminalCalls: [String] = []
+        #expect(KeyboardInjector.focusCmux(
+            applicationURL: appURL,
+            cliURL: nil,
+            cliResolver: { _ in nil },
+            runner: { _, _, _ in Issue.record("Missing CLI must not invoke runner"); return .init(terminationStatus: 1, standardOutput: Data(), timedOut: false) },
+            canContinue: { true },
+            terminalFocuser: { id in terminalCalls.append(id); return true }
+        ))
+        #expect(terminalCalls == [""])
+
+        // 2. Socket access denied (default cmuxProcessesOnly mode) or timeout falls back to Accessibility terminal focus.
+        for failure in [
+            KeyboardInjector.CmuxCommandResult(terminationStatus: 1, standardOutput: Data("ERROR: access denied".utf8), timedOut: false),
+            KeyboardInjector.CmuxCommandResult(terminationStatus: -1, standardOutput: Data(), timedOut: true)
+        ] {
+            terminalCalls.removeAll()
+            var seenArgs: [[String]] = []
+            #expect(KeyboardInjector.focusCmux(
+                applicationURL: appURL,
+                cliURL: cliURL,
+                runner: { _, args, _ in
+                    seenArgs.append(args)
+                    return failure
+                },
+                canContinue: { true },
+                terminalFocuser: { id in terminalCalls.append(id); return true }
+            ))
+            #expect(seenArgs == [["rpc", "surface.current", "{}"]])
+            #expect(terminalCalls == [""])
+        }
+
+        // 3. Explicit non-terminal active surface (e.g. browser pane) does not override focus.
+        terminalCalls.removeAll()
+        let browserPayload = try JSONSerialization.data(withJSONObject: [
+            "surface_id": surfaceUUID,
+            "surface_type": "browser"
+        ])
+        #expect(!KeyboardInjector.focusCmux(
+            applicationURL: appURL,
+            cliURL: cliURL,
+            runner: { _, _, _ in .init(terminationStatus: 0, standardOutput: browserPayload, timedOut: false) },
+            canContinue: { true },
+            terminalFocuser: { id in terminalCalls.append(id); return true }
+        ))
+        #expect(terminalCalls.isEmpty)
+
+        // 4. Terminal surface succeeds even if surface.focus RPC fails, and passes surfaceID to terminalFocuser.
+        let terminalPayload = try JSONSerialization.data(withJSONObject: [
+            "surface_id": surfaceUUID,
+            "surface_type": "terminal"
+        ])
+        for focusStatus in [Int32(0), 1] {
+            terminalCalls.removeAll()
+            var commands: [[String]] = []
+            #expect(KeyboardInjector.focusCmux(
+                applicationURL: appURL,
+                cliURL: cliURL,
+                runner: { _, args, _ in
+                    commands.append(args)
+                    if args[1] == "surface.current" {
+                        return .init(terminationStatus: 0, standardOutput: terminalPayload, timedOut: false)
+                    }
+                    return .init(terminationStatus: focusStatus, standardOutput: Data(), timedOut: false)
+                },
+                canContinue: { true },
+                terminalFocuser: { id in terminalCalls.append(id); return true }
+            ))
+            #expect(commands.count == 2)
+            #expect(terminalCalls == [surfaceUUID])
+        }
+    }
+
+    @Test func cmuxTerminalClickFallbackVerifiesCandidateHitTestAndCancellation() {
+        let terminal = KeyboardInjector.AccessibilityTextCandidate(
+            role: "AXTextArea",
+            identifier: "",
+            title: "",
+            description: "",
+            help: "Terminal content area",
+            placeholder: "",
+            context: "",
+            frame: CGRect(x: 240, y: 80, width: 700, height: 600),
+            enabled: true
+        )
+        let point = KeyboardInjector.cmuxTerminalClickPoint(terminal, windowFrame: window)
+        #expect(point == CGPoint(x: 264, y: 104))
+
+        let nonTerminal = candidate("Message input")
+        #expect(KeyboardInjector.cmuxTerminalClickPoint(nonTerminal, windowFrame: window) == nil)
+
+        var clicks = 0
+        var polls = 0
+        #expect(KeyboardInjector.clickCmuxTerminalCandidate(
+            terminal,
+            windowFrame: window,
+            canContinue: { true },
+            hitTest: { $0 == CGPoint(x: 264, y: 104) },
+            postClick: { _ in clicks += 1; return true },
+            isFocused: {
+                polls += 1
+                return polls >= 3
+            },
+            pause: {}
+        ))
+        #expect(clicks == 1)
+
+        // Occluded terminal or cancelled request never receives a click.
+        #expect(!KeyboardInjector.clickCmuxTerminalCandidate(
+            terminal,
+            windowFrame: window,
+            canContinue: { true },
+            hitTest: { _ in false },
+            postClick: { _ in Issue.record("Occluded terminal must not be clicked"); return true },
+            isFocused: { false },
+            pause: {}
+        ))
+        #expect(!KeyboardInjector.clickCmuxTerminalCandidate(
+            terminal,
+            windowFrame: window,
+            canContinue: { false },
+            hitTest: { _ in Issue.record("Cancelled focus must not hit-test"); return true },
+            postClick: { _ in Issue.record("Cancelled focus must not click"); return true },
+            isFocused: { false },
+            pause: {}
+        ))
+    }
+
 }

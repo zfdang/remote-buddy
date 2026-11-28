@@ -15,7 +15,7 @@ enum KeyboardHardwareModifierPolicy {
         deviceModifierBits
     )
 
-    private struct HardwareModifierFamily {
+    struct HardwareModifierFamily {
         let flag: CGEventFlags
         let leftKey: CGKeyCode
         let leftBit: CGEventFlags
@@ -23,7 +23,7 @@ enum KeyboardHardwareModifierPolicy {
         let rightBit: CGEventFlags
     }
 
-    private static let modifierFamilies: [HardwareModifierFamily] = [
+    static let modifierFamilies: [HardwareModifierFamily] = [
         HardwareModifierFamily(flag: .maskControl, leftKey: 59, leftBit: CGEventFlags(rawValue: 0x0001),
             rightKey: 62, rightBit: CGEventFlags(rawValue: 0x2000)),
         HardwareModifierFamily(flag: .maskAlternate, leftKey: 58, leftBit: CGEventFlags(rawValue: 0x0020),
@@ -46,17 +46,22 @@ enum KeyboardHardwareModifierPolicy {
         sanitizedEventFlags(flags).subtracting([.maskSecondaryFn, .maskNumericPad])
     }
 
-    static func currentForMappedAction() -> CGEventFlags {
-        mappedActionFlags(current())
-    }
-
-    /// Reconciles `.hidSystemState` modifier flags against physical key states so
-    /// synthetic modifiers lingering after `cghidEventTap` voice shortcuts never look held.
-    static func voiceShortcutNormalized(_ flags: CGEventFlags, heldKeys: Set<CGKeyCode>) -> CGEventFlags {
-        var result = mappedActionFlags(flags)
+    /// Reconciles `.hidSystemState` modifier flags (`Control`, `Option`, `Shift`, `Command`)
+    /// against physical key states while preserving `normalized` Fn and Caps Lock flags, so
+    /// synthetic modifiers lingering after `cghidEventTap` shortcuts or third-party paste
+    /// events (such as bare `.maskCommand` with stuck virtual key 55 and no device-side bit)
+    /// never appear physically held.
+    static func reconcilingPhysicalModifiers(
+        _ flags: CGEventFlags,
+        heldKeys: Set<CGKeyCode>,
+        requireDeviceSideBits: Bool = false
+    ) -> CGEventFlags {
+        var result = sanitizedEventFlags(flags)
         for family in modifierFamilies {
-            let leftHeld = heldKeys.contains(family.leftKey)
-            let rightHeld = heldKeys.contains(family.rightKey)
+            let leftHeld = heldKeys.contains(family.leftKey) &&
+                (!requireDeviceSideBits || (result.contains(family.flag) && result.contains(family.leftBit)))
+            let rightHeld = heldKeys.contains(family.rightKey) &&
+                (!requireDeviceSideBits || (result.contains(family.flag) && result.contains(family.rightBit)))
             if !leftHeld { result.remove(family.leftBit) }
             if !rightHeld { result.remove(family.rightBit) }
             if !leftHeld && !rightHeld {
@@ -68,13 +73,55 @@ enum KeyboardHardwareModifierPolicy {
         return result
     }
 
-    static func currentForVoiceShortcut() -> CGEventFlags {
+    /// Identifies virtual modifier keys left stuck in `.hidSystemState` by synthetic `CGEvent`
+    /// callers (e.g. third-party `Cmd+V` paste leaving `keyState(55)=true` and bare `.maskCommand`
+    /// without `0x0008`/`0x0010` hardware device-side bits).
+    static func phantomStuckModifierKeys(
+        rawFlags: CGEventFlags,
+        heldKeys: Set<CGKeyCode>,
+        ownedModifiers: CGEventFlags = []
+    ) -> [CGKeyCode] {
+        let sanitized = sanitizedEventFlags(rawFlags)
+        var stuck: [CGKeyCode] = []
+        for family in modifierFamilies {
+            let familyMask = family.flag.union(family.leftBit).union(family.rightBit)
+            if !ownedModifiers.intersection(familyMask).isEmpty {
+                continue
+            }
+            let leftPhantom = heldKeys.contains(family.leftKey) && !sanitized.contains(family.leftBit)
+            let rightPhantom = heldKeys.contains(family.rightKey) && !sanitized.contains(family.rightBit)
+            if leftPhantom { stuck.append(family.leftKey) }
+            if rightPhantom { stuck.append(family.rightKey) }
+            if !leftPhantom && !rightPhantom,
+               sanitized.contains(family.flag),
+               sanitized.intersection([family.leftBit, family.rightBit]).isEmpty {
+                stuck.append(family.leftKey)
+            }
+        }
+        return stuck
+    }
+
+    static func currentHeldModifierKeys() -> Set<CGKeyCode> {
         var heldKeys: Set<CGKeyCode> = []
         for family in modifierFamilies {
             if CGEventSource.keyState(.hidSystemState, key: family.leftKey) { heldKeys.insert(family.leftKey) }
             if CGEventSource.keyState(.hidSystemState, key: family.rightKey) { heldKeys.insert(family.rightKey) }
         }
-        return voiceShortcutNormalized(current(), heldKeys: heldKeys)
+        return heldKeys
+    }
+
+    static func currentForMappedAction() -> CGEventFlags {
+        mappedActionFlags(current())
+    }
+
+    /// Reconciles `.hidSystemState` modifier flags against physical key states so
+    /// synthetic modifiers lingering after `cghidEventTap` voice shortcuts never look held.
+    static func voiceShortcutNormalized(_ flags: CGEventFlags, heldKeys: Set<CGKeyCode>) -> CGEventFlags {
+        mappedActionFlags(reconcilingPhysicalModifiers(flags, heldKeys: heldKeys))
+    }
+
+    static func currentForVoiceShortcut() -> CGEventFlags {
+        mappedActionFlags(current())
     }
 
     static func normalized(_ flags: CGEventFlags, fnKeyDown: Bool,
@@ -123,10 +170,17 @@ enum KeyboardHardwareModifierPolicy {
     }
 
     static func current() -> CGEventFlags {
-        normalized(CGEventSource.flagsState(.hidSystemState),
+        let base = normalized(
+            CGEventSource.flagsState(.hidSystemState),
             fnKeyDown: CGEventSource.keyState(.hidSystemState, key: 63),
             combinedFlags: CGEventSource.flagsState(.combinedSessionState),
-            combinedFnKeyDown: CGEventSource.keyState(.combinedSessionState, key: 63))
+            combinedFnKeyDown: CGEventSource.keyState(.combinedSessionState, key: 63)
+        )
+        return reconcilingPhysicalModifiers(
+            base,
+            heldKeys: currentHeldModifierKeys(),
+            requireDeviceSideBits: true
+        )
     }
 
     static func currentForAppSwitcher() -> CGEventFlags {
@@ -147,14 +201,20 @@ enum KeyboardHardwareModifierPolicy {
         let combined = CGEventSource.flagsState(.combinedSessionState)
         let fnDown = CGEventSource.keyState(.hidSystemState, key: 63)
         let combinedFnDown = CGEventSource.keyState(.combinedSessionState, key: 63)
-        let effective = normalized(raw, fnKeyDown: fnDown,
-            combinedFlags: combined, combinedFnKeyDown: combinedFnDown)
+        let heldModifierKeys = currentHeldModifierKeys()
+        let effective = reconcilingPhysicalModifiers(
+            normalized(raw, fnKeyDown: fnDown, combinedFlags: combined, combinedFnKeyDown: combinedFnDown),
+            heldKeys: heldModifierKeys,
+            requireDeviceSideBits: true
+        )
+        let modifierKeyList = heldModifierKeys.sorted().map(String.init).joined(separator: ",")
         let navigationKeys: [CGKeyCode] = [115, 116, 117, 119, 121, 123, 124, 125, 126]
         let held = navigationKeys.filter {
             CGEventSource.keyState(.hidSystemState, key: $0)
         }.map(String.init).joined(separator: ",")
         return "observed_raw_flags=\(raw.rawValue) observed_combined_flags=\(combined.rawValue) " +
             "observed_fn_key_down=\(fnDown) observed_combined_fn_key_down=\(combinedFnDown) " +
+            "observed_modifier_keys=\(modifierKeyList.isEmpty ? "none" : modifierKeyList) " +
             "observed_effective_flags=\(effective.rawValue) " +
             "observed_navigation_keys=\(held.isEmpty ? "none" : held)"
     }

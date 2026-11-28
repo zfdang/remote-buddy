@@ -253,4 +253,112 @@ struct AppSwitcherModifierTests {
         #expect(down.flags.contains(.maskSecondaryFn))
         #expect(!up.flags.contains(.maskSecondaryFn))
     }
+
+    @Test func mappedReturnAndShortcutsIgnoreStaleHIDModifiersWithoutPhysicalKeys() throws {
+        // Exact polluted HID snapshots observed after third-party Cmd+V paste (0x2010_0000)
+        // and synthetic Ctrl+Shift voice shortcuts (0x2006_0003) when no physical keys are held.
+        for pollutedRaw in [UInt64(0x2010_0000), 0x2010_0108, 0x2006_0003, 0x2016_010B] {
+            let reconciled = KeyboardHardwareModifierPolicy.reconcilingPhysicalModifiers(
+                CGEventFlags(rawValue: pollutedRaw),
+                heldKeys: []
+            )
+            #expect(reconciled == [])
+
+            let returnDown = try #require(KeyboardInjector.makeMappedKeyEvent(
+                code: 36,
+                isDown: true,
+                flags: [],
+                hardwareFlags: { reconciled }
+            ))
+            let returnUp = try #require(KeyboardInjector.makeMappedKeyEvent(
+                code: 36,
+                isDown: false,
+                flags: [],
+                hardwareFlags: { reconciled }
+            ))
+            #expect(returnDown.flags == [])
+            #expect(returnUp.flags == [])
+
+            var shiftReturnEvents: [CGEvent] = []
+            #expect(ShortcutEventSequence.send(
+                keyCode: 36,
+                modifiers: .maskShift,
+                hardwareFlags: { reconciled },
+                eventPoster: { shiftReturnEvents.append($0); return true },
+                logger: { _ in }
+            ))
+            #expect(shiftReturnEvents.map { $0.getIntegerValueField(.keyboardEventKeycode) } == [56, 36, 36, 56])
+            #expect(shiftReturnEvents.allSatisfy { !$0.flags.contains(.maskCommand) })
+            #expect(shiftReturnEvents.allSatisfy { !$0.flags.contains(.maskControl) })
+
+            var commandReturnEvents: [CGEvent] = []
+            #expect(ShortcutEventSequence.send(
+                keyCode: 36,
+                modifiers: .maskCommand,
+                hardwareFlags: { reconciled },
+                eventPoster: { commandReturnEvents.append($0); return true },
+                logger: { _ in }
+            ))
+            #expect(commandReturnEvents.map { $0.getIntegerValueField(.keyboardEventKeycode) } == [55, 36, 36, 55])
+            #expect(commandReturnEvents.last?.flags.contains(.maskCommand) == false)
+        }
+
+        // Genuine Fn, Caps Lock, and physically held modifiers remain intact.
+        let preserved = KeyboardHardwareModifierPolicy.reconcilingPhysicalModifiers(
+            [.maskAlphaShift, .maskSecondaryFn, .maskCommand, .maskShift, CGEventFlags(rawValue: 0x0002)],
+            heldKeys: [56],
+            requireDeviceSideBits: true
+        )
+        #expect(preserved.contains(.maskAlphaShift))
+        #expect(preserved.contains(.maskSecondaryFn))
+        #expect(preserved.contains(.maskShift))
+        #expect(!preserved.contains(.maskCommand))
+    }
+
+    @Test func phantomModifierWithoutDeviceSideBitIsRejectedAndDetectedEvenWhenKeyStateIsStuck() {
+        // Exact state left by third-party synthetic Cmd+V paste (e.g. bageshuo/enigo):
+        // hidFlags = 0x2010_0000 (bare .maskCommand without 0x0008/0x0010 side bits) AND keyState(55) = true.
+        let phantomPasteFlags = CGEventFlags(rawValue: 0x2010_0000)
+        let reconciled = KeyboardHardwareModifierPolicy.reconcilingPhysicalModifiers(
+            phantomPasteFlags,
+            heldKeys: [55],
+            requireDeviceSideBits: true
+        )
+        #expect(reconciled == [])
+
+        let stuckKeys = KeyboardHardwareModifierPolicy.phantomStuckModifierKeys(
+            rawFlags: phantomPasteFlags,
+            heldKeys: [55],
+            ownedModifiers: []
+        )
+        #expect(stuckKeys == [55])
+
+        // Owned synthetic sessions (AppSwitcher / HeldVoiceShortcut) are never treated as external phantoms.
+        #expect(KeyboardHardwareModifierPolicy.phantomStuckModifierKeys(
+            rawFlags: phantomPasteFlags,
+            heldKeys: [55],
+            ownedModifiers: .maskCommand
+        ).isEmpty)
+
+        // Genuine physical Left Command (0x0008 side bit + .maskCommand + key 55) is preserved and not flagged.
+        let genuineLeftCommand = CGEventFlags(rawValue: 0x2010_0008)
+        let genuineReconciled = KeyboardHardwareModifierPolicy.reconcilingPhysicalModifiers(
+            genuineLeftCommand,
+            heldKeys: [55],
+            requireDeviceSideBits: true
+        )
+        #expect(genuineReconciled == [.maskCommand, CGEventFlags(rawValue: 0x0008)])
+        #expect(KeyboardHardwareModifierPolicy.phantomStuckModifierKeys(
+            rawFlags: genuineLeftCommand,
+            heldKeys: [55],
+            ownedModifiers: []
+        ).isEmpty)
+
+        // Post-voice sweep requires two consecutive observations to avoid racing mid-Cmd+V paste.
+        var sweep = KeyboardInjector.PostVoicePhantomSweepState()
+        #expect(sweep.advance(currentCandidates: [55]).isEmpty)
+        #expect(sweep.advance(currentCandidates: [55]) == [55])
+        #expect(sweep.advance(currentCandidates: []).isEmpty)
+        #expect(sweep.advance(currentCandidates: [55]).isEmpty)
+    }
 }

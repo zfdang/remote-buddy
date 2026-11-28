@@ -1,5 +1,6 @@
 import CoreGraphics
 import Foundation
+import os
 
 extension KeyboardInjector {
     final class AppSwitcherSession: @unchecked Sendable {
@@ -11,18 +12,35 @@ extension KeyboardInjector {
         static let optionHoldDuration: TimeInterval = 0.06
         static let optionReleaseDuration: TimeInterval = 0.10
         private static let maxModifierReleaseAttempts = 4
+        private static let activeSyntheticModifierCounts = OSAllocatedUnfairLock(initialState: (command: 0, option: 0))
+
+        static var activeSyntheticModifiers: CGEventFlags {
+            activeSyntheticModifierCounts.withLock { counts in
+                var flags: CGEventFlags = []
+                if counts.command > 0 { flags.formUnion(.maskCommand) }
+                if counts.option > 0 { flags.formUnion(.maskAlternate) }
+                return flags
+            }
+        }
 
         private let lock = NSRecursiveLock()
         private let keyStatePoster: OwnedKeyStatePoster
         private let hardwareFlags: () -> CGEventFlags
         private var diagnosticLogger: ((String) -> Void)?
         private var active = false
-        private var ownedCommandFlags: CGEventFlags = []
+        private var registeredSyntheticModifiers: CGEventFlags = []
+        private var ownedCommandFlags: CGEventFlags = [] {
+            didSet { syncRegisteredSyntheticModifiers() }
+        }
         private var isBorrowingCommand = false
         private var releaseTask: ScheduledOperation?
         private var optionReleaseTask: ScheduledOperation?
-        private var hasPendingOptionRelease = false
-        private var ownedCommandPendingRelease = false
+        private var hasPendingOptionRelease = false {
+            didSet { syncRegisteredSyntheticModifiers() }
+        }
+        private var ownedCommandPendingRelease = false {
+            didSet { syncRegisteredSyntheticModifiers() }
+        }
         private var releaseGeneration: UInt64 = 0
         private var releaseAttempts = 0
         private var commandReleaseAttempts = 0
@@ -49,11 +67,35 @@ extension KeyboardInjector {
 
         deinit {
             lock.withLock {
+                ownedCommandFlags = []
+                ownedCommandPendingRelease = false
+                hasPendingOptionRelease = false
                 releaseGeneration &+= 1
                 releaseTask?.cancel()
                 releaseTask = nil
                 optionReleaseTask?.cancel()
                 optionReleaseTask = nil
+            }
+        }
+
+        private func syncRegisteredSyntheticModifiers() {
+            var next: CGEventFlags = []
+            if !ownedCommandFlags.isEmpty || ownedCommandPendingRelease {
+                next.formUnion(.maskCommand)
+            }
+            if hasPendingOptionRelease {
+                next.formUnion(.maskAlternate)
+            }
+            guard next != registeredSyntheticModifiers else { return }
+            let previous = registeredSyntheticModifiers
+            registeredSyntheticModifiers = next
+            Self.activeSyntheticModifierCounts.withLock { counts in
+                if previous.contains(.maskCommand) != next.contains(.maskCommand) {
+                    counts.command = max(0, counts.command + (next.contains(.maskCommand) ? 1 : -1))
+                }
+                if previous.contains(.maskAlternate) != next.contains(.maskAlternate) {
+                    counts.option = max(0, counts.option + (next.contains(.maskAlternate) ? 1 : -1))
+                }
             }
         }
 

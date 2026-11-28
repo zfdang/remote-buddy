@@ -295,6 +295,7 @@ extension KeyboardInjector {
         processIdentifier: pid_t,
         requestID: UInt64,
         attempt: Int,
+        clickAttempted: Bool = false,
         requestGate: ApplicationFocusRequestGate = focusRequests,
         completion: (@Sendable (Bool) -> Void)? = nil
     ) {
@@ -311,6 +312,7 @@ extension KeyboardInjector {
                         processIdentifier: processIdentifier,
                         requestID: requestID,
                         attempt: nextAttempt,
+                        clickAttempted: clickAttempted,
                         requestGate: requestGate,
                         completion: completion
                     )
@@ -327,6 +329,7 @@ extension KeyboardInjector {
             let canContinue = {
                 requestGate.isCurrent(requestID) && applicationIsFrontmost(processIdentifier)
             }
+            var nextClickAttempted = clickAttempted
             let focused = focusCmux(
                 applicationURL: applicationURL,
                 canContinue: canContinue,
@@ -339,6 +342,9 @@ extension KeyboardInjector {
                     }
                     return focusCmuxTerminal(
                         processIdentifier: processIdentifier,
+                        canContinue: canContinue,
+                        allowClickFallback: !nextClickAttempted,
+                        didAttemptClick: { nextClickAttempted = true },
                         keyPoster: { postKey(code: $0, flags: $1) }
                     )
                 }
@@ -363,6 +369,7 @@ extension KeyboardInjector {
                     processIdentifier: processIdentifier,
                     requestID: requestID,
                     attempt: nextAttempt,
+                    clickAttempted: nextClickAttempted,
                     requestGate: requestGate,
                     completion: completion
                 )

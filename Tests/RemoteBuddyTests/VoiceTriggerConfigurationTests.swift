@@ -397,6 +397,22 @@ struct VoiceTriggerConfigurationTests {
             detail = view.recoveryDetailText(for: .voiceExternalToolNoCommit, using: loc)
             #expect(detail.contains("Ctrl (⌃) + Option (⌥) + V"))
             #expect(!detail.contains("%@"))
+
+            let highlighted = view.recoveryDetailAttributedText(for: .voiceExternalToolNoCommit, using: loc)
+            #expect(String(highlighted.characters) == detail)
+            let redRuns = highlighted.runs.filter {
+                $0.attributes[AttributeScopes.SwiftUIAttributes.ForegroundColorAttribute.self] == .red
+            }
+            #expect(redRuns.count == 1)
+            if let shortcutRun = redRuns.first {
+                #expect(String(highlighted[shortcutRun.range].characters) == "Ctrl (⌃) + Option (⌥) + V")
+                #expect(shortcutRun.attributes[AttributeScopes.SwiftUIAttributes.FontAttribute.self] == .system(size: 12, weight: .bold))
+            }
+
+            let nonShortcutDetail = view.recoveryDetailAttributedText(for: .voiceNoSamples, using: loc)
+            #expect(nonShortcutDetail.runs.allSatisfy {
+                $0.attributes[AttributeScopes.SwiftUIAttributes.ForegroundColorAttribute.self] == nil
+            })
         }
     }
 

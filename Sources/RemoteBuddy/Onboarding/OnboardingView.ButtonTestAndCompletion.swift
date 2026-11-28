@@ -325,7 +325,7 @@ extension OnboardingView {
                     Text(localization.text(recoveryTitleKey(for: failure)))
                         .font(.system(size: 14, weight: .semibold))
                         .fixedSize(horizontal: false, vertical: true)
-                    Text(recoveryDetailText(for: failure))
+                    Text(recoveryDetailAttributedText(for: failure))
                         .font(.system(size: 12))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -455,8 +455,7 @@ extension OnboardingView {
         case .voiceExternalToolNoCommit:
             let toolName = activeLocalization.text(settings.onboardingVoiceTool.titleKey)
             let micName = selectedAudioDevice?.name ?? BuddyMicrophoneDevicePolicy.deviceName
-            let shortcutText = (settings.stagedVoiceToolBinding?.shortcut ?? settings.selectedVoiceTrigger.voiceKeyMode)
-                .displayName(using: activeLocalization)
+            let shortcutText = recoveryShortcutDisplayName(using: activeLocalization)
             return LocalizedMessage(
                 "onboarding.recovery.voice.external_tool_no_commit.detail",
                 arguments: [toolName, micName, shortcutText]
@@ -464,6 +463,27 @@ extension OnboardingView {
         default:
             return activeLocalization.text(recoveryDetailKey(for: failure))
         }
+    }
+
+    func recoveryShortcutDisplayName(using overrideLocalization: LocalizationStore? = nil) -> String {
+        let activeLocalization = overrideLocalization ?? localization
+        return (settings.stagedVoiceToolBinding?.shortcut ?? settings.selectedVoiceTrigger.voiceKeyMode)
+            .displayName(using: activeLocalization)
+    }
+
+    func recoveryDetailAttributedText(
+        for failure: FirstUseFailureReason,
+        using overrideLocalization: LocalizationStore? = nil
+    ) -> AttributedString {
+        let text = recoveryDetailText(for: failure, using: overrideLocalization)
+        guard failure == .voiceExternalToolNoCommit else {
+            return AttributedString(text)
+        }
+        return Self.highlightedGuideText(
+            text,
+            highlighting: recoveryShortcutDisplayName(using: overrideLocalization),
+            fontSize: 12
+        )
     }
 
     private func recoveryVoiceGestureInstruction(using overrideLocalization: LocalizationStore? = nil) -> String {

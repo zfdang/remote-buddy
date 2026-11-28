@@ -671,17 +671,21 @@ final class AppSettings: ObservableObject {
             ),
             !decoded.isEmpty
         {
-            remoteDeviceProfiles = decoded
+            var profiles = decoded
+            for index in profiles.indices {
+                _ = Self.seedDefaultApplicationProfilesIfNeeded(in: &profiles[index])
+            }
+            remoteDeviceProfiles = profiles
             if let event = PublicDiagnosticEvent(
                 component: "settings", action: "load", phase: "completed", result: "loaded",
                 reason: "remote_profiles", source: "app"
             ) { AppLogger.shared.record(event) }
             let savedID = defaults.string(forKey: Keys.selectedRemoteProfileID).flatMap(UUID.init(uuidString:))
-            selectedRemoteProfileID = decoded.contains(where: { $0.id == savedID })
+            selectedRemoteProfileID = remoteDeviceProfiles.contains(where: { $0.id == savedID })
                 ? savedID
-                : decoded.first?.id
+                : remoteDeviceProfiles.first?.id
             if let selectedRemoteProfileID,
-               let selected = decoded.first(where: { $0.id == selectedRemoteProfileID }) {
+               let selected = remoteDeviceProfiles.first(where: { $0.id == selectedRemoteProfileID }) {
                 if let storedGain = selected.gainDB, storedGain.isFinite, (0...24).contains(storedGain) { gainDB = storedGain }
                 buttonBindings = Self.defaultMappings(for: selected.model).parsedButtonBindings.merging(selected.mappings.parsedButtonBindings) {
                     _, saved in saved

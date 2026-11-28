@@ -82,12 +82,19 @@ extension HIDRemoteMonitor {
         recognizesLongPress: Bool,
         applicationScope: ApplicationOverrideScope = .live
     ) -> Bool {
+        let hasDisqualifyingOverride = mappingDeliveryIsSafe
+            ? settings.hasAnyApplicationOverride(for: button, profileID: profileID)
+            : settings.hasApplicationOverride(
+                for: button,
+                profileID: profileID,
+                applicationScope: applicationScope
+            )
         guard !activeDeviceIsSeized,
               currentReportOrigin != .btleServerLog,
               !appSwitcherCoordinator.isActive,
               !recognizesDoubleClick,
               !recognizesLongPress,
-              !settings.hasAnyApplicationOverride(for: button, profileID: profileID),
+              !hasDisqualifyingOverride,
               settings.allowsHoldRepeat(
                   for: button,
                   profileID: profileID,

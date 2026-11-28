@@ -4,9 +4,10 @@ import Testing
 
 @Suite("Button mapping default action resolution") @MainActor
 struct ButtonMappingDefaultActionTests {
-    @Test(arguments: [RemoteButton.youtube, .netflix, .input])
+    @Test(arguments: [RemoteButton.youtube, .netflix, .input, .mute])
     func googleSingleTriggerResetMatchesModelAndWholeDeviceDefaults(button: RemoteButton) throws {
         try withSettings { settings in
+            settings.frontmostApplicationBundleIdentifier = { nil }
             let profile = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
             settings.selectRemoteProfile(profile)
             let expected = try #require(AppSettings.defaultMappings(for: .chromecastVoiceRemote).parsedButtonBindings[button])
@@ -121,6 +122,31 @@ struct ButtonMappingDefaultActionTests {
             settings.buttonBindings.removeValue(forKey: .power)
             // A missing active binding must return .disabled
             #expect(settings.configuredBaseAction(for: .power, trigger: .singleClick).action == .disabled)
+        }
+    }
+
+    @Test func googleMuteButtonDefaultsToReturnAndCommandReturn() throws {
+        try withSettings { settings in
+            settings.frontmostApplicationBundleIdentifier = { nil }
+            let googleProfile = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+            settings.selectRemoteProfile(googleProfile)
+            #expect(settings.action(for: .mute) == .returnKey)
+            #expect(settings.configuredAction(for: .mute, trigger: .longPress).action == .commandReturn)
+            #expect(settings.defaultAction(for: .mute, trigger: .singleClick).action == .returnKey)
+            #expect(settings.defaultAction(for: .mute, trigger: .longPress).action == .commandReturn)
+
+            settings.setAction(.volumeMute, for: .mute)
+            settings.setAction(.escape, for: .mute, trigger: .longPress)
+            settings.resetBindings()
+            #expect(settings.action(for: .mute) == .returnKey)
+            #expect(settings.configuredAction(for: .mute, trigger: .longPress).action == .commandReturn)
+
+            for otherModel in [RemoteModel.t1Remote] {
+                let profile = settings.registerBluetoothRemote(identifier: UUID(), model: otherModel)
+                settings.selectRemoteProfile(profile)
+                #expect(settings.action(for: .mute) == .volumeMute)
+                #expect(settings.configuredAction(for: .mute, trigger: .longPress).action == .disabled)
+            }
         }
     }
 }

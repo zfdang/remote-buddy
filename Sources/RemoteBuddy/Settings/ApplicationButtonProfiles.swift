@@ -116,13 +116,10 @@ extension AppSettings {
             .mappings.parsedApplicationButtonProfiles ?? [:]
     }
 
-    /// Returns the frontmost or captured application's override for `button` and `trigger` on `profileID`, if any.
-    func applicationButtonOverride(
-        for button: RemoteButton,
-        trigger: ButtonTrigger,
-        profileID: UUID?,
-        applicationScope: ApplicationOverrideScope = .live
-    ) -> ConfiguredButtonAction? {
+    private func applicationButtonProfile(
+        for profileID: UUID?,
+        applicationScope: ApplicationOverrideScope
+    ) -> ApplicationButtonProfile? {
         let profiles = applicationButtonProfiles(for: profileID)
         let bundleID: String?
         switch applicationScope {
@@ -134,10 +131,29 @@ extension AppSettings {
         case let .fixed(captured):
             bundleID = captured
         }
-        guard let bundleID,
-              let profile = profiles[bundleID]
-        else { return nil }
-        return profile.action(for: button, trigger: trigger)
+        guard let bundleID else { return nil }
+        return profiles[bundleID]
+    }
+
+    /// Returns the frontmost or captured application's override for `button` and `trigger` on `profileID`, if any.
+    func applicationButtonOverride(
+        for button: RemoteButton,
+        trigger: ButtonTrigger,
+        profileID: UUID?,
+        applicationScope: ApplicationOverrideScope = .live
+    ) -> ConfiguredButtonAction? {
+        applicationButtonProfile(for: profileID, applicationScope: applicationScope)?
+            .action(for: button, trigger: trigger)
+    }
+
+    /// Returns `true` when the resolved application scope overrides `button` on any trigger.
+    func hasApplicationOverride(
+        for button: RemoteButton,
+        profileID: UUID?,
+        applicationScope: ApplicationOverrideScope = .live
+    ) -> Bool {
+        applicationButtonProfile(for: profileID, applicationScope: applicationScope)?
+            .buttons[button.rawValue]?.isEmpty == false
     }
 
     /// Action inherited by `(bundleID, button, trigger)` when no override exists on that trigger.

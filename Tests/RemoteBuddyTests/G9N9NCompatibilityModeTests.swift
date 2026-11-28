@@ -528,6 +528,7 @@ struct G9N9NCompatibilityModeTests {
         defaults.set(legacyData, forKey: "remoteDeviceProfiles")
 
         let reloaded = AppSettings(defaults: defaults)
+        reloaded.frontmostApplicationBundleIdentifier = { nil }
         #expect(reloaded.corruptedSettingKeys.isEmpty)
         #expect(defaults.data(forKey: "remoteDeviceProfiles.corrupt") == nil)
         #expect(reloaded.remoteDeviceProfiles.count == 3)
@@ -908,6 +909,7 @@ struct G9N9NCompatibilityModeTests {
         let googleID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         settings.setG9N9NInputMode(.bluetoothLogRecovery, for: googleID)
         settings.completeOnboarding()
+        settings.frontmostApplicationBundleIdentifier = { nil }
 
         var actions: [ButtonAction] = []
         let monitor = HIDRemoteMonitor(
@@ -1295,6 +1297,7 @@ struct G9N9NCompatibilityModeTests {
                 performedActions.append((button, trigger, configured.action))
                 return true
             },
+            frontmostBundleIdentifier: { "test.editor" },
             diagnosticLogger: { _ in },
             appSwitcherCoordinator: coordinator
         )

@@ -144,6 +144,7 @@ struct RemoteDeviceProfile: Codable, Equatable, Identifiable {
     var compatibleHIDBinding: RemoteHIDBinding?
     var g9n9nInputMode: G9N9NInputMode?
     var g9n9nVoiceButtonMode: G9N9NVoiceButtonMode?
+    var seededDefaultApplicationProfiles: [String]?
     var mappings: RemoteDeviceMappings
 
     var displayNameFallbackKey: String { model.localizationKey }
@@ -167,6 +168,7 @@ struct RemoteDeviceProfile: Codable, Equatable, Identifiable {
         case compatibleHIDBinding
         case g9n9nInputMode
         case g9n9nVoiceButtonMode
+        case seededDefaultApplicationProfiles
         case mappings
     }
 
@@ -182,6 +184,7 @@ struct RemoteDeviceProfile: Codable, Equatable, Identifiable {
         gainDB: Double? = nil,
         g9n9nInputMode: G9N9NInputMode? = nil,
         g9n9nVoiceButtonMode: G9N9NVoiceButtonMode? = nil,
+        seededDefaultApplicationProfiles: [String]? = nil,
         mappings: RemoteDeviceMappings
     ) {
         self.id = id
@@ -195,6 +198,9 @@ struct RemoteDeviceProfile: Codable, Equatable, Identifiable {
         self.compatibleHIDBinding = compatibleHIDBinding
         self.g9n9nInputMode = g9n9nInputMode
         self.g9n9nVoiceButtonMode = g9n9nVoiceButtonMode
+        self.seededDefaultApplicationProfiles = seededDefaultApplicationProfiles?.isEmpty == true
+            ? nil
+            : seededDefaultApplicationProfiles
         self.mappings = mappings
     }
 
@@ -220,6 +226,11 @@ struct RemoteDeviceProfile: Codable, Equatable, Identifiable {
             G9N9NVoiceButtonMode.self,
             forKey: .g9n9nVoiceButtonMode
         )
+        let decodedSeeded = try container.decodeIfPresent(
+            [String].self,
+            forKey: .seededDefaultApplicationProfiles
+        )
+        self.seededDefaultApplicationProfiles = decodedSeeded?.isEmpty == true ? nil : decodedSeeded
         self.mappings = try container.decode(RemoteDeviceMappings.self, forKey: .mappings)
     }
 }

@@ -435,4 +435,58 @@ struct UpdateDialogTests {
         #expect(driver.title == loc.text("update.dialog.error"))
         driver.dismissUpdateInstallation()
     }
+
+    @Test func confirmedUpdateSkipsConfirmationAndSkipDialogWhenVersionMatches() throws {
+        let loc = localization()
+        let driver = LocalizedUpdateUserDriver(localization: loc, presentsWindows: false)
+        let update = AvailableUpdateInformation(displayVersion: "v26-11-28.1063", buildVersion: "1063", releaseNotes: [])
+
+        driver.prepareForConfirmedInstall(update)
+        var cancelled = false
+        driver.showUserInitiatedUpdateCheck { cancelled = true }
+        #expect(driver.title == loc.text("update.dialog.downloading"))
+        #expect(driver.versionRows.last?.version == "v26-11-28.1063")
+        #expect(driver.actionTitles == [loc.text("common.action.cancel")])
+
+        var foundChoices: [SPUUserUpdateChoice] = []
+        driver.showUpdateFound(UpdateDialogVersion(version: "v26-11-28.1063", commitCount: "1063")) {
+            foundChoices.append($0)
+        }
+        #expect(foundChoices == [.install])
+        #expect(driver.title == loc.text("update.dialog.downloading"))
+        #expect(!cancelled)
+
+        var readyChoices: [SPUUserUpdateChoice] = []
+        driver.showReady(toInstallAndRelaunch: { readyChoices.append($0) })
+        #expect(readyChoices == [.install])
+        #expect(driver.title == loc.text("update.dialog.installing"))
+    }
+
+    @Test func confirmedUpdatePromptsAgainIfDifferentNewerVersionAppearsOrShowsErrorOnFailure() throws {
+        let loc = localization()
+        let driver = LocalizedUpdateUserDriver(localization: loc, presentsWindows: false)
+        let update = AvailableUpdateInformation(displayVersion: "v26-11-28.1063", buildVersion: "1063", releaseNotes: [])
+
+        driver.prepareForConfirmedInstall(update)
+        driver.showUserInitiatedUpdateCheck {}
+        var foundChoices: [SPUUserUpdateChoice] = []
+        driver.showUpdateFound(UpdateDialogVersion(version: "v26-11-28.1064", commitCount: "1064")) {
+            foundChoices.append($0)
+        }
+        #expect(foundChoices.isEmpty)
+        #expect(driver.title == loc.text("update.dialog.found"))
+        #expect(driver.versionRows.last?.version == "v26-11-28.1064")
+        driver.dismissUpdateInstallation()
+
+        driver.prepareForConfirmedInstall(update)
+        driver.showUserInitiatedUpdateCheck {}
+        var acks = 0
+        driver.showUpdaterError(NSError(domain: NSURLErrorDomain, code: NSURLErrorNotConnectedToInternet)) {
+            acks += 1
+        }
+        #expect(acks == 0)
+        #expect(driver.title == loc.text("update.dialog.error"))
+        driver.performAction(at: 0)
+        #expect(acks == 1)
+    }
 }

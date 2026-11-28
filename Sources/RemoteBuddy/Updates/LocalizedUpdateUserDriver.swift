@@ -33,6 +33,7 @@ final class LocalizedUpdateUserDriver: NSObject, SPUUserDriver, NSWindowDelegate
     private var installAndRelaunchWhenReady = false
     private var candidateVersion: UpdateDialogVersion?
     private var fallbackAutoConfirmVersion: String?
+    private var confirmedInstallVersion: String?
     private var suppressNextErrorForFallback = false
     private var suppressNextDismissForFallback = false
     private var actions: [Action] = []
@@ -203,7 +204,16 @@ final class LocalizedUpdateUserDriver: NSObject, SPUUserDriver, NSWindowDelegate
         ])
     }
 
+    func prepareForConfirmedInstall(_ update: AvailableUpdateInformation) {
+        confirmedInstallVersion = update.buildVersion
+        candidateVersion = UpdateDialogVersion(version: update.displayVersion, commitCount: update.buildVersion)
+        fallbackAutoConfirmVersion = nil
+        suppressNextErrorForFallback = false
+        suppressNextDismissForFallback = false
+    }
+
     func prepareForFallbackDownload(autoConfirmVersion version: String) {
+        confirmedInstallVersion = nil
         fallbackAutoConfirmVersion = version
         suppressNextErrorForFallback = true
         suppressNextDismissForFallback = true
@@ -211,6 +221,7 @@ final class LocalizedUpdateUserDriver: NSObject, SPUUserDriver, NSWindowDelegate
 
     func clearFallbackState() {
         fallbackAutoConfirmVersion = nil
+        confirmedInstallVersion = nil
         suppressNextErrorForFallback = false
         suppressNextDismissForFallback = false
     }
@@ -221,6 +232,11 @@ final class LocalizedUpdateUserDriver: NSObject, SPUUserDriver, NSWindowDelegate
         suppressNextDismissForFallback = false
         if fallbackAutoConfirmVersion != nil {
             present("update.dialog.downloading", progress: -1, closeActionIndex: 0, activate: false,
+                    actions: [Action(key: "common.action.cancel", completes: true, handler: cancellation)])
+            return
+        }
+        if confirmedInstallVersion != nil {
+            present("update.dialog.downloading", progress: -1, closeActionIndex: 0, activate: true,
                     actions: [Action(key: "common.action.cancel", completes: true, handler: cancellation)])
             return
         }
@@ -237,13 +253,14 @@ final class LocalizedUpdateUserDriver: NSObject, SPUUserDriver, NSWindowDelegate
     }
 
     func showUpdateFound(_ version: UpdateDialogVersion, reply: @escaping (SPUUserUpdateChoice) -> Void) {
-        if fallbackAutoConfirmVersion == version.commitCount {
-            clearFallbackState()
+        let shouldAutoConfirm = fallbackAutoConfirmVersion == version.commitCount
+            || confirmedInstallVersion == version.commitCount
+        clearFallbackState()
+        if shouldAutoConfirm {
             candidateVersion = version
             beginDownloadAfterInstallChoice(reply: reply)
             return
         }
-        clearFallbackState()
         showAvailableUpdate(version, reply: reply)
     }
 

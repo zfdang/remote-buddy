@@ -158,15 +158,6 @@ def frame(index, progress, total, duration, subtitle=""):
         card(d, 325, "官网下载适合 Mac 芯片的安装包", "Apple Silicon / Intel · macOS 14+")
         card(d, 485, "Remote Buddy.app + 虚拟麦克风驱动", "安装后打开应用，按向导检查环境")
         card(d, 645, "在输入工具中选择麦克风", "麦克风：Remote Buddy Mic", GREEN)
-    elif kind == "devices":
-        rows = [
-            ("Chromecast · G9N9N", "已验证版本支持智能切换免提、约 5 分钟收音、14 键自定义与电量", GREEN),
-            ("小米 2 / 2 Pro · RC001 / RC003", "全控制键自定义；2 Pro 已验证，按住说话单次上限约 60 秒", GREEN),
-            ("T1 飞鼠键盘语音遥控器", "蓝牙直连；正面 7 键自定义，背面全键盘与飞鼠直通", GREEN),
-        ]
-        for j, row in enumerate(rows):
-            card(d, 305+j*153, *row)
-        center(d, 1335, 800, "GY3LE / Siri Remote：计划支持，尚未完成适配", 25, "#68758A")
     elif kind == "g9n9n":
         start, stop = actions.get("start", 4), actions.get("stop", 10)
         recording = start <= local < stop
@@ -183,7 +174,7 @@ def frame(index, progress, total, duration, subtitle=""):
             x = 1160+j*18
             d.line((x, 652-amplitude, x, 652+amplitude), fill=GREEN, width=7)
         center(d, 1460, 727, "默认智能切换 ｜ 可随时切回纯按住模式", 28)
-        center(d, 1460, 788, "自动保活突破 60 秒，单次最长约 5 分钟", 25, "#68758A")
+        center(d, 1460, 788, "支持保活的批次默认 5 分钟；部分兼容款约 60 秒", 25, "#68758A")
     elif kind in ("xiaomi", "t1"):
         is_t1 = kind == "t1"
         start, stop = actions.get("start", 4), actions.get("stop", 8)
@@ -203,10 +194,8 @@ def frame(index, progress, total, duration, subtitle=""):
             d.line((x, 652-amplitude, x, 652+amplitude), fill=GREEN, width=7)
         center(d, 1460, 727, "T1：点按开始 / 再按结束" if is_t1 else "小米：按住开始 / 松手结束", 29)
         center(d, 1460, 788, "结束后等待尾音和输入工具处理", 25, "#68758A")
-    elif kind in ("permissions", "tools", "mapping", "app_integration"):
+    elif kind in ("permissions", "devices", "tools", "mapping", "phrases", "app_integration"):
         filename = scene["screenshot"]
-        if kind == "mapping" and progress > 0.55:
-            filename = "phrases-zh.jpg"
         screenshot(
             im,
             d,
@@ -214,7 +203,9 @@ def frame(index, progress, total, duration, subtitle=""):
             {
                 "permissions": "权限与麦克风",
                 "tools": "输入法集成",
-                "mapping": "按键映射 / 常用语",
+                "devices": "遥控器连接",
+                "mapping": "按键映射",
+                "phrases": "常用语",
                 "app_integration": "应用集成",
             }[kind],
         )

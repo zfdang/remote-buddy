@@ -991,12 +991,34 @@ struct ApplicationButtonProfileTests {
         #expect(relaunched.applicationButtonProfiles(for: relaunched.selectedRemoteProfileID)[chrome] == nil)
         #expect(relaunched.remoteDeviceProfiles[0].seededDefaultApplicationProfiles == expectedSeeded)
 
-        // Adding a new G9N9N later still gives that new remote its own default Safari and Chrome profiles.
+        // Adding a new G9N9N via Bluetooth or HID later still gives that new remote its own default Safari and Chrome profiles.
         let thirdGoogle = relaunched.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         #expect(relaunched.applicationButtonProfiles(for: thirdGoogle)[safari] == AppSettings.defaultChromecastSafariApplicationProfile)
         #expect(relaunched.applicationButtonProfiles(for: thirdGoogle)[chrome] == AppSettings.defaultChromecastChromeApplicationProfile)
         #expect(relaunched.applicationButtonProfiles(for: unseededGoogle.id)[safari] == nil)
         #expect(relaunched.applicationButtonProfiles(for: unseededGoogle.id)[chrome] == nil)
+
+        let hidGoogle = try #require(relaunched.registerHIDRemote(fingerprint: "hid-google-1", model: .chromecastVoiceRemote))
+        #expect(relaunched.applicationButtonProfiles(for: hidGoogle)[safari] == AppSettings.defaultChromecastSafariApplicationProfile)
+        #expect(relaunched.applicationButtonProfiles(for: hidGoogle)[chrome] == AppSettings.defaultChromecastChromeApplicationProfile)
+
+        // Deleting only Safari from hidGoogle keeps Chrome intact and Safari stays deleted on relaunch.
+        relaunched.selectRemoteProfile(hidGoogle)
+        relaunched.removeApplicationButtonProfile(bundleID: safari)
+        let afterPartialDelete = AppSettings(defaults: defaults)
+        #expect(afterPartialDelete.applicationButtonProfiles(for: hidGoogle)[safari] == nil)
+        #expect(afterPartialDelete.applicationButtonProfiles(for: hidGoogle)[chrome] == AppSettings.defaultChromecastChromeApplicationProfile)
+
+        // Empty seededDefaultApplicationProfiles array decodes normalized as nil, matching custom init.
+        let emptySeededJSON = Data(#"{"id":"11111111-1111-1111-1111-111111111111","model":"chromecast_voice_remote","customName":"","seededDefaultApplicationProfiles":[],"mappings":{"buttonBindings":{},"buttonShortcuts":{},"secondaryButtonBindings":{}}}"#.utf8)
+        let decodedEmpty = try JSONDecoder().decode(RemoteDeviceProfile.self, from: emptySeededJSON)
+        #expect(decodedEmpty.seededDefaultApplicationProfiles == nil)
+        #expect(decodedEmpty == RemoteDeviceProfile(
+            id: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
+            model: .chromecastVoiceRemote,
+            seededDefaultApplicationProfiles: [],
+            mappings: RemoteDeviceMappings(buttonBindings: [:], buttonShortcuts: [:], secondaryButtonBindings: [:])
+        ))
 
         // Identifying an .unknown profile as G9N9N seeds Safari and Chrome once and also respects deletion across reload.
         let unknown = relaunched.registerBluetoothRemote(identifier: UUID(), model: .unknown)
@@ -1009,5 +1031,56 @@ struct ApplicationButtonProfileTests {
         let afterUnknownDelete = AppSettings(defaults: defaults)
         #expect(afterUnknownDelete.applicationButtonProfiles(for: unknown)[safari] == nil)
         #expect(afterUnknownDelete.applicationButtonProfiles(for: unknown)[chrome] == nil)
+    }
+
+    @Test func unseizedChromecastPreservesNativePassthroughFallbackWithoutFilterInNonBrowserApps() throws {
+        let (settings, _) = makeSettings()
+        settings.onboardingStep = .complete
+
+        let g9n9nID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
+        settings.selectRemoteProfile(g9n9nID)
+
+        var front: String? = notes
+        settings.frontmostApplicationBundleIdentifier = { front }
+
+        let clock = ControlledTestScheduler()
+        var performed: [ConfiguredButtonAction] = []
+        let monitor = HIDRemoteMonitor(
+            settings: settings,
+            profileID: g9n9nID,
+            scheduler: clock,
+            runtimePermissions: { true },
+            nativeSuppressionAvailable: { false },
+            actionPerformer: { _, _, configured in
+                performed.append(configured)
+                return true
+            },
+            diagnosticLogger: { _ in }
+        )
+        monitor.connectSimulatedDevice(fingerprint: "google-unseized", profileID: g9n9nID, isSeized: false)
+        defer { monitor.disconnectSimulatedDevice() }
+
+        func sendIndex(_ index: UInt8?) {
+            monitor.handleSimulatedGoogleReport(
+                reportID: 1,
+                data: Data([1, index ?? 0, 0]),
+                descriptor: G9N9NProtocol.indexedConsumerDescriptor
+            )
+        }
+
+        // In Notes (no per-app override on left/right), unseized G9N9N without filter keeps native passthrough fallback.
+        front = notes
+        sendIndex(5) // left
+        #expect(monitor.nativePassthroughUsages.contains(RemoteButton.left.hidUsage))
+        #expect(monitor.status != LocalizedMessage("button_mapping.error.filter_unavailable"))
+        sendIndex(nil)
+
+        // In Safari (overridden left -> ⌘[), unseized G9N9N without filter safely pauses rather than double-firing.
+        front = AppSettings.defaultChromecastSafariBundleID
+        sendIndex(5) // left
+        #expect(!monitor.nativePassthroughUsages.contains(RemoteButton.left.hidUsage))
+        #expect(monitor.status == LocalizedMessage("button_mapping.error.filter_unavailable"))
+        #expect(performed.isEmpty)
+        sendIndex(nil)
     }
 }

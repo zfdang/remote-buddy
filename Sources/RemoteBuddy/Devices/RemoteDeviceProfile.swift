@@ -226,10 +226,11 @@ struct RemoteDeviceProfile: Codable, Equatable, Identifiable {
             G9N9NVoiceButtonMode.self,
             forKey: .g9n9nVoiceButtonMode
         )
-        self.seededDefaultApplicationProfiles = try container.decodeIfPresent(
+        let decodedSeeded = try container.decodeIfPresent(
             [String].self,
             forKey: .seededDefaultApplicationProfiles
         )
+        self.seededDefaultApplicationProfiles = decodedSeeded?.isEmpty == true ? nil : decodedSeeded
         self.mappings = try container.decode(RemoteDeviceMappings.self, forKey: .mappings)
     }
 }

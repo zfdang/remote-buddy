@@ -7,6 +7,7 @@ struct ButtonMappingDefaultActionTests {
     @Test(arguments: [RemoteButton.youtube, .netflix, .input])
     func googleSingleTriggerResetMatchesModelAndWholeDeviceDefaults(button: RemoteButton) throws {
         try withSettings { settings in
+            settings.frontmostApplicationBundleIdentifier = { nil }
             let profile = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
             settings.selectRemoteProfile(profile)
             let expected = try #require(AppSettings.defaultMappings(for: .chromecastVoiceRemote).parsedButtonBindings[button])

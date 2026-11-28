@@ -8,6 +8,7 @@ struct RemoteMappingIndependenceTests {
     @Test func backgroundProfilesResolveMissingMediaDefaultsWithoutReplacingSavedActions() throws {
         let values = EphemeralUserDefaults()
         let settings = AppSettings(defaults: values)
+        settings.frontmostApplicationBundleIdentifier = { nil }
         let xiaomi = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         let google = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         settings.selectRemoteProfile(xiaomi)
@@ -16,6 +17,7 @@ struct RemoteMappingIndependenceTests {
             settings.remoteDeviceProfiles[index].mappings.buttonBindings.removeValue(forKey: button.rawValue)
         }
         let restored = AppSettings(defaults: values)
+        restored.frontmostApplicationBundleIdentifier = { nil }
         #expect(restored.selectedRemoteProfileID == xiaomi)
         #expect(restored.action(for: .youtube, profileID: google) == .previousCommandLeft)
         #expect(restored.action(for: .netflix, profileID: google) == .nextCommandRight)
@@ -24,6 +26,7 @@ struct RemoteMappingIndependenceTests {
             trigger: .singleClick, profileID: google)
         restored.setBaseBinding(.disabled, for: .input, trigger: .singleClick, profileID: google)
         let reloaded = AppSettings(defaults: values)
+        reloaded.frontmostApplicationBundleIdentifier = { nil }
         #expect(reloaded.action(for: .youtube, profileID: google) == .escape)
         #expect(reloaded.action(for: .input, profileID: google) == .disabled)
         reloaded.selectRemoteProfile(google)
@@ -36,6 +39,7 @@ struct RemoteMappingIndependenceTests {
     func identifyingAnUnknownGoogleRemoteFillsDefaultsAndPreservesEdits(selected: Bool) throws {
         let values = EphemeralUserDefaults()
         let settings = AppSettings(defaults: values)
+        settings.frontmostApplicationBundleIdentifier = { nil }
         let xiaomi = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         let google = settings.registerBluetoothRemote(identifier: UUID(), model: .unknown)
         settings.selectRemoteProfile(google)
@@ -58,6 +62,7 @@ struct RemoteMappingIndependenceTests {
             #expect(settings.buttonBindings[.mute] == .volumeMute)
         }
         let restored = AppSettings(defaults: values)
+        restored.frontmostApplicationBundleIdentifier = { nil }
         #expect(restored.action(for: .youtube, profileID: google) == .previousCommandLeft)
         #expect(restored.action(for: .netflix, profileID: google) == .nextCommandRight)
         #expect(restored.action(for: .input, profileID: google) == .disabled)
@@ -70,6 +75,7 @@ struct RemoteMappingIndependenceTests {
     @Test func googleMediaDefaultsPersistCustomizeAndResetIndependently() throws {
         let values = EphemeralUserDefaults()
         let settings = AppSettings(defaults: values)
+        settings.frontmostApplicationBundleIdentifier = { nil }
         let google = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         settings.selectRemoteProfile(google)
         #expect(settings.action(for: .youtube) == .previousCommandLeft)
@@ -77,6 +83,7 @@ struct RemoteMappingIndependenceTests {
         #expect(settings.action(for: .input) == .playPause)
         settings.setAction(.showDesktop, for: .youtube)
         let restored = AppSettings(defaults: values)
+        restored.frontmostApplicationBundleIdentifier = { nil }
         restored.selectRemoteProfile(google)
         #expect(restored.action(for: .youtube) == .showDesktop)
         let second = restored.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)

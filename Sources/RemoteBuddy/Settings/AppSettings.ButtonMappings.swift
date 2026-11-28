@@ -689,6 +689,7 @@ extension AppSettings {
         guard let index = remoteDeviceProfiles.firstIndex(where: { $0.id == profileID }) else { return }
         remoteDeviceProfiles[index].model = model
         remoteDeviceProfiles[index].customName = customName.trimmingCharacters(in: .whitespacesAndNewlines)
+        seedDefaultApplicationProfilesIfNeeded(at: index)
     }
 
     /// The system name is a display cache, never a device identity or a stored numbered label.

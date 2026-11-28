@@ -88,13 +88,14 @@ extension KeyboardInjector {
             }
             guard next != registeredSyntheticModifiers else { return }
             let previous = registeredSyntheticModifiers
-            registeredSyntheticModifiers = next
+            let updated = next
+            registeredSyntheticModifiers = updated
             Self.activeSyntheticModifierCounts.withLock { counts in
-                if previous.contains(.maskCommand) != next.contains(.maskCommand) {
-                    counts.command = max(0, counts.command + (next.contains(.maskCommand) ? 1 : -1))
+                if previous.contains(.maskCommand) != updated.contains(.maskCommand) {
+                    counts.command = max(0, counts.command + (updated.contains(.maskCommand) ? 1 : -1))
                 }
-                if previous.contains(.maskAlternate) != next.contains(.maskAlternate) {
-                    counts.option = max(0, counts.option + (next.contains(.maskAlternate) ? 1 : -1))
+                if previous.contains(.maskAlternate) != updated.contains(.maskAlternate) {
+                    counts.option = max(0, counts.option + (updated.contains(.maskAlternate) ? 1 : -1))
                 }
             }
         }

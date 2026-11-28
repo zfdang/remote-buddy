@@ -97,9 +97,14 @@ extension KeyboardInjector {
         }
         if cancelledBeforeStore {
             timer.cancel()
-        } else {
-            timer.resume()
         }
+        timer.resume()
+    }
+
+    static func restoredFlagsForPhantomClear(
+        hardwareFlags: () -> CGEventFlags = KeyboardHardwareModifierPolicy.current
+    ) -> CGEventFlags {
+        KeyboardHardwareModifierPolicy.sanitizedEventFlags(hardwareFlags())
     }
 
     private static func currentSyntheticOwnedModifiers() -> CGEventFlags {
@@ -129,9 +134,7 @@ extension KeyboardInjector {
         rawFlags: CGEventFlags
     ) -> [CGKeyCode] {
         guard !keys.isEmpty, let source = markedKeySource else { return [] }
-        let genuineFlags = KeyboardHardwareModifierPolicy.sanitizedEventFlags(
-            KeyboardHardwareModifierPolicy.currentForMappedAction()
-        )
+        let genuineFlags = restoredFlagsForPhantomClear()
         var cleared: [CGKeyCode] = []
         for code in keys {
             guard let event = CGEvent(keyboardEventSource: source, virtualKey: code, keyDown: false) else {

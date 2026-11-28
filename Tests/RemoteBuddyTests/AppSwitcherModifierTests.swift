@@ -360,5 +360,15 @@ struct AppSwitcherModifierTests {
         #expect(sweep.advance(currentCandidates: [55]) == [55])
         #expect(sweep.advance(currentCandidates: []).isEmpty)
         #expect(sweep.advance(currentCandidates: [55]).isEmpty)
+
+        // Phantom cleanup preserves genuinely held Fn and Caps Lock while stripping phantom Command.
+        let restored = KeyboardInjector.restoredFlagsForPhantomClear {
+            KeyboardHardwareModifierPolicy.reconcilingPhysicalModifiers(
+                [.maskAlphaShift, .maskSecondaryFn, .maskCommand, CGEventFlags(rawValue: 0x0100)],
+                heldKeys: [55],
+                requireDeviceSideBits: true
+            )
+        }
+        #expect(restored == [.maskAlphaShift, .maskSecondaryFn])
     }
 }

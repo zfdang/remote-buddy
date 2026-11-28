@@ -310,7 +310,6 @@ extension KeyboardInjector {
             return false
         }
         if allowClickFallback, let target = primaryTerminalTarget {
-            didAttemptClick?()
             return clickCmuxTerminalCandidate(
                 target.snapshot,
                 windowFrame: target.windowFrame,
@@ -321,6 +320,10 @@ extension KeyboardInjector {
                         processIdentifier: processIdentifier,
                         point: $0
                     )
+                },
+                postClick: { point in
+                    didAttemptClick?()
+                    return postAccessibilityFocusClick(point)
                 },
                 isFocused: {
                     accessibilityElementIsFocused(

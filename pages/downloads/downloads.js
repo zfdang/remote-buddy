@@ -83,33 +83,14 @@
       }
     ];
 
-    if (packages.uninstaller && packages.uninstaller.name) {
-      specs.push({
-        key: 'uninstaller',
-        title: english ? 'Universal Uninstaller' : '通用卸载安装包',
-        subtitle: english
-          ? 'Removes the app, virtual microphone driver, and optionally preferences/logs on Apple Silicon & Intel.'
-          : '一键移除 App、虚拟麦克风驱动，并可选择清理设置与日志（Apple Silicon / Intel 通用）。',
-        archLabel: 'universal · .pkg',
-        wide: true,
-        isUninstaller: true
-      });
-    }
-
-    cardsContainer.innerHTML = '';
-    specs.forEach(function (spec) {
-      var pkg = packages[spec.key];
-      if (!pkg || !pkg.name) return;
-
+    function buildPackageCard(spec, pkg) {
       var card = document.createElement('article');
       card.className = 'download-card' +
-        (spec.recommended ? ' is-recommended' : '') +
-        (spec.wide ? ' is-wide' : '');
+        (spec.recommended ? ' is-recommended' : '');
 
       var sizeText = formatBytes(pkg.size);
       var websiteHref = (websiteBaseUrl || '') + encodeURIComponent(pkg.name);
       var badgeHtml = spec.badge ? '<span class="download-badge">' + escapeHtml(spec.badge) + '</span>' : '';
-      var primaryBtnClass = spec.isUninstaller ? 'button secondary' : 'button primary';
 
       card.innerHTML =
         '<div class="download-card-body">' +
@@ -122,12 +103,19 @@
           '</div>' +
         '</div>' +
         '<div class="download-actions">' +
-          '<a class="' + primaryBtnClass + '" href="' + escapeHtml(websiteHref) + '" download>' +
+          '<a class="button primary" href="' + escapeHtml(websiteHref) + '" download>' +
             (english ? 'Download from Website ↓' : '从官网下载 ↓') +
           '</a>' +
         '</div>';
 
-      cardsContainer.appendChild(card);
+      return card;
+    }
+
+    cardsContainer.innerHTML = '';
+    specs.forEach(function (spec) {
+      var pkg = packages[spec.key];
+      if (!pkg || !pkg.name) return;
+      cardsContainer.appendChild(buildPackageCard(spec, pkg));
     });
 
     if (statusNote) statusNote.hidden = true;

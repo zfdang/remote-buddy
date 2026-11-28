@@ -52,7 +52,7 @@
             <td><span class="device-status is-supported">完全支持 · 原生 HID</span></td>
             <td>Report ID <code>1</code>，描述符 3 字节，固件实际发送完整 3 字节索引格式（例如松开 <code>01 00 00</code>）。</td>
             <td>单键按下与松开均正常通过 <code>BTLEServer</code> 上送公开 <code>IOHID</code>。</td>
-            <td><strong>标准系统 HID（原生，无需描述文件）</strong>：开箱即用；支持 ATVV 语音键（含智能切换，已实测借助 <code>MIC_EXTEND</code> 连续免提 <strong>68.9 秒</strong>突破 60 秒，主机自动停麦上限可在「通用」中设置、默认 5 分钟）+ 全部 14 颗普通按键的单击、双击、长按、连发与常用语。</td>
+            <td><strong>标准系统 HID（原生，无需描述文件）</strong>：开箱即用；支持 ATVV 语音键（含智能切换，支持借助 <code>MIC_EXTEND</code> 保活突破 60 秒，主机自动停麦上限可在「通用」中设置 3–30 分钟、默认 5 分钟）+ 全部 14 颗普通按键的单击、双击、长按、连发与常用语。</td>
           </tr>
           <tr>
             <th scope="row"><strong>DIS <code>A0</code> / 固件 <code>26.7</code></strong><br><span class="device-model-code">短报文批次</span></th>
@@ -138,7 +138,7 @@
         <ul class="device-specs">
           <li><strong>固定麦克风角色</strong>：Google Assistant 语音键始终绑定为遥控器麦克风输入，音频送入虚拟麦克风 <strong>Remote Buddy Mic</strong>，再交给微信输入法、豆包、Voice Buddy 等工具识别；底部白色指示灯在传输期间常亮，电量服务可读时显示百分比。</li>
           <li><strong>智能切换（默认）</strong>：短按并松手后保持免提持续收音（再按一次或按其他键停止）；若按住超过 0.7 秒，则松手立即停止。也可在设置页切换为纯「按住说话」。</li>
-          <li><strong>单次时长按批次而异</strong>：程序每 10 秒发送 <code>MIC_EXTEND</code> 保活，主机自动停麦时长可在「通用」设置中调整（默认 5 分钟，可选 3 / 5 / 10 / 15 / 30 分钟）；但是否能够突破 60 秒取决于批次固件：<code>0x0110 / 固件 26.2</code> 已实测借助 <code>MIC_EXTEND</code> 连续免提 <strong>68.9 秒</strong>不断流；<code>0x011B</code>（<code>zhuhai_jieli</code> 兼容款，见 <a class="text-link" href="https://github.com/zfdang/remote-buddy/issues/280">#280 ↗</a>）固件会忽略 <code>MIC_EXTEND</code> 并在约 <strong>60.6 秒</strong>静默断流（无 <code>AUDIO_STOP</code>），当前版本仍受约 60 秒上限限制；<code>26.7</code> / <code>26.0</code> 的长时保活表现尚待真机验证。</li>
+          <li><strong>单次时长按批次而异</strong>：程序每 10 秒发送 <code>MIC_EXTEND</code> 保活，主机自动停麦时长可在「通用」设置中调整（默认 5 分钟，可选 3 / 5 / 10 / 15 / 30 分钟）；但是否能够突破 60 秒取决于批次固件：<code>0x0110 / 固件 26.2</code> 已验证可通过 <code>MIC_EXTEND</code> 保活突破 60 秒限制并持续至所设自动停麦上限；<code>0x011B</code>（<code>zhuhai_jieli</code> 兼容款，见 <a class="text-link" href="https://github.com/zfdang/remote-buddy/issues/280">#280 ↗</a>）固件会忽略 <code>MIC_EXTEND</code> 并在约 <strong>60.6 秒</strong>静默断流（无 <code>AUDIO_STOP</code>），当前版本仍受约 60 秒上限限制；<code>26.7</code> / <code>26.0</code> 的长时保活表现尚待真机验证。</li>
         </ul>
       </article>
 

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Download Remote Buddy · macOS &amp; Windows</title>
-  <meta name="description" content="Download Remote Buddy for macOS installers, universal uninstaller, Windows 64-bit portable edition, and VB-CABLE virtual microphone driver from remote.zfdang.com or GitHub Releases.">
+  <meta name="description" content="Download Remote Buddy for macOS installers, Windows 64-bit portable edition, and VB-CABLE virtual microphone driver from remote.zfdang.com or GitHub Releases.">
   <meta name="theme-color" content="#203a68">
   <link rel="canonical" href="https://remote.zfdang.com/downloads/index.en.html">
   <link rel="alternate" hreflang="zh-CN" href="https://remote.zfdang.com/downloads/">
@@ -88,22 +88,22 @@
 
       <div class="downloads-grid" id="mirror-cards"></div>
 
-      <section class="download-card is-wide" id="macos-github-releases">
-        <div class="download-card-body">
-          <h2>Download via GitHub Releases</h2>
-          <p>Open the macOS repository's GitHub Releases page to pick the Apple Silicon (<code>*_macOS_arm64.pkg</code>), Intel (<code>*_macOS_intel.pkg</code>), universal uninstaller, or earlier releases.</p>
-        </div>
-        <div class="download-actions">
-          <a class="button secondary" href="https://github.com/zfdang/remote-buddy/releases" target="_blank" rel="noopener">Open GitHub Releases ↗</a>
-        </div>
-      </section>
-
-      <div class="download-note" style="margin-top:20px">
+      <div class="download-note" id="macos-gatekeeper-note" style="margin-bottom:20px">
         <strong>macOS First-Install Note (Unnotarized Installer):</strong>
         <ul>
           <li><strong>If macOS blocks opening the <code>.pkg</code>:</strong> Because this open-source installer is not Apple-notarized, Gatekeeper may block double-clicking it. Control-click (right-click) the installer in Finder and choose <strong>Open</strong>, or go to <strong>System Settings → Privacy &amp; Security</strong> and click <strong>Open Anyway</strong> (<a class="text-link" href="../faq_en.html#macos-gatekeeper">see all 3 workarounds in FAQ →</a>).</li>
         </ul>
       </div>
+
+      <section class="download-card is-wide" id="macos-github-releases">
+        <div class="download-card-body">
+          <h2>Download via GitHub Releases</h2>
+          <p>Open the macOS repository's GitHub Releases page to pick the Apple Silicon (<code>*_macOS_arm64.pkg</code>), Intel (<code>*_macOS_intel.pkg</code>), or earlier releases.</p>
+        </div>
+        <div class="download-actions">
+          <a class="button secondary" href="https://github.com/zfdang/remote-buddy/releases" target="_blank" rel="noopener">Open GitHub Releases ↗</a>
+        </div>
+      </section>
     </div>
   </section>
 
@@ -178,13 +178,12 @@
     <a href="../index.en.html">Home</a>
     <a href="../device_en.html">Supported Remotes</a>
     <a href="../faq_en.html">FAQ</a>
-    <a href="https://github.com/zfdang/remote-buddy/releases">macOS Releases</a>
+    <a href="https://github.com/zfdang/remote-buddy/releases">macOS Edition ↗</a>
     <a href="https://github.com/zfdang/remote-buddy-windows">Windows Edition ↗</a>
-    <a href="https://github.com/zfdang/remote-buddy/blob/main/README.en.md">Docs &amp; References</a>
     <a href="https://github.com/zfdang/remote-buddy/issues">Feedback</a>
     <a href="https://github.com/zfdang/remote-buddy/blob/main/LICENSE">GPL-3.0-only</a>
   </div>
 </footer>
-<script src="downloads.js?v=261124mseries"></script>
+<script src="downloads.js?v=261128clean"></script>
 </body>
 </html>

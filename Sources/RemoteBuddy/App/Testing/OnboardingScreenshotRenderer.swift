@@ -218,14 +218,17 @@ enum OnboardingScreenshotRenderer {
         let renderedPages = pages(for: controlMethod)
 #endif
         for (step, filename) in renderedPages {
-            if step == .complete && verifiedPreview {
-                settings.recordFirstUseEvent(.passed, step: .controls)
-                if requestedPurpose != .addDevice,
-                   let plan = OnboardingVoicePairingPlan.resolve(tool: settings.onboardingVoiceTool,
-                    controlSource: settings.onboardingControlSource,
-                    preferredGesture: requestedTapMode ? .toggle : .hold,
-                    selectedShortcut: settings.voiceKeyMode) {
-                    settings.beginOnboardingVoiceTrial(plan)
+            if requestedPurpose != .addDevice,
+               step == .voiceTest || (step == .complete && verifiedPreview),
+               let plan = OnboardingVoicePairingPlan.resolve(
+                   tool: settings.onboardingVoiceTool,
+                   controlSource: settings.onboardingControlSource,
+                   preferredGesture: requestedTapMode ? .toggle : .hold,
+                   selectedShortcut: settings.voiceKeyMode
+               ) {
+                settings.beginOnboardingVoiceTrial(plan)
+                if step == .complete && verifiedPreview {
+                    settings.recordFirstUseEvent(.passed, step: .controls)
                     settings.verifyOnboardingVoiceBinding()
                 }
             }

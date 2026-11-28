@@ -11,7 +11,7 @@
   <link rel="alternate" hreflang="en" href="https://remote.zfdang.com/device_en.html">
   <link rel="alternate" hreflang="x-default" href="https://remote.zfdang.com/device.html">
   <link rel="icon" href="assets/app-icon.png">
-  <link rel="stylesheet" href="style.css?v=261127dev">
+  <link rel="stylesheet" href="style.css?v=261128feat">
 </head>
 <body>
 <header class="nav wrap device-nav">
@@ -20,6 +20,8 @@
     <a href="#supported-devices">Supported devices</a>
     <a href="#compare-three-remotes">Size comparison</a>
     <a href="#buying-guide">Buying guide</a>
+    <a href="#device-models">Model details</a>
+    <a href="#photo-comparisons">Photos</a>
     <a href="faq_en.html">FAQ</a>
     <a class="nav-home" href="index.en.html">Home</a>
     <span class="language-switch" aria-label="Language"><a href="device.html" lang="zh-CN">中文</a><b aria-current="page">English</b></span>
@@ -52,7 +54,7 @@
           <td><strong>Google Chromecast Voice Remote</strong><br><span class="device-model-code">G9N9N</span></td>
           <td><span class="device-status is-supported">Supported</span></td>
           <td><strong>Tap &amp; Hold</strong> (Smart Toggle default: tap for hands-free and press again to stop, or hold &gt;0.7s to stop on release; Hold-only selectable)</td>
-          <td><strong>Varies by batch</strong>: <code>0x0110 / FW 26.2</code> keepalive <strong>configurable</strong> (3–30 min in General, 5 min default; 68.9s verified); compatible batches like <code>0x011B</code> cap at <strong>~60s</strong> (60.6s silent cutoff, <a class="text-link" href="https://github.com/zfdang/remote-buddy/issues/280">#280 ↗</a>)</td>
+          <td><strong>Varies by batch</strong>: <code>0x0110 / FW 26.2</code> supports keepalive past 60s (auto-stop timeout configurable in General settings from 3–30 min, 5 min default); compatible batches like <code>0x011B</code> cap at <strong>~60s</strong> (60.6s silent cutoff, <a class="text-link" href="https://github.com/zfdang/remote-buddy/issues/280">#280 ↗</a>)</td>
           <td><strong>All 14 buttons</strong> (single/double/long press &amp; phrases): plug-and-play native HID on <code>0x0110 / FW 26.2</code>; opt-in Bluetooth log recovery (<code>.mobileconfig</code>) on short-report batches (<code>26.7</code>/<code>26.0</code>/<code>0x011B</code>)</td>
           <td>~¥15 CNY (~$2 USD)<br><a class="text-link" href="https://mobile.yangkeduo.com/goods.html?ps=wI005ehWCi">Pinduoduo Listing ↗</a></td>
           <td>Top pick; 2× AAA batteries, solid bottom white LED while streaming, battery display; <a class="text-link" href="g9n9n-compatibility_en.html">Compatibility Guide →</a></td>
@@ -70,7 +72,7 @@
           <td><strong>T1 Air-Mouse &amp; Keyboard Remote</strong><br><span class="device-model-code">T1-Remote</span></td>
           <td><span class="device-status is-supported">Supported</span></td>
           <td><strong>Tap</strong> (on tested sample: press once to start, press again to stop)</td>
-          <td><strong>Configurable</strong> (tested sample ~2 min; 3–30 min in General, 5 min default; clone batches require individual verification)</td>
+          <td><strong>Configurable</strong> (tested sample supports keepalive past 60s; auto-stop timeout configurable in General settings from 3–30 min, 5 min default; clone batches require individual verification)</td>
           <td><strong>7 front buttons</strong> remappable + D-pad/OK, rear QWERTY keyboard, and air mouse pass through</td>
           <td>~¥50 CNY (~$7 USD)<br><a class="text-link" href="https://s.taobao.com/search?q=T1%20%E8%93%9D%E7%89%99%20%E9%A3%9E%E9%BC%A0%20%E8%AF%AD%E9%9F%B3">Taobao Search ↗</a></td>
           <td>Requires <strong>direct Bluetooth</strong> (not 2.4 GHz dongle); USB-C charging; clones require individual verification</td>
@@ -81,7 +83,7 @@
           <td>Not supported yet</td>
           <td>—</td>
           <td>Not supported yet</td>
-          <td><a class="text-link" href="https://store.google.com/product/google_tv_streamer_remote?hl=en-US">Google Store ↗</a></td>
+          <td>—</td>
           <td>Protocol adaptation and macOS hardware verification pending; not recommended specifically for Remote Buddy yet</td>
         </tr>
         <tr>
@@ -90,7 +92,7 @@
           <td>Not supported yet</td>
           <td>—</td>
           <td>Not supported yet</td>
-          <td><a class="text-link" href="https://www.apple.com/shop/product/mlfc4am/a/siri-remote">Apple Store ↗</a></td>
+          <td>—</td>
           <td>Audio adaptation and macOS validation pending; cannot be used for voice input yet</td>
         </tr>
       </tbody>
@@ -100,6 +102,48 @@
   <div class="download-note">
     <strong>Important:</strong> Bluetooth pairing alone does not guarantee compatibility—the remote must implement a supported ATVV/audio and HID protocol. Likewise, switching your input tool to Toggle mode <strong>will not</strong> keep a push-to-talk remote streaming once you release its physical button. Prices vary by seller and region; third-party compatibles require per-batch testing. (Note: This guide covers the native macOS edition; for Windows edition compatibility and details, see the <a class="text-link" href="faq_en.html#windows-guide">FAQ</a> or the <a class="text-link" href="https://github.com/zfdang/remote-buddy-windows">Windows Project Repository ↗</a>).
   </div>
+  </section>
+
+  <section class="compare-section" id="compare-three-remotes" aria-labelledby="three-remotes-title">
+    <p class="eyebrow">CURRENTLY USABLE DEVICES · VISUAL COMPARISON</p>
+    <h2 id="three-remotes-title">Three-remote comparison</h2>
+    <p class="lead-sub">Xiaomi Bluetooth Remote 2 Pro, Google Chromecast G9N9N, and T1 Air-Mouse &amp; Keyboard Voice Remote all provide voice input, with different physical voice-button behavior and ordinary-button support.</p>
+    <figure class="remote-size-figure">
+      <a href="assets/devices/three-remotes-comparison.png" target="_blank" rel="noopener" aria-label="Open the size comparison of three remotes in a new tab"><img src="assets/devices/three-remotes-comparison.png" alt="Size comparison, left to right: Xiaomi 2 Pro at 138 by 35 mm, G9N9N at 122 by 38 mm, and the front and rear of T1 at 164 by 50 mm" width="1678" height="937" loading="lazy"></a>
+      <figcaption>Left to right: Xiaomi Bluetooth Remote 2 Pro, Google Chromecast G9N9N, and the front and rear of T1. The two T1 views show both sides of one model. Click the image to enlarge.</figcaption>
+    </figure>
+  </section>
+
+  <section class="compare-section" id="buying-guide" aria-labelledby="buying-guide-title">
+    <p class="eyebrow">CHOOSE BY HOW IT FEELS</p>
+    <h2 id="buying-guide-title">Buying guide</h2>
+    <p class="lead-sub">For everyday voice input and shortcuts, prefer a G9N9N remote. Choose T1 for its keyboard and air mouse, or Xiaomi for its metal build. These handling comparisons come from hands-on use.</p>
+    <div class="buying-grid">
+      <article class="buying-card is-recommended">
+        <p class="eyebrow">FIRST CHOICE</p>
+        <h3>G9N9N: Smart Toggle, comfortable, great value</h3>
+        <p>Supports both <strong>Smart Toggle (tap hands-free) and Hold to Talk</strong>; verified units such as <code>0x0110 / FW 26.2</code> exceed 60s via keepalive (auto-stop timeout configurable in General settings from 3–30 min, 5 min default; compatible batches like <code>0x011B</code> still have a ~60s firmware cutoff), and the bottom white LED shows active streaming. Shorter than Xiaomi with a rounded grip, very light, and around ¥15 (~$2), with Voice positioned right below the directional ring for effortless thumb reach.</p>
+        <p>For profile-free plug-and-play setup and &gt;60s keepalive, prefer the tested <code>0x0110 / FW 26.2</code> batch. The remote uses two replaceable AAA batteries.</p>
+      </article>
+      <article class="buying-card">
+        <p class="eyebrow">MORE FEATURES</p>
+        <h3>T1: keyboard, air mouse, and voice</h3>
+        <p>An affordable choice with a rear mini keyboard and air mouse for large-screen control, cursor movement, and occasional typing. Press Voice once to start and again to stop, without holding it throughout.</p>
+        <p>It is longer and wider than the other two. Choose it for multiple input methods; its built-in battery charges over USB-C.</p>
+      </article>
+      <article class="buying-card">
+        <p class="eyebrow">METAL BUILD</p>
+        <h3>Xiaomi 2 Pro: finish and rechargeability</h3>
+        <p>The metal body and finish are its strengths, alongside convenient USB-C charging. Its longer body places Voice at the upper-right end, requiring more thumb reach, with less advantage in price or handling than G9N9N.</p>
+        <p>Best for people who prefer a metal feel and a built-in rechargeable battery. For affordability and easy thumb reach, start with G9N9N.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="compare-section" id="device-models" aria-labelledby="device-models-title">
+    <p class="eyebrow">MODEL DETAILS &amp; PHOTOS</p>
+    <h2 id="device-models-title">Features &amp; photos for all 5 remotes</h2>
+    <p class="lead-sub">Detailed specs, hands-on photos, button capabilities, and store links across every supported and planned remote family.</p>
 
   <div class="devices-grid">
     <article class="device-card is-wide">
@@ -119,15 +163,14 @@
             1) <code>0x0110 / FW 26.2</code> (<code>PVT/MP</code>): <strong>Standard System HID</strong>, plug-and-play voice + all 14 buttons;
             2) <code>A0 / FW 26.7</code> and <code>0x0110 / FW 26.0</code> (<code>CR PVT/MP</code>, per <a class="text-link" href="https://github.com/zfdang/remote-buddy/issues/256">#256 ↗</a>): <strong>Full Support · Log Recovery</strong> (single-key reports do not reach native HID; installing the bundled <code>.mobileconfig</code> profile and enabling recovery unlocks all 14 buttons and voice);
             3) <code>0x011B</code> (<code>zhuhai_jieli</code> compatible batch, per <a class="text-link" href="https://github.com/brightac/remote-buddy/issues/7">button report #7 ↗</a> and <a class="text-link" href="https://github.com/zfdang/remote-buddy/issues/280">voice cutoff #280 ↗</a>): <strong>Buttons via Log Recovery · ~60s Voice Cap</strong> (macOS drops short Report <code>2</code> packets; installing the bundled <code>.mobileconfig</code> profile and enabling recovery enables all 14 buttons; ATVV voice works, but stops silently around ~60.6s with <code>MIC_EXTEND</code> ignored).<br>In principle, log recovery can bypass macOS restrictions to support any G9N9N hardware variant, though previously unseen special revisions still require dedicated packet-format adaptation.</li>
-          <li><strong>Button mapping</strong>: Supports single, double, and long-press actions plus common phrases across all 14 ordinary buttons (directions, OK, Back, Home, Mute, volume, YouTube, Netflix, Input, and Power).</li>
-          <li><strong>Voice, duration &amp; LED</strong>: Defaults to <strong>Smart Toggle</strong>—tap and release to speak hands-free (press again or tap another button to stop, ~0.2s mic reopen pause), or hold over 0.7s to stop on release; can also switch to pure Hold to Talk in Connection settings. Host auto-stop timeout is configurable in General settings (3 / 5 / 10 / 15 / 30 min, 5 min default), while &gt;60s keepalive depends on batch firmware: <code>0x0110 / FW 26.2</code> is verified to stream continuously past 60s (<strong>68.9s</strong> via <code>MIC_EXTEND</code>); <code>0x011B</code> (<code>zhuhai_jieli</code>, per <a class="text-link" href="https://github.com/zfdang/remote-buddy/issues/280">#280 ↗</a>) ignores <code>MIC_EXTEND</code> and stops silently around <strong>60.6s</strong> (no <code>AUDIO_STOP</code>), remaining capped at ~60s in the current version; <code>26.7</code> / <code>26.0</code> await long-duration testing. The bottom white LED glows steadily while streaming voice; battery percentage appears when a reading is available.</li>
-          <li><strong>Setup</strong>: Press OK, then test three different ordinary buttons. Default media controls: YouTube plays the previous track, Netflix plays the next track, and Input toggles play/pause. All can be customized.</li>
+          <li><strong>Button mapping</strong>: Supports single, double, and long-press actions plus common phrases across all 14 ordinary buttons (directions, OK, Back, Home, Mute, volume, YouTube, Netflix, Input, and Power), as well as per-Application overrides with built-in Safari and Chrome browser presets.</li>
+          <li><strong>Voice, duration &amp; LED</strong>: Defaults to <strong>Smart Toggle</strong>—tap and release to speak hands-free (press again or tap another button to stop, ~0.2s mic reopen pause), or hold over 0.7s to stop on release; can also switch to pure Hold to Talk in Connection settings. Host auto-stop timeout is configurable in General settings (3 / 5 / 10 / 15 / 30 min, 5 min default), while &gt;60s keepalive depends on batch firmware: <code>0x0110 / FW 26.2</code> supports <code>MIC_EXTEND</code> keepalive beyond the 60s hardware cap up to your configured auto-stop timeout; <code>0x011B</code> (<code>zhuhai_jieli</code>, per <a class="text-link" href="https://github.com/zfdang/remote-buddy/issues/280">#280 ↗</a>) ignores <code>MIC_EXTEND</code> and stops silently around <strong>60.6s</strong> (no <code>AUDIO_STOP</code>), remaining capped at ~60s in the current version; <code>26.7</code> / <code>26.0</code> await long-duration testing. The bottom white LED glows steadily while streaming voice; battery percentage appears when a reading is available.</li>
+          <li><strong>Setup &amp; defaults</strong>: Press OK, then test three different ordinary buttons. Global defaults include Mute (Return on single press, Send / <code>Command+Return</code> on long press), YouTube (previous track), Netflix (next track), and Input (play/pause); built-in Safari and Chrome profiles add Up/Down scroll, Back/Forward (<code>Command+[</code> / <code>]</code>), Reload (<code>Command+R</code>), and Close Tab (<code>Command+W</code>). All mappings can be customized.</li>
         </ul>
         <div class="download-actions">
           <a class="button secondary" href="g9n9n-compatibility_en.html">G9N9N Compatibility Guide →</a>
           <a class="button secondary" href="https://mobile.yangkeduo.com/goods.html?ps=wI005ehWCi">Tested purchase link (Pinduoduo) ↗</a>
           <a class="button secondary" href="https://github.com/zfdang/remote-buddy/blob/main/docs/g9n9n-hardware-debugging.md">See button test results ↗</a>
-          <a class="button secondary" href="https://support.google.com/chromecast/answer/10116742?hl=en">Google button guide ↗</a>
         </div>
       </div>
     </article>
@@ -167,7 +210,7 @@
       </div>
       <ul class="device-specs">
         <li><strong>3-in-1 hardware</strong>: 164 × 50 × 11 mm, ~62 g (400mAh, right-side USB-C). Front features 7 remappable buttons (Back, Home, Menu, Vol+, Vol−, Mute, Power); rear features a ~45-key QWERTY mini keyboard plus a 6-axis gyro air mouse passing through natively to macOS.</li>
-        <li><strong>Hands-free toggle</strong>: On the tested Bluetooth sample, press once to start talking, then press again to stop (tested nearly 2 minutes continuously; keepalive every 10s, with auto-stop timeout configurable in General as 3 / 5 / 10 / 15 / 30 min, 5 min default; clone batches require individual testing for &gt;60s support). Works seamlessly with both Hold-mode and Toggle-mode input tools.</li>
+        <li><strong>Hands-free toggle</strong>: On the tested Bluetooth sample, press once to start talking, then press again to stop (keepalive every 10s supports streaming past 60s up to the auto-stop timeout configurable in General settings as 3 / 5 / 10 / 15 / 30 min, 5 min default; clone batches require individual testing for &gt;60s support). Works seamlessly with both Hold-mode and Toggle-mode input tools.</li>
         <li><strong>Buying note</strong>: Commonly ~¥50 CNY (~$7 USD) on Taobao. Hold <code>Home + Back</code> to pair over <strong>direct Bluetooth</strong> (2.4 GHz USB receivers do not carry ATVV audio). Lookalike OEM batches vary—buy from a seller offering returns.</li>
       </ul>
       <div class="download-actions">
@@ -190,9 +233,6 @@
       <ul class="device-specs">
         <li><strong>Status</strong>: Uses a different layout and firmware from G9N9N. Protocol adaptation and macOS validation are pending—not recommended for purchase solely for Remote Buddy yet.</li>
       </ul>
-      <div class="download-actions">
-        <a class="button secondary" href="https://store.google.com/product/google_tv_streamer_remote?hl=en-US">Google Store Page ↗</a>
-      </div>
     </article>
 
     <article class="device-card">
@@ -209,48 +249,14 @@
       <ul class="device-specs">
         <li><strong>Status</strong>: Audio protocol adaptation and macOS validation are pending; cannot act as a voice input device yet and not recommended specifically for this project.</li>
       </ul>
-      <div class="download-actions">
-        <a class="button secondary" href="https://www.apple.com/shop/product/mlfc4am/a/siri-remote">Apple Store Page ↗</a>
-      </div>
     </article>
   </div>
-
   </section>
 
-  <section class="compare-section" id="compare-three-remotes" aria-labelledby="three-remotes-title">
-    <p class="eyebrow">CURRENTLY USABLE DEVICES · VISUAL COMPARISON</p>
-    <h2 id="three-remotes-title">Three-remote comparison</h2>
-    <p class="lead-sub">Xiaomi Bluetooth Remote 2 Pro, Google Chromecast G9N9N, and T1 Air-Mouse &amp; Keyboard Voice Remote all provide voice input, with different physical voice-button behavior and ordinary-button support.</p>
-    <figure class="remote-size-figure">
-      <a href="assets/devices/three-remotes-comparison.png" target="_blank" rel="noopener" aria-label="Open the size comparison of three remotes in a new tab"><img src="assets/devices/three-remotes-comparison.png" alt="Size comparison, left to right: Xiaomi 2 Pro at 138 by 35 mm, G9N9N at 122 by 38 mm, and the front and rear of T1 at 164 by 50 mm" width="1678" height="937" loading="lazy"></a>
-      <figcaption>Left to right: Xiaomi Bluetooth Remote 2 Pro, Google Chromecast G9N9N, and the front and rear of T1. The two T1 views show both sides of one model. Click the image to enlarge.</figcaption>
-    </figure>
-  </section>
-
-  <section class="compare-section" id="buying-guide" aria-labelledby="buying-guide-title">
-    <p class="eyebrow">CHOOSE BY HOW IT FEELS</p>
-    <h2 id="buying-guide-title">Buying guide</h2>
-    <p class="lead-sub">For everyday voice input and shortcuts, prefer a G9N9N remote. Choose T1 for its keyboard and air mouse, or Xiaomi for its metal build. These handling comparisons come from hands-on use.</p>
-    <div class="buying-grid">
-      <article class="buying-card is-recommended">
-        <p class="eyebrow">FIRST CHOICE</p>
-        <h3>G9N9N: Smart Toggle, comfortable, great value</h3>
-        <p>Supports both <strong>Smart Toggle (tap hands-free) and Hold to Talk</strong>; verified units such as <code>0x0110 / FW 26.2</code> exceed 60s via keepalive (auto-stop timeout configurable in General, 5 min default; compatible batches like <code>0x011B</code> still have a ~60s firmware cutoff), and the bottom white LED shows active streaming. Shorter than Xiaomi with a rounded grip, very light, and around ¥15 (~$2), with Voice positioned right below the directional ring for effortless thumb reach.</p>
-        <p>For profile-free plug-and-play setup and verified &gt;60s keepalive, prefer the tested <code>0x0110 / FW 26.2</code> batch. The remote uses two replaceable AAA batteries.</p>
-      </article>
-      <article class="buying-card">
-        <p class="eyebrow">MORE FEATURES</p>
-        <h3>T1: keyboard, air mouse, and voice</h3>
-        <p>An affordable choice with a rear mini keyboard and air mouse for large-screen control, cursor movement, and occasional typing. Press Voice once to start and again to stop, without holding it throughout.</p>
-        <p>It is longer and wider than the other two. Choose it for multiple input methods; its built-in battery charges over USB-C.</p>
-      </article>
-      <article class="buying-card">
-        <p class="eyebrow">METAL BUILD</p>
-        <h3>Xiaomi 2 Pro: finish and rechargeability</h3>
-        <p>The metal body and finish are its strengths, alongside convenient USB-C charging. Its longer body places Voice at the upper-right end, requiring more thumb reach, with less advantage in price or handling than G9N9N.</p>
-        <p>Best for people who prefer a metal feel and a built-in rechargeable battery. For affordability and easy thumb reach, start with G9N9N.</p>
-      </article>
-    </div>
+  <section class="compare-section" id="photo-comparisons" aria-labelledby="photo-comparisons-title">
+    <p class="eyebrow">CLOSE-UP COMPARISONS</p>
+    <h2 id="photo-comparisons-title">Hands-on photos &amp; T1 layout</h2>
+    <p class="lead-sub">Side-by-side photos comparing voice-button reach, thickness, port placement, and T1's dual-sided control layout.</p>
     <h3 class="comparison-subtitle">G9N9N and Xiaomi: voice-button reach, grip, and thickness</h3>
     <div class="compare-photos buying-photos">
       <div class="compare-photo-card">
@@ -289,7 +295,6 @@
         <p>The front face provides 7 remappable control keys (Back, Home, Menu, Vol+, Vol−, Mute, Power) for triggering custom shortcuts while keeping D-pad and OK native. Flip the remote over to type on a ~45-key QWERTY mini keyboard or steer the Mac pointer with its built-in 6-axis gyro air mouse.</p>
       </div>
     </div>
-
   </section>
 </main>
 

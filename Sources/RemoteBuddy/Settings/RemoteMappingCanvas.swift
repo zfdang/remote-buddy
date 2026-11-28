@@ -111,7 +111,7 @@ enum G9N9NMappingLayout {
         .init(button: .power, side: .left, anchor: .init(x: 0.27, y: 0.74), targetY: 0.94),
         .init(button: .right, side: .right, anchor: .init(x: 0.83, y: 0.185), targetY: 0.195),
         .init(button: .volumeUp, side: .right, anchor: .init(x: 0.95, y: 0.25), targetY: 0.32),
-        .init(button: .volumeDown, side: .right, anchor: .init(x: 0.95, y: 0.30), targetY: 0.445),
+        .init(button: .volumeDown, side: .right, anchor: .init(x: 0.95, y: 0.35), targetY: 0.445),
         .init(button: .mute, side: .right, anchor: .init(x: 0.71, y: 0.505), targetY: 0.57),
         .init(button: .netflix, side: .right, anchor: .init(x: 0.71, y: 0.625), targetY: 0.695),
         .init(button: .input, side: .right, anchor: .init(x: 0.71, y: 0.74), targetY: 0.82),

@@ -57,6 +57,21 @@ struct LocalizationResourceDefaultTests {
         #expect(chinese == "帮助与支持")
     }
 
+    @Test func doubaoSettingsGuideUsesLongPressModeLabelInBothLanguages() throws {
+        let defaults = EphemeralUserDefaults()
+        let store = LocalizationStore(settings: AppSettings(defaults: defaults))
+        let key = "onboarding.voice_tool.guide.screenshot.doubao_settings"
+        store.select(.simplifiedChinese)
+        let chinese = LocalizedMessage(key, arguments: ["Ctrl (^) + Shift (⇧) + R"]).text(using: store)
+        #expect(chinese.contains("「长按模式」"))
+        #expect(!chinese.contains("「按住说话」"))
+
+        store.select(.english)
+        let english = LocalizedMessage(key, arguments: ["Ctrl (^) + Shift (⇧) + R"]).text(using: store)
+        #expect(english.contains("Long-Press mode (长按模式)"))
+        #expect(!english.contains("Hold-to-Talk"))
+    }
+
     @Test func websiteURLResolvesPerLocale() throws {
         let defaults = EphemeralUserDefaults()
         let store = LocalizationStore(settings: AppSettings(defaults: defaults))

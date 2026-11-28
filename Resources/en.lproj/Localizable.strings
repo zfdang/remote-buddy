@@ -957,7 +957,7 @@
 "custom_application.accessibility.test" = "Test input field";
 
 "onboarding.voice_tool.guide.screenshot.doubao_menu" = "In the input menu, choose Doubao (豆包输入法), then Settings (设置).";
-"onboarding.voice_tool.guide.screenshot.doubao_settings" = "In Voice Input, choose Hold-to-Talk mode (avoid toggle/hands-free—Remote Buddy handles remote tap conversion automatically), set the shortcut to “%@”, enable global voice activation, and select the Remote Buddy virtual microphone.";
+"onboarding.voice_tool.guide.screenshot.doubao_settings" = "In Voice Input, choose Long-Press mode (长按模式) (avoid Hands-Free mode / 免按模式—Remote Buddy handles remote tap conversion automatically), set the shortcut to “%@”, enable global voice activation, and select the Remote Buddy virtual microphone.";
 "onboarding.voice_tool.guide.screenshot.weixin_input_menu" = "In the input menu, choose WeType (微信输入法), then Settings (设置).";
 "onboarding.voice_tool.guide.screenshot.weixin_input_settings" = "In Voice Input, set the shortcut to “%@”, prefer Hold-to-Talk (Remote Buddy handles remote tap conversion automatically), and enable global shortcut activation.";
 "onboarding.voice_tool.guide.screenshot.weixin_app_shortcuts" = "The WeChat app’s global voice shortcut can conflict with any voice tool. Check whether it uses “%@” and clear only the conflicting shortcut.";

@@ -11,6 +11,7 @@ final class KeyboardMicrophoneRuntime {
     var delivery: KeyboardMicrophoneDelivery?
     var capture: KeyboardMicrophoneCapture?
     var startedAt: TimeInterval = 0
+    var canRestartInput = false
     var sendingStopKey = false
 
     isolated deinit {
@@ -107,6 +108,7 @@ extension BridgeAppModel {
         let delivery = KeyboardMicrophoneDelivery(output: audio.output)
         keyboardMicrophone.delivery = delivery
         keyboardMicrophone.startedAt = ProcessInfo.processInfo.systemUptime
+        keyboardMicrophone.canRestartInput = true
         cancelVirtualAudioReleaseIfPending(trigger: "keyboard_microphone")
         ensureVirtualAudioOutputReady(reason: "keyboard_microphone") { [weak self] ready in
             guard let self, self.keyboardMicrophone.delivery === delivery else { return }
@@ -122,12 +124,12 @@ extension BridgeAppModel {
         let preparationQueue = audio.preparationQueue
         preparationQueue.async { [weak self] in
             guard delivery.isActive else { return }
-            let capture = try? KeyboardMicrophoneCapture(device: device, delivery: delivery) { [weak self] in
-                // Stop forwarding immediately if Core Audio changes this input graph.
-                delivery.cancel()
+            let capture = try? KeyboardMicrophoneCapture(
+                device: device, delivery: delivery, preparationQueue: preparationQueue
+            ) { [weak self] in
                 DispatchQueue.main.async { [weak self] in
                     guard let self, self.keyboardMicrophone.delivery === delivery else { return }
-                    self.suppressKeyboardMicrophoneCapture(reason: "input_configuration_changed")
+                    self.restartKeyboardMicrophoneAfterInputChange(device)
                 }
             }
             DispatchQueue.main.async { [weak self] in
@@ -147,6 +149,29 @@ extension BridgeAppModel {
                 AppLogger.shared.write("KEYBOARD MIC started")
             }
         }
+    }
+
+    private func restartKeyboardMicrophoneAfterInputChange(_ device: AudioDeviceInfo) {
+        guard keyboardMicrophone.canRestartInput, !remoteOwnsMicrophone,
+              let destination = BuddyMicrophoneDevicePolicy.device(in: audioDevices),
+              keyboardMicrophone.client.isReading(
+                  deviceID: destination.id, bundleIdentifier: Self.keyboardMicrophoneClientBundleID
+              ),
+              let currentDevice = CoreAudioDeviceCatalog.deviceInfo(for: device.id),
+              currentDevice.uid == device.uid
+        else {
+            suppressKeyboardMicrophoneCapture(reason: "input_configuration_changed")
+            return
+        }
+        keyboardMicrophone.canRestartInput = false
+        if let capture = keyboardMicrophone.capture {
+            keyboardMicrophone.capture = nil
+            audio.preparationQueue.async { capture.stop() }
+        }
+        let delivery = KeyboardMicrophoneDelivery(output: audio.output)
+        keyboardMicrophone.delivery = delivery
+        openKeyboardMicrophone(currentDevice, delivery: delivery)
+        AppLogger.shared.write("KEYBOARD MIC restarting reason=input_configuration_changed")
     }
 
     func stopKeyboardMicrophone(reason: String) {

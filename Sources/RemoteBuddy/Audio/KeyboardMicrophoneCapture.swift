@@ -18,8 +18,8 @@ final class KeyboardMicrophoneDelivery: @unchecked Sendable {
 
     var isActive: Bool { lock.withLock { active } }
 
-    func verifyDevice() {
-        lock.withLock { verified = true }
+    func setDeviceVerified(_ verified: Bool) {
+        lock.withLock { self.verified = verified }
     }
 
     func cancel() {
@@ -47,12 +47,14 @@ final class KeyboardMicrophoneCapture: @unchecked Sendable {
 
     private let engine = AVAudioEngine()
     private var tapNode: AVAudioInputNode?
+    private var tapFormat: AVAudioFormat?
     private var configurationObserver: NSObjectProtocol?
 
     init(
         device: AudioDeviceInfo,
         delivery: KeyboardMicrophoneDelivery,
-        onConfigurationChange: @escaping @Sendable () -> Void
+        preparationQueue: DispatchQueue,
+        onInputInvalidated: @escaping @Sendable () -> Void
     ) throws {
         do {
             try AudioEngineSafety.perform {
@@ -60,7 +62,21 @@ final class KeyboardMicrophoneCapture: @unchecked Sendable {
             }
             configurationObserver = NotificationCenter.default.addObserver(
                 forName: .AVAudioEngineConfigurationChange, object: engine, queue: nil
-            ) { _ in onConfigurationChange() }
+            ) { [weak self] _ in
+                // Engine startup can publish a format notification even while
+                // the selected input and its tap stay usable. Recheck them
+                // on the same queue as start and stop.
+                delivery.setDeviceVerified(false)
+                preparationQueue.async { [weak self] in
+                    guard let self, delivery.isActive else { return }
+                    guard self.hasUsableInput(deviceID: device.id) else {
+                        delivery.cancel()
+                        onInputInvalidated()
+                        return
+                    }
+                    delivery.setDeviceVerified(true)
+                }
+            }
         } catch {
             stop()
             throw error
@@ -102,11 +118,23 @@ final class KeyboardMicrophoneCapture: @unchecked Sendable {
             delivery.send(Array(UnsafeBufferPointer(start: samples, count: Int(converted.frameLength))))
         }
         tapNode = input
+        tapFormat = source
         guard delivery.isActive else { throw Failure.cancelled }
         engine.prepare()
         try engine.start()
         guard Self.isBound(unit, deviceID: device.id) else { throw Failure.inputUnavailable }
-        delivery.verifyDevice()
+        delivery.setDeviceVerified(true)
+    }
+
+    private func hasUsableInput(deviceID: AudioDeviceID) -> Bool {
+        var usable = false
+        try? AudioEngineSafety.perform {
+            guard self.engine.isRunning, let tapNode = self.tapNode,
+                  let tapFormat = self.tapFormat, let unit = tapNode.audioUnit,
+                  Self.isBound(unit, deviceID: deviceID) else { return }
+            usable = tapNode.outputFormat(forBus: 0).isEqual(tapFormat)
+        }
+        return usable
     }
 
     private static func isBound(_ unit: AudioUnit, deviceID: AudioDeviceID) -> Bool {
@@ -127,6 +155,7 @@ final class KeyboardMicrophoneCapture: @unchecked Sendable {
             self.engine.stop()
             self.tapNode?.removeTap(onBus: 0)
             self.tapNode = nil
+            self.tapFormat = nil
         }
     }
 }

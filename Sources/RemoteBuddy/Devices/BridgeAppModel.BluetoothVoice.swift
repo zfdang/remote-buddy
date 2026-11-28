@@ -316,6 +316,10 @@ extension BridgeAppModel {
             voiceSession.commandAudio.bufferedSampleCount > 0
     }
 
+    private func supportsDelayedZeroAudioShortTap(for bridge: BluetoothRemoteBridge) -> Bool {
+        bridge.deviceInformation.hidVersion == 0x011B
+    }
+
     func bluetoothBridgeDidStopVoice(_ bridge: BluetoothRemoteBridge) {
         guard let identifier = bridge.deviceIdentifier else { return }
         if (identifier == voiceSession.activeDeviceIdentifier && pendingVoiceKeyActivationOwner == .bluetooth) ||
@@ -325,6 +329,7 @@ extension BridgeAppModel {
                 stopReason: bridge.lastVoiceStopReason,
                 localCloseRequested: bridge.localMicrophoneCloseRequested,
                 hasReceivedAudio: hasReceivedAudioInCurrentBluetoothPress,
+                allowsDelayedZeroAudioShortTap: supportsDelayedZeroAudioShortTap(for: bridge),
                 at: bridge.lastVoiceStopAt ?? bridge.nowUptime()
             ) {
                 AppLogger.shared.write("G9N9N SMART_TOGGLE short_release_during_preparation")
@@ -383,6 +388,7 @@ extension BridgeAppModel {
             stopReason: bridge.lastVoiceStopReason,
             localCloseRequested: bridge.localMicrophoneCloseRequested,
             hasReceivedAudio: hasReceivedAudioInCurrentBluetoothPress,
+            allowsDelayedZeroAudioShortTap: supportsDelayedZeroAudioShortTap(for: bridge),
             at: bridge.lastVoiceStopAt ?? bridge.nowUptime()
         ) {
             enterG9N9NSmartToggleAwaitingReopen(bridge: bridge, identifier: identifier)

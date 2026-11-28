@@ -307,6 +307,9 @@ enum KeyboardInjector {
         case .commandPaste:
             return ShortcutEventSequence.send(keyCode: 9, modifiers: .maskCommand,
                 hardwareFlags: shortcutHardwareFlags, eventPoster: shortcutEventPoster)
+        case .commandMinimize:
+            return ShortcutEventSequence.send(keyCode: 46, modifiers: .maskCommand,
+                hardwareFlags: shortcutHardwareFlags, eventPoster: shortcutEventPoster)
         case .commandClose:
             return ShortcutEventSequence.send(keyCode: 13, modifiers: .maskCommand,
                 hardwareFlags: shortcutHardwareFlags, eventPoster: shortcutEventPoster)

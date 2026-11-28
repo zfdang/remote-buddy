@@ -131,7 +131,7 @@
         <h3>Remote Buddy Itself</h3>
         <ul>
           <li><strong>No audio or transcript storage:</strong> Bluetooth audio is decoded solely in local memory and routed to the virtual microphone. Remote Buddy runs no speech model and stores no audio recordings or recognized text.</li>
-          <li><strong>Zero telemetry or background uploads:</strong> No usage analytics, no third-party tracking SDKs, and no automatic log uploads (diagnostic logs remain strictly local unless you inspect or copy them).</li>
+          <li><strong>Zero telemetry or background uploads:</strong> No usage analytics, no third-party tracking SDKs, and no automatic log uploads (diagnostic logging can be turned off anytime to stop writing local files, and when enabled logs stay strictly local for you to inspect or copy).</li>
           <li><strong>100% open source:</strong> Both the macOS app and the bundled <code>Remote Buddy Mic</code> virtual audio driver are published under GPL-3.0-only so anyone can inspect or build from source.</li>
           <li><strong>Strict API boundaries:</strong> Uses only public macOS integration and user-visible Accessibility APIs, never touching other apps’ private data.</li>
         </ul>

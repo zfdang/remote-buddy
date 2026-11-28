@@ -82,6 +82,9 @@ enum KeyboardHardwareModifierPolicy {
         ownedModifiers: CGEventFlags = []
     ) -> [CGKeyCode] {
         let sanitized = sanitizedEventFlags(rawFlags)
+        // A side bit is hardware evidence even when an input method hides the
+        // corresponding key from keyState. Do not post cleanup through that chord.
+        guard sanitized.rawValue & deviceModifierBits == 0 else { return [] }
         var stuck: [CGKeyCode] = []
         for family in modifierFamilies {
             let familyMask = family.flag.union(family.leftBit).union(family.rightBit)

@@ -114,7 +114,7 @@ button.addEventListener('blur', stop);
         windowTitle: '设备类型 · 首次使用向导',
         src: 'assets/screenshots/wizard-source-zh.jpg?v=261128screens',
         alt: '首次使用向导：遥控器型号列表与选中的 Chromecast Voice Remote（G9N9N）实拍图',
-        desc: '选择遥控器型号，查看右侧的设备外观。各型号的适配进度见下方“兼容范围”。'
+        desc: '选择遥控器型号，查看右侧的设备外观。各型号的适配进度见下方“支持范围”。'
       },
       {
         title: '第 3 步 · 连接遥控器',

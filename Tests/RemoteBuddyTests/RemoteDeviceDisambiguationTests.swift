@@ -32,15 +32,15 @@ struct RemoteDeviceDisambiguationTests {
             RemoteDeviceNamePolicy.disambiguatedModelName(
                 for: chromecast,
                 among: profiles,
-                baseModelName: "Chromecast Voice Remote (G9N9N)"
-            ) == "Chromecast Voice Remote (G9N9N)"
+                baseModelName: "G9N9N"
+            ) == "G9N9N"
         )
         #expect(
             RemoteDeviceNamePolicy.disambiguatedModelName(
                 for: xiaomi,
                 among: profiles,
-                baseModelName: "Xiaomi Bluetooth Remote 2 Pro"
-            ) == "Xiaomi Bluetooth Remote 2 Pro"
+                baseModelName: "Xiaomi Remote 2 Pro"
+            ) == "Xiaomi Remote 2 Pro"
         )
     }
 
@@ -298,15 +298,15 @@ struct RemoteDeviceDisambiguationTests {
             RemoteDeviceNamePolicy.disambiguatedModelName(
                 for: reloadedFirst,
                 among: reloaded.remoteDeviceProfiles,
-                baseModelName: "Chromecast Voice Remote (G9N9N)"
-            ) == "Chromecast Voice Remote (G9N9N) #A43B"
+                baseModelName: "G9N9N"
+            ) == "G9N9N #A43B"
         )
         #expect(
             RemoteDeviceNamePolicy.disambiguatedModelName(
                 for: reloadedSecond,
                 among: reloaded.remoteDeviceProfiles,
-                baseModelName: "Chromecast Voice Remote (G9N9N)"
-            ) == "Chromecast Voice Remote (G9N9N) #C0FF"
+                baseModelName: "G9N9N"
+            ) == "G9N9N #C0FF"
         )
     }
 }

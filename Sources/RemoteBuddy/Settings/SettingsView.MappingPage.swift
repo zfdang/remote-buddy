@@ -407,7 +407,7 @@ extension SettingsView {
             }
         }
         .pickerStyle(.menu)
-        .frame(maxWidth: 310)
+        .frame(maxWidth: 340)
         .disabled(profiles.isEmpty)
     }
 }

@@ -295,12 +295,13 @@
 "connection.device.name" = "Xiaomi Bluetooth Remote 2 / 2 Pro";
 "remote.device.selector" = "Remote";
 "remote.device.model" = "Model";
-"remote.device.model.rc001" = "Xiaomi Bluetooth Remote 2";
-"remote.device.model.rc003" = "Xiaomi Bluetooth Remote 2 Pro";
+"remote.device.model.rc001" = "Xiaomi Remote 2";
+"remote.device.model.rc003" = "Xiaomi Remote 2 Pro";
 "remote.device.model.unrecognized" = "Unrecognized Remote";
 "remote.device.model.apple_siri_remote_a2854" = "Apple Remote (7th Generation)";
 "remote.device.model.apple_siri_remote_a2540" = "Apple Remote (6th Generation)";
-"remote.device.model.chromecast_voice_remote" = "Chromecast Remote";
+"remote.device.model.chromecast_voice_remote" = "G9N9N";
+"remote.device.model.t1_remote" = "T1-Remote";
 "remote.device.model.unknown" = "Unrecognized Remote";
 "remote.device.custom_name" = "Custom name";
 "remote.device.bind_button" = "Set Up Button Controls";

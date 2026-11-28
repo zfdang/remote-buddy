@@ -90,6 +90,8 @@ extension SettingsView {
                         .help(modelName)
                         .font(.system(size: 13, weight: .semibold))
                         .lineLimit(1)
+                        .truncationMode(.middle)
+                        .minimumScaleFactor(0.88)
                     Text(systemName)
                         .help(systemName)
                         .font(.system(size: 12))

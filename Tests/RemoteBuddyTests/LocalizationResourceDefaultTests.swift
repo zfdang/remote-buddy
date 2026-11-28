@@ -80,8 +80,12 @@ struct LocalizationResourceDefaultTests {
 
         store.select(.simplifiedChinese)
         #expect(store.text(RemoteModel.unknown.localizationKey) == "未识别的遥控器")
+        #expect(store.text(RemoteModel.rc001.localizationKey) == "小米遥控器 2")
+        #expect(store.text(RemoteModel.rc003.localizationKey) == "小米遥控器 2 Pro")
         #expect(store.text(RemoteModel.appleSiriRemoteA2854.localizationKey) == "苹果遥控器第 7 代")
         #expect(store.text(RemoteModel.appleSiriRemoteA2540.localizationKey) == "苹果遥控器第 6 代")
+        #expect(store.text(RemoteModel.chromecastVoiceRemote.localizationKey) == "G9N9N")
+        #expect(store.text(RemoteModel.t1Remote.localizationKey) == "T1-Remote")
 
         let unknownProfile = RemoteDeviceProfile(
             model: .unknown,
@@ -91,8 +95,12 @@ struct LocalizationResourceDefaultTests {
 
         store.select(.english)
         #expect(store.text(RemoteModel.unknown.localizationKey) == "Unrecognized Remote")
+        #expect(store.text(RemoteModel.rc001.localizationKey) == "Xiaomi Remote 2")
+        #expect(store.text(RemoteModel.rc003.localizationKey) == "Xiaomi Remote 2 Pro")
         #expect(store.text(RemoteModel.appleSiriRemoteA2854.localizationKey) == "Apple Remote (7th Generation)")
         #expect(store.text(RemoteModel.appleSiriRemoteA2540.localizationKey) == "Apple Remote (6th Generation)")
+        #expect(store.text(RemoteModel.chromecastVoiceRemote.localizationKey) == "G9N9N")
+        #expect(store.text(RemoteModel.t1Remote.localizationKey) == "T1-Remote")
         #expect(store.text(unknownProfile.displayNameFallbackKey) == "Unrecognized Remote")
     }
 

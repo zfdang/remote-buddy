@@ -886,19 +886,21 @@ extension AppSettings {
         profile.setAction(
             ConfiguredButtonAction(
                 action: .customShortcut,
-                shortcut: CustomKeyboardShortcut(keyCode: 123, modifierFlags: .command, keyLabel: "←")
+                shortcut: CustomKeyboardShortcut(keyCode: 33, modifierFlags: .command, keyLabel: "[")
             ),
             for: .left,
             trigger: .singleClick
         )
+        profile.setAction(ConfiguredButtonAction.disabled, for: .left, trigger: .longPress)
         profile.setAction(
             ConfiguredButtonAction(
                 action: .customShortcut,
-                shortcut: CustomKeyboardShortcut(keyCode: 124, modifierFlags: .command, keyLabel: "→")
+                shortcut: CustomKeyboardShortcut(keyCode: 30, modifierFlags: .command, keyLabel: "]")
             ),
             for: .right,
             trigger: .singleClick
         )
+        profile.setAction(ConfiguredButtonAction.disabled, for: .right, trigger: .longPress)
         return profile
     }
 
@@ -912,38 +914,45 @@ extension AppSettings {
     }
 
     @discardableResult
-    func seedDefaultApplicationProfilesIfNeeded(at index: Int) -> Bool {
-        guard remoteDeviceProfiles.indices.contains(index) else { return false }
-        let model = remoteDeviceProfiles[index].model
-        let defaults = Self.defaultApplicationButtonProfiles(for: model)
+    static func seedDefaultApplicationProfilesIfNeeded(in profile: inout RemoteDeviceProfile) -> Bool {
+        let defaults = defaultApplicationButtonProfiles(for: profile.model)
         guard !defaults.isEmpty else { return false }
 
-        var seeded = Set(remoteDeviceProfiles[index].seededDefaultApplicationProfiles ?? [])
-        var profiles = remoteDeviceProfiles[index].mappings.parsedApplicationButtonProfiles
+        var seeded = Set(profile.seededDefaultApplicationProfiles ?? [])
+        var appProfiles = profile.mappings.parsedApplicationButtonProfiles
         var changed = false
 
         for (bundleID, defaultProfile) in defaults where !seeded.contains(bundleID) {
             seeded.insert(bundleID)
-            if profiles[bundleID] == nil {
-                profiles[bundleID] = defaultProfile
+            if appProfiles[bundleID] == nil {
+                appProfiles[bundleID] = defaultProfile
             }
             changed = true
         }
 
         guard changed else { return false }
-        remoteDeviceProfiles[index].seededDefaultApplicationProfiles = seeded.sorted()
-        let mappings = remoteDeviceProfiles[index].mappings
-        remoteDeviceProfiles[index].mappings = RemoteDeviceMappings(
+        profile.seededDefaultApplicationProfiles = seeded.sorted()
+        let mappings = profile.mappings
+        profile.mappings = RemoteDeviceMappings(
             buttonBindings: mappings.parsedButtonBindings,
             buttonShortcuts: mappings.parsedButtonShortcuts,
             buttonApplicationProfileIDs: mappings.parsedButtonApplicationProfileIDs,
             buttonURLs: mappings.parsedButtonURLs,
             secondaryButtonBindings: mappings.parsedSecondaryButtonBindings,
-            applicationButtonProfiles: profiles
+            applicationButtonProfiles: appProfiles
         )
-        if remoteDeviceProfiles[index].id == selectedRemoteProfileID {
+        return true
+    }
+
+    @discardableResult
+    func seedDefaultApplicationProfilesIfNeeded(at index: Int) -> Bool {
+        guard remoteDeviceProfiles.indices.contains(index) else { return false }
+        var profile = remoteDeviceProfiles[index]
+        guard Self.seedDefaultApplicationProfilesIfNeeded(in: &profile) else { return false }
+        remoteDeviceProfiles[index] = profile
+        if profile.id == selectedRemoteProfileID {
             withLoadingRemoteProfile {
-                applicationButtonProfiles = profiles
+                applicationButtonProfiles = profile.mappings.parsedApplicationButtonProfiles
             }
         }
         return true

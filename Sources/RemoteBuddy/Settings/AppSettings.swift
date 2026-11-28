@@ -671,10 +671,11 @@ final class AppSettings: ObservableObject {
             ),
             !decoded.isEmpty
         {
-            remoteDeviceProfiles = decoded
-            for index in remoteDeviceProfiles.indices {
-                _ = seedDefaultApplicationProfilesIfNeeded(at: index)
+            var profiles = decoded
+            for index in profiles.indices {
+                _ = Self.seedDefaultApplicationProfilesIfNeeded(in: &profiles[index])
             }
+            remoteDeviceProfiles = profiles
             if let event = PublicDiagnosticEvent(
                 component: "settings", action: "load", phase: "completed", result: "loaded",
                 reason: "remote_profiles", source: "app"

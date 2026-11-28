@@ -795,17 +795,21 @@ struct ApplicationButtonProfileTests {
         let safari = AppSettings.defaultChromecastSafariBundleID
         #expect(settings.applicationButtonProfiles[safari]?.name == "Safari")
 
-        let expectedLeft = CustomKeyboardShortcut(keyCode: 123, modifierFlags: .command, keyLabel: "←")
-        let expectedRight = CustomKeyboardShortcut(keyCode: 124, modifierFlags: .command, keyLabel: "→")
+        let expectedLeft = CustomKeyboardShortcut(keyCode: 33, modifierFlags: .command, keyLabel: "[")
+        let expectedRight = CustomKeyboardShortcut(keyCode: 30, modifierFlags: .command, keyLabel: "]")
         var front: String? = safari
         settings.frontmostApplicationBundleIdentifier = { front }
 
         #expect(settings.configuredAction(for: .up, trigger: .singleClick, profileID: g9n9nID).action == .scrollUp)
+        #expect(settings.configuredAction(for: .up, trigger: .longPress, profileID: g9n9nID).action == .repeatSingleClick)
         #expect(settings.configuredAction(for: .down, trigger: .singleClick, profileID: g9n9nID).action == .scrollDown)
+        #expect(settings.configuredAction(for: .down, trigger: .longPress, profileID: g9n9nID).action == .repeatSingleClick)
         #expect(settings.configuredAction(for: .left, trigger: .singleClick, profileID: g9n9nID)
             == ConfiguredButtonAction(action: .customShortcut, shortcut: expectedLeft))
+        #expect(settings.configuredAction(for: .left, trigger: .longPress, profileID: g9n9nID).action == .disabled)
         #expect(settings.configuredAction(for: .right, trigger: .singleClick, profileID: g9n9nID)
             == ConfiguredButtonAction(action: .customShortcut, shortcut: expectedRight))
+        #expect(settings.configuredAction(for: .right, trigger: .longPress, profileID: g9n9nID).action == .disabled)
 
         // Global / other apps keep standard directional arrow keys.
         front = notes
@@ -858,6 +862,39 @@ struct ApplicationButtonProfileTests {
         #expect(performed[2] == ConfiguredButtonAction(action: .customShortcut, shortcut: expectedLeft))
         #expect(performed[3] == ConfiguredButtonAction(action: .customShortcut, shortcut: expectedRight))
         #expect(performed[4].action == .arrowUp)
+
+        // Holding Up in Safari repeats scrollUp; holding Left fires ⌘[ once without repeating history back.
+        performed.removeAll()
+        front = safari
+        monitor.handleSimulatedGoogleReport(
+            reportID: 1,
+            data: Data([1, 3, 0]),
+            descriptor: G9N9NProtocol.indexedConsumerDescriptor
+        )
+        clock.advance(to: clock.now + HIDRemoteTiming.repeatStartMilliseconds + 250)
+        monitor.handleSimulatedGoogleReport(
+            reportID: 1,
+            data: Data([1, 0, 0]),
+            descriptor: G9N9NProtocol.indexedConsumerDescriptor
+        )
+        let scrollUpCount = performed.count
+        #expect(scrollUpCount >= 2)
+        #expect(performed.allSatisfy { $0.action == .scrollUp })
+
+        performed.removeAll()
+        monitor.handleSimulatedGoogleReport(
+            reportID: 1,
+            data: Data([1, 5, 0]),
+            descriptor: G9N9NProtocol.indexedConsumerDescriptor
+        )
+        clock.advance(to: clock.now + HIDRemoteTiming.repeatStartMilliseconds + 250)
+        monitor.handleSimulatedGoogleReport(
+            reportID: 1,
+            data: Data([1, 0, 0]),
+            descriptor: G9N9NProtocol.indexedConsumerDescriptor
+        )
+        #expect(performed.count == 1)
+        #expect(performed[0] == ConfiguredButtonAction(action: .customShortcut, shortcut: expectedLeft))
     }
 
     @Test func legacyChromecastMigrationSeedsSafariOnceAndRespectsUserDeletion() throws {

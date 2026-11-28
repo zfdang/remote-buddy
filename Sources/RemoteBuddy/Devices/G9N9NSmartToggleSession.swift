@@ -1,11 +1,15 @@
 import Foundation
 
 /// State machine for Chromecast G9N9N physical voice button smart-toggle mode:
-/// - Short press & release (`< holdThreshold`) keeps the voice session alive and triggers
-///   an ATVV `MIC_OPEN` (`0x0C`) reopen so the user can speak hands-free until the next press.
-/// - Long press (`>= holdThreshold`) behaves as standard hold-to-talk and stops on release.
+/// - Short press & release (`< holdThreshold`, or `< zeroAudioHoldThreshold` when the remote stops
+///   before emitting any audio packets) keeps the voice session alive and triggers an ATVV
+///   `MIC_OPEN` (`0x0C`) reopen so the user can speak hands-free until the next press.
+/// - Long press (`>= holdThreshold` with audio) behaves as standard hold-to-talk and stops on release.
 struct G9N9NSmartToggleState: Equatable {
     static let holdThreshold: TimeInterval = 0.7
+    // Some compatible G9N9N firmwares (e.g. 0x011B) withhold audio on a quick tap
+    // and delay ATVV STREAM STOP until ~1.29s; without audio frames, allow up to 1.5s.
+    static let zeroAudioHoldThreshold: TimeInterval = 1.5
     static let reopenTimeout: TimeInterval = 5
     static let maximumHandsFreeDuration: TimeInterval = VoiceAutoStopDuration.fiveMinutes.timeInterval
 
@@ -53,10 +57,20 @@ struct G9N9NSmartToggleState: Equatable {
         phase = .physicalPressed(bridgeID: bridgeID, startedAt: uptime, physicalReleasedAt: nil)
     }
 
+    private func isShortTapRelease(
+        startedAt: TimeInterval,
+        releaseTime: TimeInterval,
+        hasReceivedAudio: Bool
+    ) -> Bool {
+        let threshold = hasReceivedAudio ? Self.holdThreshold : Self.zeroAudioHoldThreshold
+        return releaseTime - startedAt < threshold
+    }
+
     mutating func recordShortReleaseDuringPreparation(
         bridgeID: UUID,
         stopReason: BluetoothVoiceStopReason?,
         localCloseRequested: Bool,
+        hasReceivedAudio: Bool,
         at uptime: TimeInterval
     ) -> Bool {
         guard case let .physicalPressed(ownerID, startedAt, existingRelease) = phase,
@@ -65,7 +79,11 @@ struct G9N9NSmartToggleState: Equatable {
               !localCloseRequested
         else { return false }
         let releaseTime = existingRelease ?? uptime
-        guard releaseTime - startedAt < Self.holdThreshold else { return false }
+        guard isShortTapRelease(
+            startedAt: startedAt,
+            releaseTime: releaseTime,
+            hasReceivedAudio: hasReceivedAudio
+        ) else { return false }
         phase = .physicalPressed(bridgeID: ownerID, startedAt: startedAt, physicalReleasedAt: releaseTime)
         return true
     }
@@ -74,6 +92,7 @@ struct G9N9NSmartToggleState: Equatable {
         bridgeID: UUID,
         stopReason: BluetoothVoiceStopReason?,
         localCloseRequested: Bool,
+        hasReceivedAudio: Bool,
         at uptime: TimeInterval
     ) -> Bool {
         guard case let .physicalPressed(ownerID, startedAt, physicalReleasedAt) = phase,
@@ -82,7 +101,11 @@ struct G9N9NSmartToggleState: Equatable {
               !localCloseRequested
         else { return false }
         let releaseTime = physicalReleasedAt ?? uptime
-        return releaseTime - startedAt < Self.holdThreshold
+        return isShortTapRelease(
+            startedAt: startedAt,
+            releaseTime: releaseTime,
+            hasReceivedAudio: hasReceivedAudio
+        )
     }
 
     @discardableResult

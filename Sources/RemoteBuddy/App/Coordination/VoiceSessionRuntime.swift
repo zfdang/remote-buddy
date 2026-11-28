@@ -27,6 +27,8 @@ final class VoiceSessionRuntime {
         commandAudio.cancel()
         activeDeviceIdentifier = deviceIdentifier
         loggedBluetoothVoiceAudioDeviceIdentifier = nil
+        bluetoothVoiceDecodedBatchCount = 0
+        bluetoothVoiceDecodedSampleCount = 0
         isActive = true
     }
 

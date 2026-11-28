@@ -310,6 +310,12 @@ extension BridgeAppModel {
         })
     }
 
+    private var hasReceivedAudioInCurrentBluetoothPress: Bool {
+        voiceSession.bluetoothVoiceDecodedSampleCount > 0 ||
+            voiceSession.pendingStart.audio.bufferedSampleCount > 0 ||
+            voiceSession.commandAudio.bufferedSampleCount > 0
+    }
+
     func bluetoothBridgeDidStopVoice(_ bridge: BluetoothRemoteBridge) {
         guard let identifier = bridge.deviceIdentifier else { return }
         if (identifier == voiceSession.activeDeviceIdentifier && pendingVoiceKeyActivationOwner == .bluetooth) ||
@@ -318,6 +324,7 @@ extension BridgeAppModel {
                 bridgeID: identifier,
                 stopReason: bridge.lastVoiceStopReason,
                 localCloseRequested: bridge.localMicrophoneCloseRequested,
+                hasReceivedAudio: hasReceivedAudioInCurrentBluetoothPress,
                 at: bridge.lastVoiceStopAt ?? bridge.nowUptime()
             ) {
                 AppLogger.shared.write("G9N9N SMART_TOGGLE short_release_during_preparation")
@@ -375,6 +382,7 @@ extension BridgeAppModel {
             bridgeID: identifier,
             stopReason: bridge.lastVoiceStopReason,
             localCloseRequested: bridge.localMicrophoneCloseRequested,
+            hasReceivedAudio: hasReceivedAudioInCurrentBluetoothPress,
             at: bridge.lastVoiceStopAt ?? bridge.nowUptime()
         ) {
             enterG9N9NSmartToggleAwaitingReopen(bridge: bridge, identifier: identifier)

@@ -12,8 +12,8 @@
 | 小米蓝牙遥控器 2 Pro · `RC003` | **已支持** | **仅长按**（按住说话，松手停止） | **约 60s**（硬件固件上限） | **全控制键映射**（按键本地验证、音频用户确认） | 中国大陆参考 **¥99**，[小米有品](https://www.xiaomiyoupin.com/detail?gid=183179) | 内置电池 Type-C 充电 |
 | 小米蓝牙遥控器 2 · `RC001` | **部分核验** | **仅长按**（按住说话；完整音频待单独验收） | **约 60s**（待单独验收） | **全控制键适配**（不可直接沿用 2 Pro 全部验收） | 未核实 | 干电池供电 |
 | T1 飞鼠键盘语音遥控器 · `T1-Remote` | **已支持** | **点按**（已测样机按一下开始，再按一下结束） | **可配置**（已测样机支持突破 60s 持续保活，可在「通用」中设置保护性自动停麦时长 3–30 分钟，默认 5 分钟；兼容批次需单独确认） | **7 颗正面键映射** + 方向/OK、背面键盘与飞鼠直通 | 样本约 **¥50**，[淘宝搜索](https://s.taobao.com/search?q=T1%20%E8%93%9D%E7%89%99%20%E9%A3%9E%E9%BC%A0%20%E8%AF%AD%E9%9F%B3) | 须**蓝牙直连**（非 2.4G 接收器）；非实时报价 |
-| Google TV Streamer Voice Remote · `GY3LE` | **计划支持** | 尚未支持（电视端按住用法不代表已适配） | — | 尚未支持 | [Google Store](https://store.google.com/product/google_tv_streamer_remote?hl=en-US) | 未完成适配与真机验证 |
-| Apple Siri Remote · 分代识别 | **计划支持** | 尚未支持 | — | 尚未支持 | [Apple Store](https://www.apple.com/shop/product/mlfc4am/a/siri-remote) | 未按代际核实，未完成适配与真机验证 |
+| Google TV Streamer Voice Remote · `GY3LE` | **计划支持** | 尚未支持（电视端按住用法不代表已适配） | — | 尚未支持 | — | 未完成适配与真机验证 |
+| Apple Siri Remote · 分代识别 | **计划支持** | 尚未支持 | — | 尚未支持 | — | 未按代际核实，未完成适配与真机验证 |
 
 价格、商品链接不代表兼容性认证。标价可能变化，运费、优惠和地区限制以结算页为准；未知信息保留“未核实”。
 
@@ -61,7 +61,7 @@
 - **供电**：两节 AAA 电池；有电量读数时应用显示百分比。
 - **设置**：向导单按 OK，然后逐个测试三个不同普通按键。语音键保持固定语音用途。
 - **实购验证链接**：[拼多多本次测试设备](https://mobile.yangkeduo.com/goods.html?ps=wI005ehWCi)，实购约 ¥15。
-- **资料**：[使用指南](../docs/g9n9n-compatibility.md)、[实机验证](../docs/g9n9n-hardware-debugging.md)、[Google 按键说明](https://support.google.com/chromecast/answer/10116742?hl=en)。
+- **资料**：[使用指南](../docs/g9n9n-compatibility.md)、[实机验证](../docs/g9n9n-hardware-debugging.md)。
 
 ## Google TV Streamer Voice Remote（GY3LE，计划支持）
 
@@ -70,7 +70,7 @@
 - **外观与按键**：与 G9N9N 布局不同；有方向与 OK、语音、返回、主页、音量、静音、YouTube、Netflix、电源和自定义键，支持电视端寻回响铃功能。[Google 官方说明](https://support.google.com/googletv/answer/15323195?hl=en)。
 - **语音方式**：Google 电视端说明为按住 Assistant/Mic 键说话；**这不代表 Remote Buddy 已能使用它的麦克风**。
 - **当前状态**：计划支持，未完成适配与真机验证；不能用 G9N9N 的测试结果替代。
-- **价格与购买入口**：[Google Store 商品页](https://store.google.com/product/google_tv_streamer_remote?hl=en-US)。本次页面未提供可核实的价格；地区和库存以商店为准，不建议仅为本项目语音输入购买。
+- **价格与购买**：暂不提供购买入口，不建议仅为本项目语音输入购买。
 
 ## Apple Siri Remote（计划支持）
 
@@ -79,7 +79,7 @@
 - **型号与外观**：图示为第三代 USB-C `A2854`，铝色长条机身和圆形触控点击板；不代表所有代际布局。请按 [Apple 型号识别说明](https://support.apple.com/en-au/103233)确认，不能仅写“Siri Remote”。
 - **主要按键**：图示型号含点击板/方向、返回、电视/控制中心、播放暂停、音量、静音、电源及侧面 Siri 键。见 [Apple 第三代规格](https://support.apple.com/en-us/111844)。
 - **语音方式与当前状态**：Remote Buddy 尚未完成适配与真机验证，**暂不能作为本项目的语音输入设备**，因此不承诺 Mac 上的长按或点按方式。
-- **价格与购买入口**：[Apple 在售 Siri Remote](https://www.apple.com/shop/product/mlfc4am/a/siri-remote)。在售产品可能已换代，不能将其价格或功能直接当作 A2854 的资料；当前不列混用代际的报价，也不建议仅为本项目购买。
+- **价格与购买**：在售产品可能已换代，不能将其价格或功能直接当作 A2854 的资料；当前暂不提供购买入口，也不建议仅为本项目购买。
 
 ## 补充设备记录
 

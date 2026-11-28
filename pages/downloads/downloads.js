@@ -4,6 +4,7 @@
   var macosNavVersion = document.getElementById('macos-nav-version');
   var statusNote = document.getElementById('mirror-status');
   var cardsContainer = document.getElementById('mirror-cards');
+  var uninstallerContainer = document.getElementById('uninstaller-card');
 
   var winTagBadge = document.getElementById('windows-release-tag');
   var winNavVersion = document.getElementById('windows-nav-version');
@@ -83,24 +84,7 @@
       }
     ];
 
-    if (packages.uninstaller && packages.uninstaller.name) {
-      specs.push({
-        key: 'uninstaller',
-        title: english ? 'Universal Uninstaller' : '通用卸载安装包',
-        subtitle: english
-          ? 'Removes the app, virtual microphone driver, and optionally preferences/logs on Apple Silicon & Intel.'
-          : '一键移除 App、虚拟麦克风驱动，并可选择清理设置与日志（Apple Silicon / Intel 通用）。',
-        archLabel: 'universal · .pkg',
-        wide: true,
-        isUninstaller: true
-      });
-    }
-
-    cardsContainer.innerHTML = '';
-    specs.forEach(function (spec) {
-      var pkg = packages[spec.key];
-      if (!pkg || !pkg.name) return;
-
+    function buildPackageCard(spec, pkg) {
       var card = document.createElement('article');
       card.className = 'download-card' +
         (spec.recommended ? ' is-recommended' : '') +
@@ -127,8 +111,34 @@
           '</a>' +
         '</div>';
 
-      cardsContainer.appendChild(card);
+      return card;
+    }
+
+    cardsContainer.innerHTML = '';
+    specs.forEach(function (spec) {
+      var pkg = packages[spec.key];
+      if (!pkg || !pkg.name) return;
+      cardsContainer.appendChild(buildPackageCard(spec, pkg));
     });
+
+    if (uninstallerContainer) {
+      uninstallerContainer.innerHTML = '';
+      if (packages.uninstaller && packages.uninstaller.name) {
+        uninstallerContainer.appendChild(buildPackageCard({
+          key: 'uninstaller',
+          title: english ? 'Universal Uninstaller' : '通用卸载安装包',
+          subtitle: english
+            ? 'Removes the app, virtual microphone driver, and optionally preferences/logs on Apple Silicon & Intel.'
+            : '一键移除 App、虚拟麦克风驱动，并可选择清理设置与日志（Apple Silicon / Intel 通用）。',
+          archLabel: 'universal · .pkg',
+          wide: true,
+          isUninstaller: true
+        }, packages.uninstaller));
+        uninstallerContainer.hidden = false;
+      } else {
+        uninstallerContainer.hidden = true;
+      }
+    }
 
     if (statusNote) statusNote.hidden = true;
   }

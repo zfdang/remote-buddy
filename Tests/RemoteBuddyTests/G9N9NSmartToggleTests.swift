@@ -121,35 +121,91 @@ struct G9N9NSmartToggleTests {
         #expect(state.isActive)
         #expect(state.ownerBridgeID == id)
 
-        // Short tap (< 0.7s) from remoteNotification reopens; long hold (>= 0.7s) stops.
+        // Standard G9N9N: short tap (< 0.7s) reopens; >= 0.7s always stops even with 0 audio.
         #expect(state.shouldReopenOnPhysicalStop(
             bridgeID: id,
             stopReason: .remoteNotification,
             localCloseRequested: false,
+            hasReceivedAudio: false,
+            allowsDelayedZeroAudioShortTap: false,
             at: 10.25
         ))
         #expect(!state.shouldReopenOnPhysicalStop(
             bridgeID: id,
             stopReason: .remoteNotification,
             localCloseRequested: false,
+            hasReceivedAudio: false,
+            allowsDelayedZeroAudioShortTap: false,
+            at: 11.29
+        ))
+        #expect(!state.shouldReopenOnPhysicalStop(
+            bridgeID: id,
+            stopReason: .remoteNotification,
+            localCloseRequested: false,
+            hasReceivedAudio: true,
+            allowsDelayedZeroAudioShortTap: true,
             at: 10.75
+        ))
+        // 0x011B zero-audio delayed remoteNotification stops only reopen inside 1.25s...1.35s.
+        #expect(!state.shouldReopenOnPhysicalStop(
+            bridgeID: id,
+            stopReason: .remoteNotification,
+            localCloseRequested: false,
+            hasReceivedAudio: false,
+            allowsDelayedZeroAudioShortTap: true,
+            at: 10.85
+        ))
+        #expect(!state.shouldReopenOnPhysicalStop(
+            bridgeID: id,
+            stopReason: .remoteNotification,
+            localCloseRequested: false,
+            hasReceivedAudio: false,
+            allowsDelayedZeroAudioShortTap: true,
+            at: 11.20
+        ))
+        #expect(state.shouldReopenOnPhysicalStop(
+            bridgeID: id,
+            stopReason: .remoteNotification,
+            localCloseRequested: false,
+            hasReceivedAudio: false,
+            allowsDelayedZeroAudioShortTap: true,
+            at: 11.29
+        ))
+        #expect(!state.shouldReopenOnPhysicalStop(
+            bridgeID: id,
+            stopReason: .remoteNotification,
+            localCloseRequested: false,
+            hasReceivedAudio: true,
+            allowsDelayedZeroAudioShortTap: true,
+            at: 11.29
+        ))
+        #expect(!state.shouldReopenOnPhysicalStop(
+            bridgeID: id,
+            stopReason: .remoteNotification,
+            localCloseRequested: false,
+            hasReceivedAudio: false,
+            allowsDelayedZeroAudioShortTap: true,
+            at: 11.40
         ))
         #expect(!state.shouldReopenOnPhysicalStop(
             bridgeID: id,
             stopReason: .localStop,
             localCloseRequested: false,
+            hasReceivedAudio: true,
             at: 10.25
         ))
         #expect(!state.shouldReopenOnPhysicalStop(
             bridgeID: id,
             stopReason: .remoteNotification,
             localCloseRequested: true,
+            hasReceivedAudio: true,
             at: 10.25
         ))
         #expect(!state.shouldReopenOnPhysicalStop(
             bridgeID: otherID,
             stopReason: .remoteNotification,
             localCloseRequested: false,
+            hasReceivedAudio: true,
             at: 10.25
         ))
 
@@ -371,7 +427,7 @@ struct G9N9NSmartToggleTests {
         await flushAudio()
         #expect(keyEdges() == [true])
 
-        // Hold for 850ms (>= 0.7s) then release.
+        // Hold for 850ms (>= 0.7s) on standard G9N9N without injected audio then release: must stop.
         clock.advance(to: 1_850)
         bridge.simulateControlPacketForTesting(Data([0x00]))
         await flushAudio()
@@ -523,6 +579,104 @@ struct G9N9NSmartToggleTests {
 
         // Release at 1_750 (750ms after 0x04, only 250ms after didStartVoice): must stop as long hold.
         clock.advance(to: 1_750)
+        bridge.simulateControlPacketForTesting(Data([0x00]))
+        await flushAudio()
+
+        #expect(writtenCommands().isEmpty)
+        #expect(!model.g9n9nSmartToggle.isActive)
+        #expect(!model.isStreaming)
+        #expect(keyEdges() == [true, false])
+    }
+
+    @Test func zeroAudioDelayedStopOn011BWithinWindowReopensHandsFree() async throws {
+        let fixture = try makeSmartToggleFixture(voiceButtonMode: .smartToggle)
+        let (model, bridge, clock, flushAudio, _, writtenCommands, keyEdges) = fixture
+        bridge.deviceInformation.hidVersion = 0x011B
+        defer {
+            model.started = false
+            bridge.stop()
+        }
+
+        // Compatible 0x011B short tap emits 0x04, produces zero audio frames, and stops at ~1.29s.
+        bridge.simulateControlPacketForTesting(Data([0x04, 0x03, 0x02, 0x01]))
+        await flushAudio()
+        clock.advance(to: 2_290)
+        bridge.simulateControlPacketForTesting(Data([0x00]))
+        await flushAudio()
+
+        #expect(model.g9n9nSmartToggle.isAwaitingReopen)
+        #expect(writtenCommands() == [Data([0x0C, 0x00])])
+        #expect(model.voiceKeyLatch.isHeld)
+        #expect(keyEdges() == [true])
+
+        clock.advance(to: 2_320)
+        bridge.simulateControlPacketForTesting(Data([0x04, 0x00, 0x02, 0x00]))
+        await flushAudio()
+        guard case .handsFreeActive = model.g9n9nSmartToggle.phase else {
+            Issue.record("Expected handsFreeActive phase after zero-audio delayed reopen")
+            return
+        }
+        #expect(model.voiceSession.isActive)
+        #expect(model.isStreaming)
+    }
+
+    @Test(arguments: [850, 1_200, 1_400])
+    func zeroAudioHoldOutside011BDelayedWindowStopsWithoutReopening(durationMs: UInt64) async throws {
+        let fixture = try makeSmartToggleFixture(voiceButtonMode: .smartToggle)
+        let (model, bridge, clock, flushAudio, _, writtenCommands, keyEdges) = fixture
+        bridge.deviceInformation.hidVersion = 0x011B
+        defer {
+            model.started = false
+            bridge.stop()
+        }
+
+        bridge.simulateControlPacketForTesting(Data([0x04, 0x03, 0x02, 0x01]))
+        await flushAudio()
+        clock.advance(to: 1_000 + durationMs)
+        bridge.simulateControlPacketForTesting(Data([0x00]))
+        await flushAudio()
+
+        #expect(writtenCommands().isEmpty)
+        #expect(!model.g9n9nSmartToggle.isActive)
+        #expect(!model.isStreaming)
+        #expect(keyEdges() == [true, false])
+    }
+
+    @Test func standard0110ZeroAudioAt1290msStopsWithoutReopening() async throws {
+        let fixture = try makeSmartToggleFixture(voiceButtonMode: .smartToggle)
+        let (model, bridge, clock, flushAudio, _, writtenCommands, keyEdges) = fixture
+        bridge.deviceInformation.hidVersion = 0x0110
+        defer {
+            model.started = false
+            bridge.stop()
+        }
+
+        bridge.simulateControlPacketForTesting(Data([0x04, 0x03, 0x02, 0x01]))
+        await flushAudio()
+        clock.advance(to: 2_290)
+        bridge.simulateControlPacketForTesting(Data([0x00]))
+        await flushAudio()
+
+        #expect(writtenCommands().isEmpty)
+        #expect(!model.g9n9nSmartToggle.isActive)
+        #expect(!model.isStreaming)
+        #expect(keyEdges() == [true, false])
+    }
+
+    @Test func holdWithAudioOn011BWithinDelayedWindowStopsWithoutReopening() async throws {
+        let fixture = try makeSmartToggleFixture(voiceButtonMode: .smartToggle)
+        let (model, bridge, clock, flushAudio, _, writtenCommands, keyEdges) = fixture
+        bridge.deviceInformation.hidVersion = 0x011B
+        defer {
+            model.started = false
+            bridge.stop()
+        }
+
+        bridge.simulateControlPacketForTesting(Data([0x04, 0x03, 0x02, 0x01]))
+        await flushAudio()
+        clock.advance(to: 1_355)
+        model.bluetoothBridge(bridge, didDecode: [250, -240, 180])
+        clock.advance(to: 2_290)
         bridge.simulateControlPacketForTesting(Data([0x00]))
         await flushAudio()
 

@@ -1598,29 +1598,46 @@ struct ApplicationIntegrationTests {
         ))
         #expect(terminalCalls == [""])
 
-        // 4. Terminal surface succeeds even if surface.focus RPC fails, and passes surfaceID to terminalFocuser.
-        let terminalPayload = try JSONSerialization.data(withJSONObject: [
-            "surface_id": surfaceUUID,
-            "surface_type": "terminal"
-        ])
-        for focusStatus in [Int32(0), 1] {
+        // 4. Terminal surface succeeds even if surface.focus RPC fails, supports "type" & case-insensitive
+        // "Terminal", and passes surfaceID to terminalFocuser.
+        let terminalPayloads: [[String: Any]] = [
+            ["surface_id": surfaceUUID, "surface_type": "terminal"],
+            ["surface_id": surfaceUUID, "type": "Terminal"]
+        ]
+        for payloadObject in terminalPayloads {
+            let terminalPayload = try JSONSerialization.data(withJSONObject: payloadObject)
+            for focusStatus in [Int32(0), 1] {
+                terminalCalls.removeAll()
+                var commands: [[String]] = []
+                #expect(KeyboardInjector.focusCmux(
+                    applicationURL: appURL,
+                    cliURL: cliURL,
+                    runner: { _, args, _ in
+                        commands.append(args)
+                        if args[1] == "surface.current" {
+                            return .init(terminationStatus: 0, standardOutput: terminalPayload, timedOut: false)
+                        }
+                        return .init(terminationStatus: focusStatus, standardOutput: Data(), timedOut: false)
+                    },
+                    canContinue: { true },
+                    terminalFocuser: { id in terminalCalls.append(id); return true }
+                ))
+                #expect(commands.count == 2)
+                #expect(terminalCalls == [surfaceUUID])
+            }
+        }
+
+        // Empty or non-dictionary JSON falls back to terminalFocuser(""), and false propagates.
+        for malformed in [Data(), Data("[]".utf8)] {
             terminalCalls.removeAll()
-            var commands: [[String]] = []
-            #expect(KeyboardInjector.focusCmux(
+            #expect(!KeyboardInjector.focusCmux(
                 applicationURL: appURL,
                 cliURL: cliURL,
-                runner: { _, args, _ in
-                    commands.append(args)
-                    if args[1] == "surface.current" {
-                        return .init(terminationStatus: 0, standardOutput: terminalPayload, timedOut: false)
-                    }
-                    return .init(terminationStatus: focusStatus, standardOutput: Data(), timedOut: false)
-                },
+                runner: { _, _, _ in .init(terminationStatus: 0, standardOutput: malformed, timedOut: false) },
                 canContinue: { true },
-                terminalFocuser: { id in terminalCalls.append(id); return true }
+                terminalFocuser: { id in terminalCalls.append(id); return false }
             ))
-            #expect(commands.count == 2)
-            #expect(terminalCalls == [surfaceUUID])
+            #expect(terminalCalls == [""])
         }
     }
 
@@ -1658,16 +1675,48 @@ struct ApplicationIntegrationTests {
         ))
         #expect(clicks == 1)
 
-        // Occluded terminal or cancelled request never receives a click.
+        // Failed hitTest or failed postClick must not consume the retry-bounded clickAttempted flag.
+        var clickAttempted = false
         #expect(!KeyboardInjector.clickCmuxTerminalCandidate(
             terminal,
             windowFrame: window,
             canContinue: { true },
             hitTest: { _ in false },
             postClick: { _ in Issue.record("Occluded terminal must not be clicked"); return true },
+            didAttemptClick: { clickAttempted = true },
             isFocused: { false },
             pause: {}
         ))
+        #expect(!clickAttempted)
+
+        #expect(!KeyboardInjector.clickCmuxTerminalCandidate(
+            terminal,
+            windowFrame: window,
+            canContinue: { true },
+            hitTest: { _ in true },
+            postClick: { _ in false },
+            didAttemptClick: { clickAttempted = true },
+            isFocused: { false },
+            pause: {}
+        ))
+        #expect(!clickAttempted)
+
+        // Subsequent retry with allowClickFallback (!clickAttempted) succeeds and locks out further clicks.
+        var retryClicks = 0
+        #expect(!clickAttempted)
+        #expect(KeyboardInjector.clickCmuxTerminalCandidate(
+            terminal,
+            windowFrame: window,
+            canContinue: { true },
+            hitTest: { _ in true },
+            postClick: { _ in retryClicks += 1; return true },
+            didAttemptClick: { clickAttempted = true },
+            isFocused: { retryClicks == 1 },
+            pause: {}
+        ))
+        #expect(retryClicks == 1)
+        #expect(clickAttempted)
+
         #expect(!KeyboardInjector.clickCmuxTerminalCandidate(
             terminal,
             windowFrame: window,

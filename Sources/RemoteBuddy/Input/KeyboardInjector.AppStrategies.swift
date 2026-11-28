@@ -321,10 +321,7 @@ extension KeyboardInjector {
                         point: $0
                     )
                 },
-                postClick: { point in
-                    didAttemptClick?()
-                    return postAccessibilityFocusClick(point)
-                },
+                didAttemptClick: didAttemptClick,
                 isFocused: {
                     accessibilityElementIsFocused(
                         target.element,
@@ -364,6 +361,7 @@ extension KeyboardInjector {
         canContinue: () -> Bool,
         hitTest: (CGPoint) -> Bool,
         postClick: (CGPoint) -> Bool = postAccessibilityFocusClick,
+        didAttemptClick: (() -> Void)? = nil,
         isFocused: () -> Bool,
         pause: () -> Void = { usleep(50_000) }
     ) -> Bool {
@@ -375,6 +373,7 @@ extension KeyboardInjector {
         else { return false }
         if isFocused() { return true }
         guard postClick(point) else { return false }
+        didAttemptClick?()
         for _ in 0..<5 {
             guard canContinue() else { return false }
             if isFocused() { return true }

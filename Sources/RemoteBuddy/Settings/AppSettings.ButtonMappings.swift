@@ -689,12 +689,33 @@ extension AppSettings {
         name: String?
     ) -> Bool {
         guard let index = remoteDeviceProfiles.firstIndex(where: { $0.id == profileID }),
-              let customName = RemoteDeviceNamePolicy.customName(
-                from: name, model: remoteDeviceProfiles[index].model
-              ),
-              remoteDeviceProfiles[index].customName != customName
+              let observed = RemoteDeviceNamePolicy.observedSystemName(from: name)
         else { return false }
-        remoteDeviceProfiles[index].customName = customName
+        var changed = false
+        if remoteDeviceProfiles[index].lastObservedSystemName != observed {
+            remoteDeviceProfiles[index].lastObservedSystemName = observed
+            changed = true
+        }
+        if let customName = RemoteDeviceNamePolicy.customName(
+            from: observed,
+            model: remoteDeviceProfiles[index].model
+        ), remoteDeviceProfiles[index].customName != customName {
+            remoteDeviceProfiles[index].customName = customName
+            changed = true
+        }
+        return changed
+    }
+
+    @discardableResult
+    func updateRemoteProfileHardwareShortID(
+        _ profileID: UUID,
+        shortID: String?
+    ) -> Bool {
+        guard let normalized = RemoteDeviceNamePolicy.normalizedShortIdentifier(shortID),
+              let index = remoteDeviceProfiles.firstIndex(where: { $0.id == profileID }),
+              remoteDeviceProfiles[index].hardwareShortID != normalized
+        else { return false }
+        remoteDeviceProfiles[index].hardwareShortID = normalized
         return true
     }
 

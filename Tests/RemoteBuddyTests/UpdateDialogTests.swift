@@ -6,15 +6,12 @@ import Testing
 @Suite("Localized update dialogs")
 @MainActor
 struct UpdateDialogTests {
-    private func localization(_ suite: String) throws -> LocalizationStore {
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        return LocalizationStore(settings: AppSettings(defaults: defaults), resourceBundle: RemoteBuddyResourceBundle.mainOrDevelopment)
+    private func localization() -> LocalizationStore {
+        LocalizationStore(settings: AppSettings(defaults: EphemeralUserDefaults()), resourceBundle: RemoteBuddyResourceBundle.mainOrDevelopment)
     }
 
     @Test func checkingFollowsChosenLanguageAndCancellationIsDeliveredOnce() throws {
-        let suite = "update-dialog-" + UUID().uuidString
-        defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
-        let language = try localization(suite)
+        let language = localization()
         language.select(.english)
         let driver = LocalizedUpdateUserDriver(localization: language,
             currentVersion: .init(version: "v26-10-12.070", commitCount: "70"), presentsWindows: false)
@@ -32,9 +29,7 @@ struct UpdateDialogTests {
     }
 
     @Test func foundVersionsStaySeparateAndInstallChoiceIsExplicit() throws {
-        let suite = "update-dialog-" + UUID().uuidString
-        defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
-        let language = try localization(suite)
+        let language = localization()
         language.select(.english)
         let driver = LocalizedUpdateUserDriver(localization: language,
             currentVersion: .init(version: "v26-10-12.070", commitCount: "70"), presentsWindows: false)
@@ -51,9 +46,7 @@ struct UpdateDialogTests {
     }
 
     @Test func errorAcknowledgementUsesAppLanguageAndDoesNotExposeSystemMessage() throws {
-        let suite = "update-dialog-" + UUID().uuidString
-        defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
-        let language = try localization(suite)
+        let language = localization()
         language.select(.simplifiedChinese)
         let driver = LocalizedUpdateUserDriver(localization: language, presentsWindows: false)
         var acknowledgements = 0
@@ -71,11 +64,9 @@ struct UpdateDialogTests {
 
     @Test(arguments: [true, false])
     func installationHandoffKeepsTheSameVisibleWindow(initialConsent: Bool) throws {
-        let suite = "update-continuity-" + UUID().uuidString
-        defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
         _ = NSApplication.shared
         var activations = 0
-        let driver = LocalizedUpdateUserDriver(localization: try localization(suite),
+        let driver = LocalizedUpdateUserDriver(localization: localization(),
             activateApplication: { activations += 1 })
         defer { driver.dismissUpdateInstallation() }
         var choices: [SPUUserUpdateChoice] = []
@@ -114,11 +105,9 @@ struct UpdateDialogTests {
     }
 
     @Test func hiddenProgressDoesNotReappearDuringAutomaticInstallation() throws {
-        let suite = "update-hidden-continuity-" + UUID().uuidString
-        defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
         _ = NSApplication.shared
         var activations = 0
-        let driver = LocalizedUpdateUserDriver(localization: try localization(suite),
+        let driver = LocalizedUpdateUserDriver(localization: localization(),
             activateApplication: { activations += 1 })
         defer { driver.dismissUpdateInstallation() }
         driver.showAvailableUpdate(.init(version: "v26-10-15.215", commitCount: "215")) { _ in }
@@ -139,9 +128,7 @@ struct UpdateDialogTests {
     }
 
     @Test func confirmedUpgradeContinuesAfterPreparationWithoutAnotherConfirmation() throws {
-        let suite = "update-confirmed-restart-" + UUID().uuidString
-        defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
-        let language = try localization(suite)
+        let language = localization()
         language.select(.english)
         let driver = LocalizedUpdateUserDriver(localization: language, presentsWindows: false)
         var choices: [SPUUserUpdateChoice] = []
@@ -167,9 +154,7 @@ struct UpdateDialogTests {
 
     @Test(arguments: ["cancel", "dismiss", "error", "newCheck", "newCandidate"])
     func interruptedUpgradeDoesNotReuseRestartConsent(interruption: String) throws {
-        let suite = "update-interrupted-restart-" + UUID().uuidString
-        defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
-        let driver = LocalizedUpdateUserDriver(localization: try localization(suite), presentsWindows: false)
+        let driver = LocalizedUpdateUserDriver(localization: localization(), presentsWindows: false)
         let next = UpdateDialogVersion(version: "v26-10-15.215", commitCount: "215")
         driver.showAvailableUpdate(next) { _ in }
         driver.performAction(at: 2)
@@ -188,9 +173,7 @@ struct UpdateDialogTests {
     }
 
     @Test func readyUpdateCanBeDeferredWithoutSkippingIt() throws {
-        let suite = "update-dialog-" + UUID().uuidString
-        defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
-        let language = try localization(suite)
+        let language = localization()
         language.select(.english)
         let driver = LocalizedUpdateUserDriver(localization: language, presentsWindows: false)
         var choices: [SPUUserUpdateChoice] = []
@@ -202,8 +185,7 @@ struct UpdateDialogTests {
     }
 
     @Test func progressUpdatesReuseTheExistingIndicator() throws {
-        let suite = "update-progress-" + UUID().uuidString
-        let language = try localization(suite)
+        let language = localization()
         let driver = LocalizedUpdateUserDriver(localization: language, presentsWindows: false)
         driver.showDownloadInitiated {}
         let content = driver.makeContentView()
@@ -218,9 +200,7 @@ struct UpdateDialogTests {
     }
 
     @Test func progressHandlesUnknownLengthsAndDismissalDoesNotCancelCompletedDownload() throws {
-        let suite = "update-dialog-" + UUID().uuidString
-        defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
-        let language = try localization(suite)
+        let language = localization()
         let driver = LocalizedUpdateUserDriver(localization: language, presentsWindows: false)
         var cancellations = 0
         driver.showDownloadInitiated { cancellations += 1 }
@@ -235,9 +215,7 @@ struct UpdateDialogTests {
     }
 
     @Test func latestVersionClaimRequiresAnExactInstalledVersionMatch() throws {
-        let suite = "update-current-" + UUID().uuidString
-        defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
-        let language = try localization(suite)
+        let language = localization()
         language.select(.simplifiedChinese)
         let current = UpdateDialogVersion(version: "v26-10-13.111", commitCount: "111")
         let driver = LocalizedUpdateUserDriver(localization: language, currentVersion: current, presentsWindows: false)
@@ -253,9 +231,7 @@ struct UpdateDialogTests {
     }
 
     @Test func installedUpdateAcknowledgesWithoutACompletionDialog() throws {
-        let suite = "update-installed-" + UUID().uuidString
-        defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
-        let language = try localization(suite)
+        let language = localization()
         language.select(.simplifiedChinese)
         let driver = LocalizedUpdateUserDriver(localization: language, presentsWindows: false)
         var acknowledgements = 0
@@ -269,9 +245,7 @@ struct UpdateDialogTests {
     }
 
     @Test func windowCloseDefersUpdatesAndAcknowledgesOnlyOnce() throws {
-        let suite = "update-close-" + UUID().uuidString
-        defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
-        let driver = LocalizedUpdateUserDriver(localization: try localization(suite), presentsWindows: false)
+        let driver = LocalizedUpdateUserDriver(localization: localization(), presentsWindows: false)
         var choices: [SPUUserUpdateChoice] = []
         driver.showAvailableUpdate(.init(version: "v26-10-14.112", commitCount: "112")) { choices.append($0) }
         driver.closeWindow()
@@ -299,10 +273,8 @@ struct UpdateDialogTests {
     }
 
     @Test func nativeCloseButtonCancelsDownloadAndHidesNoncancellableWork() throws {
-        let suite = "update-native-close-" + UUID().uuidString
-        defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
         _ = NSApplication.shared
-        let driver = LocalizedUpdateUserDriver(localization: try localization(suite))
+        let driver = LocalizedUpdateUserDriver(localization: localization())
         defer { driver.dismissUpdateInstallation() }
         var cancellations = 0
         driver.showUserInitiatedUpdateCheck { cancellations += 1 }
@@ -334,11 +306,9 @@ struct UpdateDialogTests {
     }
 
     @Test func confirmationStagesRestoreTheWindowButProgressDoesNotStealFocus() throws {
-        let suite = "update-focus-" + UUID().uuidString
-        defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
         _ = NSApplication.shared
         var activations = 0
-        let driver = LocalizedUpdateUserDriver(localization: try localization(suite),
+        let driver = LocalizedUpdateUserDriver(localization: localization(),
             activateApplication: { activations += 1 })
         defer { driver.dismissUpdateInstallation() }
         driver.showDownloadInitiated {}
@@ -364,10 +334,8 @@ struct UpdateDialogTests {
     }
 
     @Test func restartConfirmationFloatsUntilInstallationContinuesOrIsDeferred() throws {
-        let suite = "update-restart-focus-" + UUID().uuidString
-        defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
         _ = NSApplication.shared
-        let driver = LocalizedUpdateUserDriver(localization: try localization(suite), activateApplication: {})
+        let driver = LocalizedUpdateUserDriver(localization: localization(), activateApplication: {})
         defer { driver.dismissUpdateInstallation() }
         driver.showDownloadInitiated {}
         let panel = try #require(driver.window as? NSPanel)
@@ -398,9 +366,7 @@ struct UpdateDialogTests {
 
     @Test(arguments: [AppLanguage.english, .simplifiedChinese])
     func footerActionsFitTheDialogInBothLanguages(language: AppLanguage) throws {
-        let suite = "update-layout-" + UUID().uuidString
-        defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
-        let localization = try localization(suite)
+        let localization = localization()
         localization.select(language)
         let driver = LocalizedUpdateUserDriver(localization: localization,
             currentVersion: .init(version: "v26-10-13.111", commitCount: "111"), presentsWindows: false)
@@ -425,9 +391,7 @@ struct UpdateDialogTests {
     }
 
     @Test func fallbackErrorSuppressionKeepsDownloadingAndAutoConfirmsRetry() throws {
-        let suite = "update-fallback-driver-" + UUID().uuidString
-        defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
-        let loc = try localization(suite)
+        let loc = localization()
         let driver = LocalizedUpdateUserDriver(localization: loc, presentsWindows: false)
 
         driver.prepareForFallbackDownload(autoConfirmVersion: "867")

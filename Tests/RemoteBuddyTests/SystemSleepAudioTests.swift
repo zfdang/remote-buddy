@@ -8,9 +8,7 @@ struct SystemSleepAudioTests {
     private final class MonitorToken {}
 
     @Test func actualSleepEndsActiveVoiceEvenDuringStartup() async throws {
-        let name = "system-sleep-" + UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: name))
-        defer { values.removePersistentDomain(forName: name) }
+        let values = EphemeralUserDefaults()
         let model = BridgeAppModel(settings: AppSettings(defaults: values), initialAudioDevices: [])
         model.started = true
         defer { model.started = false }
@@ -36,9 +34,7 @@ struct SystemSleepAudioTests {
     }
 
     @Test func screenSleepPreservesActiveVoice() throws {
-        let name = "screen-sleep-" + UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: name))
-        defer { values.removePersistentDomain(forName: name) }
+        let values = EphemeralUserDefaults()
         let model = BridgeAppModel(settings: AppSettings(defaults: values), initialAudioDevices: [])
         model.started = true
         defer { model.started = false }
@@ -50,17 +46,13 @@ struct SystemSleepAudioTests {
     }
 
     private func withReadyBridgeModel(
-        customMappingEnabled: Bool = true,
         hasMatchingHIDServices: Bool = true,
         configureHIDProfile: Bool = true,
         attachReadyBridge: Bool = true,
         _ body: (BridgeAppModel, BluetoothRemoteBridge, () -> [DispatchWorkItem]) throws -> Void
     ) throws {
-        let name = "sleep-lifecycle-" + UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: name))
-        defer { values.removePersistentDomain(forName: name) }
+        let values = EphemeralUserDefaults()
         let settings = AppSettings(defaults: values)
-        settings.customMappingEnabled = customMappingEnabled
 
         let bridgeID = UUID()
         if configureHIDProfile {
@@ -228,7 +220,7 @@ struct SystemSleepAudioTests {
 
             // Attempted HID start, discovery, or recovery scheduling during sleep must remain inert.
             model.startHIDMonitors(powerKeySuppressed: true)
-            model.startHIDDiscoveryIfNeeded(allowBackOnly: true)
+            model.startHIDDiscoveryIfNeeded()
             model.scheduleHIDMappingRecoveryIfNeeded()
             #expect(model.hidMonitors.isEmpty)
             #expect(model.discoveryHIDMonitor == nil)
@@ -251,20 +243,18 @@ struct SystemSleepAudioTests {
 
     @Test func startHIDMonitorsGuardPreservesInterruptedDuringSleepWithoutMappingConfig() throws {
         try withReadyBridgeModel(
-            customMappingEnabled: false,
             hasMatchingHIDServices: false,
             configureHIDProfile: false
         ) { model, _, _ in
             model.applyHIDSettings()
             #expect(model.preferredInputSourceMonitor.isMonitoring)
-            #expect(model.hidStatus.key == "button_mapping.status.system_managed")
 
             model.handleSystemAudioLifecycle(.systemWillSleep)
             #expect(model.hidMonitoringInterrupted)
             #expect(!model.preferredInputSourceMonitor.isMonitoring)
 
             // Calling startHIDMonitors directly while suspended (e.g. from voice configuration)
-            // must not clear hidMonitoringInterrupted via the system_managed early exit.
+            // must not clear hidMonitoringInterrupted.
             model.startHIDMonitors(powerKeySuppressed: false)
             #expect(model.hidMonitoringInterrupted)
 
@@ -276,7 +266,6 @@ struct SystemSleepAudioTests {
 
     @Test func bleReadyAcrossSleepReschedulesHIDMappingRecoveryOnWake() throws {
         try withReadyBridgeModel(
-            customMappingEnabled: true,
             hasMatchingHIDServices: false
         ) { model, bridge, _ in
             model.applyHIDSettings()

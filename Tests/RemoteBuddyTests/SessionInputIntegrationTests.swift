@@ -5,9 +5,7 @@ import Testing
 @Suite("Session and input integration") @MainActor
 struct SessionInputIntegrationTests {
     @Test func deactivationDuringInputSourceActivationCannotPostFnAndRequiresAllResumeEvents() throws {
-        let name = "session-integration-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         settings.setOnboardingVoiceTool(.weixin)
         settings.voiceKeyMode = .function

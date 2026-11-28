@@ -209,8 +209,7 @@ final class RemoteBuddyAppDelegate: NSObject, NSApplicationDelegate, NSMenuDeleg
         }
         if model.settings.isOnboardingComplete,
            BridgeAppModel.shouldRecoverHIDAfterCompletedUpdate(
-            completedUpdate: completedUpdate,
-            customMappingEnabled: model.settings.customMappingEnabled
+            completedUpdate: completedUpdate
         ) {
             model.recoverHIDAfterCompletedUpdate()
         }

@@ -202,7 +202,7 @@ extension BridgeAppModel {
             if discoveryHIDMonitor?.deviceFingerprint == fingerprint {
                 discoveryHIDMonitor?.stop()
                 discoveryHIDMonitor = nil
-                startHIDDiscoveryIfNeeded(allowBackOnly: !settings.customMappingEnabled)
+                startHIDDiscoveryIfNeeded()
             }
         }
         remoteBatteryLevels.removeValue(forKey: profileID)
@@ -346,9 +346,27 @@ extension BridgeAppModel {
         return profileID
     }
 
+    @discardableResult
+    func applyObservedHardwareShortIDs(_ shortIDsByFingerprint: [String: String]) -> Int {
+        var updated = 0
+        for profile in settings.remoteDeviceProfiles {
+            guard let fingerprint = profile.hidFingerprint,
+                  let shortID = shortIDsByFingerprint[fingerprint]
+            else { continue }
+            if settings.updateRemoteProfileHardwareShortID(profile.id, shortID: shortID) {
+                updated += 1
+            }
+        }
+        return updated
+    }
+
     /// Refresh display metadata without starting discovery, reconnecting, or changing device identity.
     func refreshRemoteDeviceNames(reason: RemoteDeviceNameRefreshReason) {
-        guard started, CBManager.authorization == .allowedAlways else { return }
+        guard started else { return }
+        if settings.remoteDeviceProfiles.contains(where: { $0.hidFingerprint != nil }) {
+            _ = applyObservedHardwareShortIDs(RemoteDeviceNameReader.readHIDShortIDs())
+        }
+        guard CBManager.authorization == .allowedAlways else { return }
         remoteDeviceNameRefreshOperation &+= 1
         var requested = 0
         var resolved = 0

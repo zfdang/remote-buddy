@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Frequently Asked Questions (FAQ) · Remote Buddy</title>
-  <meta name="description" content="Frequently Asked Questions for Remote Buddy on macOS and Windows: remote buying recommendations, Hold-to-Talk vs Hands-Free Toggle, 60s hardware limit, Direct Passthrough mode, Common Phrases, Application Integration, input method bridging, Fn troubleshooting, and Windows installation & usage guide.">
+  <meta name="description" content="Frequently Asked Questions for Remote Buddy on macOS and Windows: remote buying recommendations, Hold-to-Talk vs Hands-Free Toggle, 60s hardware limit, per-app button mapping, Direct Passthrough mode, Common Phrases, Application Integration, input method bridging, Fn troubleshooting, and Windows installation & usage guide.">
   <meta name="theme-color" content="#203a68">
   <link rel="canonical" href="https://remote.zfdang.com/faq_en.html">
   <link rel="alternate" hreflang="zh-CN" href="https://remote.zfdang.com/faq.html">
@@ -32,7 +32,7 @@
   <div class="downloads-head">
     <p class="eyebrow">GUIDE &amp; REFERENCES</p>
     <h1 class="section-title">Frequently Asked Questions (FAQ)</h1>
-    <p class="lead-sub">Essential guides, hardware choices, voice trigger modes, Direct Passthrough, Common Phrases, Application Integration, input method bridging, troubleshooting, and Windows setup guidance for Remote Buddy.</p>
+    <p class="lead-sub">Essential guides, hardware choices, voice trigger modes, per-app button mapping, Direct Passthrough, Common Phrases, Application Integration, input method bridging, troubleshooting, and Windows setup guidance for Remote Buddy.</p>
   </div>
 
   <!-- 1. Hardware Support & Buying Recommendations -->
@@ -136,7 +136,7 @@
     <details class="troubleshooting-card">
       <summary><span class="troubleshooting-question">What actions can I assign in Button Mapping, and what are some practical examples?</span></summary>
       <div class="troubleshooting-body">
-        <p>Once custom mapping is enabled on the <strong>Buttons</strong> tab, you can independently customize <strong>Single Press</strong>, <strong>Double Press</strong>, and <strong>Long Press</strong> gestures for every physical key (except the dedicated Voice button). Each remote saves its own configuration independently.</p>
+        <p>On the <strong>Button Mapping</strong> tab, you can independently customize <strong>Single Press</strong>, <strong>Double Press</strong>, and <strong>Long Press</strong> gestures for every physical key supported by your remote model (for example, the T1 Remote's directional pad and OK button stay native system inputs and do not appear in the mapping list). Each remote saves its own configuration independently.</p>
         <p><strong>Available action categories:</strong></p>
         <ul>
           <li><strong>Basic Keys:</strong> Frequent editing and navigation shortcuts such as Return, Send (<code>⌘↩</code>), Shift+Return, Copy/Paste, Undo, cursor arrows, and scrolling.</li>
@@ -149,14 +149,35 @@
               <li><strong>Open URL / URL Scheme:</strong> Enter any web link (<code>https://...</code>) or app URL scheme such as Apple Shortcuts (<code>shortcuts://run-shortcut?name=MyShortcut</code>) to launch websites or trigger multi-step workflows safely.</li>
             </ul>
           </li>
-          <li><strong>Direct Passthrough (directional keys):</strong> Acts like a physical arrow key with zero gesture delay, ideal for holding Right Arrow to fast-forward video playback or continuous cursor movement.</li>
+          <li><strong>Direct Passthrough (for models with mappable directional keys):</strong> Acts like a physical arrow key with zero gesture delay, ideal for holding Right Arrow to fast-forward video playback or continuous cursor movement (on the T1 Remote, directional keys remain native system inputs).</li>
         </ul>
         <p><strong>Common setup examples:</strong></p>
         <ol>
           <li><strong>Launch a favorite app with one button:</strong> Map the <code>YouTube</code> or <code>NETFLIX</code> key's single press to <strong>Open an App</strong> (or <strong>Open Custom App</strong> for <code>Cursor</code> or <code>WeChat</code>) so one tap brings it forward ready for voice input.</li>
           <li><strong>Open a web app or run an Apple Shortcut combo:</strong> Assign a spare key or double press to <strong>Open URL / URL Scheme</strong>—use <code>https://chatgpt.com</code> to jump straight to a site, or <code>shortcuts://run-shortcut?name=WorkMode</code> to execute a multi-step Apple Shortcut workflow.</li>
-          <li><strong>Layer custom shortcuts onto Long Press:</strong> Keep single press intuitive (like OK = Return, Long Press = Send), and map another key's long press to a <strong>Custom Shortcut</strong> such as <code>⇧⌘P</code> or <code>⌘Space</code> to double your shortcuts without cluttering single taps.</li>
+          <li><strong>Layer custom shortcuts onto Long Press:</strong> Keep single press intuitive (like OK = Return, Long Press = Send; on the T1 Remote, OK stays native, so use another mappable key), and map another key's long press to a <strong>Custom Shortcut</strong> such as <code>⇧⌘P</code> or <code>⌘Space</code> to double your shortcuts without cluttering single taps.</li>
         </ol>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card" id="per-app-mapping">
+      <summary><span class="troubleshooting-question">Can I set different button mappings for specific apps?</span></summary>
+      <div class="troubleshooting-body">
+        <p><strong>Yes.</strong> Remote Buddy supports <strong>per-app button overrides</strong>, stored independently for each remote without affecting other remotes.</p>
+        <p><strong>How to configure:</strong></p>
+        <ol>
+          <li>Open <strong>Button Mapping</strong> and look at the <strong>Application</strong> bar above the remote layout, which defaults to <strong>All Applications (Default)</strong> (the remote's baseline mapping used across all apps).</li>
+          <li>Click <strong>+ Add Application</strong> on the right to pick from <strong>Running Applications</strong>, or choose <strong>Choose Application…</strong> to select any app on your Mac.</li>
+          <li>With that app selected, customize only the buttons or gestures you want to behave differently there (Single Press, Double Press, Long Press, including custom shortcuts, basic keys, or Direct Passthrough for directional keys). <strong>Unmodified triggers automatically inherit the remote's default mapping.</strong></li>
+          <li>To clear a single override, open that trigger's editor and click <strong>Restore This Trigger</strong>; to remove all overrides for that app, click <strong>Remove Application</strong> on the Application bar.</li>
+        </ol>
+        <p><strong>Automatic switching:</strong> Whenever a configured app is your frontmost window, Remote Buddy automatically applies its overrides; as soon as you switch to another app, buttons immediately fall back to your remote's defaults (or the newly focused app's overrides).</p>
+        <p><strong>Common examples:</strong></p>
+        <ul>
+          <li><strong>Browsers &amp; video players (Chrome, Safari, IINA):</strong> Override Right Arrow to Direct Passthrough for hold-to-2x playback speed and OK to Play/Pause, while keeping normal arrows and Return/Send everywhere else (applies to models with mappable directional and OK buttons, such as Xiaomi and G9N9N; on the T1 Remote, directional and OK buttons stay native, so choose another mappable key).</li>
+          <li><strong>Code editors &amp; terminals (Cursor, VS Code, Antigravity):</strong> Map a convenient button to the command palette (<code>⇧⌘P</code>) or submit shortcut only while coding.</li>
+          <li><strong>Presentation apps (Keynote / PowerPoint):</strong> Dedicate arrow buttons to slide navigation without altering your global defaults (applies to models with mappable directional keys; T1 Remote arrow keys remain native system inputs).</li>
+        </ul>
       </div>
     </details>
 
@@ -180,7 +201,7 @@
         <p><strong>Purpose:</strong> Allows one-touch insertion of frequently used static text—such as email addresses, shipping coordinates, customer support templates, terminal commands, or code snippets—without typing or speaking them repeatedly.</p>
         <p><strong>How to Configure:</strong></p>
         <ol>
-          <li>Open the <strong>Button Mapping</strong> tab in Remote Buddy and click <strong>"Manage Phrases"</strong> in the bottom right corner (or select "Common Phrases" from the sidebar).</li>
+          <li>Open the <strong>Button Mapping</strong> tab in Remote Buddy, click any button trigger (Single, Double, or Long Press), switch to the <strong>Common Phrases</strong> action category, and click <strong>Edit Common Phrases</strong> to open the phrase manager.</li>
           <li>In the phrase manager, edit phrase text, assign concise labels, and map phrases directly to remote physical keys (directional arrows, OK, and available function keys).</li>
           <li>In Button Mapping, assign any remote button gesture to the <strong>"Common Phrases"</strong> action.</li>
         </ol>
@@ -215,7 +236,7 @@
     <details class="troubleshooting-card">
       <summary><span class="troubleshooting-question">Which input methods and voice tools are currently supported?</span></summary>
       <div class="troubleshooting-body">
-        <p>Remote Buddy is inherently compatible with any macOS software that supports <strong>global shortcut triggering</strong> and allows selecting an audio input microphone. Officially integrated tools (ordered as supported in the app) include:</p>
+        <p>Remote Buddy is compatible with any macOS voice software that supports <strong>global shortcut triggering</strong> and allows selecting a microphone (or follows the system sound input)—not only voice typing apps, but also voice assistants and standalone recorders. Officially integrated tools (ordered as supported in the app) include:</p>
         <p><strong>1. WeChat Input Method (WeType):</strong> Send remote voice to WeType. Tencent's official input method, featuring configurable voice hotkeys and "Global shortcut" support for instant triggering without switching input sources.</p>
         <p><strong>2. Doubao Input Method:</strong> Send remote voice to Doubao. ByteDance's AI voice typing tool with high recognition accuracy, LLM text polishing, and "Global voice activation".</p>
         <p><strong>3. Tencent Chatterfly:</strong> Hold to talk and release to finish in Tencent Chatterfly using its global voice shortcut.</p>
@@ -223,8 +244,8 @@
         <p><strong>5. NetEase Bageshuo:</strong> NetEase AI voice dictation with real-time transcription and smart text polish.</p>
         <p><strong>6. Typeless:</strong> Use voice typing in Typeless. Modern, clean, cross-platform voice typing companion.</p>
         <p><strong>7. macOS Dictation: Built-in &amp; Zero-Install</strong><br>Use built-in Dictation without installing a third-party app. Runs on-device on Apple Silicon Macs. Default hotkey is pressing Fn twice.</p>
-        <p><strong>8. Other Voice Apps:</strong> Test in your favorite voice typing app. Any third-party software that allows setting a global voice hotkey and selecting an input microphone can be used.</p>
-        <p><strong>Universal Setup Rule:</strong> In your voice tool or macOS Sound settings, select <code>Remote Buddy Mic</code> as the input device, and set the tool's trigger hotkey in Remote Buddy's setup wizard!</p>
+        <p><strong>8. Other Voice Apps:</strong> Works with any third-party voice typing app, as well as voice assistants and standalone recorders (such as Siri or WeType AI Recorder) that <strong>do not insert text into input fields</strong>.</p>
+        <p><strong>Universal Setup Rule:</strong> (1) <strong>Microphone:</strong> Prefer selecting <code>Remote Buddy Mic</code> inside the voice app's own microphone setting (no need to change macOS's system default microphone); only set <strong>System Settings → Sound → Input</strong> if the tool lacks its own microphone picker (such as Siri). (2) <strong>Shortcut:</strong> Match the voice shortcut and trigger mode (Hold / Tap) in Remote Buddy's setup wizard with the tool's global shortcut. (3) <strong>Non-text-inserting tools:</strong> If your tool does not insert text back into the wizard's test field, choose <strong>Other Voice App</strong>, verify that the remote voice button activates and delivers audio to it, and check the “does not insert text into fields” confirmation box to finish setup without requiring text to appear in the test field.</p>
       </div>
     </details>
 

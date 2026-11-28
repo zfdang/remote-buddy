@@ -6,9 +6,7 @@ import Testing
 @MainActor
 struct OnboardingSessionTests {
     private func withSettings(_ body: (AppSettings) throws -> Void) throws {
-        let suite = "onboarding-session-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         try body(AppSettings(defaults: defaults))
     }
 
@@ -28,9 +26,7 @@ struct OnboardingSessionTests {
     }
 
     @Test func freshLaunchDoesNotReuseTheLastWizardsDestination() throws {
-        let suite = "onboarding-destination-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         settings.onboardingPurpose = .integration
         settings.completeOnboarding()
@@ -52,9 +48,7 @@ struct OnboardingSessionTests {
     }
 
     @Test func cancellingAdditionalDeviceRestoresCompletedSetupAfterRelaunch() throws {
-        let suite = "onboarding-dismiss-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let profile = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         settings.selectRemoteProfile(profile)
@@ -123,9 +117,7 @@ struct OnboardingSessionTests {
     }
 
     @Test func integrationUsesSelectedRemoteAfterDeletedDeviceAndRelaunch() throws {
-        let suite = "onboarding-selected-remote-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let xiaomi = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         let google = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)

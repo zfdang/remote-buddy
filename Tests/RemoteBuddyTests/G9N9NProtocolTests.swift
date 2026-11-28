@@ -8,11 +8,8 @@ import Testing
 struct G9N9NProtocolTests {
     @Test(arguments: [Data([0]), Data([1, 0])]) @MainActor
     func shortenedZeroReleaseClearsIndexedButtonsWithoutPressingPower(release: Data) throws {
-        let suite = "google-short-release-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
         let profileID = UUID()
         var actions: [RemoteButton] = []
         var active = Set<RemoteButton>()
@@ -47,11 +44,8 @@ struct G9N9NProtocolTests {
     }
 
     @Test @MainActor func crossOriginDeduplicationMatchesReport1AcrossIOHIDAndBTLEServerLog() throws {
-        let suite = "google-dedupe-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
         let profileID = UUID()
         var performed: [RemoteButton] = []
         let monitor = HIDRemoteMonitor(
@@ -111,11 +105,8 @@ struct G9N9NProtocolTests {
     }
 
     @Test @MainActor func unknownUsageDoesNotLoseTheReleaseOfAKnownButton() throws {
-        let name = "google-unknown-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
         let monitor = HIDRemoteMonitor(settings: settings, profileID: UUID(),
             runtimePermissions: { true }, actionPerformer: { _, _, _ in true }, diagnosticLogger: { _ in })
         monitor.connectSimulatedDevice(fingerprint: "google", profileID: UUID())
@@ -259,11 +250,8 @@ struct G9N9NProtocolTests {
     }
 
     @Test @MainActor func indexedReportsDrivePressAndReleaseWithoutStuckButtons() throws {
-        let name = "google-indexed-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
         let monitor = HIDRemoteMonitor(settings: settings, profileID: UUID(),
             runtimePermissions: { true }, actionPerformer: { _, _, _ in true }, diagnosticLogger: { _ in })
         monitor.connectSimulatedDevice(fingerprint: "indexed-google", profileID: UUID())
@@ -325,11 +313,8 @@ struct G9N9NProtocolTests {
     }
 
     @Test @MainActor func googlePressAndReleaseUseMappingsAndMalformedReportsDoNotReleaseKeys() throws {
-        let name = "g9n9n-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
-        settings.customMappingEnabled = true
         settings.setAction(.commandQuit, for: .youtube)
         var invoked: [RemoteButton] = []
         var active = Set<RemoteButton>()
@@ -348,9 +333,7 @@ struct G9N9NProtocolTests {
     }
 
     @Test @MainActor func googleBluetoothAndHidProfilesMergeWithinTheirFamily() throws {
-        let name = "g9n9n-profiles-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let xiaomi = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         settings.selectRemoteProfile(xiaomi)
@@ -366,9 +349,7 @@ struct G9N9NProtocolTests {
     }
 
     @Test @MainActor func googleHidIdentityWinsOverAnEmptyPlaceholderAndAmbiguityIsNotGuessed() throws {
-        let name = "g9n9n-identity-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let hid = settings.registerHIDRemote(fingerprint: "first-google", model: .chromecastVoiceRemote)
         #expect(settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote) == hid)
@@ -380,9 +361,7 @@ struct G9N9NProtocolTests {
     }
 
     @Test @MainActor func xiaomiAudioCannotPassGoogleOnboardingAfterADevicePickerChange() throws {
-        let name = "g9n9n-source-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let xiaomiID = UUID()
         _ = settings.registerBluetoothRemote(identifier: xiaomiID, model: .rc003)

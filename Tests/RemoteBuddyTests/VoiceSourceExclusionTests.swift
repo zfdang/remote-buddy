@@ -4,9 +4,7 @@ import Testing
 @Suite("Voice source exclusion") @MainActor
 struct VoiceSourceExclusionTests {
     @Test func pendingReleaseBlocksAnotherVoiceStart() throws {
-        let suite = "voice-exclusion-" + UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: suite))
-        defer { values.removePersistentDomain(forName: suite) }
+        let values = EphemeralUserDefaults()
         let model = BridgeAppModel(settings: AppSettings(defaults: values))
         #expect(model.canAcceptNewVoiceSession(from: .bluetooth))
         model.voiceKeyReleaseRetry = ScheduledOperation {}

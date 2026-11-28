@@ -70,6 +70,7 @@ struct AudioEngineStartCoordinatorTests {
     @Test func coordinatorCancelsTokenRunsCleanupAndUnblocksOnTimeout() {
         let gate = DispatchSemaphore(value: 0)
         let cleanupDone = DispatchSemaphore(value: 0)
+        let workDone = DispatchSemaphore(value: 0)
         let tokenCancelledAfterUnblock = LockedIntBox()
         defer { gate.signal() }
 
@@ -82,6 +83,7 @@ struct AudioEngineStartCoordinatorTests {
                 if token.isCancelled {
                     tokenCancelledAfterUnblock.increment()
                 }
+                workDone.signal()
                 return 99
             },
             cleanup: {
@@ -95,6 +97,7 @@ struct AudioEngineStartCoordinatorTests {
         }
         gate.signal()
         #expect(cleanupDone.wait(timeout: .now() + 1) == .success)
+        #expect(workDone.wait(timeout: .now() + 1) == .success)
         #expect(tokenCancelledAfterUnblock.current == 1)
     }
 

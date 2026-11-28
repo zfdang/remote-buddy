@@ -276,8 +276,6 @@ final class BridgeAppModel: ObservableObject, BluetoothRemoteBridgeDelegate {
     }
 
     struct HIDMonitoringConfiguration: Equatable {
-        let customMappingEnabled: Bool
-        let backOnlyMode: Bool
         let powerKeySuppressed: Bool
         let waitForMatchingServices: Bool
         let allowedLocationIDs: Set<UInt32>?

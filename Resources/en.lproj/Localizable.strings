@@ -33,7 +33,6 @@
 "voice_button.status.input_unavailable" = "The text field was not ready. Voice input was canceled.";
 "audio.compatibility.device_detected" = "%1$@ detected";
 "audio.compatibility.device_not_detected" = "%1$@ was not found";
-"button_mapping.status.system_managed" = "Buttons are handled natively by macOS";
 "button_mapping.status.interrupted" = "Button mapping paused; return to the app to retry";
 "button_mapping.permission.input_monitoring_required" = "Allow Input Monitoring to use remote buttons.";
 "button_mapping.permission.accessibility_required" = "Allow Accessibility (new name: Device Control and Data Access) to run button actions.";
@@ -296,12 +295,13 @@
 "connection.device.name" = "Xiaomi Bluetooth Remote 2 / 2 Pro";
 "remote.device.selector" = "Remote";
 "remote.device.model" = "Model";
-"remote.device.model.rc001" = "Xiaomi Bluetooth Remote 2";
-"remote.device.model.rc003" = "Xiaomi Bluetooth Remote 2 Pro";
+"remote.device.model.rc001" = "Xiaomi Remote 2";
+"remote.device.model.rc003" = "Xiaomi Remote 2 Pro";
 "remote.device.model.unrecognized" = "Unrecognized Remote";
 "remote.device.model.apple_siri_remote_a2854" = "Apple Remote (7th Generation)";
 "remote.device.model.apple_siri_remote_a2540" = "Apple Remote (6th Generation)";
-"remote.device.model.chromecast_voice_remote" = "Chromecast Remote";
+"remote.device.model.chromecast_voice_remote" = "G9N9N";
+"remote.device.model.t1_remote" = "T1-Remote";
 "remote.device.model.unknown" = "Unrecognized Remote";
 "remote.device.custom_name" = "Custom name";
 "remote.device.bind_button" = "Set Up Button Controls";
@@ -342,6 +342,7 @@
 "connection.voice_key.mode.left_option" = "Left Option (⌥)";
 "connection.voice_key.mode.right_option" = "Right Option (⌥)";
 "connection.voice_key_mode.help" = "Set the same voice shortcut and recording mode in your input tool in the next step (avoid Fn/Globe when possible, as it is frequently claimed by macOS or apps like WeChat).";
+"connection.voice_key_mode.help.highlight" = "Set the same voice shortcut and recording mode";
 "connection.voice_key_mode.fn_caution_help" = "Tip: avoid Fn/Globe unless required (e.g., macOS Dictation). Fn is easily claimed or conflicted by macOS Globe actions, WeChat, and other apps—Ctrl (⌃) + Shift (⇧) + R is recommended instead.";
 "onboarding.voice_trigger.save_hint" = "New settings take effect after the voice test passes.";
 "connection.voice_key_mode.command_permission" = "Modifier-key mode requires Accessibility permission";
@@ -363,14 +364,9 @@
 "audio.compatibility.help" = "Install the compatible microphone and select it here. The device is named Remote Buddy Mic.";
 "audio.compatibility.help_plain" = "If your voice typing app receives no audio, select the compatible microphone included with the installer. Existing audio devices are not replaced.";
 "button_mapping.page.title" = "Button Mapping";
-"button_mapping.page.subtitle" = "Click a button to change its settings";
-"button_mapping.google.subtitle" = "G9N9N supports custom single-click, double-click, and long-press actions";
+"button_mapping.faq_link" = "Voice & Buttons FAQ ↗";
 "button_mapping.t1.subtitle" = "Click Back, Home, Menu, Mute, Volume, or Power to customize; press and release Voice to start talking, then press again to stop (OK, arrows, air mouse, and back keyboard keep default system input)";
 "t1.remote.keyboard_airmouse_note" = "Back, Home, Menu, Mute, Volume, and Power support single, double, and long-press mapping. OK, direction keys, air mouse movement, and the back QWERTY keyboard keep default system input (typing and cursor control).";
-"button_mapping.toggle.enabled" = "Custom Buttons";
-"button_mapping.permission_prompt.title" = "Button Permissions Required";
-"button_mapping.permission_prompt.message" = "Custom button controls require Input Monitoring and Accessibility. Open the Permissions page to finish setup.";
-"button_mapping.permission_prompt.open" = "Open Permissions";
 "common.status.enabled" = "Enabled";
 "common.status.disabled" = "Disabled";
 "button_mapping.actions.title" = "Button Actions";
@@ -378,9 +374,9 @@
 "button_mapping.all_buttons.title" = "All Buttons";
 "button_mapping.all_buttons.help" = "Each row shows the actions for a single press, double press, and long press.";
 "button_mapping.inspector.help" = "Choose an action for each type of button press.";
-"button_mapping.selection_lock" = "Lock Current Button";
-"button_mapping.selection_lock_help" = "When enabled, pressing the physical remote will not switch the button being edited.";
-"button_mapping.selection_lock_hint_short" = "Keep the current item selected while using the remote.";
+"button_mapping.selection_lock" = "Lock Selected Button";
+"button_mapping.selection_lock_help" = "Controls whether pressing a button on the physical remote automatically highlights that button on the map. Keep on to switch selection only by clicking; turn off to locate buttons by pressing them on the remote.";
+"button_mapping.selection_lock_hint_short" = "When on, pressing the physical remote will not switch the highlighted button; turn off to auto-highlight whichever remote button you press.";
 "button_mapping.voice_button.title" = "Voice Button";
 "button_mapping.voice_button.fixed" = "Voice Trigger Key";
 "button_mapping.action.not_set" = "Not Set";
@@ -781,7 +777,6 @@
 "onboarding.side.samples" = "Voice audio received";
 "onboarding.side.transcript" = "Text appeared";
 "onboarding.side.three_buttons" = "Three different buttons detected";
-"onboarding.side.mapping_enabled" = "Custom buttons enabled";
 "onboarding.diagnostics.copy" = "Copy Setup Diagnostics";
 "onboarding.recovery.permission.bluetooth_denied.title" = "Bluetooth access is still needed";
 "onboarding.recovery.permission.bluetooth_denied.detail" = "Allow Bluetooth access so Remote Buddy can find your paired remote.";
@@ -969,6 +964,9 @@
 "onboarding.voice_tool.guide.screenshot.bageshuo_menu" = "In the menu bar, click the NetEase Bageshuo icon, then select Settings.";
 "onboarding.voice_tool.guide.screenshot.bageshuo_settings" = "In Settings → Shortcuts, set the voice shortcut to “%@” and use press-to-start/stop mode.";
 "onboarding.voice_tool.guide.screenshot.system_fn" = "In System Settings → Keyboard (键盘), set Press Globe key to (按下🌐键时) to Do Nothing (不执行任何操作).";
+"onboarding.voice_tool.guide.screenshot.example_badge" = "Example only\nUse your key";
+"onboarding.voice_tool.guide.screenshot.example_notice" = "Note: The shortcut in the screenshot above is only an example. Follow your actual selected shortcut “%@”.";
+"onboarding.voice_tool.guide.screenshot.conflict_example_notice" = "Note: The shortcut in the screenshot above is only an example. Check for conflicts using your actual selected shortcut “%@”.";
 "siri_remote.activation.enable" = "Enable";
 "siri_remote.activation.disable" = "Disable";
 "siri_remote.activation.retry" = "Retry";
@@ -1280,6 +1278,7 @@
 "shortcut.keyboard.main_key_required" = "Choose a main key, or keep just one standalone modifier.";
 
 "connection.voice_key.chord_help" = "Set the same chord and recording mode in your input tool in the next step, and avoid shortcuts already used by other apps (avoid Fn/Globe when possible, as it is often claimed by macOS or apps like WeChat).";
+"connection.voice_key.chord_help.highlight" = "Set the same chord and recording mode";
 
 "shortcut.keyboard.help" = "Combine modifier and main keys, or record a shortcut directly. Left and right modifiers are distinct.";
 "shortcut.keyboard.use_shortcut" = "Use This Shortcut";
@@ -1289,9 +1288,6 @@
 
 "onboarding.voice_test.trial_missing" = "The voice test configuration is no longer active. Return to input tool setup before testing again.";
 "onboarding.voice_test.reconfigure" = "Return to Input Tool Setup";
-
-"button_mapping.google.version_notice" = "G9N9N units connect via Standard System HID or Bluetooth Logging Profile (.mobileconfig); see the";
-"button_mapping.google.device_guide" = "device guide ↗";
 
 "connection.empty.title" = "No remotes added";
 "connection.empty.detail" = "Click Add Device in the top-right corner to connect your remote.";
@@ -1322,7 +1318,7 @@
 "onboarding.voice_tool.guide.open_chatterfly" = "Open Tencent Chatterfly";
 "onboarding.voice_tool.guide.open_chatterfly.detail" = "Install and start Tencent Chatterfly, leave it running in the background, then open Settings.";
 "onboarding.voice_tool.guide.configure_chatterfly" = "Configure the global voice shortcut";
-"onboarding.voice_tool.guide.screenshot.chatterfly_settings" = "In Tencent Chatterfly → Settings → Voice Settings, set the Voice Input shortcut to “%@” and enable the global shortcut option. Hold to talk and release to finish. The screenshot shortcut is an example; use your selected shortcut.";
+"onboarding.voice_tool.guide.screenshot.chatterfly_settings" = "In Tencent Chatterfly → Settings → Voice Settings, set the Voice Input shortcut to “%@” and enable the global shortcut option. Hold to talk and release to finish.";
 "onboarding.voice_tool.guide.screenshot.chatterfly_input_microphone" = "In Tencent Chatterfly → Settings → Audio Settings → Microphone, select Remote Buddy Mic.";
 
 // Per-device Connection usage tips

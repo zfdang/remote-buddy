@@ -39,9 +39,7 @@ struct VoiceSilenceNoticeTests {
     }
 
     @Test @MainActor func bridgeAppModelPresentsLocalizedReminderOncePerHandsFreeSession() throws {
-        let suite = "voice-silence-notice-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: values(defaults))
         let model = BridgeAppModel(settings: settings, initialAudioDevices: [])
 

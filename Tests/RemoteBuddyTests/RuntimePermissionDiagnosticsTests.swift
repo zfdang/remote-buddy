@@ -51,17 +51,6 @@ struct RuntimePermissionDiagnosticsTests {
             ) == nil
         )
 
-        #expect(
-            RuntimePermissionDiagnosisPolicy.diagnose(
-                bluetoothGranted: false,
-                inputMonitoringGranted: false,
-                accessibilityGranted: true,
-                connectionStatusKey: "connection.status.searching",
-                hidStatusKey: "button_mapping.status.system_managed",
-                hidFilterFailure: .none
-            ) == nil
-        )
-
         // Transient Bluetooth resetting should not flash a banner.
         #expect(
             RuntimePermissionDiagnosisPolicy.diagnose(
@@ -183,9 +172,7 @@ struct RuntimePermissionDiagnosticsTests {
     }
 
     @Test func appModelDetectsSystemDisabledEventTapAsDesyncEvenWhenPermissionsReportGranted() throws {
-        let suiteName = "runtime-perm-tap-disabled-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suiteName))
-        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let defaults = EphemeralUserDefaults()
 
         let model = BridgeAppModel(
             settings: AppSettings(defaults: defaults),
@@ -284,9 +271,7 @@ struct RuntimePermissionDiagnosticsTests {
     }
 
     @Test func relaunchApplicationValidatesBundleTerminationAndProcessLaunch() throws {
-        let suiteName = "runtime-perm-relaunch-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suiteName))
-        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let defaults = EphemeralUserDefaults()
 
         let model = BridgeAppModel(settings: AppSettings(defaults: defaults))
         var launchedCalls: [(executable: String, arguments: [String])] = []
@@ -367,9 +352,7 @@ struct RuntimePermissionDiagnosticsTests {
     }
 
     @Test func newPermissionAndDiagnosticLocalizationKeysExistInEnglishAndChinese() throws {
-        let suiteName = "locale-runtime-perm-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suiteName))
-        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let defaults = EphemeralUserDefaults()
         let store = LocalizationStore(settings: AppSettings(defaults: defaults))
 
         let keys = [
@@ -505,9 +488,7 @@ struct RuntimePermissionDiagnosticsTests {
     }
 
     @Test func appModelFirstUseAndSettingsDiagnosticsReflectRestrictedPostEventAccess() throws {
-        let suiteName = "runtime-perm-post-event-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suiteName))
-        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let defaults = EphemeralUserDefaults()
 
         var postEventGranted = false
         let model = BridgeAppModel(
@@ -713,7 +694,6 @@ struct RuntimePermissionDiagnosticsTests {
         #expect(
             !HIDPermissionRecoveryPolicy.shouldReapplySettings(
                 started: true,
-                customMappingEnabled: true,
                 previous: granted,
                 current: restricted
             )
@@ -721,7 +701,6 @@ struct RuntimePermissionDiagnosticsTests {
         #expect(
             !HIDPermissionRecoveryPolicy.shouldReapplySettings(
                 started: true,
-                customMappingEnabled: true,
                 previous: restricted,
                 current: granted
             )
@@ -729,7 +708,6 @@ struct RuntimePermissionDiagnosticsTests {
         #expect(
             HIDPermissionRecoveryPolicy.shouldReapplySettings(
                 started: true,
-                customMappingEnabled: true,
                 previous: restricted,
                 current: denied
             )
@@ -737,7 +715,6 @@ struct RuntimePermissionDiagnosticsTests {
 
         #expect(
             !BridgeAppModel.shouldReapplyHIDSettingsBeforeVoiceStart(
-                customMappingEnabled: true,
                 mode: .rightOption,
                 fnTapModeEnabled: false,
                 requiresOrderedFn: false,
@@ -753,9 +730,7 @@ struct RuntimePermissionDiagnosticsTests {
             )
         )
 
-        let suiteName = "runtime-perm-no-hid-rebuild-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suiteName))
-        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let defaults = EphemeralUserDefaults()
 
         var postEventGranted = true
         let model = BridgeAppModel(
@@ -769,8 +744,6 @@ struct RuntimePermissionDiagnosticsTests {
             }
         )
         let initialConfig = BridgeAppModel.HIDMonitoringConfiguration(
-            customMappingEnabled: true,
-            backOnlyMode: false,
             powerKeySuppressed: true,
             waitForMatchingServices: false,
             allowedLocationIDs: nil,
@@ -794,5 +767,100 @@ struct RuntimePermissionDiagnosticsTests {
         #expect(model.runtimePermissionIssue == nil)
         #expect(model.appliedHIDMonitoringConfiguration == initialConfig)
         #expect(model.appliedHIDPermissionSnapshot == granted)
+    }
+
+    @Test func nextPermissionRequestScopesPromptsByControlAndVoiceNeeds() {
+        #expect(
+            HIDPermissionGate.nextPermissionRequest(
+                requiresInputMonitoring: false,
+                requiresAccessibility: false,
+                inputMonitoringGranted: false,
+                accessibilityGranted: false
+            ) == .none
+        )
+        #expect(
+            HIDPermissionGate.nextPermissionRequest(
+                requiresInputMonitoring: false,
+                requiresAccessibility: true,
+                inputMonitoringGranted: false,
+                accessibilityGranted: false
+            ) == .accessibility
+        )
+        #expect(
+            HIDPermissionGate.nextPermissionRequest(
+                requiresInputMonitoring: false,
+                requiresAccessibility: true,
+                inputMonitoringGranted: false,
+                accessibilityGranted: true
+            ) == .none
+        )
+        #expect(
+            HIDPermissionGate.nextPermissionRequest(
+                requiresInputMonitoring: true,
+                requiresAccessibility: false,
+                inputMonitoringGranted: false,
+                accessibilityGranted: false
+            ) == .inputMonitoring
+        )
+        #expect(
+            HIDPermissionGate.nextPermissionRequest(
+                requiresInputMonitoring: true,
+                requiresAccessibility: false,
+                inputMonitoringGranted: true,
+                accessibilityGranted: false
+            ) == .accessibility
+        )
+        #expect(
+            HIDPermissionGate.nextPermissionRequest(
+                requiresInputMonitoring: true,
+                requiresAccessibility: true,
+                inputMonitoringGranted: true,
+                accessibilityGranted: true
+            ) == .none
+        )
+
+        let missingBoth = HIDPermissionSnapshot(inputMonitoringGranted: false, accessibilityGranted: false)
+        let missingAccessibility = HIDPermissionSnapshot(inputMonitoringGranted: true, accessibilityGranted: false)
+        let allGranted = HIDPermissionSnapshot(inputMonitoringGranted: true, accessibilityGranted: true)
+
+        let settings = AppSettings(defaults: EphemeralUserDefaults())
+        settings.setAllApplicationIntegrations(enabled: false)
+        let model = BridgeAppModel(settings: settings, initialAudioDevices: [])
+
+        // Fresh default uses .suggestedShortcut with unselected control method: requests Accessibility directly.
+        #expect(settings.onboardingControlMethod == .unselected)
+        #expect(settings.remoteDeviceProfiles.isEmpty)
+        #expect(model.nextHIDPermissionRequest(permissionSnapshot: missingBoth) == .accessibility)
+
+        // Plain Fn with unselected control method, no remotes, and no integrations needs neither permission.
+        settings.voiceKeyMode = .function
+        #expect(model.nextHIDPermissionRequest(permissionSnapshot: missingBoth) == .none)
+
+        // Enabling Fn tap, a non-Fn voice shortcut, or an app integration requests Accessibility directly.
+        settings.voiceFnTapModeEnabled = true
+        #expect(model.nextHIDPermissionRequest(permissionSnapshot: missingBoth) == .accessibility)
+        settings.voiceFnTapModeEnabled = false
+
+        settings.voiceKeyMode = .rightOption
+        #expect(model.nextHIDPermissionRequest(permissionSnapshot: missingBoth) == .accessibility)
+        settings.voiceKeyMode = .function
+
+        settings.setApplicationIntegration(.chatGPT, enabled: true)
+        #expect(model.nextHIDPermissionRequest(permissionSnapshot: missingBoth) == .accessibility)
+        #expect(model.nextHIDPermissionRequest(permissionSnapshot: allGranted) == .none)
+        settings.setAllApplicationIntegrations(enabled: false)
+
+        // Selecting physical remote control or having a configured remote requests Input Monitoring first.
+        settings.setOnboardingControlSource(.xiaomiRemote)
+        #expect(settings.onboardingControlMethod == .physicalRemote)
+        #expect(model.nextHIDPermissionRequest(permissionSnapshot: missingBoth) == .inputMonitoring)
+        #expect(model.nextHIDPermissionRequest(permissionSnapshot: missingAccessibility) == .accessibility)
+        #expect(model.nextHIDPermissionRequest(permissionSnapshot: allGranted) == .none)
+
+        settings.setOnboardingControlSource(.unselected)
+        _ = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
+        #expect(model.nextHIDPermissionRequest(permissionSnapshot: missingBoth) == .inputMonitoring)
+        #expect(model.nextHIDPermissionRequest(permissionSnapshot: missingAccessibility) == .accessibility)
+        #expect(model.nextHIDPermissionRequest(permissionSnapshot: allGranted) == .none)
     }
 }

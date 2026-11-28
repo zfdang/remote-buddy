@@ -48,8 +48,6 @@ extension OnboardingView {
                     "onboarding.side.three_buttons",
                     isComplete: testedControlButtons.count >= 3
                 )
-                sideCheck("onboarding.side.mapping_enabled",
-                    isComplete: settings.customMappingEnabled)
             }
         default:
             EmptyView()

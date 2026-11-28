@@ -12,7 +12,6 @@ private struct OnboardingReturnConfiguration: Codable {
     let verifiedBinding: VoiceToolUserBinding?
     let voiceKeyMode: VoiceKeyMode
     let fnTapModeEnabled: Bool
-    let customMappingEnabled: Bool
     let selectedRemoteProfileID: UUID?
     let initialRemoteProfileIDs: [UUID]
     let initialG9N9NInputModes: [UUID: G9N9NInputMode]?
@@ -46,7 +45,6 @@ extension AppSettings {
             verifiedBinding: verifiedVoiceToolBinding,
             voiceKeyMode: voiceKeyMode,
             fnTapModeEnabled: voiceFnTapModeEnabled,
-            customMappingEnabled: customMappingEnabled,
             selectedRemoteProfileID: selectedRemoteProfileID,
             initialRemoteProfileIDs: remoteDeviceProfiles.map(\.id),
             initialG9N9NInputModes: Dictionary(
@@ -109,7 +107,6 @@ extension AppSettings {
         verifiedVoiceToolBinding = configuration.verifiedBinding
         voiceKeyMode = configuration.voiceKeyMode
         voiceFnTapModeEnabled = configuration.fnTapModeEnabled
-        customMappingEnabled = configuration.customMappingEnabled
         if let savedBypass = configuration.bypassInputSourceSwitching {
             bypassInputSourceSwitching = savedBypass
         }

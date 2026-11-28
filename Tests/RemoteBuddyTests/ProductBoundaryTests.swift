@@ -149,9 +149,7 @@ struct ProductBoundaryTests {
     }
 
     @Test @MainActor func receiveUpdateNotificationsDefaultsToTrueAndPersists() throws {
-        let suite = "remote-buddy.update-notifications.\(UUID().uuidString)"
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
 
         let initial = AppSettings(defaults: defaults)
         #expect(initial.receiveUpdateNotifications)
@@ -162,9 +160,7 @@ struct ProductBoundaryTests {
     }
 
     @Test @MainActor func voiceAutoStopDurationDefaultsToFiveMinutesPersistsAndFallsBackSafely() throws {
-        let suite = "remote-buddy.voice-timeout.\(UUID().uuidString)"
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
 
         let initial = AppSettings(defaults: defaults)
         #expect(initial.voiceAutoStopDuration == .fiveMinutes)
@@ -202,14 +198,12 @@ struct ProductBoundaryTests {
     }
 
     @Test @MainActor func settingsPersistPreferencesWithoutUsageData() throws {
-        let suite = "remote-buddy.tests.\(UUID().uuidString)"
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         settings.setAction(.commandCopy, for: .right)
         settings.gainDB = 12
         _ = settings.recordLaunchAndDetectCompletedUpdate(currentBuild: "80", sparkleHadLaunchedBefore: false)
-        let persisted = defaults.persistentDomain(forName: suite) ?? [:]
+        let persisted = defaults.persistentDomain(forName: "test") ?? [:]
         #expect(!persisted.isEmpty)
         #expect(persisted.keys.allSatisfy { !$0.hasPrefix("usage.") })
     }
@@ -262,20 +256,16 @@ struct ProductBoundaryTests {
     }
 
     @Test @MainActor func changingIntegrationKeepsHardwareAudioAndMappings() throws {
-        let suite = "remote-buddy.tests.\(UUID().uuidString)"
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let remote = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         settings.selectRemoteProfile(remote)
         settings.gainDB = 6
-        settings.customMappingEnabled = true
         settings.setOnboardingControlSource(.chromecastRemote)
         settings.completeOnboarding()
         SettingsPageBehavior.beginIntegrationSetup(tool: .voiceBuddy, settings: settings)
         #expect(settings.selectedAudioDeviceUID == "BuddyMic2ch_UID")
         #expect(settings.gainDB == 6)
-        #expect(settings.customMappingEnabled)
         #expect(settings.onboardingVoiceTool == .voiceBuddy)
         #expect(settings.onboardingControlSource == .chromecastRemote)
         #expect(settings.onboardingPurpose == .integration)
@@ -369,9 +359,7 @@ struct ProductBoundaryTests {
     }
 
     @Test @MainActor func integrationPageReadOnlyCopyExistsInBothLanguages() throws {
-        let suite = "remote-buddy.tests.\(UUID().uuidString)"
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let localization = LocalizationStore(settings: AppSettings(defaults: defaults))
         let keys = [
             "settings.integration.title",
@@ -393,9 +381,7 @@ struct ProductBoundaryTests {
     }
 
     @Test @MainActor func firstRunLanguageFollowsSystemAndExplicitChoicePersists() throws {
-        let suite = "remote-buddy.tests.\(UUID().uuidString)"
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         #expect(settings.applicationLanguage == .system)
         let localization = LocalizationStore(settings: settings)
@@ -435,9 +421,7 @@ struct ProductBoundaryTests {
     }
 
     @Test @MainActor func t1RemoteSelectionPersistsAndResolvesCombinedSetupIllustration() throws {
-        let suite = "remote-buddy.tests.\(UUID().uuidString)"
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let model = BridgeAppModel(settings: settings, initialAudioDevices: [])
         let view = OnboardingView(model: model)
@@ -451,9 +435,7 @@ struct ProductBoundaryTests {
     }
 
     @Test @MainActor func g9n9nSelectionPersistsWithoutClaimingAConnection() throws {
-        let suite = "remote-buddy.tests.\(UUID().uuidString)"
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let model = BridgeAppModel(settings: settings, initialAudioDevices: [])
         let view = OnboardingView(model: model)
@@ -469,9 +451,7 @@ struct ProductBoundaryTests {
 
     @Test @MainActor func deviceChoicePersistsAndContinueBlocksOnlyUpcomingAdapters() throws {
         for device in RemoteSetupDevice.allCases {
-            let suite = "remote-buddy.tests.\(UUID().uuidString)"
-            let defaults = try #require(UserDefaults(suiteName: suite))
-            defer { defaults.removePersistentDomain(forName: suite) }
+            let defaults = EphemeralUserDefaults()
             let settings = AppSettings(defaults: defaults)
             settings.setOnboardingStep(.remoteAvailability)
             let model = BridgeAppModel(settings: settings, initialAudioDevices: [])
@@ -498,9 +478,7 @@ struct ProductBoundaryTests {
 
     @Test @MainActor func googleSelectionKeepsItsOwnIllustrationAndConnectionValidation() throws {
         for device in [RemoteSetupDevice.chromecastG9N9N] {
-            let suite = "google-selection-" + UUID().uuidString
-            let defaults = try #require(UserDefaults(suiteName: suite))
-            defer { defaults.removePersistentDomain(forName: suite) }
+            let defaults = EphemeralUserDefaults()
             let settings = AppSettings(defaults: defaults)
             let view = OnboardingView(model: BridgeAppModel(settings: settings, initialAudioDevices: []))
             settings.setOnboardingStep(.remoteAvailability)
@@ -532,6 +510,10 @@ struct ProductBoundaryTests {
             == "https://remote.zfdang.com/faq.html#input-methods")
         #expect(AppLinks.inputMethodsFAQ(for: Locale(identifier: "en_US")).absoluteString
             == "https://remote.zfdang.com/faq_en.html#input-methods")
+        #expect(AppLinks.voiceButtonsFAQ(for: Locale(identifier: "zh_CN")).absoluteString
+            == "https://remote.zfdang.com/faq.html#voice-buttons")
+        #expect(AppLinks.voiceButtonsFAQ(for: Locale(identifier: "en_US")).absoluteString
+            == "https://remote.zfdang.com/faq_en.html#voice-buttons")
         #expect(AppLinks.applicationIntegrationFAQ(for: Locale(identifier: "zh_CN")).absoluteString
             == "https://remote.zfdang.com/faq.html#integrations")
         #expect(AppLinks.applicationIntegrationFAQ(for: Locale(identifier: "en_US")).absoluteString
@@ -614,9 +596,7 @@ struct ProductBoundaryTests {
     }
 
     @Test @MainActor func wizardStartsWithEnvironmentAndUsesOnlyCurrentSteps() throws {
-        let suite = "remote-buddy.tests.\(UUID().uuidString)"
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         #expect(settings.onboardingStep == .permissions)
         #expect(settings.onboardingControlMethod == .unselected)

@@ -18,9 +18,7 @@ struct BluetoothAudioPipelineTests {
         let queue = DispatchQueue(label: "test.audio.busy")
         let deliveries = AudioDeliveries()
         let pipeline = BluetoothAudioPipeline(queue: queue, deliver: { deliveries.enqueue($0) })
-        let name = "pending-audio-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let model = BridgeAppModel(settings: AppSettings(defaults: defaults))
         let bridge = BluetoothRemoteBridge(settings: model.settings, delegate: model, audioPipeline: pipeline)
         model.connections.bridges[UUID()] = bridge

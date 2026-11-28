@@ -43,7 +43,6 @@ final class AppSettings: ObservableObject {
     enum Keys {
         static let disabledApplicationIntegrations = "disabledApplicationIntegrations"
         static let gainDB = "gainDB"
-        static let customMappingEnabled = "customMappingEnabled"
         static let buttonBindings = "buttonBindings"
         static let buttonShortcuts = "buttonShortcuts"
         static let buttonApplicationProfileIDs = "buttonApplicationProfileIDs"
@@ -113,10 +112,6 @@ final class AppSettings: ObservableObject {
     }
 
     var selectedAudioDeviceUID: String { BuddyMicrophoneDevicePolicy.deviceUID }
-
-    @Published var customMappingEnabled: Bool {
-        didSet { defaults.set(customMappingEnabled, forKey: Keys.customMappingEnabled) }
-    }
 
     func setBaseBinding(_ configured: ConfiguredButtonAction, for button: RemoteButton,
                         trigger: ButtonTrigger, profileID: UUID?) {
@@ -505,7 +500,6 @@ final class AppSettings: ObservableObject {
         storedGainDB = defaults.object(forKey: Keys.gainDB) == nil
             ? 10.0
             : Self.normalizedGain(defaults.double(forKey: Keys.gainDB))
-        customMappingEnabled = defaults.bool(forKey: Keys.customMappingEnabled)
 
         if let decoded = Self.decodeSetting(
             [String: ButtonAction].self,

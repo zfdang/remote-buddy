@@ -9,7 +9,6 @@ struct HIDHotPathIdempotencyTests {
 
     @MainActor
     private struct Harness {
-        let suite: String
         let defaults: UserDefaults
         let settings: AppSettings
         let model: BridgeAppModel
@@ -29,7 +28,7 @@ struct HIDHotPathIdempotencyTests {
             var hasMatchingHIDServices = true
             var allowWrites = true
             var primaryRegistryID: UInt64? = 123
-            var primaryLocationID: UInt32 = 9
+            var primaryLocationID: UInt32? = 9
             var hidMappings: [HIDUsageMapping] = []
             var recordedWrites: [(registryID: UInt64?, mappings: [HIDUsageMapping])] = []
             var secondaryService: (
@@ -77,7 +76,6 @@ struct HIDHotPathIdempotencyTests {
             model.connections.bridges.removeAll()
             model.connections.states.removeAll()
             model.started = false
-            defaults.removePersistentDomain(forName: suite)
         }
     }
 
@@ -109,7 +107,6 @@ struct HIDHotPathIdempotencyTests {
     }
 
     private func makeHarness(
-        customMappingEnabled: Bool = true,
         configureProfile: Bool = true,
         configureSecondProfile: Bool = false,
         modelType: RemoteModel = .rc001,
@@ -117,13 +114,16 @@ struct HIDHotPathIdempotencyTests {
         voiceTool: OnboardingVoiceTool = .unselected,
         voiceFnTapModeEnabled: Bool = false,
         hasMatchingHIDServices: Bool = true,
-        secondaryServiceEnabled: Bool = false
+        secondaryServiceEnabled: Bool = false,
+        initialPermissionSnapshot: HIDPermissionSnapshot = HIDPermissionSnapshot(
+            inputMonitoringGranted: true,
+            accessibilityGranted: true
+        ),
+        initialHIDMappings: [HIDUsageMapping] = []
     ) throws -> Harness {
-        let suite = "hid-idempotency-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         settings.setAllApplicationIntegrations(enabled: false)
-        settings.customMappingEnabled = customMappingEnabled
         settings.voiceKeyMode = voiceKeyMode
         settings.setOnboardingVoiceTool(voiceTool)
         settings.voiceFnTapModeEnabled = voiceFnTapModeEnabled
@@ -154,6 +154,8 @@ struct HIDHotPathIdempotencyTests {
         }
 
         let counters = Harness.Counters()
+        counters.permissionSnapshot = initialPermissionSnapshot
+        counters.hidMappings = initialHIDMappings
         counters.hasMatchingHIDServices = hasMatchingHIDServices
         counters.secondaryService.enabled = secondaryServiceEnabled
 
@@ -265,7 +267,6 @@ struct HIDHotPathIdempotencyTests {
         model.started = true
 
         return Harness(
-            suite: suite,
             defaults: defaults,
             settings: settings,
             model: model,
@@ -281,26 +282,8 @@ struct HIDHotPathIdempotencyTests {
         let granted = HIDPermissionSnapshot(inputMonitoringGranted: true, accessibilityGranted: true)
         let deniedAccessibility = HIDPermissionSnapshot(inputMonitoringGranted: true, accessibilityGranted: false)
 
-        // Plain Fn hold-to-talk without custom mapping never needs pre-voice reapplication.
+        // Plain Fn skips reapplication when power-key suppression matches live services or no HID services exist, and recovers when services mismatch.
         #expect(!BridgeAppModel.shouldReapplyHIDSettingsBeforeVoiceStart(
-            customMappingEnabled: false,
-            mode: .function,
-            fnTapModeEnabled: false,
-            requiresOrderedFn: false,
-            hasHardwareVoiceKey: true,
-            hasMatchingHIDServices: false,
-            isVoiceKeyNeutralized: false,
-            currentServicesMatchDesiredMapping: false,
-            fnTapSessionEnabled: false,
-            monitoringInterrupted: true,
-            monitoringConfigurationApplied: false,
-            appliedPermissionSnapshot: deniedAccessibility,
-            currentPermissionSnapshot: granted
-        ))
-
-        // Plain Fn with customMappingEnabled skips when power-key suppression matches live services or no HID services exist, and recovers when services mismatch.
-        #expect(!BridgeAppModel.shouldReapplyHIDSettingsBeforeVoiceStart(
-            customMappingEnabled: true,
             mode: .function,
             fnTapModeEnabled: false,
             requiresOrderedFn: false,
@@ -315,7 +298,6 @@ struct HIDHotPathIdempotencyTests {
             currentPermissionSnapshot: granted
         ))
         #expect(!BridgeAppModel.shouldReapplyHIDSettingsBeforeVoiceStart(
-            customMappingEnabled: true,
             mode: .function,
             fnTapModeEnabled: false,
             requiresOrderedFn: false,
@@ -330,7 +312,6 @@ struct HIDHotPathIdempotencyTests {
             currentPermissionSnapshot: granted
         ))
         #expect(BridgeAppModel.shouldReapplyHIDSettingsBeforeVoiceStart(
-            customMappingEnabled: true,
             mode: .function,
             fnTapModeEnabled: false,
             requiresOrderedFn: false,
@@ -347,7 +328,6 @@ struct HIDHotPathIdempotencyTests {
 
         // Steady-state ordered-Fn (e.g. Weixin) skips reapplication when neutralized and healthy.
         #expect(!BridgeAppModel.shouldReapplyHIDSettingsBeforeVoiceStart(
-            customMappingEnabled: true,
             mode: .function,
             fnTapModeEnabled: false,
             requiresOrderedFn: true,
@@ -364,7 +344,6 @@ struct HIDHotPathIdempotencyTests {
 
         // Missing neutralization, service mismatch, interrupted monitoring, missing config, or permission changes trigger recovery.
         #expect(BridgeAppModel.shouldReapplyHIDSettingsBeforeVoiceStart(
-            customMappingEnabled: true,
             mode: .function,
             fnTapModeEnabled: false,
             requiresOrderedFn: true,
@@ -379,7 +358,6 @@ struct HIDHotPathIdempotencyTests {
             currentPermissionSnapshot: granted
         ))
         #expect(BridgeAppModel.shouldReapplyHIDSettingsBeforeVoiceStart(
-            customMappingEnabled: true,
             mode: .function,
             fnTapModeEnabled: false,
             requiresOrderedFn: true,
@@ -394,7 +372,6 @@ struct HIDHotPathIdempotencyTests {
             currentPermissionSnapshot: granted
         ))
         #expect(BridgeAppModel.shouldReapplyHIDSettingsBeforeVoiceStart(
-            customMappingEnabled: true,
             mode: .function,
             fnTapModeEnabled: false,
             requiresOrderedFn: true,
@@ -409,7 +386,6 @@ struct HIDHotPathIdempotencyTests {
             currentPermissionSnapshot: granted
         ))
         #expect(BridgeAppModel.shouldReapplyHIDSettingsBeforeVoiceStart(
-            customMappingEnabled: true,
             mode: .function,
             fnTapModeEnabled: false,
             requiresOrderedFn: true,
@@ -424,7 +400,6 @@ struct HIDHotPathIdempotencyTests {
             currentPermissionSnapshot: granted
         ))
         #expect(BridgeAppModel.shouldReapplyHIDSettingsBeforeVoiceStart(
-            customMappingEnabled: true,
             mode: .function,
             fnTapModeEnabled: false,
             requiresOrderedFn: true,
@@ -441,7 +416,6 @@ struct HIDHotPathIdempotencyTests {
 
         // Chromecast remote (no hardware voice key) does not flap when no Xiaomi HID service exists.
         #expect(!BridgeAppModel.shouldReapplyHIDSettingsBeforeVoiceStart(
-            customMappingEnabled: true,
             mode: .leftCommand,
             fnTapModeEnabled: false,
             requiresOrderedFn: false,
@@ -458,7 +432,6 @@ struct HIDHotPathIdempotencyTests {
 
         // Hardware-key remote (.leftCommand) forces reapplication when neutralization is missing even before HID services appear.
         #expect(BridgeAppModel.shouldReapplyHIDSettingsBeforeVoiceStart(
-            customMappingEnabled: true,
             mode: .leftCommand,
             fnTapModeEnabled: false,
             requiresOrderedFn: false,
@@ -475,7 +448,6 @@ struct HIDHotPathIdempotencyTests {
 
         // Fn-tap mode requires session activation only when Accessibility is granted and session is disabled.
         #expect(BridgeAppModel.shouldReapplyHIDSettingsBeforeVoiceStart(
-            customMappingEnabled: true,
             mode: .function,
             fnTapModeEnabled: true,
             requiresOrderedFn: false,
@@ -490,7 +462,6 @@ struct HIDHotPathIdempotencyTests {
             currentPermissionSnapshot: granted
         ))
         #expect(!BridgeAppModel.shouldReapplyHIDSettingsBeforeVoiceStart(
-            customMappingEnabled: true,
             mode: .function,
             fnTapModeEnabled: true,
             requiresOrderedFn: false,
@@ -505,7 +476,6 @@ struct HIDHotPathIdempotencyTests {
             currentPermissionSnapshot: deniedAccessibility
         ))
         #expect(!BridgeAppModel.shouldReapplyHIDSettingsBeforeVoiceStart(
-            customMappingEnabled: true,
             mode: .function,
             fnTapModeEnabled: true,
             requiresOrderedFn: false,
@@ -565,7 +535,6 @@ struct HIDHotPathIdempotencyTests {
 
     @Test func voiceStartSkipsHIDTeardownWhenOrderedFnAlreadyNeutralizedAndRecoversWhenNeeded() throws {
         let harness = try makeHarness(
-            customMappingEnabled: true,
             voiceKeyMode: .function,
             voiceTool: .weixin,
             hasMatchingHIDServices: true
@@ -606,7 +575,6 @@ struct HIDHotPathIdempotencyTests {
 
     @Test func voiceStartRecoversWhenAppliedMonitoringConfigurationIsMissing() throws {
         let harness = try makeHarness(
-            customMappingEnabled: true,
             voiceKeyMode: .function,
             voiceTool: .weixin,
             hasMatchingHIDServices: true
@@ -631,7 +599,6 @@ struct HIDHotPathIdempotencyTests {
 
     @Test func voiceStartReappliesSettingsWhenServiceWasNotYetNeutralized() throws {
         let harness = try makeHarness(
-            customMappingEnabled: true,
             voiceKeyMode: .leftCommand,
             voiceTool: .unselected,
             hasMatchingHIDServices: false
@@ -652,7 +619,7 @@ struct HIDHotPathIdempotencyTests {
     }
 
     @Test func applyHIDSettingsReusesHealthyMonitorsUnlessConfigChangesOrRecheckForced() throws {
-        let harness = try makeHarness(customMappingEnabled: true)
+        let harness = try makeHarness()
         defer { harness.cleanup() }
         let model = harness.model
         let counters = harness.counters
@@ -705,37 +672,25 @@ struct HIDHotPathIdempotencyTests {
         model.hidEventSuppressor.stop()
         model.applyHIDSettings()
         let afterSuppressorRecovery = try #require(model.hidMonitors["bound-fp"])
+        _ = try #require(model.discoveryHIDMonitor)
         #expect(afterSuppressorRecovery !== reboundMonitor)
         #expect(counters.tapStopCount == 4)
         #expect(counters.tapStartCount == 5)
 
-        // Turning off custom mapping (falling back to back-only mode) tears down event tap and rebuilds monitors.
-        harness.settings.customMappingEnabled = false
-        model.applyHIDSettings()
-        let backOnlyMonitor = try #require(model.hidMonitors["bound-fp"])
-        let backOnlyDiscovery = try #require(model.discoveryHIDMonitor)
-        #expect(backOnlyMonitor !== afterSuppressorRecovery)
-        #expect(!counters.tapEnabled)
-        #expect(counters.tapStopCount == 5)
-
-        // Re-running with unchanged back-only config stays idempotent.
-        model.applyHIDSettings()
-        #expect(model.hidMonitors["bound-fp"] === backOnlyMonitor)
-        #expect(model.discoveryHIDMonitor === backOnlyDiscovery)
-        #expect(counters.tapStartCount == 5)
-
         // External target or discovery monitor stop invalidates reuse so next applyHIDSettings recovers.
-        backOnlyMonitor.stop()
+        afterSuppressorRecovery.stop()
         model.applyHIDSettings()
-        let recoveredBackOnlyMonitor = try #require(model.hidMonitors["bound-fp"])
-        #expect(recoveredBackOnlyMonitor !== backOnlyMonitor)
-
+        let recoveredMonitor = try #require(model.hidMonitors["bound-fp"])
         let recoveredDiscovery = try #require(model.discoveryHIDMonitor)
+        #expect(recoveredMonitor !== afterSuppressorRecovery)
+        #expect(counters.tapStartCount == 6)
+
         recoveredDiscovery.stop()
         model.applyHIDSettings()
         #expect(model.discoveryHIDMonitor !== recoveredDiscovery)
+        #expect(counters.tapStartCount == 7)
 
-        // Removing the remote device clears applied monitoring config and stops monitors.
+        // Removing the remote device clears applied monitoring config and stops target monitor, while discovery monitor stays active.
         #expect(model.removeRemoteDevice(profileID))
         #expect(model.appliedHIDMonitoringConfiguration == nil)
         #expect(model.hidMonitors["bound-fp"] == nil)
@@ -743,13 +698,12 @@ struct HIDHotPathIdempotencyTests {
         model.applyHIDSettings()
         #expect(model.appliedHIDMonitoringConfiguration != nil)
         #expect(model.hidMonitors.isEmpty)
-        #expect(model.discoveryHIDMonitor == nil)
+        #expect(model.discoveryHIDMonitor?.isMonitoring == true)
         #expect(counters.logs.isEmpty)
     }
 
     @Test func startHIDMonitorsAndSystemAudioLifecyclePreserveSleepReasonsAndFlags() throws {
         let harness = try makeHarness(
-            customMappingEnabled: false,
             configureProfile: false
         )
         defer { harness.cleanup() }
@@ -862,7 +816,6 @@ struct HIDHotPathIdempotencyTests {
 
     @Test func voiceStartRevalidatesWhenSecondXiaomiHIDServiceAppearsLater() throws {
         let harness = try makeHarness(
-            customMappingEnabled: true,
             configureProfile: true,
             configureSecondProfile: true,
             modelType: .rc003,
@@ -890,7 +843,7 @@ struct HIDHotPathIdempotencyTests {
 
         // Verify explicit live validation invalidates isVoiceKeyNeutralized (true -> false) on unmapped service 2.
         #expect(!model.voiceFunctionMapper.refreshAppliedMappingsValidity(
-            expectedPowerKeySuppression: harness.settings.customMappingEnabled,
+            expectedPowerKeySuppression: true,
             expectedVoiceKeyNeutralization: model.shouldNeutralizeNativeVoiceKey
         ))
         #expect(!model.voiceFunctionMapper.isVoiceKeyNeutralized)
@@ -926,7 +879,6 @@ struct HIDHotPathIdempotencyTests {
 
     @Test func refreshValidityDetectsNewRegistryIDResetMappingsNilRegistryIDAndPowerMismatch() throws {
         let harness = try makeHarness(
-            customMappingEnabled: true,
             voiceKeyMode: .function,
             voiceTool: .weixin,
             hasMatchingHIDServices: true
@@ -975,10 +927,10 @@ struct HIDHotPathIdempotencyTests {
         model.applyHIDSettings()
         #expect(model.voiceFunctionMapper.isVoiceKeyNeutralized)
 
-        // 4. Power-key suppression mismatch (customMappingEnabled turned off) invalidates live validity.
-        harness.settings.customMappingEnabled = false
+        // 4. Power-key suppression mismatch on the live service invalidates live validity and restores on voice start.
+        counters.hidMappings = [RemoteHIDKeyMappingPolicy.neutralRemoteVoiceKey]
         #expect(!model.voiceFunctionMapper.refreshAppliedMappingsValidity(
-            expectedPowerKeySuppression: harness.settings.customMappingEnabled,
+            expectedPowerKeySuppression: true,
             expectedVoiceKeyNeutralization: model.shouldNeutralizeNativeVoiceKey
         ))
         #expect(!model.voiceFunctionMapper.isVoiceKeyNeutralized)
@@ -987,13 +939,12 @@ struct HIDHotPathIdempotencyTests {
         let writesBeforePowerToggle = counters.setMappingsCount
         harness.startAndVerifyVoice()
         #expect(counters.setMappingsCount == writesBeforePowerToggle + 1)
-        #expect(counters.recordedWrites.last?.mappings.contains(RemoteHIDKeyMappingPolicy.suppressedRemotePowerKey) == false)
+        #expect(counters.recordedWrites.last?.mappings.contains(RemoteHIDKeyMappingPolicy.suppressedRemotePowerKey) == true)
         #expect(counters.recordedWrites.last?.mappings.contains(RemoteHIDKeyMappingPolicy.neutralRemoteVoiceKey) == true)
     }
 
     @Test func transientEmptyServicesAndFailedVoiceStartWritePreserveFnTapMode() throws {
         let harness = try makeHarness(
-            customMappingEnabled: true,
             voiceKeyMode: .function,
             voiceTool: .unselected,
             voiceFnTapModeEnabled: true,
@@ -1055,7 +1006,6 @@ struct HIDHotPathIdempotencyTests {
 
     @Test func refreshValidityDiscriminatesUnneutralizedEmptyServicesAndResetsAllStateOnDivergence() throws {
         let harness = try makeHarness(
-            customMappingEnabled: true,
             voiceKeyMode: .leftCommand,
             voiceTool: .unselected,
             hasMatchingHIDServices: true
@@ -1104,7 +1054,6 @@ struct HIDHotPathIdempotencyTests {
 
     @Test func hardwareRemoteRejectsBluetoothVoiceBeforeReconnectedHIDServiceAppearsWhilePreservingPreference() throws {
         let harness = try makeHarness(
-            customMappingEnabled: true,
             voiceKeyMode: .leftCommand,
             voiceTool: .unselected,
             hasMatchingHIDServices: true
@@ -1142,7 +1091,6 @@ struct HIDHotPathIdempotencyTests {
 
     @Test func pruneAppliedServicesShrinksIntersectionSoReturningServiceMustReapply() throws {
         let harness = try makeHarness(
-            customMappingEnabled: true,
             voiceKeyMode: .leftCommand,
             voiceTool: .unselected,
             hasMatchingHIDServices: true,
@@ -1198,7 +1146,6 @@ struct HIDHotPathIdempotencyTests {
 
     @Test func pureFunctionModeRevalidatesPowerSuppressionOnlyWhenCustomMappingEnabled() throws {
         let harness = try makeHarness(
-            customMappingEnabled: true,
             voiceKeyMode: .function,
             voiceTool: .unselected,
             hasMatchingHIDServices: true,
@@ -1213,7 +1160,7 @@ struct HIDHotPathIdempotencyTests {
         #expect(model.voiceFunctionMapper.isPowerKeySuppressed)
         let initialWrites = counters.setMappingsCount
 
-        // Steady state with customMappingEnabled skips teardown and extra writes.
+        // Steady state skips teardown and extra writes.
         harness.startAndVerifyVoice()
         #expect(counters.setMappingsCount == initialWrites)
 
@@ -1226,20 +1173,10 @@ struct HIDHotPathIdempotencyTests {
         let secondaryWrite = try #require(counters.recordedWrites.last(where: { $0.registryID == 202 }))
         #expect(secondaryWrite.mappings.contains(RemoteHIDKeyMappingPolicy.suppressedRemotePowerKey))
         #expect(model.hidAllowedLocationIDs == Set([9, 10]))
-
-        // Default Fn still probes for T1 services, but does not rewrite healthy Xiaomi mappings.
-        harness.settings.customMappingEnabled = false
-        model.applyHIDSettings()
-        let probesBeforeDisabledVoice = counters.serviceProviderCallCount
-        let writesBeforeDisabledVoice = counters.setMappingsCount
-        harness.startAndVerifyVoice()
-        #expect(counters.serviceProviderCallCount == probesBeforeDisabledVoice + 1)
-        #expect(counters.setMappingsCount == writesBeforeDisabledVoice)
     }
 
     @Test func partialMappingOptionsDuplicateRegistryIDAndNilRegistryIDWithoutNeutralization() throws {
         let harness = try makeHarness(
-            customMappingEnabled: false,
             voiceKeyMode: .leftCommand,
             voiceTool: .unselected,
             hasMatchingHIDServices: true
@@ -1249,6 +1186,7 @@ struct HIDHotPathIdempotencyTests {
         let counters = harness.counters
 
         // 1. suppressPowerKey: false + neutralizeVoiceKey: true applies and validates cleanly.
+        #expect(mapper.apply(suppressPowerKey: false, neutralizeVoiceKey: true))
         #expect(mapper.isVoiceKeyNeutralized)
         #expect(!mapper.isPowerKeySuppressed)
         #expect(!mapper.needsReapply(suppressPowerKey: false, neutralizeVoiceKey: true))
@@ -1273,7 +1211,6 @@ struct HIDHotPathIdempotencyTests {
             expectedVoiceKeyNeutralization: false
         ))
 
-        harness.settings.customMappingEnabled = true
         harness.settings.voiceKeyMode = .function
         harness.model.applyHIDSettings()
         let writesBeforeConsecutiveDuplicateVoice = counters.setMappingsCount
@@ -1299,7 +1236,6 @@ struct HIDHotPathIdempotencyTests {
 
     @Test func candidateAvailableAndConnectedRefreshCoalescesDefersFlushesAndCancelsStaleWork() throws {
         let harness = try makeHarness(
-            customMappingEnabled: true,
             voiceKeyMode: .leftCommand,
             voiceTool: .unselected,
             hasMatchingHIDServices: true,
@@ -1388,7 +1324,6 @@ struct HIDHotPathIdempotencyTests {
 
     @Test func dualPendingFlagsCoalesceAndEmptyServiceRefreshSchedulesRecovery() throws {
         let harness = try makeHarness(
-            customMappingEnabled: true,
             voiceKeyMode: .function,
             voiceTool: .unselected,
             hasMatchingHIDServices: true,
@@ -1435,7 +1370,7 @@ struct HIDHotPathIdempotencyTests {
         #expect(model.hidMappingRecoveryAttempt == 1)
         model.cancelHIDMappingRecovery(reason: "test_step")
 
-        // 3. Pure .function + customMappingEnabled with empty HID services skips immediate applyHIDSettings
+        // 3. Pure .function with empty HID services skips immediate applyHIDSettings
         // on voice start yet still schedules active HID mapping recovery for non-Chromecast profiles.
         #expect(model.voiceFunctionMapper.refreshAppliedMappingsValidity(
             expectedPowerKeySuppression: true,
@@ -1444,5 +1379,160 @@ struct HIDHotPathIdempotencyTests {
         harness.startAndVerifyVoice()
         #expect(model.hidMappingRecoveryWorkItem != nil)
         #expect(model.hidMappingRecoveryAttempt == 1)
+    }
+
+    @Test func powerKeySuppressionFollowsMonitoringPermissionsAndRestoresOnRevocation() throws {
+        let originalPower = HIDUsageMapping(
+            source: RemoteHIDKeyMappingPolicy.suppressedRemotePowerKey.source,
+            destination: 0x0007_0000_0045
+        )
+        let harness = try makeHarness(
+            configureProfile: false,
+            hasMatchingHIDServices: true,
+            initialPermissionSnapshot: HIDPermissionSnapshot(
+                inputMonitoringGranted: false,
+                accessibilityGranted: true
+            ),
+            initialHIDMappings: [originalPower]
+        )
+        defer { harness.cleanup() }
+        let model = harness.model
+        let counters = harness.counters
+
+        // 1. With Input Monitoring missing, applyHIDSettings must not suppress Power or start monitors.
+        model.applyHIDSettings()
+        #expect(model.hidMonitors.isEmpty)
+        #expect(model.discoveryHIDMonitor?.isMonitoring == false)
+        #expect(!model.hidEventSuppressor.isRunning)
+        #expect(!model.voiceFunctionMapper.isPowerKeySuppressed)
+        #expect(!counters.hidMappings.contains(RemoteHIDKeyMappingPolicy.suppressedRemotePowerKey))
+        #expect(counters.hidMappings.contains(originalPower))
+
+        // 2. Granting Input Monitoring starts monitoring and applies Power -> F20.
+        counters.permissionSnapshot = HIDPermissionSnapshot(
+            inputMonitoringGranted: true,
+            accessibilityGranted: true
+        )
+        model.refreshHIDAfterPermissionChange()
+        #expect(model.discoveryHIDMonitor?.isMonitoring == true)
+        #expect(model.hidEventSuppressor.isRunning)
+        #expect(model.voiceFunctionMapper.isPowerKeySuppressed)
+        #expect(counters.hidMappings.contains(RemoteHIDKeyMappingPolicy.suppressedRemotePowerKey))
+        #expect(!counters.hidMappings.contains(originalPower))
+
+        // 3. Revoking Input Monitoring stops monitoring and restores the original Power mapping.
+        counters.permissionSnapshot = HIDPermissionSnapshot(
+            inputMonitoringGranted: false,
+            accessibilityGranted: true
+        )
+        model.refreshHIDAfterPermissionChange()
+        #expect(model.discoveryHIDMonitor?.isMonitoring == false)
+        #expect(!model.hidEventSuppressor.isRunning)
+        #expect(!model.voiceFunctionMapper.isPowerKeySuppressed)
+        #expect(!counters.hidMappings.contains(RemoteHIDKeyMappingPolicy.suppressedRemotePowerKey))
+        #expect(counters.hidMappings.contains(originalPower))
+
+        // 4. Re-granting Input Monitoring re-enables monitoring and Power suppression.
+        counters.permissionSnapshot = HIDPermissionSnapshot(
+            inputMonitoringGranted: true,
+            accessibilityGranted: true
+        )
+        model.refreshHIDAfterPermissionChange()
+        #expect(model.discoveryHIDMonitor?.isMonitoring == true)
+        #expect(model.hidEventSuppressor.isRunning)
+        #expect(model.voiceFunctionMapper.isPowerKeySuppressed)
+        #expect(counters.hidMappings.contains(RemoteHIDKeyMappingPolicy.suppressedRemotePowerKey))
+
+        // 5. Revoking Accessibility also tears down monitoring and restores the original Power mapping.
+        counters.permissionSnapshot = HIDPermissionSnapshot(
+            inputMonitoringGranted: true,
+            accessibilityGranted: false
+        )
+        model.refreshHIDAfterPermissionChange()
+        #expect(model.discoveryHIDMonitor?.isMonitoring == false)
+        #expect(!model.hidEventSuppressor.isRunning)
+        #expect(!model.voiceFunctionMapper.isPowerKeySuppressed)
+        #expect(!counters.hidMappings.contains(RemoteHIDKeyMappingPolicy.suppressedRemotePowerKey))
+        #expect(counters.hidMappings.contains(originalPower))
+    }
+
+    @Test(arguments: [UInt32(9), nil] as [UInt32?])
+    func revokingAccessibilityWithPendingFnTapReleaseRestoresPowerWhilePreservingVoiceMapping(
+        locationID: UInt32?
+    ) throws {
+        let originalPower = HIDUsageMapping(
+            source: RemoteHIDKeyMappingPolicy.suppressedRemotePowerKey.source,
+            destination: 0x0007_0000_0045
+        )
+        let harness = try makeHarness(
+            configureProfile: true,
+            modelType: .rc001,
+            voiceKeyMode: .function,
+            voiceFnTapModeEnabled: true,
+            hasMatchingHIDServices: true,
+            initialHIDMappings: [originalPower]
+        )
+        defer { harness.cleanup(expectNoFnTapLogs: false) }
+        let model = harness.model
+        let settings = harness.settings
+        let counters = harness.counters
+        counters.primaryLocationID = locationID
+
+        let clock = ControlledTestScheduler()
+        var canRelease = false
+        model.voiceFnTapSession = VoiceFnTapSessionController(
+            startDelay: 0,
+            tapDuration: 0.1,
+            schedule: clock.voiceSchedule,
+            setTriggerPressed: { down in down || canRelease },
+            enqueueAudio: { _ in },
+            drainAudio: { _, done in done() },
+            onFailure: { _ in },
+            logger: { counters.logs.append($0) }
+        )
+
+        model.applyHIDSettings()
+        #expect(model.voiceFunctionMapper.isPowerKeySuppressed == (locationID != nil))
+        #expect(model.voiceFunctionMapper.isVoiceKeyNeutralized)
+        #expect(counters.hidMappings.contains(RemoteHIDKeyMappingPolicy.suppressedRemotePowerKey))
+        #expect(counters.hidMappings.contains(RemoteHIDKeyMappingPolicy.neutralRemoteVoiceKey))
+
+        // Start a Fn-tap voice session whose release fails, leaving cleanup pending.
+        #expect(model.voiceFnTapSession.startVoice())
+        clock.advance(to: 100)
+        #expect(model.voiceFnTapSession.requiresCleanupBeforeMapping)
+
+        // Disable Fn tap mode and revoke Accessibility before release succeeds.
+        settings.voiceFnTapModeEnabled = false
+        counters.permissionSnapshot = HIDPermissionSnapshot(
+            inputMonitoringGranted: true,
+            accessibilityGranted: false
+        )
+        model.refreshHIDAfterPermissionChange()
+
+        #expect(model.voiceFnTapSession.requiresCleanupBeforeMapping)
+        #expect(!model.hidEventSuppressor.isRunning)
+        #expect(model.hidMonitors.values.allSatisfy { !$0.isMonitoring })
+        #expect(model.discoveryHIDMonitor?.isMonitoring != true)
+        #expect(!model.voiceFunctionMapper.isPowerKeySuppressed)
+        #expect(!counters.hidMappings.contains(RemoteHIDKeyMappingPolicy.suppressedRemotePowerKey))
+        #expect(counters.hidMappings.contains(originalPower))
+        #expect(model.voiceFunctionMapper.isVoiceKeyNeutralized)
+        #expect(counters.hidMappings.contains(RemoteHIDKeyMappingPolicy.neutralRemoteVoiceKey))
+
+        // Restore Accessibility and allow release; cleanup completes and re-applies HID settings.
+        counters.permissionSnapshot = HIDPermissionSnapshot(
+            inputMonitoringGranted: true,
+            accessibilityGranted: true
+        )
+        canRelease = true
+        model.refreshHIDAfterPermissionChange()
+        clock.advance(to: 1200)
+
+        #expect(!model.voiceFnTapSession.requiresCleanupBeforeMapping)
+        #expect(model.voiceFunctionMapper.isPowerKeySuppressed == (locationID != nil))
+        #expect(counters.hidMappings.contains(RemoteHIDKeyMappingPolicy.suppressedRemotePowerKey))
+        #expect(!model.voiceFunctionMapper.isVoiceKeyNeutralized)
+        #expect(!counters.hidMappings.contains(RemoteHIDKeyMappingPolicy.neutralRemoteVoiceKey))
     }
 }

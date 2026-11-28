@@ -136,6 +136,8 @@ struct RemoteDeviceProfile: Codable, Equatable, Identifiable {
     let id: UUID
     var model: RemoteModel
     var customName: String
+    var lastObservedSystemName: String?
+    var hardwareShortID: String?
     var bluetoothIdentifier: UUID?
     var hidFingerprint: String?
     var gainDB: Double?
@@ -157,6 +159,8 @@ struct RemoteDeviceProfile: Codable, Equatable, Identifiable {
         case id
         case model
         case customName
+        case lastObservedSystemName
+        case hardwareShortID
         case bluetoothIdentifier
         case hidFingerprint
         case gainDB
@@ -170,6 +174,8 @@ struct RemoteDeviceProfile: Codable, Equatable, Identifiable {
         id: UUID = UUID(),
         model: RemoteModel = .unknown,
         customName: String = "",
+        lastObservedSystemName: String? = nil,
+        hardwareShortID: String? = nil,
         bluetoothIdentifier: UUID? = nil,
         hidFingerprint: String? = nil,
         compatibleHIDBinding: RemoteHIDBinding? = nil,
@@ -181,6 +187,8 @@ struct RemoteDeviceProfile: Codable, Equatable, Identifiable {
         self.id = id
         self.model = model
         self.customName = customName
+        self.lastObservedSystemName = lastObservedSystemName
+        self.hardwareShortID = hardwareShortID
         self.bluetoothIdentifier = bluetoothIdentifier
         self.hidFingerprint = hidFingerprint
         self.gainDB = gainDB
@@ -195,6 +203,8 @@ struct RemoteDeviceProfile: Codable, Equatable, Identifiable {
         self.id = try container.decode(UUID.self, forKey: .id)
         self.model = try container.decode(RemoteModel.self, forKey: .model)
         self.customName = try container.decode(String.self, forKey: .customName)
+        self.lastObservedSystemName = try container.decodeIfPresent(String.self, forKey: .lastObservedSystemName)
+        self.hardwareShortID = try container.decodeIfPresent(String.self, forKey: .hardwareShortID)
         self.bluetoothIdentifier = try container.decodeIfPresent(UUID.self, forKey: .bluetoothIdentifier)
         self.hidFingerprint = try container.decodeIfPresent(String.self, forKey: .hidFingerprint)
         self.gainDB = try container.decodeIfPresent(Double.self, forKey: .gainDB)

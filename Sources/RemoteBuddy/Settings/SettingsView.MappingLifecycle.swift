@@ -23,29 +23,4 @@ extension SettingsView {
             )
         }
     }
-
-    func setCustomMappingEnabled(_ enabled: Bool) {
-        refreshPermissionStates()
-        settings.customMappingEnabled = enabled
-        guard MappingPermissionPolicy.requiresPrompt(
-            enabled: enabled,
-            inputMonitoringGranted: inputMonitoringGranted,
-            accessibilityGranted: accessibilityGranted
-        ) else {
-            isWaitingForMappingPermissions = false
-            model.applyHIDSettings()
-            return
-        }
-        isMappingPermissionAlertPresented = true
-    }
-
-    func resumeCustomMappingIfPermissionsGranted() {
-        guard
-            isWaitingForMappingPermissions,
-            inputMonitoringGranted,
-            accessibilityGranted
-        else { return }
-        isWaitingForMappingPermissions = false
-        model.applyHIDSettings()
-    }
 }

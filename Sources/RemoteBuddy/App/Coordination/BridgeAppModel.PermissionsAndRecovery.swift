@@ -7,10 +7,9 @@ import Foundation
 
 extension BridgeAppModel {
     static func shouldRecoverHIDAfterCompletedUpdate(
-        completedUpdate: Bool,
-        customMappingEnabled: Bool
+        completedUpdate: Bool
     ) -> Bool {
-        completedUpdate && customMappingEnabled
+        completedUpdate
     }
 
     nonisolated static func shouldReapplyHIDSettings(
@@ -26,7 +25,6 @@ extension BridgeAppModel {
     /// Reapplies HID settings before starting Bluetooth voice only when live-validated
     /// neutralization or listener state is incomplete, interrupted, or permissions changed.
     nonisolated static func shouldReapplyHIDSettingsBeforeVoiceStart(
-        customMappingEnabled: Bool,
         mode: VoiceKeyMode,
         fnTapModeEnabled: Bool,
         requiresOrderedFn: Bool,
@@ -43,7 +41,6 @@ extension BridgeAppModel {
     ) -> Bool {
         let needsNeutralization = mode != .function || fnTapModeEnabled || requiresOrderedFn
         if !currentServicesMatchDesiredMapping, hasMatchingHIDServices { return true }
-        guard customMappingEnabled || needsNeutralization || requiresT1VoiceKeySuppression else { return false }
         if monitoringInterrupted || !monitoringConfigurationApplied { return true }
         if appliedPermissionSnapshot?.monitoringPermissions != currentPermissionSnapshot.monitoringPermissions {
             return true
@@ -85,12 +82,11 @@ extension BridgeAppModel {
     nonisolated static func voiceKeyCompatibilityWarning(
         remoteConnected: Bool,
         usesPrivateAdapter: Bool,
-        customMappingEnabled: Bool,
         hidStatusKey: String,
         voiceShortcutStatusKey: String,
         karabinerRunning: Bool
     ) -> VoiceKeyCompatibilityWarning? {
-        guard remoteConnected, !usesPrivateAdapter, customMappingEnabled else { return nil }
+        guard remoteConnected, !usesPrivateAdapter else { return nil }
 
         let isExclusiveAccess = hidStatusKey == "button_mapping.error.exclusive_access" ||
             hidStatusKey == "button_mapping.error.exclusive_access.karabiner"
@@ -107,12 +103,12 @@ extension BridgeAppModel {
     }
 
     func recoverHIDAfterCompletedUpdate(delay: TimeInterval = 2) {
-        guard started, settings.customMappingEnabled else { return }
+        guard started else { return }
         completedUpdateHIDRecoveryWorkItem?.cancel()
         stopHIDMonitors()
         AppLogger.shared.write("HID UPDATE RECOVERY scheduled delay_ms=\(Int(delay * 1_000))")
         let workItem = DispatchWorkItem { [weak self] in
-            guard let self, self.started, self.settings.customMappingEnabled else { return }
+            guard let self, self.started else { return }
             self.completedUpdateHIDRecoveryWorkItem = nil
             self.applyHIDSettings()
             AppLogger.shared.write("HID UPDATE RECOVERY applied")
@@ -131,10 +127,6 @@ extension BridgeAppModel {
         if current.accessibilityGranted { voiceFnTapSession.retryCleanupAfterPermissionRecovery() }
         guard HIDPermissionRecoveryPolicy.shouldReapplySettings(
             started: started,
-            customMappingEnabled: settings.customMappingEnabled,
-            voiceKeyMode: settings.effectiveVoiceKeyMode,
-            voiceFnTapModeEnabled: settings.effectiveVoiceFnTapModeEnabled,
-            softwareVoiceKeyHeld: voiceKeyLatch.isHeld,
             monitoringInterrupted: hidMonitoringInterrupted,
             previous: appliedHIDPermissionSnapshot,
             current: current
@@ -190,7 +182,6 @@ extension BridgeAppModel {
         let warning = Self.voiceKeyCompatibilityWarning(
             remoteConnected: isConnected,
             usesPrivateAdapter: settings.selectedRemoteProfile?.model.usesPrivateAdapter == true,
-            customMappingEnabled: settings.customMappingEnabled,
             hidStatusKey: hidStatus.key,
             voiceShortcutStatusKey: voiceShortcutStatus.key,
             karabinerRunning: HIDRemoteMonitor.isKarabinerElementsRunning()

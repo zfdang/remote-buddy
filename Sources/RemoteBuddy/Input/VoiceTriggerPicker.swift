@@ -28,11 +28,7 @@ struct VoiceTriggerPicker: View {
                 .pickerStyle(.menu)
                 Button(localization.text("connection.voice_key.customize")) { editing = true }
             }
-            Text(localization.text({
-                if case .shortcut = selection { return "connection.voice_key.chord_help" }
-                if selection == .function { return "connection.voice_key_mode.fn_caution_help" }
-                return "connection.voice_key_mode.help"
-            }()))
+            Text(Self.helpText(for: selection, localization: localization))
                 .font(.caption)
                 .foregroundStyle(selection == .function ? Color.orange : .secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -40,6 +36,35 @@ struct VoiceTriggerPicker: View {
         .sheet(isPresented: $editing) {
             KeyboardShortcutEditor(shortcut: editableShortcut, onSelect: accept, onCancel: { editing = false })
         }
+    }
+
+    static func helpText(
+        for selection: VoiceKeyMode,
+        localization: LocalizationStore
+    ) -> AttributedString {
+        let key: String
+        let highlightKey: String?
+        if case .shortcut = selection {
+            key = "connection.voice_key.chord_help"
+            highlightKey = "connection.voice_key.chord_help.highlight"
+        } else if selection == .function {
+            key = "connection.voice_key_mode.fn_caution_help"
+            highlightKey = nil
+        } else {
+            key = "connection.voice_key_mode.help"
+            highlightKey = "connection.voice_key_mode.help.highlight"
+        }
+
+        var attributed = AttributedString(localization.text(key))
+        guard let highlightKey else { return attributed }
+        let phrase = localization.text(highlightKey)
+        guard !phrase.isEmpty, let range = attributed.range(of: phrase) else { return attributed }
+
+        var highlight = AttributeContainer()
+        highlight[AttributeScopes.SwiftUIAttributes.ForegroundColorAttribute.self] = .red
+        highlight[AttributeScopes.SwiftUIAttributes.FontAttribute.self] = .caption.bold()
+        attributed[range].mergeAttributes(highlight)
+        return attributed
     }
 
     private var editableShortcut: CustomKeyboardShortcut {

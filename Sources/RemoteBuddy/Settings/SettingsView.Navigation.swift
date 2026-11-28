@@ -104,7 +104,12 @@ extension SettingsView {
             if let device = settings.selectedRemoteProfile,
                device.model.isAppleSiriRemote {
                 settingsPage {
-                    PageHeader(title: localization.text("button_mapping.page.title"))
+                    PageHeader(
+                        title: localization.text("button_mapping.page.title"),
+                        linkTitle: localization.text("button_mapping.faq_link"),
+                        linkDestination: AppLinks.voiceButtonsFAQ(for: localization.locale),
+                        linkAccessibilityIdentifier: "button-mapping.faq-link"
+                    )
                 } content: {
                     Text(localization.text("button_mapping.unsupported_device"))
                         .frame(maxWidth: .infinity, alignment: .leading)

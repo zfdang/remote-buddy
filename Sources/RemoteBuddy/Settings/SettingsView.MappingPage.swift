@@ -61,38 +61,34 @@ extension SettingsView {
 
     private var mappingPageHeader: some View {
         let model = settings.selectedRemoteProfile?.model
-        let subtitleKey = if isSelectedChromecastBluetoothLogRecovery {
+        let subtitleKey: String? = if isSelectedChromecastBluetoothLogRecovery {
             "button_mapping.google.btle_log_subtitle"
-        } else if model?.isChromecastRemote == true {
-            "button_mapping.google.subtitle"
         } else if model?.isT1Remote == true {
             "button_mapping.t1.subtitle"
         } else {
-            "button_mapping.page.subtitle"
+            nil
         }
         return VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .center, spacing: 14) {
-                PageHeader(title: localization.text("button_mapping.page.title"))
-                mappingHeaderToggle
+            PageHeader(
+                title: localization.text("button_mapping.page.title"),
+                linkTitle: localization.text("button_mapping.faq_link"),
+                linkDestination: AppLinks.voiceButtonsFAQ(for: localization.locale),
+                linkAccessibilityIdentifier: "button-mapping.faq-link"
+            )
+            .fixedSize(horizontal: true, vertical: false)
+            if let subtitleKey {
+                Text(localization.text(subtitleKey))
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            Text(localization.text(subtitleKey))
-                .font(.system(size: 13))
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     var mappingPage: some View {
         hardwareMappingPage {
-            if settings.selectedRemoteProfile?.model.isChromecastRemote == true {
-                HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text(localization.text("button_mapping.google.version_notice"))
-                        .foregroundStyle(.secondary)
-                    Link(localization.text("button_mapping.google.device_guide"),
-                         destination: AppLinks.devices(for: localization.locale))
-                }
-                .font(.caption)
-            } else if settings.selectedRemoteProfile?.model.isT1Remote == true {
+            if settings.selectedRemoteProfile?.model.isT1Remote == true {
                 Text(localization.text("t1.remote.keyboard_airmouse_note"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -140,9 +136,8 @@ extension SettingsView {
         VStack(spacing: 0) {
             HStack(alignment: .center, spacing: 14) {
                 mappingPageHeader
-                    .fixedSize(horizontal: true, vertical: false)
                 mappingDevicePicker
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .layoutPriority(1)
             }
             .padding(.horizontal, 22)
             .padding(.top, 12)
@@ -169,7 +164,7 @@ extension SettingsView {
                                     .id("mapping-action-editor")
                             }
 
-                            mappingFooter()
+                            mappingSelectionLockSection
                             if editingApplicationBundleID == nil {
                                 mappingResetAllDefaultsSection
                             }
@@ -245,16 +240,6 @@ extension SettingsView {
         }
     }
 
-    private var mappingHeaderToggle: some View {
-        Toggle(localization.text("button_mapping.toggle.enabled"), isOn: Binding(
-            get: { settings.customMappingEnabled },
-            set: { setCustomMappingEnabled($0) }
-        ))
-        .font(.system(size: 14, weight: .medium))
-        .toggleStyle(.switch)
-        .fixedSize(horizontal: true, vertical: false)
-    }
-
     private func mappingEditorPanel(_ target: ShortcutEditingTarget) -> some View {
         GlassPanel {
             VStack(alignment: .leading, spacing: 14) {
@@ -328,48 +313,25 @@ extension SettingsView {
             : MappingActionFilter(category: defaultAction.action.category)
     }
 
-    private func mappingFooter() -> some View {
-        // 能力一律取自「链路自报优先、型号默认兜底」的判定结果（见 RemoteVoiceCapabilities）。
+    private var mappingSelectionLockSection: some View {
         GlassPanel {
-            VStack(alignment: .leading, spacing: 12) {
-                mappingHIDStatus
-                Divider()
-                HStack {
-                    mappingSelectionLockControl
-                    Spacer()
-                    Button {
-                        selectSection(.commonPhrases)
-                    } label: {
-                        Label(localization.text("common_phrases.adjust"), systemImage: "text.quote")
-                    }
-                    .compatibilityButtonStyle(.standard)
-                    .font(.system(size: 12))
+            HStack(alignment: .center, spacing: 16) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(localization.text("button_mapping.selection_lock"))
+                        .font(.system(size: 13, weight: .semibold))
+                    Text(localization.text("button_mapping.selection_lock_hint_short"))
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
+                Spacer(minLength: 16)
+                Toggle(localization.text("button_mapping.selection_lock"), isOn: $isMappingSelectionLocked)
+                    .toggleStyle(.switch)
+                    .labelsHidden()
+                    .accessibilityLabel(localization.text("button_mapping.selection_lock"))
             }
+            .help(localization.text("button_mapping.selection_lock_help"))
         }
-    }
-
-    private var mappingHIDStatus: some View {
-        Label(
-            model.hidStatus.text(using: localization),
-            systemImage: "keyboard"
-        )
-        .font(.system(size: 12))
-        .foregroundStyle(.secondary)
-        .lineLimit(2)
-    }
-
-    private var mappingSelectionLockControl: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Toggle(localization.text("button_mapping.selection_lock"), isOn: $isMappingSelectionLocked)
-                .font(.system(size: 12, weight: .medium))
-                .toggleStyle(.switch)
-            Text(localization.text("button_mapping.selection_lock_hint_short"))
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
-                .lineLimit(2)
-        }
-        .help(localization.text("button_mapping.selection_lock_help"))
     }
 
     var voiceTriggerStatus: some View {
@@ -430,7 +392,7 @@ extension SettingsView {
     private var mappingDevicePicker: some View {
         let profiles = RemoteDeviceNamePolicy.sortedForCards(
             settings.remoteDeviceProfiles,
-            modelName: remoteModelName,
+            modelName: remoteBaseModelName,
             systemName: { model.systemDeviceName(for: $0) }
         )
         return Picker(localization.text("remote.device.selector"), selection: Binding<UUID?>(
@@ -445,7 +407,7 @@ extension SettingsView {
             }
         }
         .pickerStyle(.menu)
-        .frame(maxWidth: 310)
+        .frame(maxWidth: 340)
         .disabled(profiles.isEmpty)
     }
 }

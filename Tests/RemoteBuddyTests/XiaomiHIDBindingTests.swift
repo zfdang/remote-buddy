@@ -7,9 +7,7 @@ import Testing
 struct XiaomiHIDBindingTests {
     @Test(arguments: [false, true])
     func ambiguousBluetoothProfilesWaitForExplicitBinding(selectSecond: Bool) throws {
-        let name = "xiaomi-binding-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let first = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         let second = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
@@ -25,9 +23,7 @@ struct XiaomiHIDBindingTests {
     }
 
     @Test func aSingleXiaomiCandidateDoesNotBindAppleOrGoogleProfiles() throws {
-        let name = "xiaomi-family-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let mappings = RemoteDeviceMappings(buttonBindings: AppSettings.defaultBindings,
             buttonShortcuts: [:], secondaryButtonBindings: [:])

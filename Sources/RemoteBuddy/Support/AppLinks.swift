@@ -52,6 +52,10 @@ enum AppLinks {
         faqSection("input-methods", for: locale)
     }
 
+    static func voiceButtonsFAQ(for locale: Locale) -> URL {
+        faqSection("voice-buttons", for: locale)
+    }
+
     static func applicationIntegrationFAQ(for locale: Locale) -> URL {
         faqSection("integrations", for: locale)
     }

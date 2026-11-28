@@ -7,9 +7,8 @@ import Testing
 @MainActor
 struct InputLifecycleRegressionTests {
     private final class Probe {}
-    private func defaults() -> (UserDefaults, String) {
-        let name = "input-lifecycle-" + UUID().uuidString
-        return (UserDefaults(suiteName: name)!, name)
+    private func defaults() -> UserDefaults {
+        EphemeralUserDefaults()
     }
 
     @Test func accessibilityTimeoutFailureIsReportedWithoutRetries() {
@@ -30,17 +29,15 @@ struct InputLifecycleRegressionTests {
         for granted in [false, true] {
             let snapshot = HIDPermissionSnapshot(inputMonitoringGranted: granted, accessibilityGranted: granted)
             let shouldRecover = HIDPermissionRecoveryPolicy.shouldReapplySettings(
-                started: true, customMappingEnabled: true, monitoringInterrupted: true,
+                started: true, monitoringInterrupted: true,
                 previous: snapshot, current: snapshot)
             #expect(shouldRecover == granted)
         }
     }
 
     @Test func systemDisabledSharedFilterAlsoStopsDeviceMappings() {
-        let (values, name) = defaults()
-        defer { values.removePersistentDomain(forName: name) }
+        let values = defaults()
         let settings = AppSettings(defaults: values)
-        settings.customMappingEnabled = true
         let model = BridgeAppModel(settings: settings)
         let monitor = HIDRemoteMonitor(settings: settings, profileID: nil,
             eventSuppressor: model.hidEventSuppressor, ownsEventSuppressor: false,
@@ -56,18 +53,17 @@ struct InputLifecycleRegressionTests {
         #expect(model.activeRemoteButtons.isEmpty)
         #expect(model.hidMonitoringInterrupted)
         // UI messages can change independently; recovery uses the explicit interruption flag.
-        model.hidStatus = LocalizedMessage("button_mapping.status.system_managed")
+        model.hidStatus = LocalizedMessage("button_mapping.status.disabled")
         let granted = HIDPermissionSnapshot(inputMonitoringGranted: true, accessibilityGranted: true)
         #expect(HIDPermissionRecoveryPolicy.shouldReapplySettings(
-            started: true, customMappingEnabled: true,
+            started: true,
             monitoringInterrupted: model.hidMonitoringInterrupted, previous: granted, current: granted))
         monitor.onInputReset = nil
     }
 
     @Test(arguments: [VoiceKeyMode.function, .leftCommand, .rightOption])
     func deniedVoiceReleaseKeepsLatchUntilSuccessfulRetry(mode: VoiceKeyMode) {
-        let (values, name) = defaults()
-        defer { values.removePersistentDomain(forName: name) }
+        let values = defaults()
         let model = BridgeAppModel(settings: AppSettings(defaults: values))
         _ = model.voiceKeyLatch.transition(streaming: true, owner: .bluetooth)
         model.heldVoiceKeyMode = mode
@@ -142,10 +138,8 @@ struct InputLifecycleRegressionTests {
     }
 
     @Test func revokedPermissionsClearSharedFilterBeforeInputReset() throws {
-        let (values, name) = defaults()
-        defer { values.removePersistentDomain(forName: name) }
+        let values = defaults()
         let settings = AppSettings(defaults: values)
-        settings.customMappingEnabled = true
         var granted = true
         let filter = KeyboardEventSuppressor(uptime: { 0 })
         let monitor = HIDRemoteMonitor(settings: settings, profileID: nil,
@@ -198,10 +192,8 @@ struct InputLifecycleRegressionTests {
     }
 
     @Test func mixedReportDeliversReleaseDespiteRejectedNewPress() {
-        let (values, name) = defaults()
-        defer { values.removePersistentDomain(forName: name) }
+        let values = defaults()
         let settings = AppSettings(defaults: values)
-        settings.customMappingEnabled = true
         for button in RemoteButton.allCases {
             settings.setAction(.escape, for: button, trigger: .singleClick)
         }
@@ -225,10 +217,8 @@ struct InputLifecycleRegressionTests {
     }
 
     @Test func stoppedMonitorDoesNotDispatchRemainingPressesInSameReport() {
-        let (values, name) = defaults()
-        defer { values.removePersistentDomain(forName: name) }
+        let values = defaults()
         let settings = AppSettings(defaults: values)
-        settings.customMappingEnabled = true
         for button in RemoteButton.allCases {
             settings.setAction(.escape, for: button, trigger: .singleClick)
         }
@@ -251,10 +241,8 @@ struct InputLifecycleRegressionTests {
 
     @Test(arguments: [false, true])
     func appSwitcherNavigationOwnsNativeArrowsOnUnseizedDevice(delayedNativeEvents: Bool) throws {
-        let (values, name) = defaults()
-        defer { values.removePersistentDomain(forName: name) }
+        let values = defaults()
         let settings = AppSettings(defaults: values)
-        settings.customMappingEnabled = true
         settings.setAction(.appSwitcher, for: .tv)
         settings.setAction(.arrowRight, for: .right)
         settings.setAction(.arrowLeft, for: .left)
@@ -297,10 +285,8 @@ struct InputLifecycleRegressionTests {
     }
 
     @Test func rejectedActionDoesNotDisableMonitorWhilePermissionsRemainValid() {
-        let (values, name) = defaults()
-        defer { values.removePersistentDomain(forName: name) }
+        let values = defaults()
         let settings = AppSettings(defaults: values)
-        settings.customMappingEnabled = true
         let profile = UUID()
         var actions: [RemoteButton] = []
         let monitor = HIDRemoteMonitor(settings: settings, profileID: profile,
@@ -343,8 +329,7 @@ struct InputLifecycleRegressionTests {
     }
 
     @Test func restartWizardClearsPriorValidationHistory() throws {
-        let (values, name) = defaults()
-        defer { values.removePersistentDomain(forName: name) }
+        let values = defaults()
         let binding = VoiceToolUserBinding(tool: .weixin, shortcut: .function,
             gestureMode: .hold, source: .manuallyConfirmed, validationState: .verified)
         values.set(try JSONEncoder().encode(binding), forKey: "onboarding.verifiedVoiceBinding")
@@ -404,8 +389,7 @@ struct InputLifecycleRegressionTests {
     }
 
     @Test func mappingJournalSurvivesRestartAndOfflineRestore() {
-        let (values, name) = defaults()
-        defer { values.removePersistentDomain(forName: name) }
+        let values = defaults()
         let original = HIDUsageMapping(source: RemoteHIDKeyMappingPolicy.remoteVoiceKey.source, destination: 99)
         var mappings = [original]
         var online = true
@@ -432,8 +416,7 @@ struct InputLifecycleRegressionTests {
     }
 
     @Test func mappingJournalDoesNotCrossSystemBoots() {
-        let (values, name) = defaults()
-        defer { values.removePersistentDomain(forName: name) }
+        let values = defaults()
         let source = RemoteHIDKeyMappingPolicy.remoteVoiceKey.source
         var mappings = [HIDUsageMapping(source: source, destination: 99)]
         let provider = { [RemoteHIDMappingService(registryID: 123,
@@ -475,10 +458,8 @@ struct InputLifecycleRegressionTests {
             let down: Bool
             let command: Bool
         }
-        let (values, name) = defaults()
-        defer { values.removePersistentDomain(forName: name) }
+        let values = defaults()
         let settings = AppSettings(defaults: values)
-        settings.customMappingEnabled = true
         let remoteAProfile = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         let remoteBProfile = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         settings.setBaseBinding(
@@ -614,10 +595,8 @@ struct InputLifecycleRegressionTests {
     }
 
     @Test func nonOwnerMonitorResetDoesNotCancelActiveAppSwitcher() {
-        let (values, name) = defaults()
-        defer { values.removePersistentDomain(forName: name) }
+        let values = defaults()
         let settings = AppSettings(defaults: values)
-        settings.customMappingEnabled = true
         let remoteAProfile = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         let remoteBProfile = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         settings.setBaseBinding(
@@ -675,8 +654,7 @@ struct InputLifecycleRegressionTests {
     }
 
     @Test @MainActor func bridgeAppModelSharesAppSwitcherCoordinatorAcrossHIDMonitors() throws {
-        let (values, name) = defaults()
-        defer { values.removePersistentDomain(forName: name) }
+        let values = defaults()
         let settings = AppSettings(defaults: values)
         let model = BridgeAppModel(settings: settings, initialAudioDevices: [])
         let xiaomiID = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
@@ -688,10 +666,8 @@ struct InputLifecycleRegressionTests {
     }
 
     @Test @MainActor func cancelPendingButtonActionsCleansActiveUsagesAndTimers() throws {
-        let (values, name) = defaults()
-        defer { values.removePersistentDomain(forName: name) }
+        let values = defaults()
         let settings = AppSettings(defaults: values)
-        settings.customMappingEnabled = true
         let profile = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         var activeButtonsHistory: [Set<RemoteButton>] = []
         let monitor = HIDRemoteMonitor(
@@ -718,8 +694,7 @@ struct InputLifecycleRegressionTests {
     }
 
     @Test @MainActor func bridgeAppModelCancelAllScheduledWorkCleansTimers() throws {
-        let (values, name) = defaults()
-        defer { values.removePersistentDomain(forName: name) }
+        let values = defaults()
         let settings = AppSettings(defaults: values)
         let model = BridgeAppModel(settings: settings, initialAudioDevices: [])
         model.completedUpdateHIDRecoveryWorkItem = DispatchWorkItem {}
@@ -735,10 +710,8 @@ struct InputLifecycleRegressionTests {
             let down: Bool
             let command: Bool
         }
-        let (values, name) = defaults()
-        defer { values.removePersistentDomain(forName: name) }
+        let values = defaults()
         let settings = AppSettings(defaults: values)
-        settings.customMappingEnabled = true
         let profile = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         settings.setBaseBinding(.init(action: .appSwitcher, shortcut: nil), for: .home, trigger: .singleClick, profileID: profile)
         settings.selectRemoteProfile(profile)

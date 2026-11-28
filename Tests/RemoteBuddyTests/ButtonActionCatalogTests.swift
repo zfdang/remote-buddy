@@ -9,9 +9,7 @@ import Testing
 struct ButtonActionCatalogTests {
     @MainActor
     @Test func allActionsAndPresetApplicationsResolveLocalizedNamesInBothLanguages() throws {
-        let suite = "button-action-catalog-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let store = LocalizationStore(settings: AppSettings(defaults: defaults))
 
         for language in [AppLanguage.english, .simplifiedChinese] {
@@ -35,9 +33,7 @@ struct ButtonActionCatalogTests {
 
     @MainActor
     @Test func shortcutActionsExposeDescriptiveNamesAndShortcutLabels() throws {
-        let suite = "button-action-shortcuts-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let store = LocalizationStore(settings: AppSettings(defaults: defaults))
 
         store.select(.simplifiedChinese)
@@ -151,8 +147,7 @@ struct ButtonActionCatalogTests {
 
     @Test @MainActor func remoteActionOpensCustomAppFromSavedPathBeforeLaunchServicesRegistration() throws {
         let bundleID = "com.example.remote-buddy-test.\(UUID().uuidString.lowercased())"
-        let defaults = try #require(UserDefaults(suiteName: bundleID))
-        defer { defaults.removePersistentDomain(forName: bundleID) }
+        let defaults = EphemeralUserDefaults()
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(bundleID, isDirectory: true)
         let app = directory.appendingPathComponent("Custom.app", isDirectory: true)
         let contents = app.appendingPathComponent("Contents", isDirectory: true)
@@ -217,9 +212,7 @@ struct ButtonActionCatalogTests {
         #expect(launchedURLs.count == 1)
 
         // Verify per-remote & secondary-trigger URL persistence across reload.
-        let suite = "open-url-settings-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
 
         let settings = AppSettings(defaults: defaults)
         let profileID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)

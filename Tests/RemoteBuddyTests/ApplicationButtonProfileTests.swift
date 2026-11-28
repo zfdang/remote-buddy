@@ -12,15 +12,13 @@ struct ApplicationButtonProfileTests {
     private let nextSession = CustomKeyboardShortcut(keyCode: 125, modifierFlags: .option, keyLabel: "↓")
     private let nextChat = CustomKeyboardShortcut(keyCode: 30, modifierFlags: [.command, .option], keyLabel: "]")
 
-    private func makeSettings(suiteName: String? = nil) throws -> (settings: AppSettings, defaults: UserDefaults, suite: String) {
-        let suite = suiteName ?? ("app-profiles-" + UUID().uuidString)
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        return (AppSettings(defaults: defaults), defaults, suite)
+    private func makeSettings() -> (settings: AppSettings, defaults: UserDefaults) {
+        let defaults = EphemeralUserDefaults()
+        return (AppSettings(defaults: defaults), defaults)
     }
 
     @Test func frontmostAppOverrideAppliesPerTriggerAndLeavesOtherButtonsDefault() throws {
-        let (settings, defaults, suite) = try makeSettings()
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let (settings, _) = makeSettings()
 
         let remoteID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         settings.selectRemoteProfile(remoteID)
@@ -66,8 +64,7 @@ struct ApplicationButtonProfileTests {
     }
 
     @Test func perRemotePerAppProfilesStayIsolatedAcrossRemotesAndReload() throws {
-        let (settings, defaults, suite) = try makeSettings()
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let (settings, defaults) = makeSettings()
 
         let xiaomiID = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         let g9n9nID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
@@ -132,8 +129,7 @@ struct ApplicationButtonProfileTests {
     }
 
     @Test func mappingPageLookupsIgnoreFrontmostApplicationOverrides() throws {
-        let (settings, defaults, suite) = try makeSettings()
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let (settings, _) = makeSettings()
 
         let remoteID = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         settings.selectRemoteProfile(remoteID)
@@ -152,10 +148,8 @@ struct ApplicationButtonProfileTests {
     }
 
     @Test func hidRemoteMonitorDispatchesActionsByFrontmostApplication() throws {
-        let (settings, defaults, suite) = try makeSettings()
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let (settings, _) = makeSettings()
 
-        settings.customMappingEnabled = true
         settings.onboardingStep = .complete
         let profileID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         settings.selectRemoteProfile(profileID)
@@ -218,8 +212,7 @@ struct ApplicationButtonProfileTests {
     }
 
     @Test func holdRepeatAndDirectPassthroughRespectPerAppOverrides() throws {
-        let (settings, defaults, suite) = try makeSettings()
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let (settings, _) = makeSettings()
 
         let remoteID = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         settings.selectRemoteProfile(remoteID)
@@ -274,9 +267,7 @@ struct ApplicationButtonProfileTests {
         #expect(decoded[codex]?.name == "Codex")
         #expect(decoded[codex]?.buttons.isEmpty == true)
 
-        let suite = "app-profiles-corrupt-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         defaults.set(Data("{invalid-json".utf8), forKey: AppSettings.Keys.applicationButtonProfiles)
 
         let settings = AppSettings(defaults: defaults)
@@ -286,8 +277,7 @@ struct ApplicationButtonProfileTests {
     }
 
     @Test func mappingEditingHelpersAddClearResetOrderAndParseAppIdentity() throws {
-        let (settings, defaults, suite) = try makeSettings()
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let (settings, _) = makeSettings()
 
         let remoteID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         settings.selectRemoteProfile(remoteID)
@@ -346,10 +336,8 @@ struct ApplicationButtonProfileTests {
     }
 
     @Test func deferredAndRepeatingAppOverridesCancelWhenFocusMovesToAnotherApp() throws {
-        let (settings, defaults, suite) = try makeSettings()
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let (settings, _) = makeSettings()
 
-        settings.customMappingEnabled = true
         settings.onboardingStep = .complete
         let profileID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         settings.selectRemoteProfile(profileID)
@@ -463,8 +451,7 @@ struct ApplicationButtonProfileTests {
     }
 
     @Test func appScopedHoldRepeatMatchesRuntimeAndAllowsExplicitRepeatAfterOpenURL() throws {
-        let (settings, defaults, suite) = try makeSettings()
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let (settings, _) = makeSettings()
 
         let remoteID = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         settings.selectRemoteProfile(remoteID)
@@ -498,8 +485,7 @@ struct ApplicationButtonProfileTests {
     }
 
     @Test func selectingBaseActionDropsOverrideEvenWithStaleUnusedPayloadFields() throws {
-        let (settings, defaults, suite) = try makeSettings()
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let (settings, _) = makeSettings()
 
         let remoteID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         settings.selectRemoteProfile(remoteID)
@@ -553,10 +539,8 @@ struct ApplicationButtonProfileTests {
     }
 
     @Test func defaultActionDeferredClickAndRepeatCancelWhenDestinationAppDisablesOrChangesButton() throws {
-        let (settings, defaults, suite) = try makeSettings()
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let (settings, _) = makeSettings()
 
-        settings.customMappingEnabled = true
         settings.onboardingStep = .complete
         let profileID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         settings.selectRemoteProfile(profileID)
@@ -654,8 +638,7 @@ struct ApplicationButtonProfileTests {
     }
 
     @Test func changingDefaultToMatchOverridePrunesStorageAcrossConsecutiveDefaultChanges() throws {
-        let (settings, defaults, suite) = try makeSettings()
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let (settings, _) = makeSettings()
 
         let xiaomiID = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         let g9n9nID = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
@@ -708,10 +691,8 @@ struct ApplicationButtonProfileTests {
     }
 
     @Test func heldArrowWithPerAppOverrideBypassesNativePassthroughAndCancelsRepeatOnFocusChange() throws {
-        let (settings, defaults, suite) = try makeSettings()
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let (settings, _) = makeSettings()
 
-        settings.customMappingEnabled = true
         settings.onboardingStep = .complete
         let profileID = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         settings.selectRemoteProfile(profileID)

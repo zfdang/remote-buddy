@@ -6,9 +6,7 @@ import Testing
 @MainActor
 struct RemoteMappingIndependenceTests {
     @Test func backgroundProfilesResolveMissingMediaDefaultsWithoutReplacingSavedActions() throws {
-        let suite = "background-google-defaults-" + UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: suite))
-        defer { values.removePersistentDomain(forName: suite) }
+        let values = EphemeralUserDefaults()
         let settings = AppSettings(defaults: values)
         let xiaomi = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         let google = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
@@ -36,9 +34,7 @@ struct RemoteMappingIndependenceTests {
 
     @Test(arguments: [true, false])
     func identifyingAnUnknownGoogleRemoteFillsDefaultsAndPreservesEdits(selected: Bool) throws {
-        let suite = "identified-google-defaults-" + UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: suite))
-        defer { values.removePersistentDomain(forName: suite) }
+        let values = EphemeralUserDefaults()
         let settings = AppSettings(defaults: values)
         let xiaomi = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         let google = settings.registerBluetoothRemote(identifier: UUID(), model: .unknown)
@@ -72,9 +68,7 @@ struct RemoteMappingIndependenceTests {
     }
 
     @Test func googleMediaDefaultsPersistCustomizeAndResetIndependently() throws {
-        let suite = "google-media-defaults-" + UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: suite))
-        defer { values.removePersistentDomain(forName: suite) }
+        let values = EphemeralUserDefaults()
         let settings = AppSettings(defaults: values)
         let google = settings.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         settings.selectRemoteProfile(google)
@@ -95,9 +89,7 @@ struct RemoteMappingIndependenceTests {
     }
 
     @Test func newDevicesUseModelDefaultsAndKeepCustomizationsSeparate() throws {
-        let suite = "independent-remote-defaults-" + UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: suite))
-        defer { values.removePersistentDomain(forName: suite) }
+        let values = EphemeralUserDefaults()
         let settings = AppSettings(defaults: values)
         let xiaomi = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         settings.selectRemoteProfile(xiaomi)
@@ -126,9 +118,7 @@ struct RemoteMappingIndependenceTests {
     }
 
     @Test func preDeviceBindingsDoNotOverrideNewDeviceDefaults() throws {
-        let suite = "independent-unscoped-defaults-" + UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: suite))
-        defer { values.removePersistentDomain(forName: suite) }
+        let values = EphemeralUserDefaults()
         let settings = AppSettings(defaults: values)
         settings.setBaseBinding(.init(action: .commandCopy, shortcut: nil), for: .ok,
             trigger: .longPress, profileID: nil)

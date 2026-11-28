@@ -6,9 +6,7 @@ import Testing
 @MainActor
 struct LongRecordingStartupTests {
     @Test func cancelledRequestCannotBeReopenedByLateAudioStartup() throws {
-        let name = UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: name))
-        defer { values.removePersistentDomain(forName: name) }
+        let values = EphemeralUserDefaults()
         let model = BridgeAppModel(settings: AppSettings(defaults: values), initialAudioDevices: [])
         model.longRecordingRequested = true
         model.longRecordingGeneration = 12

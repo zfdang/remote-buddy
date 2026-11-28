@@ -6,11 +6,8 @@ import Testing
 struct NativePassthroughResetTests {
     @Test(arguments: ["disconnect", "compatibilityReset", "stop"])
     func nativeArrowMustBeReleasedOnReset(path: String) throws {
-        let name = "review-ten-" + UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: name))
-        defer { values.removePersistentDomain(forName: name) }
+        let values = EphemeralUserDefaults()
         let settings = AppSettings(defaults: values)
-        settings.customMappingEnabled = true
         let profile = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         settings.selectRemoteProfile(profile)
         let clock = ControlledTestScheduler()

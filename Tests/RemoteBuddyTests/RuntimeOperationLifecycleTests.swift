@@ -39,9 +39,7 @@ struct RuntimeOperationLifecycleTests {
     }
 
     @Test func staleAudioStartupCannotStopNewSession() async throws {
-        let name = "operation-lifecycle-" + UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: name))
-        defer { values.removePersistentDomain(forName: name) }
+        let values = EphemeralUserDefaults()
         let model = BridgeAppModel(settings: AppSettings(defaults: values))
         model.started = true
         defer { model.started = false }
@@ -94,9 +92,7 @@ struct RuntimeOperationLifecycleTests {
     }
 
     @Test func startupAlwaysTargetsOwnedMicrophoneAndRejectsStaleEnumeration() throws {
-        let name = "startup-selection-" + UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: name))
-        defer { values.removePersistentDomain(forName: name) }
+        let values = EphemeralUserDefaults()
         let settings = AppSettings(defaults: values)
         let model = BridgeAppModel(settings: settings)
         model.started = true
@@ -114,11 +110,8 @@ struct RuntimeOperationLifecycleTests {
 
     @Test(arguments: [false, true])
     func unavailableNativeFilterCannotDuplicateMappedActions(seized: Bool) throws {
-        let name = "mapping-filter-" + UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: name))
-        defer { values.removePersistentDomain(forName: name) }
+        let values = EphemeralUserDefaults()
         let settings = AppSettings(defaults: values)
-        settings.customMappingEnabled = true
         settings.setAction(.commandQuit, for: .up)
         var actions = 0
         let profile = UUID()
@@ -135,11 +128,8 @@ struct RuntimeOperationLifecycleTests {
 
     @Test(arguments: [false, true])
     func lostFilterCancelsDelayedActions(longPress: Bool) throws {
-        let name = "mapping-filter-lost-" + UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: name))
-        defer { values.removePersistentDomain(forName: name) }
+        let values = EphemeralUserDefaults()
         let settings = AppSettings(defaults: values)
-        settings.customMappingEnabled = true
         if longPress { settings.setAction(.commandQuit, for: .up, trigger: .longPress) }
         let scheduler = ControlledTestScheduler()
         var filtering = true

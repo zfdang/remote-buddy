@@ -5,9 +5,7 @@ import Testing
 @Suite("Mapping storage consistency") @MainActor
 struct MappingStorageConsistencyTests {
     @Test func uiEditsAcrossProfilesAndReloadKeepEffectiveMappings() throws {
-        let name = "review-thirteen-ui-" + UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: name))
-        defer { values.removePersistentDomain(forName: name) }
+        let values = EphemeralUserDefaults()
         let settings = AppSettings(defaults: values)
         let first = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         let second = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
@@ -35,9 +33,7 @@ struct MappingStorageConsistencyTests {
 
     @Test(arguments: ButtonTrigger.allCases)
     func backgroundDeviceWritesPersistWithoutChangingSelectedDevice(trigger: ButtonTrigger) throws {
-        let name = "background-mapping-write-" + UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: name))
-        defer { values.removePersistentDomain(forName: name) }
+        let values = EphemeralUserDefaults()
         let settings = AppSettings(defaults: values)
         let selected = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         let background = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
@@ -63,9 +59,7 @@ struct MappingStorageConsistencyTests {
     }
 
     @Test func mixedSetterPathsReadTheLatestSavedValue() throws {
-        let name = "review-thirteen-mixed-" + UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: name))
-        defer { values.removePersistentDomain(forName: name) }
+        let values = EphemeralUserDefaults()
         let settings = AppSettings(defaults: values)
         let profile = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         settings.selectRemoteProfile(profile)

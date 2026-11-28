@@ -6,9 +6,7 @@ import Testing
 @MainActor
 struct BluetoothDiscoverySequenceTests {
     @Test func failedCachedConnectionFindsItsAlreadyConnectedTarget() throws {
-        let suite = "bluetooth-discovery-paths-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let model = BridgeAppModel(settings: settings)
         let target = UUID(), other = UUID()

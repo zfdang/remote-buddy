@@ -491,13 +491,3 @@ enum MappingSelectionPolicy {
         return RemoteButton.allCases.first(where: activeButtons.contains) ?? current
     }
 }
-
-enum MappingPermissionPolicy {
-    static func requiresPrompt(
-        enabled: Bool,
-        inputMonitoringGranted: Bool,
-        accessibilityGranted: Bool
-    ) -> Bool {
-        enabled && (!inputMonitoringGranted || !accessibilityGranted)
-    }
-}

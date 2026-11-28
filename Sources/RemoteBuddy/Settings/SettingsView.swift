@@ -41,8 +41,6 @@ struct SettingsView: View {
     @State var accessibilityGranted: Bool
     @State var integrationToolAvailability: OnboardingVoiceToolAvailability
     @State var isRepositoryLinkCopied = false
-    @State var isMappingPermissionAlertPresented = false
-    @State var isWaitingForMappingPermissions = false
     @State var isShowingRestoreAllDefaultsAlert = false
     @State var isPermissionRelaunchConfirmationPresented = false
 
@@ -151,26 +149,9 @@ struct SettingsView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             refreshPermissionStates()
             loginItemService.refresh()
-            resumeCustomMappingIfPermissionsGranted()
             if settings.g9n9nBluetoothLogRecoveryEnabled {
                 model.refreshBluetoothLoggingProfileStatus()
             }
-        }
-        .alert(
-            localization.text("button_mapping.permission_prompt.title"),
-            isPresented: $isMappingPermissionAlertPresented
-        ) {
-            Button(localization.text("button_mapping.permission_prompt.open")) {
-                isWaitingForMappingPermissions = true
-                selectSection(.permissions)
-                model.applyHIDSettings()
-            }
-            Button(localization.text("common.action.cancel"), role: .cancel) {
-                settings.customMappingEnabled = false
-                model.applyHIDSettings()
-            }
-        } message: {
-            Text(localization.text("button_mapping.permission_prompt.message"))
         }
         .confirmationDialog(
             localization.text("permission.desync.restart_confirm.title"),

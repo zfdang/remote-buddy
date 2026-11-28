@@ -6,9 +6,7 @@ import Testing
 @MainActor
 struct AudioConfigurationRetryTests {
     private func withModel(_ body: (BridgeAppModel) async throws -> Void) async throws {
-        let suite = UUID().uuidString
-        let values = try #require(UserDefaults(suiteName: suite))
-        defer { values.removePersistentDomain(forName: suite) }
+        let values = EphemeralUserDefaults()
         let model = BridgeAppModel(settings: AppSettings(defaults: values))
         try await body(model)
     }

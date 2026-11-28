@@ -23,9 +23,7 @@ struct ButtonMappingDefaultActionTests {
     }
 
     private func withSettings(_ body: (AppSettings) throws -> Void) throws {
-        let name = "default-actions-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         try body(AppSettings(defaults: defaults))
     }
 

@@ -216,16 +216,29 @@ extension BridgeAppModel {
         applyHIDSettings()
     }
 
-    func requestNextHIDPermissionIfNeeded(
-        voiceFnTapModeRequested: Bool? = nil,
-        voiceKeyModeRequested: VoiceKeyMode? = nil
-    ) {
-        let request = HIDPermissionGate.nextPermissionRequest(
-            mappingEnabled: settings.customMappingEnabled,
-            voiceFnTapModeEnabled: (voiceFnTapModeRequested ?? settings.effectiveVoiceFnTapModeEnabled) || requiresOrderedVoiceFn,
-            voiceKeyMode: voiceKeyModeRequested ?? settings.effectiveVoiceKeyMode,
-            inputMonitoringGranted: HIDRemoteMonitor.isInputMonitoringGranted,
-            accessibilityGranted: KeyboardInjector.isAccessibilityTrusted
+    func nextHIDPermissionRequest(
+        permissionSnapshot: HIDPermissionSnapshot
+    ) -> HIDPermissionRequest {
+        let requiresInputMonitoring = settings.onboardingControlMethod.requiresInputMonitoringPermission
+            || !settings.remoteDeviceProfiles.isEmpty
+        let requiresAccessibility = settings.effectiveVoiceFnTapModeEnabled
+            || requiresOrderedVoiceFn
+            || settings.effectiveVoiceKeyMode.requiresAccessibility
+            || !settings.enabledApplicationIntegrations.isEmpty
+        return HIDPermissionGate.nextPermissionRequest(
+            requiresInputMonitoring: requiresInputMonitoring,
+            requiresAccessibility: requiresAccessibility,
+            inputMonitoringGranted: permissionSnapshot.inputMonitoringGranted,
+            accessibilityGranted: permissionSnapshot.accessibilityGranted
+        )
+    }
+
+    func requestNextHIDPermissionIfNeeded() {
+        let request = nextHIDPermissionRequest(
+            permissionSnapshot: HIDPermissionSnapshot(
+                inputMonitoringGranted: HIDRemoteMonitor.isInputMonitoringGranted,
+                accessibilityGranted: KeyboardInjector.isAccessibilityTrusted
+            )
         )
         switch request {
         case .none:

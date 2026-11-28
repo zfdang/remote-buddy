@@ -8,15 +8,10 @@ import Testing
 @Suite("Action feedback HUD and visibility settings")
 struct ActionFeedbackTests {
     @MainActor
-    private func makeStrings(language: AppLanguage = .english) throws -> (ActionFeedbackStrings, () -> Void) {
-        let suite = "action-feedback-strings-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        let settings = AppSettings(defaults: defaults)
+    private func makeStrings(language: AppLanguage = .english) -> ActionFeedbackStrings {
+        let settings = AppSettings(defaults: EphemeralUserDefaults())
         settings.applicationLanguage = language
-        return (
-            ActionFeedbackStrings(localization: LocalizationStore(settings: settings)),
-            { defaults.removePersistentDomain(forName: suite) }
-        )
+        return ActionFeedbackStrings(localization: LocalizationStore(settings: settings))
     }
 
     @Test @MainActor func successMergesRepeatsAndMultipleActionsWithinWindow() throws {
@@ -30,8 +25,7 @@ struct ActionFeedbackTests {
             log: { logs.append($0) },
             pasteboardWriter: { _ in }
         )
-        let (strings, cleanup) = try makeStrings()
-        defer { cleanup() }
+        let strings = makeStrings()
 
         center.record(
             ActionFeedbackEvent(
@@ -96,8 +90,7 @@ struct ActionFeedbackTests {
             openSystemSettings: { openedSettings += 1 },
             reselectAction: {}
         )
-        let (strings, cleanup) = try makeStrings()
-        defer { cleanup() }
+        let strings = makeStrings()
 
         center.record(
             ActionFeedbackEvent(
@@ -214,9 +207,7 @@ struct ActionFeedbackTests {
     }
 
     @Test @MainActor func settingsTogglesPersistAndControlActionFeedbackVisibility() throws {
-        let suite = "action-feedback-settings-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
 
         let settings = AppSettings(defaults: defaults)
         #expect(!settings.hideAllActionFeedback)
@@ -283,9 +274,7 @@ struct ActionFeedbackTests {
 
     @Test(arguments: [false, true])
     @MainActor func focusInputDefersFeedbackUntilAsyncCompletion(fnTapModeEnabled: Bool) throws {
-        let suite = "action-feedback-focus-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
 
         let settings = AppSettings(defaults: defaults)
         settings.hideAllActionFeedback = false
@@ -383,9 +372,7 @@ struct ActionFeedbackTests {
 
     @Test(arguments: [false, true])
     @MainActor func applicationLaunchesReportMissingTargetsAndAsyncFailures(fnTapModeEnabled: Bool) throws {
-        let suite = "action-feedback-apps-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
 
         let settings = AppSettings(defaults: defaults)
         settings.hideAllActionFeedback = false

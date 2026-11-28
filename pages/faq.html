@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>常见问答 (FAQ) · Remote Buddy 遥控搭子</title>
-  <meta name="description" content="Remote Buddy（遥控搭子）使用常见问答：遥控器选购推荐、点按免提与按住说话区别、为什么有的遥控器只能长按、60秒录音物理上限原理解析、按键直通模式、常用语设置、应用集成、输入法长按点按转换、Fn热键排障以及 Windows 平台安装与使用指南。">
+  <meta name="description" content="Remote Buddy（遥控搭子）使用常见问答：遥控器选购推荐、点按免提与按住说话区别、为什么有的遥控器只能长按、60秒录音物理上限原理解析、按键直通模式、按应用按键映射、常用语设置、应用集成、输入法长按点按转换、Fn热键排障以及 Windows 平台安装与使用指南。">
   <meta name="theme-color" content="#203a68">
   <link rel="canonical" href="https://remote.zfdang.com/faq.html">
   <link rel="alternate" hreflang="zh-CN" href="https://remote.zfdang.com/faq.html">
@@ -32,7 +32,7 @@
   <div class="downloads-head">
     <p class="eyebrow">使用指南 · 常见问答</p>
     <h1 class="section-title">常见问答 (FAQ)</h1>
-    <p class="lead-sub">汇总 Remote Buddy（遥控搭子）在硬件选购、语音触发、按键直通、常用语面板、应用集成、输入法生态、常见疑难排障以及 Windows 平台安装配置方面的完整解答。</p>
+    <p class="lead-sub">汇总 Remote Buddy（遥控搭子）在硬件选购、语音触发、按键映射与按应用覆盖、按键直通、常用语面板、应用集成、输入法生态、常见疑难排障以及 Windows 平台安装配置方面的完整解答。</p>
   </div>
 
   <!-- 一、硬件支持与选购推荐 -->
@@ -136,7 +136,7 @@
     <details class="troubleshooting-card">
       <summary><span class="troubleshooting-question">“按键映射”里每个按键都可以设置哪些动作？有什么常见的设置例子？</span></summary>
       <div class="troubleshooting-body">
-        <p>在「按键映射」页面开启自定义开关后，除语音键外，每颗实体按键的<strong>单击、双击、长按</strong>都可以分别设置不同动作，并且每台遥控器的配置互不干扰、独立保存。</p>
+        <p>在「按键映射」页面中，除语音键外，该型号支持映射的实体按键均可分别设置<strong>单击、双击、长按</strong>动作（例如 T1 遥控器的方向键与 OK 键保留系统原生输入，不在映射列表中），并且每台遥控器的配置互不干扰、独立保存。</p>
         <p><strong>目前可为每个键位设置的动作分为以下几类：</strong></p>
         <ul>
           <li><strong>基础按键：</strong>如回车、发送（<code>⌘↩</code>）、换行、复制/粘贴、撤销、上下左右光标与页面滚动等高频编辑操作。</li>
@@ -149,14 +149,35 @@
               <li><strong>打开网址 / URL Scheme：</strong>填写网页链接（如 <code>https://...</code>）或应用协议（如苹果原生<strong>「快捷指令」</strong>的 <code>shortcuts://run-shortcut?name=名称</code>），一键打开页面或执行多步快捷指令组合动作。</li>
             </ul>
           </li>
-          <li><strong>原样透传（方向键可选）：</strong>作为纯方向键直接按下/抬起，0 延迟响应，适合视频播放器长按倍速或光标持续移动。</li>
+          <li><strong>原样透传（支持方向键映射的型号可选）：</strong>作为纯方向键直接按下/抬起，0 延迟响应，适合视频播放器长按倍速或光标持续移动（T1 遥控器方向键已固定为系统原生输入）。</li>
         </ul>
         <p><strong>常见设置示例：</strong></p>
         <ol>
           <li><strong>单键秒开常用程序并直接开聊：</strong>把遥控器上的 <code>YouTube</code> 或 <code>Netflix</code> 键单击设为<strong>「打开具体 APP」</strong>（或「打开自定义 APP」选择 <code>Cursor</code> / <code>微信</code>），点一下切过去就能直接按语音键说话。</li>
           <li><strong>单键打开网页或联动「快捷指令」做组合动作：</strong>把空闲键（例如 <code>信源键</code> 或 <code>返回键</code> 双击）设为<strong>「打开网址 / URL Scheme」</strong>——填入 <code>https://chatgpt.com</code> 即可一键打开网页版；或填入 <code>shortcuts://run-shortcut?name=工作模式</code>，按一下就能运行你编排好的多步「快捷指令」组合动作。</li>
-          <li><strong>用“长按”扩展自定义快捷键：</strong>例如保留 <code>确定键</code> 单击为回车、长按为发送；再把 <code>静音键</code> 长按设为<strong>「自定义快捷键」</strong>（如 <code>⌘Space</code> 或编辑器命令面板 <code>⇧⌘P</code>），让一颗按键同时承担多种高频操作。</li>
+          <li><strong>用“长按”扩展自定义快捷键：</strong>例如保留 <code>确定键</code> 单击为回车、长按为发送（T1 的 OK 键保留原生输入，可改用其他可映射按键）；再把 <code>静音键</code> 长按设为<strong>「自定义快捷键」</strong>（如 <code>⌘Space</code> 或编辑器命令面板 <code>⇧⌘P</code>），让一颗按键同时承担多种高频操作。</li>
         </ol>
+      </div>
+    </details>
+
+    <details class="troubleshooting-card" id="per-app-mapping">
+      <summary><span class="troubleshooting-question">可以为不同的 APP 单独设置不同的按键映射吗？</span></summary>
+      <div class="troubleshooting-body">
+        <p><strong>可以。</strong>Remote Buddy 支持<strong>按应用覆盖（Per-App Button Mapping）</strong>，而且每台遥控器的应用专属配置相互独立保存，不会互相覆盖。</p>
+        <p><strong>配置方法：</strong></p>
+        <ol>
+          <li>打开「按键映射」页面，在遥控器图示上方的<strong>「适用应用」</strong>栏中，默认选中的是<strong>「所有应用（默认）」</strong>（作为所有应用的基础默认映射）。</li>
+          <li>点击右侧<strong>「+ 添加应用」</strong>，可以从<strong>「当前正在运行的应用」</strong>中快速选择，或点击<strong>「选择其他应用…」</strong>选取 Mac 上的任意应用。</li>
+          <li>选中该应用后，只需修改希望在该应用里表现不同的按键（支持单击、双击、长按，包括自定义快捷键、基础按键或方向键原样透传）；<strong>未修改的按键与触发方式会自动沿用当前遥控器的默认映射</strong>。</li>
+          <li>若想取消某个触发方式的专属覆盖，打开该键编辑面板点击<strong>「恢复此项默认」</strong>即可回到遥控器默认动作；点击应用栏右侧的<strong>「移除此应用」</strong>则会清除该应用的全部自定义覆盖。</li>
+        </ol>
+        <p><strong>自动生效机制：</strong>当已配置的应用处于前台窗口时，按下遥控器按键会自动使用该应用的专属映射；切换到其他应用时，立即恢复默认映射（或切换为目标应用的专属映射）。</p>
+        <p><strong>常见使用示例：</strong></p>
+        <ul>
+          <li><strong>视频播放器 / 浏览器（如 Chrome、Safari、IINA）：</strong>将方向右键覆盖为「原样透传」实现长按倍速播放、确定键设为播放/暂停，切回聊天或编辑器后自动恢复常规方向键与回车/发送（适用于支持方向键与 OK 键映射的型号，如小米与 G9N9N；T1 遥控器方向键与 OK 键保留系统原生输入，可改用其他可映射按键）。</li>
+          <li><strong>代码编辑器 / 终端（如 Cursor、VS Code、Antigravity）：</strong>把常用键覆盖为命令面板（<code>⇧⌘P</code>）或确认快捷键，不影响全局默认按键。</li>
+          <li><strong>演示文稿（Keynote / PowerPoint）：</strong>将方向键设为翻页控制，退出或切回日常软件时无缝还原（适用于支持方向键映射的型号，T1 遥控器方向键默认保持系统原生方向键）。</li>
+        </ul>
       </div>
     </details>
 
@@ -180,7 +201,7 @@
         <p><strong>功能定位：</strong>用于高频固定文本的一键快速粘贴。例如你的个人邮箱、收件地址、常用客服话术、终端长命令、代码 Snippet 等，无需每次重复打字或语音念出。</p>
         <p><strong>设置与唤出方式：</strong></p>
         <ol>
-          <li>打开 Remote Buddy「按键映射」界面，点击右下角的<strong>「调整常用语」</strong>按钮（或直接通过左侧导航进入「常用语」设置）。</li>
+          <li>打开 Remote Buddy「按键映射」界面，点击任意按键的触发格（单击、双击或长按），切换到<strong>「常用语」</strong>动作分类，点击<strong>「调整常用语」</strong>进入常用语管理面板。</li>
           <li>在常用语管理面板中，可以编辑词条内容、设定简短标签，并将常用语直接分配绑定给遥控器上的实体按键（方向键、OK 键以及当前遥控器支持的功能键）。</li>
           <li>在按键映射网格中，将任意按键的单击、双击或长按设置为<strong>「常用语」</strong>动作。</li>
         </ol>
@@ -215,7 +236,7 @@
     <details class="troubleshooting-card">
       <summary><span class="troubleshooting-question">目前为止支持哪些输入法和语音工具？</span></summary>
       <div class="troubleshooting-body">
-        <p>Remote Buddy 原生兼容所有支持<strong>通过全局快捷键唤醒语音</strong>且支持<strong>选择系统麦克风输入</strong>的 macOS 软件。内置官方适配的工具列表（按软件中的适配顺序排列）如下：</p>
+        <p>Remote Buddy 原生兼容所有支持<strong>全局快捷键触发</strong>且支持<strong>选择麦克风（或跟随系统声音输入）</strong>的 macOS 语音软件——不仅限于语音输入法，也包括语音助手和独立录音工具。内置官方适配的工具列表（按软件中的适配顺序排列）如下：</p>
         <p><strong>1. 微信输入法（WeType）：</strong>微信官方输入法，支持在输入法设置中配置语音快捷键，并可开启“快捷键全局生效”实现免切输入法极速唤起。</p>
         <p><strong>2. 豆包输入法（Doubao）：</strong>字节跳动推出的 AI 语音输入利器，识别准确度极高，具备大模型智能润色与“全局唤起语音”功能。</p>
         <p><strong>3. 腾讯 Chatterfly：</strong>通过全局语音快捷键，在腾讯 Chatterfly 中按住说话、松开结束。</p>
@@ -223,8 +244,8 @@
         <p><strong>5. 网易叭哥说（Bageshuo）：</strong>网易 AI 语音输入工具，主打端到端极速语音上屏与大模型内容润色修正。</p>
         <p><strong>6. Typeless：</strong>新一代极简现代跨平台智能语音输入工具，支持全局语音快捷键按住说话。</p>
         <p><strong>7. macOS 听写（Apple Dictation）：免安装系统自带</strong><br>系统原生内置，无需安装第三方软件，在 Apple Silicon 设备上可离线运行。默认快捷键通常为连按两次 Fn（或系统自定义热键）。</p>
-        <p><strong>8. 其他语音工具（Other Voice App）：</strong>支持任何可自定义全局语音快捷键并能选择输入麦克风的第三方工具。</p>
-        <p><strong>通用配置原则：</strong>只需在对应工具或系统设置中，将默认音频输入麦克风选择为 <code>Remote Buddy Mic</code>，并将该工具的语音触发全局快捷键填入 Remote Buddy 的向导配置中即可！</p>
+        <p><strong>8. 其他语音工具（Other Voice App）：</strong>支持任意第三方语音输入工具，以及系统 Siri、微信 AI 录音笔、独立录音软件等<strong>不向输入框回填文字</strong>的语音助手或录音工具。</p>
+        <p><strong>通用配置原则：</strong>① <strong>麦克风：</strong>优先在对应工具自身的设置中将麦克风选为 <code>Remote Buddy Mic</code>（无需修改 macOS 系统默认麦克风）；仅当工具不支持单独选麦（如系统 Siri）时，再在「系统设置 → 声音 → 输入」中选择 <code>Remote Buddy Mic</code>。② <strong>快捷键：</strong>让 Remote Buddy 向导中的语音热键及触发模式（长按 / 点按）与该工具的全局语音快捷键保持一致。③ <strong>不向向导回填文字的工具：</strong>若所选工具不会向输入框写入文字，在向导中选择「其他语音工具」并实测确认按下语音键可正常唤醒与收音后，勾选“该工具不会向输入框写入文字”即可直接完成向导配置，无需文字回填到测试框中。</p>
       </div>
     </details>
 

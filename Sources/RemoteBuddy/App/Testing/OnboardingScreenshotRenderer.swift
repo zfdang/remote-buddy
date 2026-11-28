@@ -97,11 +97,7 @@ enum OnboardingScreenshotRenderer {
             withIntermediateDirectories: true
         )
 
-        let suiteName = "RemoteBuddy.OnboardingScreenshot.\(UUID().uuidString)"
-        guard let defaults = UserDefaults(suiteName: suiteName) else {
-            throw RenderingError.bitmapCreationFailed
-        }
-        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let defaults = EphemeralUserDefaults()
 
         let settings = AppSettings(defaults: defaults)
         settings.applicationLanguage = screenshotLanguage.appLanguage

@@ -8,9 +8,7 @@ import Testing
 @MainActor
 struct ApplicationIntegrationTests {
     private func withSettings(_ body: (AppSettings, UserDefaults) throws -> Void) throws {
-        let suite = "app-integration.tests.\(UUID().uuidString)"
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         try body(AppSettings(defaults: defaults), defaults)
     }
 

@@ -5,9 +5,7 @@ import Testing
 @Suite("Update feed descriptions")
 struct ReleaseNotesAssetTests {
     @MainActor @Test func updateDetailsComeFromTheFeedWithoutSeparateAssets() throws {
-        let name = UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let store = UpdateInformationStore(userDefaults: defaults)
         store.setAvailable(displayVersion: "v26-10-12.043", buildVersion: "43",
                            fallbackDescription: "- Updates app and driver.\n- Administrator authorization required.")

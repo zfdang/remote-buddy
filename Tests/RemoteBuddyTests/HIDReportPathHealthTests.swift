@@ -147,9 +147,7 @@ struct HIDReportPathHealthTests {
 
     @Test @MainActor func monitorSkipsPathHealthFallbackLoggingWhenDeviceCallbackIsInactive() throws {
         guard ProcessInfo.processInfo.operatingSystemVersion.majorVersion < 27 else { return }
-        let suite = UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
 
         var logs: [String] = []
         let monitor = HIDRemoteMonitor(

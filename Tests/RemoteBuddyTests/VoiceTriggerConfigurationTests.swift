@@ -9,9 +9,7 @@ import SwiftUI
 @MainActor
 struct VoiceTriggerConfigurationTests {
     private func withSettings(_ body: (AppSettings, UserDefaults) throws -> Void) throws {
-        let name = "voice-trigger-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         try body(AppSettings(defaults: defaults), defaults)
     }
 
@@ -222,9 +220,7 @@ struct VoiceTriggerConfigurationTests {
 
     @Test(arguments: [OnboardingVoiceToolAvailability.notInstalled, .available])
     func chatterflyHoldBannerFollowsInstallationPriority(availability: OnboardingVoiceToolAvailability) async throws {
-        let name = "chatterfly-hold-banner-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         settings.voiceFnTapModeEnabled = true
         settings.setOnboardingControlSource(.xiaomiRemote)
@@ -474,6 +470,172 @@ struct VoiceTriggerConfigurationTests {
             #expect(VoiceKeyMode.suggestedShortcut == expected)
             #expect(settings.voiceKeyMode == expected)
             #expect(settings.selectedVoiceTrigger.voiceKeyMode == expected)
+        }
+    }
+
+    @Test func shortcutGuideScreenshotsHighlightActiveShortcutAndShowExampleNotice() throws {
+        try withSettings { settings, _ in
+            settings.setOnboardingControlSource(.xiaomiRemote)
+            let view = OnboardingView(model: BridgeAppModel(settings: settings, initialAudioDevices: []))
+
+            for resource in [
+                "doubao-settings",
+                "weixin-input-settings",
+                "bageshuo-settings",
+                "chatterfly-settings",
+                "voicebuddy-setting-fn",
+            ] {
+                #expect(OnboardingView.screenshotShortcutNotice(for: resource) == .configureShortcut)
+                let callout = try #require(OnboardingView.screenshotShortcutCallout(for: resource))
+                #expect(callout.trailingX > 0 && callout.trailingX < 1)
+                #expect(callout.centerY > 0 && callout.centerY < 1)
+            }
+            #expect(OnboardingView.screenshotShortcutNotice(for: "weixin-app-shortcuts") == .conflictCheck)
+            #expect(OnboardingView.screenshotShortcutCallout(for: "weixin-app-shortcuts") == nil)
+            for nonShortcutResource in [
+                "doubao-menu",
+                "weixin-input-menu",
+                "weixin-input-microphone",
+                "macos-dictation-shortcut",
+                "system-fn",
+            ] {
+                #expect(OnboardingView.screenshotShortcutNotice(for: nonShortcutResource) == nil)
+                #expect(OnboardingView.screenshotShortcutCallout(for: nonShortcutResource) == nil)
+            }
+
+            let widerContainer = OnboardingView.aspectFitRect(
+                imageSize: CGSize(width: 1200, height: 960),
+                in: CGSize(width: 408, height: 260)
+            )
+            #expect(abs(widerContainer.width - 325) < 0.01)
+            #expect(abs(widerContainer.height - 260) < 0.01)
+            #expect(abs(widerContainer.minX - 41.5) < 0.01)
+            #expect(widerContainer.minY == 0)
+
+            let tallerContainer = OnboardingView.aspectFitRect(
+                imageSize: CGSize(width: 1400, height: 1400),
+                in: CGSize(width: 200, height: 300)
+            )
+            #expect(tallerContainer == CGRect(x: 0, y: 50, width: 200, height: 200))
+
+            let zhSettings = AppSettings(defaults: EphemeralUserDefaults())
+            zhSettings.applicationLanguage = .simplifiedChinese
+            let zhStore = LocalizationStore(settings: zhSettings)
+            let enSettings = AppSettings(defaults: EphemeralUserDefaults())
+            enSettings.applicationLanguage = .english
+            let enStore = LocalizationStore(settings: enSettings)
+
+            let shortcutCaptionKey = "onboarding.voice_tool.guide.screenshot.weixin_input_settings"
+            for tool in OnboardingVoiceTool.allCases {
+                settings.setOnboardingVoiceTool(tool)
+                settings.selectOnboardingVoiceTrigger(.function)
+                let fnSteps = view.inputMethodGuideSteps(for: tool)
+                settings.selectOnboardingVoiceTrigger(.suggestedShortcut)
+                let chordSteps = view.inputMethodGuideSteps(for: tool)
+
+                #expect(fnSteps.count == chordSteps.count || settings.selectedVoiceTrigger.voiceKeyMode != .function)
+                for step in chordSteps {
+                    guard case let .screenshot(resourceName) = step.content else { continue }
+                    let key = "onboarding.voice_tool.guide.screenshot." +
+                        resourceName.replacingOccurrences(of: "-", with: "_")
+                    for store in [zhStore, enStore] {
+                        let fnCaption = LocalizedMessage(
+                            key,
+                            arguments: [VoiceKeyMode.function.displayName(using: store), store.text("onboarding.gesture.hold")]
+                        ).text(using: store)
+                        let chordCaption = LocalizedMessage(
+                            key,
+                            arguments: [VoiceKeyMode.suggestedShortcut.displayName(using: store), store.text("onboarding.gesture.hold")]
+                        ).text(using: store)
+                        if fnCaption != chordCaption {
+                            #expect(OnboardingView.screenshotShortcutNotice(for: resourceName) == .configureShortcut)
+                            #expect(OnboardingView.screenshotShortcutCallout(for: resourceName) != nil)
+                        }
+                    }
+                }
+            }
+
+            for store in [zhStore, enStore] {
+                #expect(!store.text("onboarding.voice_tool.guide.screenshot.example_badge").isEmpty)
+                for notice in [
+                    OnboardingGuideScreenshotShortcutNotice.configureShortcut,
+                    .conflictCheck,
+                ] {
+                    let localizedNotice = LocalizedMessage(
+                        notice.localizationKey,
+                        arguments: ["Ctrl (^) + Shift (⇧) + R", "Hold"]
+                    ).text(using: store)
+                    #expect(localizedNotice.contains("Ctrl (^) + Shift (⇧) + R"))
+                }
+            }
+
+            let shortcut = "Ctrl (^) + Shift (⇧) + R"
+            let sampleCaption = LocalizedMessage(shortcutCaptionKey, arguments: [shortcut, "按住说话"])
+                .text(using: zhStore)
+            let highlighted = OnboardingView.highlightedGuideText(
+                sampleCaption,
+                highlighting: shortcut,
+                fontSize: 12
+            )
+            #expect(String(highlighted.characters) == sampleCaption)
+            let styledRuns = highlighted.runs.filter {
+                $0.attributes[AttributeScopes.SwiftUIAttributes.ForegroundColorAttribute.self] == .red
+            }
+            #expect(styledRuns.count == 1)
+            for run in highlighted.runs {
+                let runText = String(highlighted[run.range].characters)
+                let color = run.attributes[AttributeScopes.SwiftUIAttributes.ForegroundColorAttribute.self]
+                let font = run.attributes[AttributeScopes.SwiftUIAttributes.FontAttribute.self]
+                if runText == shortcut {
+                    #expect(color == .red)
+                    #expect(font == .system(size: 12, weight: .bold))
+                } else {
+                    #expect(color == nil)
+                    #expect(font == nil)
+                }
+            }
+
+            let unchanged = OnboardingView.highlightedGuideText(sampleCaption, highlighting: "")
+            #expect(String(unchanged.characters) == sampleCaption)
+            #expect(unchanged.runs.allSatisfy {
+                $0.attributes[AttributeScopes.SwiftUIAttributes.ForegroundColorAttribute.self] == nil &&
+                    $0.attributes[AttributeScopes.SwiftUIAttributes.FontAttribute.self] == nil
+            })
+        }
+    }
+
+    @Test func voiceTriggerPickerHighlightsMatchingInstructionInBothLanguages() throws {
+        let zhSettings = AppSettings(defaults: EphemeralUserDefaults())
+        zhSettings.applicationLanguage = .simplifiedChinese
+        let zhStore = LocalizationStore(settings: zhSettings)
+        let enSettings = AppSettings(defaults: EphemeralUserDefaults())
+        enSettings.applicationLanguage = .english
+        let enStore = LocalizationStore(settings: enSettings)
+
+        for store in [zhStore, enStore] {
+            let chordText = VoiceTriggerPicker.helpText(for: .suggestedShortcut, localization: store)
+            let chordHighlight = store.text("connection.voice_key.chord_help.highlight")
+            let chordStyledRuns = chordText.runs.filter {
+                $0.attributes[AttributeScopes.SwiftUIAttributes.ForegroundColorAttribute.self] == .red
+            }
+            #expect(chordStyledRuns.count == 1)
+            #expect(String(chordText[chordStyledRuns[0].range].characters) == chordHighlight)
+            #expect(chordStyledRuns[0].attributes[AttributeScopes.SwiftUIAttributes.FontAttribute.self] == .caption.bold())
+
+            let optionText = VoiceTriggerPicker.helpText(for: .rightOption, localization: store)
+            let optionHighlight = store.text("connection.voice_key_mode.help.highlight")
+            let optionStyledRuns = optionText.runs.filter {
+                $0.attributes[AttributeScopes.SwiftUIAttributes.ForegroundColorAttribute.self] == .red
+            }
+            #expect(optionStyledRuns.count == 1)
+            #expect(String(optionText[optionStyledRuns[0].range].characters) == optionHighlight)
+            #expect(optionStyledRuns[0].attributes[AttributeScopes.SwiftUIAttributes.FontAttribute.self] == .caption.bold())
+
+            let fnText = VoiceTriggerPicker.helpText(for: .function, localization: store)
+            #expect(fnText.runs.allSatisfy {
+                $0.attributes[AttributeScopes.SwiftUIAttributes.ForegroundColorAttribute.self] == nil &&
+                    $0.attributes[AttributeScopes.SwiftUIAttributes.FontAttribute.self] == nil
+            })
         }
     }
 }

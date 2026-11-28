@@ -19,16 +19,7 @@ enum RemoteDeviceNameReader {
     }
 
     static func readHIDNames() -> [String: HIDName] {
-        let manager = IOHIDManagerCreate(kCFAllocatorDefault, IOOptionBits(kIOHIDOptionsTypeNone))
-        IOHIDManagerSetDeviceMatching(manager, nil)
-        let devices = IOHIDManagerCopyDevices(manager) as? Set<IOHIDDevice> ?? []
-        let identities = devices.compactMap { device -> HIDIdentity? in
-            guard let fingerprint = HIDRemoteMonitor.fingerprint(for: device) else { return nil }
-            return HIDIdentity(
-                fingerprint: fingerprint,
-                address: IOHIDDeviceGetProperty(device, "DeviceAddress" as CFString) as? String
-            )
-        }
+        let identities = readHIDIdentities()
         // Re-enumerate on every requested refresh: retained objects may keep the old name.
         let paired = (IOBluetoothDevice.pairedDevices() as? [IOBluetoothDevice] ?? []).compactMap {
             device -> PairedDevice? in
@@ -36,6 +27,39 @@ enum RemoteDeviceNameReader {
             return PairedDevice(address: address, name: device.name)
         }
         return namesByFingerprint(identities: identities, paired: paired)
+    }
+
+    static func readHIDShortIDs() -> [String: String] {
+        shortIDsByFingerprint(identities: readHIDIdentities())
+    }
+
+    private static func readHIDIdentities() -> [HIDIdentity] {
+        let manager = IOHIDManagerCreate(kCFAllocatorDefault, IOOptionBits(kIOHIDOptionsTypeNone))
+        IOHIDManagerSetDeviceMatching(manager, nil)
+        let devices = IOHIDManagerCopyDevices(manager) as? Set<IOHIDDevice> ?? []
+        return devices.compactMap { device -> HIDIdentity? in
+            guard let fingerprint = HIDRemoteMonitor.fingerprint(for: device) else { return nil }
+            return HIDIdentity(
+                fingerprint: fingerprint,
+                address: IOHIDDeviceGetProperty(device, "DeviceAddress" as CFString) as? String
+            )
+        }
+    }
+
+    static func shortIDsByFingerprint(identities: [HIDIdentity]) -> [String: String] {
+        let byFingerprint = Dictionary(grouping: identities, by: \.fingerprint)
+        var result: [String: String] = [:]
+        for (fingerprint, interfaces) in byFingerprint {
+            let shortIDs = Set(interfaces.compactMap { addressShortID(from: $0.address) })
+            guard shortIDs.count == 1, let shortID = shortIDs.first else { continue }
+            result[fingerprint] = shortID
+        }
+        return result
+    }
+
+    static func addressShortID(from raw: String?) -> String? {
+        guard let normalized = normalizedAddress(raw) else { return nil }
+        return String(normalized.suffix(4)).uppercased()
     }
 
     static func namesByFingerprint(

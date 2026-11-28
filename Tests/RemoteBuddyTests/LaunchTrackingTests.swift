@@ -6,9 +6,7 @@ import Testing
 @MainActor
 struct LaunchTrackingTests {
     @Test func detectsUpdateWhenBuildNumberIncreases() throws {
-        let name = "launch-tracking-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
 
         // First launch on build 80
@@ -29,9 +27,7 @@ struct LaunchTrackingTests {
     }
 
     @Test func detectsCompletedUpdateOnFirstRunIfSparkleHadLaunchedBefore() throws {
-        let name = "sparkle-migration-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
 
         let completed = settings.recordLaunchAndDetectCompletedUpdate(currentBuild: "80", sparkleHadLaunchedBefore: true)
@@ -39,9 +35,7 @@ struct LaunchTrackingTests {
     }
 
     @Test func deviceMappingsRemainIndependentOfUnboundDefaults() throws {
-        let name = "device-mapping-priority-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         settings.setBaseBinding(.init(action: .playPause, shortcut: nil),
             for: .volumeUp, trigger: .singleClick, profileID: nil)
@@ -56,9 +50,7 @@ struct LaunchTrackingTests {
     }
 
     @Test func ignoresNonNumericBuildWithoutOverwritingLastLaunchedBuild() throws {
-        let name = "launch-nonnumeric-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
 
         #expect(!settings.recordLaunchAndDetectCompletedUpdate(currentBuild: "80", sparkleHadLaunchedBefore: false))

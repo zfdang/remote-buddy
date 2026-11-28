@@ -240,9 +240,12 @@ extension OnboardingView {
     }
 
     func onboardingGuideScreenshot(resourceName: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        let captionKey = "onboarding.voice_tool.guide.screenshot." +
+            resourceName.replacingOccurrences(of: "-", with: "_")
+        let shortcutName = voiceToolGuideShortcutDisplayName
+        return VStack(alignment: .leading, spacing: 8) {
             if let image = onboardingGuideImage(resourceName: resourceName) {
-                onboardingGuidePreview(image: image)
+                onboardingGuidePreview(image: image, resourceName: resourceName)
                     .frame(height: 260)
                     .frame(maxWidth: .infinity)
                     // Guide pictures are informational; clicks belong to the surrounding controls.
@@ -260,23 +263,76 @@ extension OnboardingView {
                     .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 10))
             }
             Group {
-                Text(verbatim: voiceToolGuideText(
-                    "onboarding.voice_tool.guide.screenshot." +
-                        resourceName.replacingOccurrences(of: "-", with: "_")
+                Text(Self.highlightedGuideText(
+                    voiceToolGuideText(captionKey),
+                    highlighting: shortcutName,
+                    fontSize: 12
                 ))
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            if let notice = Self.screenshotShortcutNotice(for: resourceName) {
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.red)
+                        .padding(.top, 1)
+                    Text(Self.highlightedGuideText(
+                        voiceToolGuideText(notice.localizationKey),
+                        highlighting: shortcutName,
+                        fontSize: 12
+                    ))
+                    .font(.system(size: 12))
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.red.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.red.opacity(0.24), lineWidth: 1)
+                }
+            }
         }
     }
 
-    private func onboardingGuidePreview(image: NSImage) -> some View {
+    private func onboardingGuidePreview(image: NSImage, resourceName: String) -> some View {
         GeometryReader { geometry in
-            Image(nsImage: image)
-                .resizable()
-                .scaledToFit()
-                .frame(width: geometry.size.width, height: geometry.size.height)
+            let fittedRect = Self.aspectFitRect(imageSize: image.size, in: geometry.size)
+            ZStack(alignment: .topLeading) {
+                Image(nsImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+
+                if let callout = Self.screenshotShortcutCallout(for: resourceName) {
+                    let anchorWidth = fittedRect.width * callout.trailingX
+                    HStack(spacing: 0) {
+                        Spacer(minLength: 0)
+                        HStack(spacing: 3) {
+                            Text(verbatim: localization.text("onboarding.voice_tool.guide.screenshot.example_badge"))
+                                .font(.system(size: 9.5, weight: .bold))
+                                .multilineTextAlignment(.trailing)
+                                .lineSpacing(1)
+                                .fixedSize(horizontal: true, vertical: true)
+                            Image(systemName: "arrow.right")
+                                .font(.system(size: 8.5, weight: .bold))
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(Color.red.opacity(0.92), in: RoundedRectangle(cornerRadius: 5))
+                        .shadow(color: Color.black.opacity(0.20), radius: 2, y: 1)
+                    }
+                    .frame(width: anchorWidth, alignment: .trailing)
+                    .position(
+                        x: fittedRect.minX + anchorWidth / 2,
+                        y: fittedRect.minY + fittedRect.height * callout.centerY
+                    )
+                }
+            }
         }
     }
 
@@ -289,7 +345,11 @@ extension OnboardingView {
                 .font(.system(size: 22, weight: .medium))
                 .foregroundStyle(Color.accentColor)
                 .frame(width: 34)
-            Text(verbatim: voiceToolGuideText(detailKey))
+            Text(Self.highlightedGuideText(
+                voiceToolGuideText(detailKey),
+                highlighting: voiceToolGuideShortcutDisplayName,
+                fontSize: 13
+            ))
                 .font(.system(size: 13))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -494,9 +554,89 @@ extension OnboardingView {
         settings.selectedVoiceTrigger.voiceFnTapModeEnabled ? .toggle : .hold
     }
 
+    var voiceToolGuideShortcutDisplayName: String {
+        settings.selectedVoiceTrigger.voiceKeyMode.displayName(using: localization)
+    }
+
+    static func screenshotShortcutCallout(
+        for resourceName: String
+    ) -> OnboardingGuideScreenshotShortcutCallout? {
+        switch resourceName {
+        case "weixin-input-settings":
+            .init(trailingX: 0.785, centerY: 0.317)
+        case "doubao-settings":
+            .init(trailingX: 0.795, centerY: 0.236)
+        case "bageshuo-settings":
+            .init(trailingX: 0.722, centerY: 0.220)
+        case "chatterfly-settings":
+            .init(trailingX: 0.700, centerY: 0.262)
+        case "voicebuddy-setting-fn":
+            .init(trailingX: 0.832, centerY: 0.348)
+        default:
+            nil
+        }
+    }
+
+    static func aspectFitRect(imageSize: CGSize, in containerSize: CGSize) -> CGRect {
+        guard imageSize.width > 0, imageSize.height > 0,
+              containerSize.width > 0, containerSize.height > 0 else {
+            return CGRect(origin: .zero, size: containerSize)
+        }
+        let scale = min(containerSize.width / imageSize.width, containerSize.height / imageSize.height)
+        let fittedWidth = imageSize.width * scale
+        let fittedHeight = imageSize.height * scale
+        return CGRect(
+            x: (containerSize.width - fittedWidth) / 2,
+            y: (containerSize.height - fittedHeight) / 2,
+            width: fittedWidth,
+            height: fittedHeight
+        )
+    }
+
+    static func screenshotShortcutNotice(
+        for resourceName: String
+    ) -> OnboardingGuideScreenshotShortcutNotice? {
+        switch resourceName {
+        case "doubao-settings",
+             "weixin-input-settings",
+             "bageshuo-settings",
+             "chatterfly-settings",
+             "voicebuddy-setting-fn":
+            .configureShortcut
+        case "weixin-app-shortcuts":
+            .conflictCheck
+        default:
+            nil
+        }
+    }
+
+    static func highlightedGuideText(
+        _ text: String,
+        highlighting shortcutDisplayName: String,
+        fontSize: CGFloat = 12
+    ) -> AttributedString {
+        var attributed = AttributedString(text)
+        guard !shortcutDisplayName.isEmpty else { return attributed }
+
+        var highlight = AttributeContainer()
+        highlight[AttributeScopes.SwiftUIAttributes.ForegroundColorAttribute.self] = .red
+        highlight[AttributeScopes.SwiftUIAttributes.FontAttribute.self] = .system(
+            size: fontSize,
+            weight: .bold
+        )
+
+        var searchStart = attributed.startIndex
+        while searchStart < attributed.endIndex,
+              let range = attributed[searchStart..<attributed.endIndex].range(of: shortcutDisplayName) {
+            attributed[range].mergeAttributes(highlight)
+            searchStart = range.upperBound
+        }
+        return attributed
+    }
+
     func voiceToolGuideText(_ key: String) -> String {
         LocalizedMessage(key, arguments: [
-            settings.selectedVoiceTrigger.voiceKeyMode.displayName(using: localization),
+            voiceToolGuideShortcutDisplayName,
             localization.text("onboarding.gesture.\(voiceToolGuideGesture.rawValue)"),
         ]).text(using: localization)
     }
@@ -540,4 +680,23 @@ struct OnboardingInputMethodGuideStep: Identifiable {
     let id: Int
     let titleKey: String
     let content: Content
+}
+
+struct OnboardingGuideScreenshotShortcutCallout: Equatable {
+    let trailingX: CGFloat
+    let centerY: CGFloat
+}
+
+enum OnboardingGuideScreenshotShortcutNotice: Equatable {
+    case configureShortcut
+    case conflictCheck
+
+    var localizationKey: String {
+        switch self {
+        case .configureShortcut:
+            "onboarding.voice_tool.guide.screenshot.example_notice"
+        case .conflictCheck:
+            "onboarding.voice_tool.guide.screenshot.conflict_example_notice"
+        }
+    }
 }

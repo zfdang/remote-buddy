@@ -8,6 +8,10 @@ import Foundation
 struct HIDMonitoringPermissions: Equatable {
     let inputMonitoringGranted: Bool
     let accessibilityGranted: Bool
+
+    var canMonitor: Bool {
+        inputMonitoringGranted && accessibilityGranted
+    }
 }
 
 struct HIDPermissionSnapshot: Equatable {
@@ -20,6 +24,10 @@ struct HIDPermissionSnapshot: Equatable {
             inputMonitoringGranted: inputMonitoringGranted,
             accessibilityGranted: accessibilityGranted
         )
+    }
+
+    var canMonitor: Bool {
+        monitoringPermissions.canMonitor
     }
 
     init(
@@ -44,23 +52,11 @@ struct HIDPermissionSnapshot: Equatable {
 enum HIDPermissionRecoveryPolicy {
     static func shouldReapplySettings(
         started: Bool,
-        customMappingEnabled: Bool,
-        voiceKeyMode: VoiceKeyMode = .function,
-        voiceFnTapModeEnabled: Bool = false,
-        softwareVoiceKeyHeld: Bool = false,
         monitoringInterrupted: Bool = false,
         previous: HIDPermissionSnapshot?,
         current: HIDPermissionSnapshot
     ) -> Bool {
-        guard started,
-              (
-                  customMappingEnabled ||
-                      voiceKeyMode.requiresAccessibility ||
-                      voiceFnTapModeEnabled ||
-                      softwareVoiceKeyHeld || monitoringInterrupted
-              ),
-              let previous
-        else { return false }
+        guard started, let previous else { return false }
         return previous.monitoringPermissions != current.monitoringPermissions || (monitoringInterrupted &&
             current.inputMonitoringGranted && current.accessibilityGranted)
     }

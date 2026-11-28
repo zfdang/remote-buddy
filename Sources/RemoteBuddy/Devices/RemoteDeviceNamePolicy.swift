@@ -33,6 +33,91 @@ enum RemoteDeviceNamePolicy {
         return "\(base) \(index + 1)"
     }
 
+    static func normalizedShortIdentifier(_ raw: String?) -> String? {
+        guard let raw else { return nil }
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        guard trimmed.count == 4, trimmed.allSatisfy(isHexCharacter) else { return nil }
+        return trimmed
+    }
+
+    static func shortIdentifier(for profile: RemoteDeviceProfile, length: Int = 4) -> String {
+        if length == 4, let hardware = normalizedShortIdentifier(profile.hardwareShortID) {
+            return hardware
+        }
+        for candidate in [
+            profile.hidFingerprint,
+            profile.bluetoothIdentifier?.uuidString,
+            profile.id.uuidString,
+        ] {
+            guard let candidate else { continue }
+            let hex = candidate.uppercased().filter(isHexCharacter)
+            if hex.count >= length {
+                return String(hex.prefix(length))
+            }
+        }
+        return String(profile.id.uuidString.uppercased().filter(isHexCharacter).prefix(length))
+    }
+
+    static func disambiguatedModelName(
+        for profile: RemoteDeviceProfile,
+        among profiles: [RemoteDeviceProfile],
+        baseModelName: String
+    ) -> String {
+        let peers = profiles.filter { $0.model == profile.model }
+        guard peers.count > 1 else { return baseModelName }
+
+        let resolved = resolvedShortIdentifiers(for: peers)
+        let resolvedShortID = resolved[profile.id] ?? shortIdentifier(for: profile, length: 4)
+        return "\(baseModelName) #\(resolvedShortID)"
+    }
+
+    private static func resolvedShortIdentifiers(for peers: [RemoteDeviceProfile]) -> [UUID: String] {
+        var baseIDs: [UUID: String] = [:]
+        var baseGroups: [String: [RemoteDeviceProfile]] = [:]
+        for peer in peers {
+            let shortID = shortIdentifier(for: peer, length: 4)
+            baseIDs[peer.id] = shortID
+            baseGroups[shortID, default: []].append(peer)
+        }
+
+        var proposed: [UUID: String] = [:]
+        for peer in peers {
+            guard let baseID = baseIDs[peer.id], let group = baseGroups[baseID] else { continue }
+            if group.count == 1 {
+                proposed[peer.id] = baseID
+            } else if group.allSatisfy({ normalizedShortIdentifier($0.hardwareShortID) == nil }) {
+                proposed[peer.id] = shortIdentifier(for: peer, length: 6)
+            }
+        }
+
+        var candidateCounts: [String: Int] = [:]
+        for value in proposed.values {
+            candidateCounts[value, default: 0] += 1
+        }
+
+        var resolved: [UUID: String] = [:]
+        for peer in peers {
+            guard let baseID = baseIDs[peer.id], let group = baseGroups[baseID] else { continue }
+            if group.count == 1 {
+                resolved[peer.id] = baseID
+            } else if group.allSatisfy({
+                normalizedShortIdentifier($0.hardwareShortID) == nil &&
+                    proposed[$0.id].map({ candidateCounts[$0] == 1 }) == true
+            }), let uniqueExtended = proposed[peer.id] {
+                resolved[peer.id] = uniqueExtended
+            } else if let index = group.firstIndex(where: { $0.id == peer.id }) {
+                resolved[peer.id] = "\(baseID)-\(index + 1)"
+            } else {
+                resolved[peer.id] = baseID
+            }
+        }
+        return resolved
+    }
+
+    private static func isHexCharacter(_ character: Character) -> Bool {
+        ("0"..."9").contains(character) || ("A"..."F").contains(character)
+    }
+
     static func observedSystemName(from rawName: String?) -> String? {
         guard let rawName else { return nil }
         let name = normalizedName(rawName)

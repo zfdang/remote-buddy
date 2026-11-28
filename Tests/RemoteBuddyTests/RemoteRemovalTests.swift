@@ -5,9 +5,7 @@ import Testing
 @Suite("Removing remotes") @MainActor
 struct RemoteRemovalTests {
     @Test func removalPreservesOtherDeviceAndRemembersExclusionsAcrossRelaunch() throws {
-        let suite = "remote-removal-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let firstIdentifier = UUID(), secondIdentifier = UUID()
         let first = settings.registerBluetoothRemote(identifier: firstIdentifier, model: .rc003)
@@ -36,9 +34,7 @@ struct RemoteRemovalTests {
     }
 
     @Test func removingLastDeviceDoesNotInheritItsMappingsOnNextAddition() throws {
-        let suite = "remote-removal-last-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let first = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         settings.selectRemoteProfile(first)
@@ -53,9 +49,7 @@ struct RemoteRemovalTests {
     }
 
     @Test func removingADeviceStopsItsBridgeWithoutRemovingAnother() throws {
-        let suite = "remote-removal-bridge-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let firstID = UUID(), secondID = UUID()
         let first = settings.registerBluetoothRemote(identifier: firstID, model: .rc003)
@@ -95,9 +89,7 @@ struct RemoteRemovalTests {
     }
 
     @Test func cancellingAddDeviceRemovesTransientProfileWhileCompletingReleasesOnlyAddedRemote() throws {
-        let suite = "remote-removal-scoping-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
 
         let settings = AppSettings(defaults: defaults)
         let existingID = UUID()
@@ -158,9 +150,7 @@ struct RemoteRemovalTests {
     }
 
     @Test func freshSetupCandidateIsRemovedOnExitAndCanBeAddedAgain() throws {
-        let suite = "remote-removal-fresh-candidate-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let existing = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
         settings.selectRemoteProfile(existing)
@@ -194,9 +184,7 @@ struct RemoteRemovalTests {
     }
 
     @Test func completingOnboardingUnforgetsOnlySelectedTransientRemoteAndTearsDownUnconfirmedPeers() throws {
-        let suite = "remote-removal-confirm-one-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
 
         let settings = AppSettings(defaults: defaults)
         let firstID = UUID()
@@ -238,9 +226,7 @@ struct RemoteRemovalTests {
     }
 
     @Test func selectedSetupRemoteRemainsAdmittedAcrossRemainingWizardSteps() throws {
-        let suite = "remote-removal-wizard-steps-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
 
         let settings = AppSettings(defaults: defaults)
         let selectedID = UUID()
@@ -279,9 +265,7 @@ struct RemoteRemovalTests {
     }
 
     @Test func dismissingOnboardingDuringVoiceActivityStopsVoiceAndRemovesTransientBridge() throws {
-        let suite = "remote-removal-voice-busy-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = EphemeralUserDefaults()
 
         let settings = AppSettings(defaults: defaults)
         let transientID = UUID()

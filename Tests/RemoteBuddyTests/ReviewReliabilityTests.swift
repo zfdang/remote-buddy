@@ -8,9 +8,7 @@ import Testing
 @MainActor
 struct ReviewReliabilityTests {
     @Test @MainActor func devicePagePolicyMatchesViewForEverySelection() throws {
-        let name = "review-policy-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         settings.setOnboardingStep(.remoteAvailability)
         let view = OnboardingView(model: BridgeAppModel(settings: settings, initialAudioDevices: []))
@@ -83,9 +81,7 @@ struct ReviewReliabilityTests {
     }
 
     @Test func resetBindingsPersistsCompleteSelectedProfileAndKeepsOtherDevices() throws {
-        let name = "review-bindings-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let settings = AppSettings(defaults: defaults)
         let first = settings.registerBluetoothRemote(identifier: UUID())
         let second = settings.registerBluetoothRemote(identifier: UUID())
@@ -139,9 +135,7 @@ struct ReviewReliabilityTests {
     }
 
     @Test @MainActor func immutableLocalizationSnapshotKeepsItsLanguageWhenUISelectionChanges() throws {
-        let name = "review-localization-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let defaults = EphemeralUserDefaults()
         let store = LocalizationStore(settings: AppSettings(defaults: defaults),
                                       resourceBundle: RemoteBuddyResourceBundle.mainOrDevelopment)
         store.select(.english)

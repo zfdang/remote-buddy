@@ -4,7 +4,7 @@ import CoreBluetooth
 import SwiftUI
 import UniformTypeIdentifiers
 
-enum SettingsSection: String, CaseIterable, Identifiable {
+enum SettingsSection: String, CaseIterable, Codable, Identifiable {
     case connection
     case integration
     case mapping
@@ -267,7 +267,7 @@ enum SettingsPageBehavior {
     }
 
     @MainActor static func beginDeviceSetup(settings: AppSettings) {
-        settings.preserveCompletedOnboarding()
+        settings.preserveCompletedOnboarding(returnSection: .connection)
         settings.onboardingPurpose = settings.canDismissOnboarding ? .addDevice : .initialSetup
         settings.discardOnboardingVoiceTrial()
         settings.onboardingDevice = nil
@@ -279,7 +279,7 @@ enum SettingsPageBehavior {
 
     @MainActor static func beginIntegrationSetup(tool: OnboardingVoiceTool, settings: AppSettings) {
         settings.synchronizeOnboardingRemoteWithSelectedProfile()
-        settings.preserveCompletedOnboarding()
+        settings.preserveCompletedOnboarding(returnSection: .integration)
         settings.discardOnboardingVoiceTrial()
         settings.onboardingPurpose = settings.canDismissOnboarding && settings.onboardingControlSource != .unselected
             ? .integration : .initialSetup

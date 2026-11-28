@@ -221,4 +221,31 @@ struct OnboardingSessionTests {
             #expect(settings.remoteDeviceProfiles.map(\.id) == [original])
         }
     }
+
+    @Test func cancellingSubWizardsReturnsToOriginatingSettingsSection() throws {
+        try withSettings { settings in
+            let profile = settings.registerBluetoothRemote(identifier: UUID(), model: .rc003)
+            settings.selectRemoteProfile(profile)
+            settings.setOnboardingControlSource(.xiaomiRemote)
+            settings.completeOnboarding()
+            #expect(settings.completedOnboardingDestination == .general)
+
+            SettingsPageBehavior.beginDeviceSetup(settings: settings)
+            settings.dismissOnboarding()
+            #expect(settings.completedOnboardingDestination == .connection)
+            #expect(SettingsPageBehavior.initialSection(requestedSection: settings.completedOnboardingDestination) == .connection)
+
+            SettingsPageBehavior.beginIntegrationSetup(tool: .weixin, settings: settings)
+            settings.dismissOnboarding()
+            #expect(settings.completedOnboardingDestination == .integration)
+            #expect(SettingsPageBehavior.initialSection(requestedSection: settings.completedOnboardingDestination) == .integration)
+
+            // Switching from an earlier .integration completion to adding a device must still return to .connection.
+            SettingsPageBehavior.beginDeviceSetup(settings: settings)
+            settings.setOnboardingStep(.permissions)
+            #expect(settings.onboardingPurpose == .initialSetup)
+            settings.dismissOnboarding()
+            #expect(settings.completedOnboardingDestination == .connection)
+        }
+    }
 }

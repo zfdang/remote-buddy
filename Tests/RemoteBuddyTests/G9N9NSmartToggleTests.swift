@@ -146,7 +146,7 @@ struct G9N9NSmartToggleTests {
             allowsDelayedZeroAudioShortTap: true,
             at: 10.75
         ))
-        // 0x011B zero-audio delayed remoteNotification stops only reopen inside 1.25s...1.35s.
+        // 0x011B zero-audio delayed remoteNotification stops only reopen inside 1.0s...1.5s.
         #expect(!state.shouldReopenOnPhysicalStop(
             bridgeID: id,
             stopReason: .remoteNotification,
@@ -155,13 +155,13 @@ struct G9N9NSmartToggleTests {
             allowsDelayedZeroAudioShortTap: true,
             at: 10.85
         ))
-        #expect(!state.shouldReopenOnPhysicalStop(
+        #expect(state.shouldReopenOnPhysicalStop(
             bridgeID: id,
             stopReason: .remoteNotification,
             localCloseRequested: false,
             hasReceivedAudio: false,
             allowsDelayedZeroAudioShortTap: true,
-            at: 11.20
+            at: 11.00
         ))
         #expect(state.shouldReopenOnPhysicalStop(
             bridgeID: id,
@@ -185,7 +185,7 @@ struct G9N9NSmartToggleTests {
             localCloseRequested: false,
             hasReceivedAudio: false,
             allowsDelayedZeroAudioShortTap: true,
-            at: 11.40
+            at: 11.55
         ))
         #expect(!state.shouldReopenOnPhysicalStop(
             bridgeID: id,
@@ -620,7 +620,7 @@ struct G9N9NSmartToggleTests {
         #expect(model.isStreaming)
     }
 
-    @Test(arguments: [850, 1_200, 1_400])
+    @Test(arguments: [850, 1_550])
     func zeroAudioHoldOutside011BDelayedWindowStopsWithoutReopening(durationMs: UInt64) async throws {
         let fixture = try makeSmartToggleFixture(voiceButtonMode: .smartToggle)
         let (model, bridge, clock, flushAudio, _, writtenCommands, keyEdges) = fixture

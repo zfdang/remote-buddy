@@ -1,3 +1,4 @@
 "CFBundleDisplayName" = "Remote Buddy";
 "CFBundleName" = "Remote Buddy";
 "NSBluetoothAlwaysUsageDescription" = "Connect to supported Bluetooth remotes to receive button presses and microphone audio.";
+"NSMicrophoneUsageDescription" = "Use the microphone you select for keyboard-triggered voice input.";

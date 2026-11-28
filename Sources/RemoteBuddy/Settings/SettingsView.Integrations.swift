@@ -49,6 +49,9 @@ extension SettingsView {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                if #available(macOS 15.0, *), settings.onboardingVoiceTool == .doubao {
+                    keyboardMicrophonePanel
+                }
                 HStack(spacing: 20) {
                     Rectangle()
                         .fill(Color.primary.opacity(0.18))

@@ -62,6 +62,8 @@ final class AppSettings: ObservableObject {
         static let g9n9nBluetoothLogRecoveryEnabled = "g9n9nBluetoothLogRecoveryEnabled"
         static let voiceFnTapModeEnabled = "voiceFnTapModeEnabled"
         static let voiceKeyMode = "voiceKeyMode"
+        static let keyboardMicrophoneUID = "keyboardMicrophoneUID"
+        static let keyboardMicrophoneToggleKey = "keyboardMicrophoneToggleKey"
         static let voiceAutoStopMinutes = "voiceAutoStopMinutes"
         static let hideAllActionFeedback = "hideAllActionFeedback"
         static let hideSuccessActionFeedback = "hideSuccessActionFeedback"
@@ -374,6 +376,14 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(onboardingVoiceTool.rawValue, forKey: Keys.onboardingVoiceTool) }
     }
 
+    @Published var keyboardMicrophoneUID: String {
+        didSet { defaults.set(keyboardMicrophoneUID, forKey: Keys.keyboardMicrophoneUID) }
+    }
+
+    @Published var keyboardMicrophoneToggleKey: VoiceKeyMode {
+        didSet { defaults.set(keyboardMicrophoneToggleKey.rawValue, forKey: Keys.keyboardMicrophoneToggleKey) }
+    }
+
     @Published var bypassInputSourceSwitching: Bool {
         didSet { defaults.set(bypassInputSourceSwitching, forKey: Keys.bypassInputSourceSwitching) }
     }
@@ -489,6 +499,9 @@ final class AppSettings: ObservableObject {
     }
 
     init(defaults: UserDefaults = .standard) {
+        keyboardMicrophoneUID = defaults.string(forKey: Keys.keyboardMicrophoneUID) ?? ""
+        keyboardMicrophoneToggleKey = defaults.string(forKey: Keys.keyboardMicrophoneToggleKey) == VoiceKeyMode.rightOption.rawValue
+            ? .rightOption : .rightCommand
         let disabled = Set(defaults.stringArray(forKey: Keys.disabledApplicationIntegrations) ?? [])
             .intersection(Self.allApplicationIntegrationIdentifiers)
         enabledApplicationIntegrations = Self.allApplicationIntegrationIdentifiers.subtracting(disabled)

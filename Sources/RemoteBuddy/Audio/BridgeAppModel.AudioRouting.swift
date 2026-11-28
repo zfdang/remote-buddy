@@ -112,6 +112,7 @@ extension BridgeAppModel {
     private func publishAudioDevices(_ devices: [AudioDeviceInfo]) {
         audioDevices = devices
         buddyMicrophoneStatus = BuddyMicrophoneDevicePolicy.status(in: devices)
+        refreshKeyboardMicrophoneDevices()
     }
 
     nonisolated private static func audioDevicesDiagnostic(_ devices: [AudioDeviceInfo]) -> String {
@@ -133,6 +134,7 @@ extension BridgeAppModel {
         reason: String = "settings_change",
         completion: @escaping (Bool) -> Void = { _ in }
     ) {
+        suppressKeyboardMicrophoneCapture(reason: "audio_reconfigure")
         stopLongRecording(reason: "audio_reconfigure")
         guard shouldKeepVirtualAudioActive else {
             releaseVirtualAudioOutputIfUnused(reason: reason)
@@ -169,6 +171,9 @@ extension BridgeAppModel {
             suspendHIDMonitoring(reason: event.rawValue)
             suspendActiveAudio(reason: event.rawValue)
             return
+        }
+        if !audio.suspensionState.isSuspended, keyboardMicrophone.timer == nil {
+            synchronizeKeyboardMicrophone()
         }
         if !event.isSuspending, hidMonitoringInterrupted, !audio.suspensionState.suspendsHIDMonitoring {
             applyHIDSettings()
@@ -260,6 +265,7 @@ extension BridgeAppModel {
         audio.configurationGeneration &+= 1
         audio.cancelAllConfigurationWaiters()
         cancelVirtualAudioReleaseIfPending(trigger: "system_sleep")
+        stopKeyboardMicrophone(reason: reason)
         stopLongRecording(reason: "system_sleep")
         finishRC003VoiceExtensionTest(reason: "system_sleep")
         clearG9N9NSmartToggleState(reason: "system_sleep")
@@ -788,6 +794,7 @@ extension BridgeAppModel {
             if !configured, !ready, self.longRecordingGeneration == recordingGeneration,
                self.audio.activeConfigurationGeneration == nil {
                 self.stopLongRecording(reason: "audio_recovery_failed")
+                self.suppressKeyboardMicrophoneCapture(reason: "audio_recovery_failed")
             }
             diagnosticLog(
                 "AUDIO RECOVERY operation_id=\(generation) phase=completed " +

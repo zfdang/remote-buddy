@@ -60,6 +60,8 @@ Download `Remote_Buddy_*.pkg` from [GitHub Releases](https://github.com/zfdang/r
 4. Configure the tool's voice shortcut (`Ctrl+Shift+R` recommended by default, or `Fn`/custom shortcut) under **Integration**, then test it with the guide.
 5. Focus a text field and use your remote's voice trigger: G9N9N defaults to Smart Toggle (tap once for hands-free listening and press again to stop, or hold >0.7s to stop on release), T1 presses once to start and again to stop, and Xiaomi requires holding while speaking. Adjust the start/stop behavior for tap-based tools such as Typeless.
 
+On macOS 15 or later, Integration can route an external microphone into keyboard-started Doubao sessions. Keep Remote Buddy Mic selected in Doubao and use the same hands-free key in both apps. Remote-started sessions use the remote microphone and can also be stopped with the keyboard key. Grant microphone access when enabling this option.
+
 On the Connections page, remove an unused remote and its saved app settings. Its macOS Bluetooth pairing remains; choosing Add Device may rediscover previously removed remotes.
 
 Configure single, double, and long presses for Xiaomi, T1, and validated G9N9N versions under **Buttons**. Use **Run Setup Guide Again** at the top of **General** settings to repeat validation. G9N9N hardware/firmware batches vary; check the **HID version** in **Connections** after pairing, and see the [G9N9N Compatibility Guide](https://remote.zfdang.com/g9n9n-compatibility_en.html) ([Chinese repo guide](docs/g9n9n-compatibility.md)).

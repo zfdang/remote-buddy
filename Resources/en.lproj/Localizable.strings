@@ -1412,3 +1412,17 @@
 "button_mapping.app_scope.running_apps" = "Running Applications";
 "button_mapping.app_scope.remove" = "Remove Application";
 "button_mapping.app_scope.editing_hint" = "Editing buttons for %@ on this remote: used only while it is frontmost. Unchanged triggers keep the defaults; Restore Default on a trigger returns it to this remote’s default.";
+
+"keyboard_microphone.title" = "Microphone for keyboard voice input";
+"keyboard_microphone.help" = "Use a selected mic for keyboard-started Doubao voice input. The remote continues to use its own microphone.";
+"keyboard_microphone.device" = "Keyboard microphone";
+"keyboard_microphone.off" = "Off";
+"keyboard_microphone.key" = "Keyboard toggle key";
+"keyboard_microphone.key_help" = "Set the same key in Doubao’s hands-free mode. While the remote is recording, a tap of this key stops it.";
+"keyboard_microphone.disabled" = "Keyboard microphone routing is off.";
+"keyboard_microphone.ready" = "Ready";
+"keyboard_microphone.active" = "Using the keyboard microphone";
+"keyboard_microphone.needs_permission" = "Microphone access is required.";
+"keyboard_microphone.input_unavailable" = "Selected microphone unavailable";
+"keyboard_microphone.allow" = "Allow Microphone Access";
+"keyboard_microphone.open_privacy" = "Open Microphone Privacy Settings";

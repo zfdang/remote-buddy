@@ -1414,3 +1414,17 @@
 "button_mapping.app_scope.running_apps" = "当前正在运行的应用";
 "button_mapping.app_scope.remove" = "移除此应用";
 "button_mapping.app_scope.editing_hint" = "正在配置当前遥控器在「%@」中的按键：仅该应用在前台时生效；未覆盖的触发方式继续沿用默认，点“恢复默认”可取消覆盖。";
+
+"keyboard_microphone.title" = "键盘语音输入麦克风";
+"keyboard_microphone.help" = "用键盘启动豆包语音输入时，使用这里选择的麦克风。用遥控器启动时，使用遥控器自带的麦克风。";
+"keyboard_microphone.device" = "键盘麦克风";
+"keyboard_microphone.off" = "关闭";
+"keyboard_microphone.key" = "键盘免按键";
+"keyboard_microphone.key_help" = "在豆包免按模式中设置同一个键。遥控器正在收音时，轻点它可以结束收音。";
+"keyboard_microphone.disabled" = "键盘麦克风自动切换已关闭";
+"keyboard_microphone.ready" = "已就绪";
+"keyboard_microphone.active" = "正在使用键盘麦克风";
+"keyboard_microphone.needs_permission" = "需要麦克风权限";
+"keyboard_microphone.input_unavailable" = "所选麦克风不可用";
+"keyboard_microphone.allow" = "允许麦克风访问";
+"keyboard_microphone.open_privacy" = "打开麦克风隐私设置";

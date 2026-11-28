@@ -80,9 +80,12 @@ struct ApplicationButtonProfileTests {
             bundleID: claude, button: .back, trigger: .singleClick
         )
 
-        // Switch to G9N9N remote: Xiaomi's Claude profile must not bleed over (only G9N9N's default Safari profile exists).
+        // Switch to G9N9N remote: Xiaomi's Claude profile must not bleed over (only G9N9N's default browser profiles exist).
         settings.selectRemoteProfile(g9n9nID)
-        #expect(Set(settings.applicationButtonProfiles.keys) == [AppSettings.defaultChromecastSafariBundleID])
+        #expect(Set(settings.applicationButtonProfiles.keys) == [
+            AppSettings.defaultChromecastSafariBundleID,
+            AppSettings.defaultChromecastChromeBundleID,
+        ])
         #expect(settings.applicationButtonProfiles[claude] == nil)
 
         // Configure a different Claude override on G9N9N remote.
@@ -288,7 +291,14 @@ struct ApplicationButtonProfileTests {
         settings.addApplicationButtonProfile(bundleID: claude, name: "Claude")
         settings.addApplicationButtonProfile(bundleID: "com.alpha.app", name: "Beta")
         #expect(settings.sortedApplicationButtonProfiles.map(\.bundleID)
-            == ["com.alpha.app", "com.zeta.app", claude, codex, AppSettings.defaultChromecastSafariBundleID])
+            == [
+                "com.alpha.app",
+                "com.zeta.app",
+                AppSettings.defaultChromecastChromeBundleID,
+                claude,
+                codex,
+                AppSettings.defaultChromecastSafariBundleID,
+            ])
 
         // Double-click override can be cleared explicitly and keeps the app profile.
         settings.setApplicationScopedAction(
@@ -780,7 +790,7 @@ struct ApplicationButtonProfileTests {
         sendRC003(usage: nil)
     }
 
-    @Test func newChromecastRemoteSeedsDefaultSafariMappingAndResolvesAtRuntime() throws {
+    @Test func newChromecastRemoteSeedsDefaultBrowserMappingsAndResolvesAtRuntime() throws {
         let (settings, _) = makeSettings()
         settings.onboardingStep = .complete
 
@@ -793,30 +803,41 @@ struct ApplicationButtonProfileTests {
 
         settings.selectRemoteProfile(g9n9nID)
         let safari = AppSettings.defaultChromecastSafariBundleID
+        let chrome = AppSettings.defaultChromecastChromeBundleID
         #expect(settings.applicationButtonProfiles[safari]?.name == "Safari")
+        #expect(settings.applicationButtonProfiles[chrome]?.name == "Chrome")
 
         let expectedLeft = CustomKeyboardShortcut(keyCode: 33, modifierFlags: .command, keyLabel: "[")
         let expectedRight = CustomKeyboardShortcut(keyCode: 30, modifierFlags: .command, keyLabel: "]")
         var front: String? = safari
         settings.frontmostApplicationBundleIdentifier = { front }
 
-        #expect(settings.configuredAction(for: .up, trigger: .singleClick, profileID: g9n9nID).action == .scrollUp)
-        #expect(settings.configuredAction(for: .up, trigger: .longPress, profileID: g9n9nID).action == .repeatSingleClick)
-        #expect(settings.configuredAction(for: .down, trigger: .singleClick, profileID: g9n9nID).action == .scrollDown)
-        #expect(settings.configuredAction(for: .down, trigger: .longPress, profileID: g9n9nID).action == .repeatSingleClick)
-        #expect(settings.configuredAction(for: .left, trigger: .singleClick, profileID: g9n9nID)
-            == ConfiguredButtonAction(action: .customShortcut, shortcut: expectedLeft))
-        #expect(settings.configuredAction(for: .left, trigger: .longPress, profileID: g9n9nID).action == .disabled)
-        #expect(settings.configuredAction(for: .right, trigger: .singleClick, profileID: g9n9nID)
-            == ConfiguredButtonAction(action: .customShortcut, shortcut: expectedRight))
-        #expect(settings.configuredAction(for: .right, trigger: .longPress, profileID: g9n9nID).action == .disabled)
+        for browser in [safari, chrome] {
+            front = browser
+            #expect(settings.configuredAction(for: .up, trigger: .singleClick, profileID: g9n9nID).action == .scrollUp)
+            #expect(settings.configuredAction(for: .up, trigger: .longPress, profileID: g9n9nID).action == .repeatSingleClick)
+            #expect(settings.configuredAction(for: .down, trigger: .singleClick, profileID: g9n9nID).action == .scrollDown)
+            #expect(settings.configuredAction(for: .down, trigger: .longPress, profileID: g9n9nID).action == .repeatSingleClick)
+            #expect(settings.configuredAction(for: .left, trigger: .singleClick, profileID: g9n9nID)
+                == ConfiguredButtonAction(action: .customShortcut, shortcut: expectedLeft))
+            #expect(settings.configuredAction(for: .left, trigger: .longPress, profileID: g9n9nID).action == .disabled)
+            #expect(settings.configuredAction(for: .right, trigger: .singleClick, profileID: g9n9nID)
+                == ConfiguredButtonAction(action: .customShortcut, shortcut: expectedRight))
+            #expect(settings.configuredAction(for: .right, trigger: .longPress, profileID: g9n9nID).action == .disabled)
+            #expect(settings.configuredAction(for: .youtube, trigger: .singleClick, profileID: g9n9nID).action == .commandRefresh)
+            #expect(settings.configuredAction(for: .youtube, trigger: .longPress, profileID: g9n9nID).action == .disabled)
+            #expect(settings.configuredAction(for: .netflix, trigger: .singleClick, profileID: g9n9nID).action == .commandClose)
+            #expect(settings.configuredAction(for: .netflix, trigger: .longPress, profileID: g9n9nID).action == .disabled)
+        }
 
-        // Global / other apps keep standard directional arrow keys.
+        // Global / other apps keep standard directional arrow keys and media defaults.
         front = notes
         #expect(settings.configuredAction(for: .up, trigger: .singleClick, profileID: g9n9nID).action == .arrowUp)
         #expect(settings.configuredAction(for: .down, trigger: .singleClick, profileID: g9n9nID).action == .arrowDown)
         #expect(settings.configuredAction(for: .left, trigger: .singleClick, profileID: g9n9nID).action == .arrowLeft)
         #expect(settings.configuredAction(for: .right, trigger: .singleClick, profileID: g9n9nID).action == .arrowRight)
+        #expect(settings.configuredAction(for: .youtube, trigger: .singleClick, profileID: g9n9nID).action == .previousCommandLeft)
+        #expect(settings.configuredAction(for: .netflix, trigger: .singleClick, profileID: g9n9nID).action == .nextCommandRight)
 
         let clock = ControlledTestScheduler()
         var performed: [ConfiguredButtonAction] = []
@@ -853,15 +874,26 @@ struct ApplicationButtonProfileTests {
         tap(4) // down
         tap(5) // left
         tap(6) // right
+        tap(14) // youtube -> reload
+        tap(15) // netflix -> close
+        front = chrome
+        tap(14) // youtube -> reload in Chrome
+        tap(15) // netflix -> close in Chrome
         front = notes
         tap(3) // up in Notes
+        tap(14) // youtube in Notes
 
-        #expect(performed.count == 5)
+        #expect(performed.count == 10)
         #expect(performed[0].action == .scrollUp)
         #expect(performed[1].action == .scrollDown)
         #expect(performed[2] == ConfiguredButtonAction(action: .customShortcut, shortcut: expectedLeft))
         #expect(performed[3] == ConfiguredButtonAction(action: .customShortcut, shortcut: expectedRight))
-        #expect(performed[4].action == .arrowUp)
+        #expect(performed[4].action == .commandRefresh)
+        #expect(performed[5].action == .commandClose)
+        #expect(performed[6].action == .commandRefresh)
+        #expect(performed[7].action == .commandClose)
+        #expect(performed[8].action == .arrowUp)
+        #expect(performed[9].action == .previousCommandLeft)
 
         // Holding Up in Safari repeats scrollUp; holding Left fires ⌘[ once without repeating history back.
         performed.removeAll()
@@ -897,11 +929,13 @@ struct ApplicationButtonProfileTests {
         #expect(performed[0] == ConfiguredButtonAction(action: .customShortcut, shortcut: expectedLeft))
     }
 
-    @Test func legacyChromecastMigrationSeedsSafariOnceAndRespectsUserDeletion() throws {
+    @Test func legacyChromecastMigrationSeedsBrowsersOnceAndRespectsUserDeletion() throws {
         let defaults = EphemeralUserDefaults()
         let safari = AppSettings.defaultChromecastSafariBundleID
+        let chrome = AppSettings.defaultChromecastChromeBundleID
+        let expectedSeeded = AppSettings.defaultSeededApplicationBundleIDs(for: .chromecastVoiceRemote)
 
-        // 1) Legacy G9N9N with no Safari profile + another legacy G9N9N that already has a custom Safari profile.
+        // 1) Legacy G9N9N with no browser profiles + another legacy G9N9N that already has a custom Safari profile.
         let unseededGoogle = RemoteDeviceProfile(
             model: .chromecastVoiceRemote,
             bluetoothIdentifier: UUID(),
@@ -933,36 +967,47 @@ struct ApplicationButtonProfileTests {
         defaults.set(encoded, forKey: AppSettings.Keys.remoteDeviceProfiles)
         defaults.set(unseededGoogle.id.uuidString, forKey: AppSettings.Keys.selectedRemoteProfileID)
 
-        // First launch after upgrade seeds Safari on unseededGoogle, preserves customGoogle, and skips Xiaomi.
+        // First launch after upgrade seeds Safari & Chrome on unseededGoogle, preserves custom Safari while adding Chrome on customGoogle, and skips Xiaomi.
         let migrated = AppSettings(defaults: defaults)
         #expect(migrated.applicationButtonProfiles[safari] == AppSettings.defaultChromecastSafariApplicationProfile)
-        #expect(migrated.remoteDeviceProfiles[0].seededDefaultApplicationProfiles == [safari])
+        #expect(migrated.applicationButtonProfiles[chrome] == AppSettings.defaultChromecastChromeApplicationProfile)
+        #expect(migrated.remoteDeviceProfiles[0].seededDefaultApplicationProfiles == expectedSeeded)
         #expect(migrated.applicationButtonProfiles(for: customGoogle.id)[safari]?.action(for: .up, trigger: .singleClick)?.action == .commandCopy)
+        #expect(migrated.applicationButtonProfiles(for: customGoogle.id)[chrome] == AppSettings.defaultChromecastChromeApplicationProfile)
         #expect(migrated.applicationButtonProfiles(for: customGoogle.id)[claude] != nil)
-        #expect(migrated.remoteDeviceProfiles[1].seededDefaultApplicationProfiles == [safari])
+        #expect(migrated.remoteDeviceProfiles[1].seededDefaultApplicationProfiles == expectedSeeded)
         #expect(migrated.applicationButtonProfiles(for: xiaomi.id).isEmpty)
 
-        // User explicitly deletes Safari from unseededGoogle; subsequent launches must NOT re-add it.
+        // User explicitly deletes Safari and Chrome from unseededGoogle; subsequent launches must NOT re-add either.
         migrated.removeApplicationButtonProfile(bundleID: safari)
+        migrated.removeApplicationButtonProfile(bundleID: chrome)
         #expect(migrated.applicationButtonProfiles[safari] == nil)
+        #expect(migrated.applicationButtonProfiles[chrome] == nil)
 
         let relaunched = AppSettings(defaults: defaults)
         #expect(relaunched.applicationButtonProfiles[safari] == nil)
+        #expect(relaunched.applicationButtonProfiles[chrome] == nil)
         #expect(relaunched.applicationButtonProfiles(for: relaunched.selectedRemoteProfileID)[safari] == nil)
-        #expect(relaunched.remoteDeviceProfiles[0].seededDefaultApplicationProfiles == [safari])
+        #expect(relaunched.applicationButtonProfiles(for: relaunched.selectedRemoteProfileID)[chrome] == nil)
+        #expect(relaunched.remoteDeviceProfiles[0].seededDefaultApplicationProfiles == expectedSeeded)
 
-        // Adding a new G9N9N later still gives that new remote its own default Safari profile.
+        // Adding a new G9N9N later still gives that new remote its own default Safari and Chrome profiles.
         let thirdGoogle = relaunched.registerBluetoothRemote(identifier: UUID(), model: .chromecastVoiceRemote)
         #expect(relaunched.applicationButtonProfiles(for: thirdGoogle)[safari] == AppSettings.defaultChromecastSafariApplicationProfile)
+        #expect(relaunched.applicationButtonProfiles(for: thirdGoogle)[chrome] == AppSettings.defaultChromecastChromeApplicationProfile)
         #expect(relaunched.applicationButtonProfiles(for: unseededGoogle.id)[safari] == nil)
+        #expect(relaunched.applicationButtonProfiles(for: unseededGoogle.id)[chrome] == nil)
 
-        // Identifying an .unknown profile as G9N9N seeds Safari once and also respects deletion across reload.
+        // Identifying an .unknown profile as G9N9N seeds Safari and Chrome once and also respects deletion across reload.
         let unknown = relaunched.registerBluetoothRemote(identifier: UUID(), model: .unknown)
         relaunched.updateRemoteProfileModel(unknown, model: .chromecastVoiceRemote)
         #expect(relaunched.applicationButtonProfiles(for: unknown)[safari] == AppSettings.defaultChromecastSafariApplicationProfile)
+        #expect(relaunched.applicationButtonProfiles(for: unknown)[chrome] == AppSettings.defaultChromecastChromeApplicationProfile)
         relaunched.selectRemoteProfile(unknown)
         relaunched.removeApplicationButtonProfile(bundleID: safari)
+        relaunched.removeApplicationButtonProfile(bundleID: chrome)
         let afterUnknownDelete = AppSettings(defaults: defaults)
         #expect(afterUnknownDelete.applicationButtonProfiles(for: unknown)[safari] == nil)
+        #expect(afterUnknownDelete.applicationButtonProfiles(for: unknown)[chrome] == nil)
     }
 }

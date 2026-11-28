@@ -870,9 +870,10 @@ extension AppSettings {
     }
 
     static let defaultChromecastSafariBundleID = PresetApplication.safari.bundleIdentifier
+    static let defaultChromecastChromeBundleID = PresetApplication.chrome.bundleIdentifier
 
-    static var defaultChromecastSafariApplicationProfile: ApplicationButtonProfile {
-        var profile = ApplicationButtonProfile(name: "Safari")
+    static func defaultChromecastBrowserApplicationProfile(name: String) -> ApplicationButtonProfile {
+        var profile = ApplicationButtonProfile(name: name)
         profile.setAction(
             ConfiguredButtonAction(action: .scrollUp, shortcut: nil),
             for: .up,
@@ -901,12 +902,33 @@ extension AppSettings {
             trigger: .singleClick
         )
         profile.setAction(ConfiguredButtonAction.disabled, for: .right, trigger: .longPress)
+        profile.setAction(
+            ConfiguredButtonAction(action: .commandRefresh, shortcut: nil),
+            for: .youtube,
+            trigger: .singleClick
+        )
+        profile.setAction(
+            ConfiguredButtonAction(action: .commandClose, shortcut: nil),
+            for: .netflix,
+            trigger: .singleClick
+        )
         return profile
+    }
+
+    static var defaultChromecastSafariApplicationProfile: ApplicationButtonProfile {
+        defaultChromecastBrowserApplicationProfile(name: "Safari")
+    }
+
+    static var defaultChromecastChromeApplicationProfile: ApplicationButtonProfile {
+        defaultChromecastBrowserApplicationProfile(name: "Chrome")
     }
 
     static func defaultApplicationButtonProfiles(for model: RemoteModel) -> [String: ApplicationButtonProfile] {
         guard model == .chromecastVoiceRemote else { return [:] }
-        return [defaultChromecastSafariBundleID: defaultChromecastSafariApplicationProfile]
+        return [
+            defaultChromecastSafariBundleID: defaultChromecastSafariApplicationProfile,
+            defaultChromecastChromeBundleID: defaultChromecastChromeApplicationProfile,
+        ]
     }
 
     static func defaultSeededApplicationBundleIDs(for model: RemoteModel) -> [String] {

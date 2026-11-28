@@ -21,6 +21,12 @@ final class HeldVoiceShortcut: @unchecked Sendable {
     private var uptime: () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }
     private var recovery: ScheduledOperation?
 
+    var activeOwnedModifiers: CGEventFlags {
+        lock.lock()
+        defer { lock.unlock() }
+        return ownedModifierFlags
+    }
+
     func setPressed(
         _ pressed: Bool, shortcut requested: CustomKeyboardShortcut,
         post: @escaping KeyboardInjector.KeyStatePoster,

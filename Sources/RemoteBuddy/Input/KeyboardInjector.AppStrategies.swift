@@ -255,27 +255,43 @@ extension KeyboardInjector {
 
     static func focusCmuxTerminal(
         processIdentifier: pid_t,
+        canContinue: () -> Bool = { true },
+        allowClickFallback: Bool = false,
+        didAttemptClick: (() -> Void)? = nil,
         keyPoster: KeyPoster
     ) -> Bool {
-        guard !AXSelfTargetPolicy.isOwnProcess(processIdentifier) else { return false }
+        guard !AXSelfTargetPolicy.isOwnProcess(processIdentifier), canContinue() else { return false }
         let applicationElement = AXUIElementCreateApplication(processIdentifier)
         var terminalFrame: CGRect?
+        var primaryTerminalTarget: (
+            element: AXUIElement,
+            snapshot: AccessibilityTextCandidate,
+            windowFrame: CGRect?
+        )?
         for window in applicationWindows(applicationElement) {
+            guard canContinue() else { return false }
+            let windowFrame = axFrame(window)
             let candidates = accessibilityTextCandidates(in: window)
             guard let candidateIndex = bestCmuxTerminalCandidateIndex(
                 candidates.map(\.snapshot),
-                windowFrame: axFrame(window)
+                windowFrame: windowFrame
             ) else { continue }
-            terminalFrame = terminalFrame ?? candidates[candidateIndex].snapshot.frame
+            let candidate = candidates[candidateIndex]
+            terminalFrame = terminalFrame ?? candidate.snapshot.frame
+            if primaryTerminalTarget == nil {
+                primaryTerminalTarget = (candidate.element, candidate.snapshot, windowFrame)
+            }
             if focusAccessibilityElement(
-                candidates[candidateIndex].element,
+                candidate.element,
                 applicationElement: applicationElement,
-                requiresApplicationFocusedElement: true
+                requiresApplicationFocusedElement: true,
+                canWriteFocus: canContinue
             ) {
                 return true
             }
         }
 
+        guard canContinue() else { return false }
         let focusedElementSnapshot = axElement(
             applicationElement,
             attribute: kAXFocusedUIElementAttribute
@@ -291,8 +307,79 @@ extension KeyboardInjector {
             terminalFrame: terminalFrame
         ) {
             keyPoster(keyCode, [.maskCommand, .maskShift])
+            return false
+        }
+        if allowClickFallback, let target = primaryTerminalTarget {
+            return clickCmuxTerminalCandidate(
+                target.snapshot,
+                windowFrame: target.windowFrame,
+                canContinue: canContinue,
+                hitTest: {
+                    accessibilityHitTestMatchesTarget(
+                        target.element,
+                        processIdentifier: processIdentifier,
+                        point: $0
+                    )
+                },
+                didAttemptClick: didAttemptClick,
+                isFocused: {
+                    accessibilityElementIsFocused(
+                        target.element,
+                        applicationElement: applicationElement,
+                        requiresApplicationFocusedElement: true
+                    )
+                }
+            )
         }
         return false
+    }
+
+    static func cmuxTerminalClickPoint(
+        _ candidate: AccessibilityTextCandidate,
+        windowFrame: CGRect?
+    ) -> CGPoint? {
+        guard cmuxTerminalCandidateScore(candidate, windowFrame: windowFrame) != nil,
+              let frame = candidate.frame,
+              let windowFrame
+        else { return nil }
+        let visibleFrame = frame.intersection(windowFrame)
+        guard !visibleFrame.isNull,
+              visibleFrame.width >= 48,
+              visibleFrame.height >= 32
+        else { return nil }
+        let point = CGPoint(
+            x: visibleFrame.minX + min(24, visibleFrame.width / 2),
+            y: visibleFrame.minY + min(24, visibleFrame.height / 2)
+        )
+        guard point.x.isFinite, point.y.isFinite, windowFrame.contains(point) else { return nil }
+        return point
+    }
+
+    static func clickCmuxTerminalCandidate(
+        _ candidate: AccessibilityTextCandidate,
+        windowFrame: CGRect?,
+        canContinue: () -> Bool,
+        hitTest: (CGPoint) -> Bool,
+        postClick: (CGPoint) -> Bool = postAccessibilityFocusClick,
+        didAttemptClick: (() -> Void)? = nil,
+        isFocused: () -> Bool,
+        pause: () -> Void = { usleep(50_000) }
+    ) -> Bool {
+        guard canContinue() else { return false }
+        if isFocused() { return true }
+        guard let point = cmuxTerminalClickPoint(candidate, windowFrame: windowFrame),
+              hitTest(point),
+              canContinue()
+        else { return false }
+        if isFocused() { return true }
+        guard postClick(point) else { return false }
+        didAttemptClick?()
+        for _ in 0..<5 {
+            guard canContinue() else { return false }
+            if isFocused() { return true }
+            pause()
+        }
+        return canContinue() && isFocused()
     }
 
     static func cmuxFocusRecoveryShortcutKeyCode(
@@ -362,46 +449,55 @@ extension KeyboardInjector {
     static func focusCmux(
         applicationURL: URL,
         cliURL: URL? = nil,
+        cliResolver: (URL) -> URL? = { cmuxCLIURL(applicationURL: $0) },
         runner: CmuxCommandRunner = runCmuxCommand,
         canContinue: () -> Bool = { true },
         terminalFocuser: (String) -> Bool = { _ in true }
     ) -> Bool {
         guard canContinue() else { return false }
-        guard let cliURL = cliURL ?? cmuxCLIURL(applicationURL: applicationURL) else {
+        guard let cliURL = cliURL ?? cliResolver(applicationURL) else {
             AppLogger.shared.write("APP FOCUS failed bundle=\(PresetApplication.cmux.bundleIdentifier) method=cmux_api reason=cli_unavailable")
-            return false
+            return canContinue() && terminalFocuser("")
         }
 
         let currentResult = runner(cliURL, ["rpc", "surface.current", "{}"], 1)
         guard !currentResult.timedOut, currentResult.terminationStatus == 0 else {
+            // Default cmux socket auth rejects external processes not launched inside cmux;
+            // fall back directly to Accessibility terminal focus.
             let reason = currentResult.timedOut ? "current_timeout" : "current_failed"
             AppLogger.shared.write("APP FOCUS failed bundle=\(PresetApplication.cmux.bundleIdentifier) method=cmux_api reason=\(reason)")
-            return false
+            return canContinue() && terminalFocuser("")
         }
         guard canContinue() else { return false }
         guard let payload = try? JSONSerialization.jsonObject(with: currentResult.standardOutput) as? [String: Any],
-              let surfaceID = payload["surface_id"] as? String,
-              UUID(uuidString: surfaceID) != nil,
-              let surfaceType = (payload["surface_type"] as? String) ?? (payload["type"] as? String),
-              surfaceType.caseInsensitiveCompare("terminal") == .orderedSame
+              let surfaceType = (payload["surface_type"] as? String) ?? (payload["type"] as? String)
         else {
+            AppLogger.shared.write("APP FOCUS failed bundle=\(PresetApplication.cmux.bundleIdentifier) method=cmux_api reason=invalid_current_payload")
+            return canContinue() && terminalFocuser("")
+        }
+        guard surfaceType.caseInsensitiveCompare("terminal") == .orderedSame else {
             AppLogger.shared.write("APP FOCUS failed bundle=\(PresetApplication.cmux.bundleIdentifier) method=cmux_api reason=no_current_terminal")
             return false
+        }
+        guard let surfaceID = payload["surface_id"] as? String,
+              UUID(uuidString: surfaceID) != nil
+        else {
+            AppLogger.shared.write("APP FOCUS failed bundle=\(PresetApplication.cmux.bundleIdentifier) method=cmux_api reason=invalid_current_payload")
+            return canContinue() && terminalFocuser("")
         }
 
         guard let focusParameters = try? JSONSerialization.data(
             withJSONObject: ["surface_id": surfaceID],
             options: [.sortedKeys]
         ), let focusJSON = String(data: focusParameters, encoding: .utf8) else {
-            return false
+            return canContinue() && terminalFocuser(surfaceID)
         }
         guard canContinue() else { return false }
 
         let focusResult = runner(cliURL, ["rpc", "surface.focus", focusJSON], 1)
-        guard !focusResult.timedOut, focusResult.terminationStatus == 0 else {
+        if focusResult.timedOut || focusResult.terminationStatus != 0 {
             let reason = focusResult.timedOut ? "focus_timeout" : "focus_failed"
             AppLogger.shared.write("APP FOCUS failed bundle=\(PresetApplication.cmux.bundleIdentifier) method=cmux_api reason=\(reason)")
-            return false
         }
         guard canContinue() else { return false }
         return terminalFocuser(surfaceID)

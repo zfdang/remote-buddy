@@ -72,6 +72,7 @@ extension BridgeAppModel {
                 self?.preferredInputSourceMonitor.endVoiceSession()
                 self?.flushPendingVoiceToolMappingRefresh()
                 self?.releaseVirtualAudioOutputIfUnused(reason: "voice_fn_tap_idle")
+                KeyboardInjector.startPostVoicePhantomModifierSweep()
             }
         )
     }

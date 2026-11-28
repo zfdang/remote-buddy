@@ -175,6 +175,10 @@ enum KeyboardInjector {
     ) -> Bool {
         guard !isPressed || !secureInputEnabled() else { return false }
         guard accessibilityTrusted() else { return false }
+        if isPressed {
+            cancelPostVoicePhantomModifierSweep()
+            _ = clearPhantomHIDModifiersIfNeeded()
+        }
         if case let .shortcut(shortcut) = mode {
             return shortcutSession.setPressed(isPressed, shortcut: shortcut, post: shortcutKeyStatePoster,
                 hardwareFlags: shortcutHardwareFlags)
@@ -276,6 +280,9 @@ enum KeyboardInjector {
             return true
         }
         guard accessibilityTrusted() else { return false }
+        if action != .appSwitcher {
+            _ = clearPhantomHIDModifiersIfNeeded()
+        }
 
         switch action {
         case .disabled, .repeatSingleClick:

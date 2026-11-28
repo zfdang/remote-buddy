@@ -356,6 +356,7 @@ extension BridgeAppModel {
             heldVoiceKeyMode = mode
         } else {
             heldVoiceKeyMode = nil
+            KeyboardInjector.startPostVoicePhantomModifierSweep()
         }
         isVoiceTriggerEnabled = !shouldHold
         voiceShortcutStatus = LocalizedMessage(
@@ -437,6 +438,7 @@ extension BridgeAppModel {
             "VOICE KEY mode=\(heldVoiceKeyMode.rawValue) edge=up " +
                 "result=event_submitted target_response=unknown"
         )
+        KeyboardInjector.startPostVoicePhantomModifierSweep()
         return true
     }
 

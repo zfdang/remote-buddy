@@ -631,7 +631,7 @@ extension KeyboardInjector {
         return .resynced
     }
 
-    private static func postAccessibilityFocusClick(_ point: CGPoint) -> Bool {
+    static func postAccessibilityFocusClick(_ point: CGPoint) -> Bool {
         guard let source = CGEventSource(stateID: .hidSystemState),
               let down = CGEvent(mouseEventSource: source, mouseType: .leftMouseDown,
                                  mouseCursorPosition: point, mouseButton: .left),
@@ -653,8 +653,8 @@ extension KeyboardInjector {
         return true
     }
 
-    private static func accessibilityHitTestMatchesTarget(_ target: AXUIElement,
-                                                          processIdentifier: pid_t, point: CGPoint) -> Bool {
+    static func accessibilityHitTestMatchesTarget(_ target: AXUIElement,
+                                                  processIdentifier: pid_t, point: CGPoint) -> Bool {
         guard !AXSelfTargetPolicy.isOwnProcess(processIdentifier) else { return false }
         var hit: AXUIElement?
         guard AXUIElementCopyElementAtPosition(AXUIElementCreateSystemWide(), Float(point.x), Float(point.y), &hit) == .success,

@@ -59,15 +59,16 @@ def render_onboarding(bin_path: Path, language: str, output_tmp: Path):
     subprocess.run([str(bin_path)], cwd=ROOT, env=env, check=True)
 
 MAX_RETINA_WIDTH = 1380
+README_IMAGE_WIDTH = 1280
 
 
-def save_jpeg(src: Path, dst: Path):
+def save_jpeg(src: Path, dst: Path, max_width: int = MAX_RETINA_WIDTH):
     with Image.open(src) as img:
         icc_profile = img.info.get("icc_profile")
         rgb = img.convert("RGB")
-        if rgb.width > MAX_RETINA_WIDTH:
-            target_height = round(rgb.height * MAX_RETINA_WIDTH / rgb.width)
-            rgb = rgb.resize((MAX_RETINA_WIDTH, target_height), Image.Resampling.LANCZOS)
+        if rgb.width > max_width:
+            target_height = round(rgb.height * max_width / rgb.width)
+            rgb = rgb.resize((max_width, target_height), Image.Resampling.LANCZOS)
 
         save_kwargs = {
             "format": "JPEG",
@@ -105,7 +106,7 @@ def main():
 
             # Include all G9N9N media buttons, both connection cards, Xiaomi common phrases, and an active voice tool.
             section_overrides = [
-                ("mapping", "mapping", 980, "0", "1", ""),
+                ("mapping", "mapping", 1050, "0", "1", ""),
                 ("connection", "connection", 960, "1", "1", ""),
                 ("commonPhrases", "phrases", 772, "1", "0", ""),
                 ("integration", "integration", 772, "1", "1", "weixin"),
@@ -120,8 +121,12 @@ def main():
                 if voice_tool:
                     overrides["REMOTE_BUDDY_SETTINGS_SCREENSHOT_VOICE_TOOL"] = voice_tool
                 render_settings(bin_path, lang_code, Path(tmp_settings_dir), overrides)
-                save_jpeg(Path(tmp_settings_dir) / f"{section}-1020x{height}.png",
-                          OUTPUT_DIR / f"{target_id}-{lang_suffix}.jpg")
+                raw_png = Path(tmp_settings_dir) / f"{section}-1020x{height}.png"
+                save_jpeg(raw_png, OUTPUT_DIR / f"{target_id}-{lang_suffix}.jpg")
+                if lang_suffix == "zh" and target_id in {"connection", "integration", "mapping"}:
+                    readme_target = OUTPUT_DIR / f"readme-{target_id}.jpg"
+                    print(f"Saving {readme_target.name}...")
+                    save_jpeg(raw_png, readme_target, max_width=README_IMAGE_WIDTH)
 
             for variant, overrides in integration_variants():
                 render_settings(bin_path, lang_code, Path(tmp_settings_dir), overrides)
